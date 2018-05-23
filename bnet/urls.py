@@ -7,6 +7,7 @@ app_name = 'bnet'
 urlpatterns = [
     path('member/', views.MemberIndexView.as_view(), name='index'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='detail'),
+    path('sms_callback/', views.sms_callback, name='sms_callback'),
     url(r'^sms/$', views.sms),
     url(r'^test_send/$', views.test_send),
 ]

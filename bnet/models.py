@@ -5,8 +5,14 @@
 #   * Make sure each ForeignKey has `on_delete` set to the desired behavior.
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
+from django.conf import settings
 from django.db import models
+from django.urls import reverse
 from django_twilio.client import twilio_client
+
+import phonenumbers
+import logging
+logger = logging.getLogger(__name__)
 
 class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -109,7 +115,7 @@ class Phone(BaseModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     typ = models.CharField(choices=TYPES, max_length=255)
     number = models.CharField(max_length=255, blank=True, null=True)
-    pagable = models.CharField(max_length=255, blank=True, null=True)
+    pagable = models.CharField(max_length=255, blank=True, null=True) # TODO 1/0 to bool
     sms_email = models.CharField(max_length=255, blank=True, null=True)
     position = models.IntegerField(blank=True, null=True)
     class Meta:
@@ -201,6 +207,9 @@ class Message(BaseModel):
     period_id = models.IntegerField(blank=True, null=True)  # TODO: foreign key
     period_format = models.CharField(max_length=255, blank=True, null=True)
 
+    def send(self):
+        for d in self.distribution_set.all():
+            d.send()
     class Meta:
         db_table = 'messages'
 
@@ -219,21 +228,42 @@ class Distribution(BaseModel):
     unauth_rsvp_token = models.CharField(max_length=255, unique=True, blank=True, null=True)
     unauth_rsvp_expires_at = models.DateTimeField(blank=True, null=True)
 
+    def send(self):
+        if self.phone:
+            for p in self.member.phone_set.filter(pagable='1'): # TODO bool
+                sms, created = OutboundSms.objects.get_or_create(distribution=self, phone=p)
+                if created:
+                    sms.send()
     class Meta:
         db_table = 'distributions'
 
 class OutboundSms(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
     phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
-    member_number = models.CharField(max_length=255, blank=False, null=False)
+    member_number = models.CharField(max_length=255, blank=True, null=True)
+    sid = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=255, blank=True, null=True)
+    error_code = models.IntegerField(blank=True, null=True)
+    error_message = models.CharField(max_length=255, blank=True, null=True)
 
     def send(self):
-        self.member_number = self.phone.number
-        twilio_client.messages.create(
+        logger.error(self.phone.number)
+        e164 = phonenumbers.format_number(phonenumbers.parse(self.phone.number, 'US'),
+                                          phonenumbers.PhoneNumberFormat.E164)
+        self.member_number = e164
+        logger.error(self.member_number)
+        logger.error(self.distribution.message.text)
+        message = twilio_client.messages.create(
             body=self.distribution.message.text,
-            to=self.member_number,
-            from_="415-599-2671",
+            to=e164,
+            from_=settings.TWILIO_SMS_FROM,
+            status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
             )
+        self.sid = message.sid
+        self.status = message.status
+        self.error_code = self.error_code
+        self.error_message = message.error_message
+        self.save()
 
 #####################################################################
 # Models below this line have not been looked at
@@ -250,9 +280,7 @@ class AvailDos(models.Model):
     comment = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'avail_dos'
 
 
@@ -264,9 +292,7 @@ class AvailOps(models.Model):
     comment = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'avail_ops'
 
 
@@ -289,9 +315,7 @@ class Certs(models.Model):
     ninety_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'certs'
 
 
@@ -310,9 +334,7 @@ class DataFiles(models.Model):
     killme2 = models.IntegerField(blank=True, null=True)
     caption = models.TextField(blank=True, null=True)  # This field type is a guess.
     published = models.NullBooleanField()
-
     class Meta:
-        managed = False
         db_table = 'data_files'
 
 
@@ -329,9 +351,7 @@ class DataLinks(models.Model):
     position = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'data_links'
 
 
@@ -347,9 +367,7 @@ class DataPhotos(models.Model):
     published = models.NullBooleanField()
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'data_photos'
 
 
@@ -368,9 +386,7 @@ class DoAssignments(models.Model):
     finish = models.DateTimeField(blank=True, null=True)
     reminder_notice_sent_at = models.DateTimeField(blank=True, null=True)
     alert_notice_sent_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'do_assignments'
 
 
@@ -381,9 +397,7 @@ class EventFiles(models.Model):
     keyval = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'event_files'
 
 
@@ -394,9 +408,7 @@ class EventLinks(models.Model):
     keyval = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'event_links'
 
 
@@ -407,9 +419,7 @@ class EventPhotos(models.Model):
     keyval = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'event_photos'
 
 
@@ -425,13 +435,8 @@ class EventReports(models.Model):
     published = models.NullBooleanField()
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'event_reports'
-
-
-
 
 class Photos(models.Model):
     id = models.IntegerField(primary_key=True)  # AutoField?
@@ -443,9 +448,7 @@ class Photos(models.Model):
     position = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'photos'
 
 
@@ -459,9 +462,7 @@ class RsvpTemplates(models.Model):
     no_prompt = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'rsvp_templates'
 
 
@@ -473,9 +474,7 @@ class Rsvps(models.Model):
     no_prompt = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'rsvps'
 
 
@@ -497,9 +496,7 @@ class InboundMails(models.Model):
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
     ignore_bounce = models.NullBooleanField()
-
     class Meta:
-        managed = False
         db_table = 'inbound_mails'
 
 
@@ -510,9 +507,7 @@ class Journals(models.Model):
     action = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'journals'
 
 class OutboundMails(models.Model):
@@ -529,9 +524,7 @@ class OutboundMails(models.Model):
     sent_at = models.DateTimeField(blank=True, null=True)
     sms_member_number = models.TextField(blank=True, null=True)  # This field type is a guess.
     sms_service_number = models.TextField(blank=True, null=True)  # This field type is a guess.
-
     class Meta:
-        managed = False
         db_table = 'outbound_mails'
 
 
@@ -543,9 +536,7 @@ class AlertSubscriptions(models.Model):
     role_typ = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'alert_subscriptions'
 
 
@@ -554,9 +545,7 @@ class ArInternalMetadata(models.Model):
     value = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'ar_internal_metadata'
 
 class BrowserProfiles(models.Model):
@@ -573,9 +562,7 @@ class BrowserProfiles(models.Model):
     screen_width = models.IntegerField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
     class Meta:
-        managed = False
         db_table = 'browser_profiles'
 
 class Chats(models.Model):
@@ -588,9 +575,7 @@ class Chats(models.Model):
     text = models.TextField(blank=True, null=True)  # This field type is a guess.
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-
     class Meta:
-        managed = False
         db_table = 'chats'
 
 
@@ -599,7 +584,6 @@ class Orgs(models.Model):
     id = models.IntegerField(primary_key=True)  # AutoField?
     name = models.TextField(blank=True, null=True)  # This field type is a guess.
     class Meta:
-        managed = False
         db_table = 'orgs'
 
 class QueueClassicJobs(models.Model):
@@ -609,11 +593,9 @@ class QueueClassicJobs(models.Model):
     args = models.TextField(blank=True, null=True)
     locked_at = models.DateTimeField(blank=True, null=True)
     class Meta:
-        managed = False
         db_table = 'queue_classic_jobs'
 
 class SchemaMigrations(models.Model):
     version = models.TextField(primary_key=True)  # This field type is a guess.
     class Meta:
-        managed = False
         db_table = 'schema_migrations'

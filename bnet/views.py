@@ -1,12 +1,17 @@
-from django.shortcuts import get_object_or_404, render
+from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views import generic
 from django_twilio.client import twilio_client
 from django_twilio.decorators import twilio_view
+from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
 
-from .models import Member
+import logging
+logger = logging.getLogger(__name__)
+
+from .models import Member, OutboundSms
 
 
 class MemberIndexView(generic.ListView):
@@ -23,16 +28,28 @@ class MemberDetailView(generic.DetailView):
     template_name = 'member/detail.html'
 
 @twilio_view
+def sms_callback(request):
+    logger.error(request.body)
+    twilio_request = decompose(request)
+    sms = OutboundSms.objects.get(sid=twilio_request.messagesid)
+    sms.status = twilio_request.messagestatus
+    if hasattr(twilio_request, 'errorcode'):
+        sms.error_code = twilio_request.errorcode
+    sms.save()
+    return HttpResponse('')
+
+@twilio_view
 def sms(request):
     r = Response()
     r.message('Hello from your Django app!')
     return r
 
 def test_send(request):
-    twilio_client.messages.create(
+    message = twilio_client.messages.create(
         body="test message",
         to="+18182747750",
-        from_="415-599-2671",
+        from_=settings.TWILIO_SMS_FROM,
+        status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
         )
-    return HttpResponse("Done")
+    return HttpResponse('done ' + message.sid)
     
