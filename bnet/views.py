@@ -50,8 +50,9 @@ def sms(request):
                                         body=twilio_request.body)
     except:
         logger.error("Unable to save message: " + request.body)
-        response.message('BAMRU.net Warning: not sure what to do with your message.')
+        response.message('BAMRU.net Error: unable to parse your message.')
         return response
+
     response.message('BAMRU.net Warning: not sure what to do with your message.')
     return response
 
