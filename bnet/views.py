@@ -11,7 +11,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 import logging
 logger = logging.getLogger(__name__)
 
-from .models import Member, OutboundSms
+from .models import InboundSms, Member, OutboundSms
 
 
 class MemberIndexView(generic.ListView):
@@ -29,7 +29,7 @@ class MemberDetailView(generic.DetailView):
 
 @twilio_view
 def sms_callback(request):
-    logger.error(request.body)
+    logger.info(request.body)
     twilio_request = decompose(request)
     sms = OutboundSms.objects.get(sid=twilio_request.messagesid)
     sms.status = twilio_request.messagestatus
@@ -40,9 +40,20 @@ def sms_callback(request):
 
 @twilio_view
 def sms(request):
-    r = Response()
-    r.message('Hello from your Django app!')
-    return r
+    logger.info(request.body)
+    response = MessagingResponse()
+    twilio_request = decompose(request)
+    try:
+        sms = InboundSms.objects.create(sid=twilio_request.messagesid,
+                                        from_number=twilio_request.from_,
+                                        to_number=twilio_request.to,
+                                        body=twilio_request.body)
+    except:
+        logger.error("Unable to save message: " + request.body)
+        response.message('BAMRU.net Warning: not sure what to do with your message.')
+        return response
+    response.message('BAMRU.net Warning: not sure what to do with your message.')
+    return response
 
 def test_send(request):
     message = twilio_client.messages.create(

@@ -247,12 +247,11 @@ class OutboundSms(BaseModel):
     error_message = models.CharField(max_length=255, blank=True, null=True)
 
     def send(self):
-        logger.error(self.phone.number)
         e164 = phonenumbers.format_number(phonenumbers.parse(self.phone.number, 'US'),
                                           phonenumbers.PhoneNumberFormat.E164)
         self.member_number = e164
-        logger.error(self.member_number)
-        logger.error(self.distribution.message.text)
+        logger.info('Sending text to {}: {}'.format(self.member_number,
+                                                    self.distribution.message.text))
         message = twilio_client.messages.create(
             body=self.distribution.message.text,
             to=e164,
@@ -264,6 +263,12 @@ class OutboundSms(BaseModel):
         self.error_code = self.error_code
         self.error_message = message.error_message
         self.save()
+
+class InboundSms(BaseModel):
+    sid = models.CharField(max_length=255, blank=True, null=True)
+    from_number = models.CharField(max_length=255, blank=True, null=True)
+    to_number = models.CharField(max_length=255, blank=True, null=True)
+    body = models.CharField(max_length=255, blank=True, null=True)
 
 #####################################################################
 # Models below this line have not been looked at
@@ -466,6 +471,8 @@ class RsvpTemplates(models.Model):
         db_table = 'rsvp_templates'
 
 
+################ Old messaging ###########################
+
 class Rsvps(models.Model):
     id = models.IntegerField(primary_key=True)  # AutoField?
     message_id = models.IntegerField(blank=True, null=True)
@@ -476,9 +483,6 @@ class Rsvps(models.Model):
     updated_at = models.DateTimeField(blank=True, null=True)
     class Meta:
         db_table = 'rsvps'
-
-
-################ Old messaging ###########################
 
 
 class InboundMails(models.Model):
