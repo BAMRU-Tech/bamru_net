@@ -40,6 +40,11 @@ class EventDetailView(generic.DetailView):
     model = Event
     template_name = 'event_detail.html'
 
+class EventUpdateView(generic.edit.UpdateView):
+    model = Event
+    fields = ['title', 'leaders', 'description', 'location', 'start', 'finish']
+    template_name = 'event_form.html'
+
 
 @twilio_view
 def sms_callback(request):

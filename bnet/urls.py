@@ -10,6 +10,7 @@ urlpatterns = [
 
     path('event/', views.EventIndexView.as_view(), name='event_index'),
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
+    path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),
 
     url(r'^anymail/', include('anymail.urls')),
     path('sms_callback/', views.sms_callback, name='sms_callback'),

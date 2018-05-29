@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_twilio',
     'anymail',
+    'bootstrap4',
     'bnet',
 ]
 

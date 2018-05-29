@@ -65,7 +65,7 @@ class Member(BaseModel):
 
     def __str__(self):
         return "{} {}".format(self.first_name, self.last_name)
-    
+
     class Meta:
         db_table = 'members'
 
@@ -171,6 +171,9 @@ class Event(BaseModel):
     published = models.NullBooleanField()
     def __str__(self):
         return self.title
+    @models.permalink
+    def get_absolute_url(self):
+        return ('bnet:event_detail', [str(self.id)])
     class Meta:
         db_table = 'events'
 
