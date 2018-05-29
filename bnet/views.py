@@ -15,7 +15,7 @@ from .models import Event, InboundSms, Member, OutboundSms
 
 
 class MemberIndexView(generic.ListView):
-    template_name = 'member/index.html'
+    template_name = 'member_list.html'
     context_object_name = 'member_list'
 
     def get_queryset(self):
@@ -25,11 +25,11 @@ class MemberIndexView(generic.ListView):
 
 class MemberDetailView(generic.DetailView):
     model = Member
-    template_name = 'member/detail.html'
+    template_name = 'member_detail.html'
 
 
 class EventIndexView(generic.ListView):
-    template_name = 'event/index.html'
+    template_name = 'event_list.html'
     context_object_name = 'event_list'
 
     def get_queryset(self):
@@ -38,7 +38,7 @@ class EventIndexView(generic.ListView):
 
 class EventDetailView(generic.DetailView):
     model = Event
-    template_name = 'event/detail.html'
+    template_name = 'event_detail.html'
 
 
 @twilio_view
@@ -78,4 +78,3 @@ def test_send(request):
         status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
         )
     return HttpResponse('done ' + message.sid)
-    
