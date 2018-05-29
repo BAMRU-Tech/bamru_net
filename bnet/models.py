@@ -7,9 +7,12 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.conf import settings
 from django.db import models
+from django.dispatch import receiver
 from django.urls import reverse
 from django_twilio.client import twilio_client
 
+from anymail.message import AnymailMessage
+from anymail.signals import tracking
 import phonenumbers
 import logging
 logger = logging.getLogger(__name__)
@@ -234,6 +237,11 @@ class Distribution(BaseModel):
                 sms, created = OutboundSms.objects.get_or_create(distribution=self, phone=p)
                 if created:
                     sms.send()
+        if self.email:
+            for e in self.member.email_set.filter(pagable='1'): # TODO bool
+                email, created = OutboundEmail.objects.get_or_create(distribution=self, email=e)
+                if created:
+                    email.send()
     class Meta:
         db_table = 'distributions'
 
@@ -269,6 +277,42 @@ class InboundSms(BaseModel):
     from_number = models.CharField(max_length=255, blank=True, null=True)
     to_number = models.CharField(max_length=255, blank=True, null=True)
     body = models.CharField(max_length=255, blank=True, null=True)
+
+class OutboundEmail(BaseModel):
+    distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
+    email = models.ForeignKey(Email, on_delete=models.CASCADE)
+    sid = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(max_length=255, blank=True, null=True)
+    error_message = models.CharField(max_length=255, blank=True, null=True)
+    delivered = models.BooleanField(default=False)
+    opened = models.BooleanField(default=False)
+
+    def send(self):
+        body = self.distribution.message.text
+        message = AnymailMessage(
+            subject="BAMRU.net page",
+            body=body,
+            to=[self.email.address],
+            from_email=settings.MAILGUN_EMAIL_FROM,
+            )
+        message.attach_alternative('<html>{}</html>'.format(body), 'text/html')
+        message.send()
+        self.sid = message.anymail_status.message_id
+        self.status = message.anymail_status.status
+        logger.info(dir(message.anymail_status))
+        self.save()
+
+@receiver(tracking)
+def handle_outbound_email_tracking(sender, event, esp_name, **kwargs):
+    logger.info('{}: {} ({})'.format(event.message_id, event.event_type, event.description))
+    email = OutboundEmail.objects.get(sid=event.message_id)
+    email.status = event.event_type
+    email.error_message = event.description
+    if event.event_type == 'delivered':
+        email.delivered = True
+    if event.event_type == 'opened':
+        email.opened = True
+    email.save()
 
 #####################################################################
 # Models below this line have not been looked at

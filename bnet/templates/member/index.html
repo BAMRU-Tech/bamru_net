@@ -1,9 +1,13 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
 {% if member_list %}
     <ul>
     {% for member in member_list %}
-        <li><a href="/bnet/member/{{ member.id }}/">{{ member }}</a> {{ member.typ }}</li>
+        <li><a href="{% url 'bnet:member_detail' member.id %}">{{ member }}</a> {{ member.typ }}</li>
     {% endfor %}
     </ul>
 {% else %}
     <p>No members are available.</p>
 {% endif %}
+{% endblock %}

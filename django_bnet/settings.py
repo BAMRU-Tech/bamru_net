@@ -16,7 +16,9 @@ load_dotenv(find_dotenv())
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'static'),
+)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
@@ -40,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_twilio',
+    'anymail',
     'bnet',
 ]
 
@@ -127,3 +130,32 @@ STATIC_URL = '/static/'
 
 TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
+
+EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+ANYMAIL = {
+    'WEBHOOK_SECRET': os.environ['MAILGUN_WEBHOOK_SECRET'],
+    'MAILGUN_API_KEY': os.environ['MAILGUN_API_KEY'],
+}
+MAILGUN_EMAIL_FROM = os.environ['MAILGUN_EMAIL_FROM']
+DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
+
+# TODO: add file logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+        },
+        'bnet': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+        },
+    },
+}

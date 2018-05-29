@@ -11,7 +11,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 import logging
 logger = logging.getLogger(__name__)
 
-from .models import InboundSms, Member, OutboundSms
+from .models import Event, InboundSms, Member, OutboundSms
 
 
 class MemberIndexView(generic.ListView):
@@ -26,6 +26,20 @@ class MemberIndexView(generic.ListView):
 class MemberDetailView(generic.DetailView):
     model = Member
     template_name = 'member/detail.html'
+
+
+class EventIndexView(generic.ListView):
+    template_name = 'event/index.html'
+    context_object_name = 'event_list'
+
+    def get_queryset(self):
+        """Return the member list."""
+        return Event.objects.order_by('id')
+
+class EventDetailView(generic.DetailView):
+    model = Event
+    template_name = 'event/detail.html'
+
 
 @twilio_view
 def sms_callback(request):
