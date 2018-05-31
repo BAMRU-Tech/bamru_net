@@ -198,6 +198,8 @@ class Participant(BaseModel):
     return_home_at = models.DateTimeField(blank=True, null=True)
     signed_in_at = models.DateTimeField(blank=True, null=True)
     signed_out_at = models.DateTimeField(blank=True, null=True)
+    def __str__(self):
+        return "{} ({})".format(self.member, self.period)
     class Meta:
         db_table = 'participants'
 

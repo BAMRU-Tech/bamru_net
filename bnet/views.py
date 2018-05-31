@@ -11,7 +11,8 @@ from twilio.twiml.messaging_response import MessagingResponse
 import logging
 logger = logging.getLogger(__name__)
 
-from .models import Event, InboundSms, Member, OutboundSms
+from .models import Event, InboundSms, Member, OutboundSms, Participant, Period
+
 
 
 class MemberIndexView(generic.ListView):
@@ -43,7 +44,29 @@ class EventDetailView(generic.DetailView):
 class EventUpdateView(generic.edit.UpdateView):
     model = Event
     fields = ['title', 'leaders', 'description', 'location', 'start', 'finish']
-    template_name = 'event_form.html'
+    template_name = 'base_form.html'
+
+class ParticipantCreateView(generic.edit.CreateView):
+    model = Participant
+    fields = ['member', 'ahc', 'ol', 'period']
+    template_name = 'base_form.html'
+
+    def get_success_url(self):
+        return self.object.period.event.get_absolute_url()
+
+    def get_initial(self):
+        period = get_object_or_404(Period, pk=self.kwargs.get('period'))
+        return {
+            'period':period,
+        }
+
+class ParticipantDeleteView(generic.edit.DeleteView):
+    model = Participant
+    template_name = 'base_delete.html'
+
+    def get_success_url(self):
+        event = get_object_or_404(Event, pk=self.kwargs.get('event'))
+        return event.get_absolute_url()
 
 
 @twilio_view
