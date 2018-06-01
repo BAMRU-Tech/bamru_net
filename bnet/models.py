@@ -6,6 +6,7 @@
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.conf import settings
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.dispatch import receiver
 from django.urls import reverse
@@ -23,7 +24,11 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-class Member(BaseModel):
+class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
+    USERNAME_FIELD = 'username'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
+    objects = BaseUserManager()
+    
     TYPES = (
         ('TM', 'Technical Member'),
         ('FM', 'Field Member'),
@@ -40,19 +45,30 @@ class Member(BaseModel):
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    user_name = models.CharField(max_length=255)
+    username = models.CharField(max_length=255, unique=True)
     typ = models.CharField(choices=TYPES, max_length=255)
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
     v9 = models.CharField(max_length=255, blank=True, null=True)
-    admin = models.BooleanField(default=False)
-    developer = models.BooleanField(default=False)
-    current_do = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_current_do = models.BooleanField(default=False)
     sign_in_count = models.IntegerField(default=0)
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return "{} {}".format(self.first_name, self.last_name)
+        return self.get_full_name()
+
+    def get_full_name(self):
+        """
+        Returns the first_name plus the last_name, with a space in between.
+        """
+        full_name = '%s %s' % (self.first_name, self.last_name)
+        return full_name.strip()
+
+    def get_short_name(self):
+        "Returns the short name for the user."
+        return self.first_name
 
 
 class Address(BaseModel):
