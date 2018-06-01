@@ -1,4 +1,6 @@
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -14,8 +16,7 @@ logger = logging.getLogger(__name__)
 from .models import Event, InboundSms, Member, OutboundSms, Participant, Period
 
 
-
-class MemberIndexView(generic.ListView):
+class MemberIndexView(LoginRequiredMixin, generic.ListView):
     template_name = 'member_list.html'
     context_object_name = 'member_list'
 
@@ -24,12 +25,12 @@ class MemberIndexView(generic.ListView):
         return Member.objects.order_by('id')
 
 
-class MemberDetailView(generic.DetailView):
+class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_detail.html'
 
 
-class EventIndexView(generic.ListView):
+class EventIndexView(LoginRequiredMixin, generic.ListView):
     template_name = 'event_list.html'
     context_object_name = 'event_list'
 
@@ -37,16 +38,16 @@ class EventIndexView(generic.ListView):
         """Return the member list."""
         return Event.objects.order_by('id')
 
-class EventDetailView(generic.DetailView):
+class EventDetailView(LoginRequiredMixin, generic.DetailView):
     model = Event
     template_name = 'event_detail.html'
 
-class EventUpdateView(generic.edit.UpdateView):
+class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
     fields = ['title', 'leaders', 'description', 'location', 'start', 'finish']
     template_name = 'base_form.html'
 
-class ParticipantCreateView(generic.edit.CreateView):
+class ParticipantCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Participant
     fields = ['member', 'ahc', 'ol', 'period']
     template_name = 'base_form.html'
@@ -60,7 +61,8 @@ class ParticipantCreateView(generic.edit.CreateView):
             'period':period,
         }
 
-class ParticipantDeleteView(generic.edit.DeleteView):
+
+class ParticipantDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
     model = Participant
     template_name = 'base_delete.html'
 
@@ -98,6 +100,7 @@ def sms(request):
     response.message('BAMRU.net Warning: not sure what to do with your message.')
     return response
 
+@login_required
 def test_send(request):
     message = twilio_client.messages.create(
         body="test message",
