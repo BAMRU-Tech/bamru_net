@@ -2,13 +2,13 @@
 
 {% block content %}
 <h2>Event: {{ event.title}}</h2>
-<p><a href="{% url 'bnet:event_update' event.id %}">Edit</a></p>
+<p><a href="{% url 'event_update' event.id %}">Edit</a></p>
 <p>{{ event.typ }}</p>
 <p>{{ event.description }}</p>
 
 {% for period in event.period_set.all %}
 <h3>OP {{period.position}}</h3>
-<a href="{% url 'bnet:event_participant_add' period.id %}">Add participant</a>
+<a href="{% url 'event_participant_add' period.id %}">Add participant</a>
 <table class="table">
 <tr>
   <th>Name</th>
@@ -21,7 +21,7 @@
   <td>{{ participant.member }}</td>
   <td>{{ participant.en_route_at }}</td>
   <td>{{ participant.signed_out_at }}</td>
-  <td><a href="{% url 'bnet:event_participant_delete' event=event.id pk=participant.id %}">delete</a></td>
+  <td><a href="{% url 'event_participant_delete' event=event.id pk=participant.id %}">delete</a></td>
 </tr>
 {% endfor %}
 </table>

@@ -17,9 +17,23 @@ from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
+from bnet import views
 
 urlpatterns = [
-    path('bnet/', include('bnet.urls')),
+    path('member/', views.MemberIndexView.as_view(), name='member_index'),
+    path('member/<int:pk>/', views.MemberDetailView.as_view(),
+         name='member_detail'),
+    path('event/', views.EventIndexView.as_view(), name='event_index'),
+    path('event/<int:pk>/', views.EventDetailView.as_view(),
+         name='event_detail'),
+    path('event/<int:pk>/edit/', views.EventUpdateView.as_view(),
+         name='event_update'),
+    path('event/participant/add/<int:period>/',
+         views.ParticipantCreateView.as_view(),
+         name='event_participant_add'),
+    path('event/<int:event>/participant/delete/<int:pk>/',
+         views.ParticipantDeleteView.as_view(),
+         name='event_participant_delete'),
     path('admin/', admin.site.urls),
 
     url(r'^accounts/login/$', auth_views.login, name='login'),

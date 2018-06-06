@@ -163,7 +163,7 @@ class Event(BaseModel):
         return self.title
     @models.permalink
     def get_absolute_url(self):
-        return ('bnet:event_detail', [str(self.id)])
+        return ('event_detail', [str(self.id)])
 
 class Period(BaseModel):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
