@@ -1,5 +1,5 @@
 """
-WSGI config for django_bnet project.
+WSGI config for bamru_net project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_bnet.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bamru_net.settings")
 
 application = get_wsgi_application()
