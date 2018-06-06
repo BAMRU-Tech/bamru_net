@@ -2,6 +2,8 @@
 
 {% block content %}
 Member:
-<p>{{ member.first_name}} {{member.last_name}}</p>
-<p>{{ member.typ }}</p>
+<p>{{ member.get_full_name }}</p>
+<p>{{ member.typ }} {{ member.ham }} </p>
+<p>{{ member.sign_in_count }}</p>
+<p>{{ member.is_superuser }}</p>
 {% endblock %}

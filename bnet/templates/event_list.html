@@ -2,12 +2,58 @@
 
 {% block content %}
 {% if event_list %}
-    <ul>
+<script src="https://code.jquery.com/jquery-3.3.1.js"></script> 
+<script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        $('#eventTbl').DataTable( {
+            "responsive": true,
+            "paging":   false,
+            "info":     false,
+            "order": [[ {{ sortOrder|safe }} ]],
+            columnDefs: [
+                { width: "35%", targets: 0 },
+                { width: "30%", targets: 1 },
+                { width: "5%", targets: 2 },
+                { width: "15%", targets: 3 },
+                { width: "15%", targets: 3 },
+                { type: "string", targets: 3 },
+                { responsivePriority: 0, targets: 0 },
+                { responsivePriority: 1, targets: 4 },
+                { responsivePriority: 2, targets: 1 },
+                { responsivePriority: 3, targets: 3 }
+            ]
+        });
+    });
+</script>
+
+{# - title ||= "Title" #}
+{# <table id="eventTbl" class="display table-bordered dt-responsive nowrap" style="width:100%"> #}
+
+<table id="eventTbl" class="display table-bordered" nowrap style="width:100%">
+  <thead>
+    <tr>
+      <th>Title</th><th>Location</th><th>Type</th><th>Leaders</th><th>Start</th>
+    </tr>
+  </thead>
+
+  <tbody>
     {% for event in event_list %}
-        <li><a href="{% url 'event_detail' event.id %}">{{ event }}</a> {{ event.typ }}</li>
+    <tr>
+      <td><a href="{% url 'event_detail' event.id %}">{{ event.displayTitle }}</a></td>
+      <td>{{ event.displayLocation }}</td>
+      <td>{{ event.typ }}</td>
+      <td>{{ event.leaders }}</td>
+      <td data-sort="{{ event.startOrder }}">{{ event.start }}</td>
+    </tr>
     {% endfor %}
-    </ul>
+  </tbody>
+</table>
 {% else %}
     <p>No events are available.</p>
 {% endif %}
 {% endblock %}
+
+{#    - if "all" == "#{@view}" #}
+{#      = event_summary_stats #}

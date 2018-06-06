@@ -12,6 +12,8 @@ from django.dispatch import receiver
 from django.urls import reverse
 from django_twilio.client import twilio_client
 
+#from datetime import datetime
+
 from anymail.message import AnymailMessage
 from anymail.signals import tracking
 import phonenumbers
@@ -60,15 +62,63 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return self.get_full_name()
 
     def get_full_name(self):
-        """
-        Returns the first_name plus the last_name, with a space in between.
-        """
+        """ Returns the first_name plus the last_name, with a space in between."""
         full_name = '%s %s' % (self.first_name, self.last_name)
         return full_name.strip()
 
+    def get_rank(self):
+        """ Return member rank."""
+        return self.typ
+    rank = property(get_rank)
+    
+    def rank_order(self):
+        """ Return int, lowest value is TM, follows order in Member.TYPES """
+        for rankTuple in Member.TYPES:
+            if rankTuple[0] == self.typ:
+                return Member.TYPES.index(rankTuple)
+        return len(Member.TYPES)
+    rankOrder = property(rank_order)
+
+    def get_roles(self):
+        """ Return string, list of ordered roles """
+        roles = self.role_set.all()
+        result = [ [ r.get_role_ordinal(), r.typ ] for r in roles ]
+        return ', '.join([ r[1] for r in sorted(result) ])
+    roles = property(get_roles)
+
+    def role_order(self):
+        """ Return int for the highest priority role """
+        roles = self.role_set.all()
+        result = [ [ r.get_role_ordinal(), r.typ ] for r in roles ]
+        try:
+            return [ r[0] for r in sorted(result) ][0]
+        except:
+            return len(Role.TYPES)
+    roleOrder = property(role_order)
+
+    def get_default_email(self):
+        """ Return first email XXX."""
+        try:
+            return self.email_set.first().address
+        except:
+            return ''
+    email = property(get_default_email)
+            
+    def get_default_phone(self):
+        """ Return first phone XXX."""
+        try:
+            return self.phone_set.first().number
+        except:
+            return ''
+    phone = property(get_default_phone)
+        
     def get_short_name(self):
         "Returns the short name for the user."
         return self.first_name
+
+    def isActive(self):
+        """ Return member status, True is active member XXX"""
+        return self.typ in ['TM', 'FM', 'T']
 
 
 class Address(BaseModel):
@@ -133,10 +183,40 @@ class EmergencyContact(BaseModel):
     position = models.IntegerField(default=1)
     
 
-# UL, XO, OO, SEC, TO, TRS, REG, WEB, Bd, OL,
+"""
+from bnet.models import Member, Role
+m=Member.objects.get(last_name="Chang")
+r=m.get_roles()
+"""
+
+# UL, Bd, XO, OO, SEC, TO, TRS, REG, WEB, Bd, OL,
 class Role(BaseModel):
+    TYPES = (
+        ('UL', 'Unit Leader'),
+        ('Bd', 'Board Member'),
+        ('XO', 'Executive Officer'),
+        ('OO', 'Operations Officer'),
+        ('SEC', 'Secretary'),
+        ('TO', 'Training Officer'),
+        ('RO', 'Recruiting Officer'),
+        ('TRS', 'Treasurer'),
+        ('OL', 'Operators Leader'),
+        ('WEB', 'Web Master'),
+        ('REG', 'Registar'),
+        ('TM', 'Active Technical Member'),
+        ('FM', 'Active Field Member'),
+        ('T', 'Active Trainee'),
+    )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     typ = models.CharField(max_length=255)  # TODO choices
+
+    def get_role_ordinal(self):
+        """ Return int, lowest value is UL, follows order in TYPES """
+        for roleTuple in Role.TYPES:
+            if roleTuple[0] == self.typ:
+                return Role.TYPES.index(roleTuple)
+        return len(Role.TYPES)
+
 
 class OtherInfo(BaseModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
@@ -148,7 +228,7 @@ class OtherInfo(BaseModel):
 ################## Events ###########################################
 
 class Event(BaseModel):
-    typ = models.CharField(max_length=255)  # TODO choice
+    typ = models.CharField(max_length=255)  # TODO choice XXX short version M,T,C,O
     title = models.CharField(max_length=255)
     leaders = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -159,8 +239,32 @@ class Event(BaseModel):
     finish = models.DateTimeField(blank=True, null=True)
     all_day = models.BooleanField(default=False)
     published = models.BooleanField(default=False)
+
     def __str__(self):
         return self.title
+
+    def display_title(self):
+        """ Return event title, properly sized for table display """
+        """ XXX database has titles with leading spaces, seems wrong """
+        title = self.title
+        title = (title[:50] + '..') if len(title) > 50 else title
+        return title.strip()
+    
+    displayTitle = property(display_title);
+
+    def display_location(self):
+        """ Return event location, properly sized for table display """
+        location = self.location
+        location = (location[:50] + '..') if len(location) > 50 else location
+        return location.strip()
+    
+    displayLocation = property(display_location);
+
+    def start_order(self):
+        return self.start.timestamp()
+
+    startOrder = property(start_order)
+
     @models.permalink
     def get_absolute_url(self):
         return ('event_detail', [str(self.id)])
