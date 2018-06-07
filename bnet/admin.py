@@ -26,8 +26,11 @@ class RoleInline(InlineDefaults):
 class OtherInfoInline(InlineDefaults):
     model = OtherInfo
 
+class MemberUserAdmin(UserAdmin):
+    fieldsets = None
+
 @admin.register(Member)
-class MemberAdmin(admin.ModelAdmin):
+class MemberAdmin(MemberUserAdmin):
     list_display = ('last_name', 'first_name', 'typ')
     list_filter = ('typ', )
     inlines = [

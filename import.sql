@@ -1,7 +1,7 @@
 TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution CASCADE;
 
 insert into bnet_member (id, first_name, last_name, username, typ, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
-select id, first_name, last_name, user_name, typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
+select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
 
 insert into bnet_address (id, member_id, typ, address1, address2, city, state, zip, position, created_at, updated_at)
 select id, member_id, typ, address1, address2, city, state, zip, COALESCE(position, 1), created_at, updated_at from addresses;
