@@ -6,7 +6,7 @@ from .models import *
 
 class InlineDefaults(admin.TabularInline):
     extra = 0
-    min_num = 1
+    min_num = 0
 
 class AddressInline(InlineDefaults):
     model = Address
@@ -25,7 +25,6 @@ class RoleInline(InlineDefaults):
 
 class OtherInfoInline(InlineDefaults):
     model = OtherInfo
-
 
 @admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
