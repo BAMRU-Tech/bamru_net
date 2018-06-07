@@ -1,6 +1,6 @@
-"""
-           Member Model
-"""
+#
+#           Member Model
+#
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
@@ -47,60 +47,63 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return self.get_full_name()
+        return self.full_name()
 
-    def get_full_name(self):
+    @property
+    def full_name(self):
         """ Returns the first_name plus the last_name, with a space in between."""
         full_name = '%s %s' % (self.first_name, self.last_name)
         return full_name.strip()
 
-    def get_rank(self):
+    @property
+    def rank(self):
         """ Return member rank."""
         return self.typ
-    rank = property(get_rank)
     
+    @property
     def rank_order(self):
         """ Return int, lowest value is TM, follows order in Member.TYPES """
         for rankTuple in Member.TYPES:
             if rankTuple[0] == self.typ:
                 return Member.TYPES.index(rankTuple)
         return len(Member.TYPES)
-    rankOrder = property(rank_order)
 
-    def get_roles(self):
+    @property
+    def roles(self):
         """ Return string, list of ordered roles """
         roles = self.role_set.all()
-        result = [ [ r.get_role_ordinal(), r.typ ] for r in roles ]
+        result = [ [ r.role_ordinal, r.typ ] for r in roles ]
         return ', '.join([ r[1] for r in sorted(result) ])
-    roles = property(get_roles)
 
+    @property
     def role_order(self):
         """ Return int for the highest priority role """
         roles = self.role_set.all()
-        result = [ [ r.get_role_ordinal(), r.typ ] for r in roles ]
+        result = [ [ r.role_ordinal, r.typ ] for r in roles ]
         try:
             return [ r[0] for r in sorted(result) ][0]
         except:
             return len(Role.TYPES)
-    roleOrder = property(role_order)
 
-    def get_default_email(self):
+
+    @property
+    def default_email(self):
         """ Return first email XXX."""
         try:
             return self.email_set.first().address
         except:
             return ''
-    email = property(get_default_email)
             
-    def get_default_phone(self):
+    @property
+    def default_phone(self):
         """ Return first phone XXX."""
         try:
             return self.phone_set.first().number
         except:
             return ''
-    phone = property(get_default_phone)
         
-    def get_short_name(self):
+    @property
+    def short_name(self):
         "Returns the short name for the user."
         return self.first_name
 
@@ -130,7 +133,8 @@ class Role(BaseModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     typ = models.CharField(max_length=255)  # TODO choices
 
-    def get_role_ordinal(self):
+    @property
+    def role_ordinal(self):
         """ Return int, lowest value is UL, follows order in TYPES """
         for roleTuple in Role.TYPES:
             if roleTuple[0] == self.typ:

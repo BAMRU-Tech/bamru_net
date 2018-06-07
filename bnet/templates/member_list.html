@@ -70,9 +70,9 @@ $(document).ready( function() {
     {% for member in member_list %}
     {% if member.isActive %} {# XXX #}
     <tr>
-      <td><a href="{% url 'member_detail' member.id %}">{{ member.get_full_name }}</a></td>
-      <td data-sort="{{ member.rankOrder }}"> {{ member.rank }}</td>
-      <td data-sort="{{ member.roleOrder }}"> {{ member.roles }}</td>
+      <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
+      <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
+      <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td> <!--  -->
       <td> {{ member.phone }}</td>
       <td> {{ member.email }}</td>
     </tr>

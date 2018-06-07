@@ -1,6 +1,6 @@
-"""
-           Base Model
-"""
+#
+#           Base Model
+#
 from django.db import models
 
 class BaseModel(models.Model):

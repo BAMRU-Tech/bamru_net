@@ -1,6 +1,6 @@
-"""
-           Event Model
-"""
+#
+#           Event Model
+#
 from django.db import models
 
 from .base import BaseModel
@@ -22,31 +22,29 @@ class Event(BaseModel):
     def __str__(self):
         return self.title
 
+    @property
     def display_title(self):
         """ Return event title, properly sized for table display """
         """ XXX database has titles with leading spaces, seems wrong """
         title = self.title
         title = (title[:50] + '..') if len(title) > 50 else title
         return title.strip()
-    
-    displayTitle = property(display_title);
 
+    @property
     def display_location(self):
         """ Return event location, properly sized for table display """
         location = self.location
         location = (location[:50] + '..') if len(location) > 50 else location
         return location.strip()
     
-    displayLocation = property(display_location);
-
+    @property
     def start_order(self):
         return self.start.timestamp()
-
-    startOrder = property(start_order)
 
     @models.permalink
     def get_absolute_url(self):
         return ('event_detail', [str(self.id)])
+
 
 class Period(BaseModel):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)

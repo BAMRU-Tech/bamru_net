@@ -41,11 +41,11 @@
   <tbody>
     {% for event in event_list %}
     <tr>
-      <td><a href="{% url 'event_detail' event.id %}">{{ event.displayTitle }}</a></td>
-      <td>{{ event.displayLocation }}</td>
+      <td><a href="{% url 'event_detail' event.id %}">{{ event.display_title }}</a></td>
+      <td>{{ event.display_location }}</td>
       <td>{{ event.typ }}</td>
       <td>{{ event.leaders }}</td>
-      <td data-sort="{{ event.startOrder }}">{{ event.start }}</td>
+      <td data-sort="{{ event.start_order }}">{{ event.start }}</td>
     </tr>
     {% endfor %}
   </tbody>
