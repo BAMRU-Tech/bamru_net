@@ -5,8 +5,8 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
-from .model_base import BaseModel
-from .model_member import Member, Role
+from .base import BaseModel
+from .member import Member, Role
 
 class Event(BaseModel):
     typ = models.CharField(max_length=255)  # TODO choice XXX short version M,T,C,O

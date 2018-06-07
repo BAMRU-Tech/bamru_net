@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
-from .model_base import BaseModel
+from .base import BaseModel
 
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
