@@ -1,7 +1,6 @@
 """
            Base Model
 """
-from django.conf import settings
 from django.db import models
 
 class BaseModel(models.Model):
