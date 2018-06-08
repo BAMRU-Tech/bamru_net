@@ -12,18 +12,39 @@ import phonenumbers
 import logging
 logger = logging.getLogger(__name__)
 
-from .base import BaseModel
+from .base import BaseModel, BasePositionModel
 from .member import Member, Phone, Email
 from .event import Period
 
+class RsvpTemplates(BasePositionModel):
+    name = models.CharField(max_length=255, blank=True, null=True)
+    prompt = models.CharField(max_length=255, blank=True, null=True)
+    yes_prompt = models.CharField(max_length=255, blank=True, null=True)
+    no_prompt = models.CharField(max_length=255, blank=True, null=True)
+
+
 class Message(BaseModel):
+    FORMATS = (
+        ('page', 'Page'),
+        ('password_reset', 'Password reset'),
+        ('cert_notice', 'Cert notice'),
+        ('do_shift_starting', 'DO Shift Starting'),
+        ('do_shift_pending', 'DO Shift Pending'),
+        )
+    PERIOD_FORMATS = (
+        ('invite', 'invite'),
+        ('info', 'info'),
+        ('broadcast', 'broadcast'),
+        ('leave', 'leave'),
+        ('return', 'return'),
+        )
     author = models.ForeignKey(Member, on_delete=models.CASCADE)
     text = models.TextField()
-    format = models.CharField(max_length=255)  #TODO choices
-    linked_rsvp_id = models.IntegerField(blank=True, null=True)  # TODO: foreign key
+    format = models.CharField(choices=FORMATS, max_length=255)
+    linked_rsvp = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
     ancestry = models.CharField(max_length=255, blank=True, null=True)
     period = models.ForeignKey(Period, on_delete=models.CASCADE, blank = True, null=True)
-    period_format = models.CharField(max_length=255, blank=True, null=True)
+    period_format = models.CharField(choices=PERIOD_FORMATS, max_length=255, blank=True, null=True)
 
     def send(self):
         for d in self.distribution_set.all():

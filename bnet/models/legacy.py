@@ -163,16 +163,6 @@ class Photos(models.Model):
 
 
 
-class RsvpTemplates(models.Model):
-    id = models.IntegerField(primary_key=True)  # AutoField?
-    position = models.IntegerField(blank=True, null=True)
-    name = models.TextField(blank=True, null=True)  # This field type is a guess.
-    prompt = models.TextField(blank=True, null=True)  # This field type is a guess.
-    yes_prompt = models.TextField(blank=True, null=True)  # This field type is a guess.
-    no_prompt = models.TextField(blank=True, null=True)  # This field type is a guess.
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
 
 ################ Old messaging ###########################
 

@@ -1,4 +1,4 @@
-TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution CASCADE;
+TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution, bnet_rsvptemplates CASCADE;
 
 insert into bnet_member (id, first_name, last_name, username, typ, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
 select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
@@ -35,3 +35,6 @@ select id, author_id, text, format, linked_rsvp_id, ancestry, period_id, period_
 
 insert into bnet_distribution (id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, rsvp_answer, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at)
 select id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, case rsvp_answer when 'Yes' then true when 'No' then false else null end, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at from distributions where message_id in (select distinct id from bnet_message);
+
+insert into bnet_rsvptemplates (id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at)
+select id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at from rsvp_templates;
