@@ -1,4 +1,4 @@
-{% extends 'base_generic.html' %}
+{% extends 'base_table.html' %}
 
 {% block content %}
 {% if event_list %}
@@ -45,7 +45,7 @@
       <td>{{ event.display_location }}</td>
       <td>{{ event.typ }}</td>
       <td>{{ event.leaders }}</td>
-      <td data-sort="{{ event.start_order }}">{{ event.start }}</td>
+      <td data-sort="{{ event.start_order }}">{{ event.display_start }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -57,3 +57,23 @@
 
 {#    - if "all" == "#{@view}" #}
 {#      = event_summary_stats #}
+
+{% block subheader %}
+<nav class="navbar  navbar-expand-sm text-primary subhead">
+  <a class="navbar-brand" href="#">
+    <i class="fa fa-chevron-right"></i>Events
+  </a>
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item dropdown">
+        <a class="nav-link">
+          "[sub action 1]"
+        </a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link">
+          "[sub action 2]"
+        </a>
+      </li>
+    </ul>
+</nav>
+{% endblock %}

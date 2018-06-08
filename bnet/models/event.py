@@ -3,8 +3,13 @@
 #
 from django.db import models
 
+from datetime import datetime, timezone
+
 from .base import BaseModel
 from .member import Member, Role
+
+def utc_to_local(utc_dt):
+    return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
 class Event(BaseModel):
     typ = models.CharField(max_length=255)  # TODO choice XXX short version M,T,C,O
@@ -37,6 +42,13 @@ class Event(BaseModel):
         location = (location[:50] + '..') if len(location) > 50 else location
         return location.strip()
     
+    @property
+    def display_start(self):
+        if self.all_day:
+            return self.start.strftime('%x')
+        else:
+            return utc_to_local(self.start).strftime('%x %R')
+
     @property
     def start_order(self):
         return self.start.timestamp()

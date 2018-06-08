@@ -1,4 +1,4 @@
-{% extends 'base_generic.html' %}
+{% extends 'base_table.html' %}
 
 {% block content %}
 {% if member_list %}
@@ -59,7 +59,8 @@ $(document).ready( function() {
 
 </script>
 
-<table id="memberTbl" class="display table-bordered dt-responsive nowrap" style="width:100%">
+<table id="memberTbl" class="display table-bordered dt-responsive nowrap"
+       style="width:100%">
   <thead>
     <tr>
       <th>Name</th><th>Rank</th><th>Role</th><th>Phone</th><th>eMail</th>
@@ -83,4 +84,24 @@ $(document).ready( function() {
 {% else %}
     <p>No members are available.</p>
 {% endif %}
+{% endblock %}
+
+{% block subheader %}
+<nav class="navbar  navbar-expand-sm text-primary subhead">
+  <a class="navbar-brand" href="#">
+    <i class="fa fa-chevron-right"></i>Members
+  </a>
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item dropdown">
+        <a class="nav-link">
+          "[sub action 1]"
+        </a>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link">
+          "[sub action 2]"
+        </a>
+      </li>
+    </ul>
+</nav>
 {% endblock %}

@@ -1,142 +1,140 @@
-<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-  <i class="fas fa-camera-retro"></i>
-  <a class="navbar-brand" href="#">BAMRU.net</a>
+<nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+  <a class="navbar-brand" href="#">
+    <i class="fa fa-area-chart"></i>BAMRU.net
+  </a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
     <span class="navbar-toggler-icon"></span>
   </button>
 
   <div class="collapse navbar-collapse" id="navbarSupportedContent">
-    <ul class="navbar-nav mr-auto">
+    <ul class="navbar-nav ml-auto">
       <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
-          Event
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-calendar-check-o"></i>Event
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="/events/new"> 
-            <i class="fas fa-pencil-alt"></i>
+            <i class="fa fa-calendar-plus-o"></i>
             Create new event
           </a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="{% url 'event_index' %}">
-            <i class="fas fa-calendar"></i>
+            <i class="fa fa-calendar"></i>
             Current events
           </a>
           <a class="dropdown-item" href="{% url 'event_all' %}">
-            <i class="fas fa-calendar"></i>
+            <i class="fa fa-calendar"></i>
             All events
           </a>
         </div>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
-          Team
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-user"></i>Team
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="{% url 'member_index' %}">
-            <i class="fas fa-address-book"></i>
+            <i class="fa fa-address-book"></i>
             Members
           </a>
           <a class="dropdown-item" href="/avail/days">
-            <i class="fas fa-calendar"></i>
+            <i class="fa fa-calendar"></i>
             Availability
           </a>
           <a class="dropdown-item" href="/quals">
-            <i class="fas fa-certificate"></i>
+            <i class="fa fa-certificate"></i>
             Certifications
           </a>
           <a class="dropdown-item" href="/wip">
-            <i class="fas fa-camera-retro"></i>
+            <i class="fa fa-camera-retro"></i>
             Member photos
           </a>
           <a class="dropdown-item" href="/paging/new">
-            <i class="fas fa-bullhorn"></i>
+            <i class="fa fa-bullhorn"></i>
             Page team
           </a>
         </div>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
-          Library
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-book"></i>Library
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="/reports">
-            <i class="fas fa-file-alt"></i>
+            <i class="fa fa-file"></i>
             Reports
           </a>
           <a class="dropdown-item" href="http://wiki.bamru.net/?username=Craig.Taylor" target="_blank">
-            <i class="fab fa-wikipedia-w"></i>
+            <i class="fa fa-university"></i>
             Wiki
           </a>
           <a class="dropdown-item" href="https://groups.yahoo.com/neo/groups/BAMRU/info" target="_blank">
-            <i class="far fa-comments"></i>
+            <i class="fa fa-google"></i>
             Forum posts
           </a>
           <a class="dropdown-item" href="/wip">
-            <i class="fas fa-upload"></i>
+            <i class="fa fa-upload"></i>
             Files
           </a>
           <a class="dropdown-item" href="/wip">
-            <i class="fas fa-calendar"></i>
+            <i class="fa fa-calendar"></i>
             Quarterly DO schedule
           </a>
           <a class="dropdown-item" href="/paging">
-            <i class="fas fa-list"></i>
+            <i class="fa fa-list"></i>
             Paging log
           </a>
         </div>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
-          Action
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-bolt"></i>Action
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="/zcst/initiate_callout">
-            <i class="fas fa-bolt"></i>
+            <i class="fa fa-bolt"></i>
             Initiate a callout
           </a>
           <a class="dropdown-item" href="/zcst/become_do">
-            <i class="fas fa-bolt"></i>
+            <i class="fa fa-bolt"></i>
             Becoming DO
           </a>
           <a class="dropdown-item" href="/wip">
-            <i class="fas fa-bolt"></i>
+            <i class="fa fa-bolt"></i>
             Temporary DO change
           </a>
           <a class="dropdown-item" href="/admin">
-            <i class="fas fa-edit"></i>
+            <i class="fa fa-edit"></i>
             Perform admin tasks
           </a>
         </div>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
-          LOGGED USER
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+            <i class="fa fa-user-circle"></i>LOGGED USER
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="/wip">
-            <i class="fas fa-inbox"></i>
+            <i class="fa fa-inbox"></i>
             Inbox (n)
           </a>
           <a class="dropdown-item" href="/avail/days/#{current_user.user_name}">
-            <i class="far fa-calendar-alt"></i>
+            <i class="fa fa-calendar"></i>
             Busy periods
           </a>
           <a class="dropdown-item" href="/members/#{current_user.user_name}">
-            <i class="fas fa-certificate"></i>
+            <i class="fa fa-certificate"></i>
             Certifications
           </a>
           <a class="dropdown-item" href="/members/#{current_user.user_name}">
-            <i class="fas fa-cogs"></i>
+            <i class="fa fa-cogs"></i>
             Settings
           </a>
           <a class="dropdown-item" href="/logout">
-            <i class="fas fa-sign-out-alt"></i>
+            <i class="fa fa-sign-out"></i>
             Log out
           </a>
         </div>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link disabled" href="#">Disabled</a>
       </li>
     </ul>
     <form class="form-inline my-2 my-lg-0">
@@ -145,3 +143,4 @@
     </form>
   </div>
 </nav>
+
