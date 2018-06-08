@@ -5,10 +5,11 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
-from .base import BaseModel
+from .base import BaseModel, BasePositionModel
 
 
 class CustomUserManager(BaseUserManager):
+    """Allows username to be case insensitive."""
     def get_by_natural_key(self, username):
         case_insensitive_username_field = '{}__iexact'.format(self.model.USERNAME_FIELD)
         return self.get(**{case_insensitive_username_field: username})
@@ -47,7 +48,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return self.full_name()
+        return self.full_name
 
     @property
     def full_name(self):
@@ -142,7 +143,7 @@ class Role(BaseModel):
         return len(Role.TYPES)
 
 
-class Address(BaseModel):
+class Address(BasePositionModel):
     TYPES = (
         ('home', 'home FIXME'),
         ('Home', 'Home'),
@@ -156,12 +157,12 @@ class Address(BaseModel):
     city = models.CharField(max_length=255)
     state = models.CharField(max_length=255)
     zip = models.CharField(max_length=255)
-    position = models.IntegerField(default=1)
 
     def __str__(self):
         return "{}, {}, {}, {} {}".format(self.address1, self.address2, self.city, self.state, self.zip)
 
-class Email(BaseModel):
+
+class Email(BasePositionModel):
     TYPES = (
         ('Home', 'Home'),
         ('Personal', 'Personal'),
@@ -172,10 +173,9 @@ class Email(BaseModel):
     typ = models.CharField(choices=TYPES, max_length=255)
     pagable = models.BooleanField(default=True)
     address = models.CharField(max_length=255)
-    position = models.IntegerField(default=1)
 
 
-class Phone(BaseModel):
+class Phone(BasePositionModel):
     TYPES = (
         ('Home', 'Home'),
         ('Mobile', 'Mobile'),
@@ -188,9 +188,9 @@ class Phone(BaseModel):
     number = models.CharField(max_length=255)
     pagable = models.BooleanField(default=True)
     sms_email = models.CharField(max_length=255, blank=True, null=True)
-    position = models.IntegerField(default=1)
 
-class EmergencyContact(BaseModel):
+
+class EmergencyContact(BasePositionModel):
     TYPES = (
         ('Home', 'Home'),
         ('Mobile', 'Mobile'),
@@ -201,13 +201,9 @@ class EmergencyContact(BaseModel):
     name = models.CharField(max_length=255)
     number = models.CharField(max_length=255)
     typ = models.CharField(choices=TYPES, max_length=255)
-    position = models.IntegerField(default=1)
     
 
-class OtherInfo(BaseModel):
+class OtherInfo(BasePositionModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     label = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
-    position = models.IntegerField(default=1)
-
-

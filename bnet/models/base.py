@@ -9,3 +9,11 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
         app_label = 'bnet'
+
+
+class BasePositionModel(BaseModel):
+    """Common handling for user-sorted items."""
+    position = models.IntegerField(default=1)
+    class Meta:
+        abstract = True
+        ordering = ['position',]

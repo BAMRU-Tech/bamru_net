@@ -27,12 +27,15 @@ class OtherInfoInline(InlineDefaults):
     model = OtherInfo
 
 class MemberUserAdmin(UserAdmin):
+    """Override broken defaults from UserAdmin"""
     fieldsets = None
+    search_fields = []
 
 @admin.register(Member)
 class MemberAdmin(MemberUserAdmin):
     list_display = ('last_name', 'first_name', 'typ')
     list_filter = ('typ', )
+    search_fields = ['last_name', 'first_name', 'username',]
     inlines = [
         AddressInline,
         EmailInline,
