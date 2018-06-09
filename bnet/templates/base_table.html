@@ -1,42 +1,36 @@
-{% load static %}
-{% load bootstrap4 %}
+{% extends 'base_generic.html' %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <!-- Bootstrap CSS -->
-    {% bootstrap_css %}
-
-    <link rel="stylesheet" href="{% static 'style.css' %}" />
-    <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
-    <script src="https://cdn.fontawesome.com:443/js/stats.js"></script>
-    <link href="https://use.fontawesome.com/5fb07bfd2c.css"
-          media="all" rel="stylesheet">
+{% block css %}
     <link rel="stylesheet" type="text/css"
-         href="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.css"/>
+          href="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.css"/>
+{% endblock %}
 
-    <title>{% block title %}BAMRU.net{% endblock %}</title>
-</head>
-
-
-<body>
-  {% include 'navbar.html' %}
-  {% block subheader %}{% endblock %}
-  {% bootstrap_messages %}
-
-  <main>
-    <div id="content">
-        {% block content %}{% endblock %}
-    </div>
-  </main><!-- /.container -->
-
-{% bootstrap_javascript jquery="slim" %}
-<script src="https://code.jquery.com/jquery-3.3.1.js"></script> 
-<script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.js"></script>
-
-</body>
-</html>
+{% block js %}
+    {{ block.super }}
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script> 
+    <script type="text/javascript"
+            src="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.js">
+    </script>
+    <script>
+      $(document).ready(function() {
+        $('#dTbl').DataTable( {
+          "responsive": true,
+          "paging":   false,
+          "info":     false,
+          "order": [[ 4, "desc" ]],
+          columnDefs: [
+            { width: "35%", targets: 0 },
+            { width: "30%", targets: 1 },
+            { width: "5%", targets: 2 },
+            { width: "15%", targets: 3 },
+            { width: "15%", targets: 3 },
+            { type: "string", targets: 3 },
+            { responsivePriority: 0, targets: 0 },
+            { responsivePriority: 1, targets: 4 },
+            { responsivePriority: 2, targets: 1 },
+            { responsivePriority: 3, targets: 3 }
+          ]
+        });
+      });
+    </script>
+{% endblock %}

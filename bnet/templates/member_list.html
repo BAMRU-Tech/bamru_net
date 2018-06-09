@@ -1,107 +1,49 @@
 {% extends 'base_table.html' %}
 
 {% block content %}
-{% if member_list %}
-<script src="https://code.jquery.com/jquery-3.3.1.js"></script> 
-<script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.js"></script>
-    
-<script>
-$(document).ready( function() {
-    $('#memberTbl').DataTable( {
-        responsive: true,
-        paging:   false,
-        info:     false,
-        order: [[ 0, "asc" ]],
-        columnDefs: [
-            { responsivePriority: 1, targets: 0 },
-            { responsivePriority: 2, targets: 3 },
-            { responsivePriority: 3, targets: 4}]
-    });
+<main>
+  {% if member_list %}
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>Name</th><th>Rank</th><th>Role</th><th>Phone</th><th>eMail</th>
+      </tr>
+    </thead>
 
-    function AddMemberData(table, data) {
-		$.each(data, function(index, row) {
-            table.row.add(
-                $('<tr>'+
-                  '<td data-sort="'+row.nameDS+'">'+
-                  '<img class="smAvatar hidden-xs" src="'+row.avatar+'" />'+
-                  '<a class="memLink" href="'+row.user+'" target="_blank">'+
-                  '<strong class="name-lbl"> '+row.name+'</strong></a></td>'+
-                  '<td data-sort="'+row.rankDS+'">'+row.rank+'</td>'+
-                  '<td data-sort="'+row.roleDS+'">'+row.role+'</td>'+
-                  '<td class="phoneDat">'+row.phone+'</td>'+
-                  '<td class="emailDat" data-sort="'+row.emailDS+'">'+
-                  '<a href="mailto:'+row.email+'">'+row.email+'</a></td>'+
-                  '</tr>')[0]
-			);
-		});
-    };
-
-    function DisplayMemberData() {
-        $.get( "/api/m/members.json", function (data) {
-            var table = $('#memberTbl').DataTable();
-            table.clear();
-            AddMemberData(table, data);
-            table.draw();
-        });  
-    }; 
-
-    $('#handleCheckBox').click( function () {
-        var el = $('#handleCheckBox');
-        $.cookie('member_reserves', (el.prop('checked') ? 'true' : 'false'), { path: '/' });
-        DisplayMemberData();
-      });
-
-      // Intitalize table
-
-    //DisplayMemberData();
-    //  $('#memberTbl').css('visibility', 'visible');
-});
-
-</script>
-
-<table id="memberTbl" class="display table-bordered dt-responsive nowrap"
-       style="width:100%">
-  <thead>
-    <tr>
-      <th>Name</th><th>Rank</th><th>Role</th><th>Phone</th><th>eMail</th>
-    </tr>
-  </thead>
-
-  <tbody>
-    {% for member in member_list %}
-    {% if member.isActive %} {# XXX #}
-    <tr>
-      <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
-      <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
-      <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td> <!--  -->
-      <td> {{ member.phone }}</td>
-      <td> {{ member.email }}</td>
-    </tr>
-    {% endif %}
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-    <p>No members are available.</p>
-{% endif %}
+    <tbody>
+      {% for member in member_list %}
+      {% if member.isActive %} {# XXX #}
+      <tr>
+        <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
+        <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
+        <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td> <!--  -->
+        <td> {{ member.phone }}</td>
+        <td> {{ member.email }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No members are available.</p>
+  {% endif %}
+</main>
 {% endblock %}
 
 {% block subheader %}
-<nav class="navbar  navbar-expand-sm text-primary subhead">
-  <a class="navbar-brand" href="#">
-    <i class="fa fa-chevron-right"></i>Members
-  </a>
-    <ul class="navbar-nav ml-auto">
-      <li class="nav-item dropdown">
-        <a class="nav-link">
-          "[sub action 1]"
-        </a>
-      </li>
-      <li class="nav-item dropdown">
-        <a class="nav-link">
-          "[sub action 2]"
-        </a>
-      </li>
-    </ul>
-</nav>
+<a class="navbar-brand" href="#">
+  <i class="fa fa-chevron-right"></i>Members
+</a>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link">
+      "[sub action 1]"
+    </a>
+  </li>
+  <li class="nav-item dropdown">
+    <a class="nav-link">
+      "[sub action 2]"
+    </a>
+  </li>
+</ul>
 {% endblock %}

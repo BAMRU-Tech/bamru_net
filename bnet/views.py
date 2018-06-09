@@ -122,11 +122,18 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
-    fields = ['title', 'leaders', 'description', 'location', 'start', 'finish']
+    fields = ['title', 'leaders', 'description', 'location', 'start', 'finish',
+              ]
     template_name = 'base_form.html'
 
 
+class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): {# In Progres #}
+    model = Event
+    fields = ['title', 'leaders', 'description', 'location', 'start', 'finish',]
+
+
 class ParticipantCreateView(LoginRequiredMixin, generic.edit.CreateView):
+    
     model = Participant
     fields = ['member', 'ahc', 'ol', 'period']
     template_name = 'base_form.html'

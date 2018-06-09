@@ -1,9 +1,11 @@
 {% extends 'base_generic.html' %}
 
 {% block content %}
-Member:
-<p>{{ member.full_name }}</p>
-<p>{{ member.typ }} {{ member.ham }} </p>
-<p>{{ member.sign_in_count }}</p>
-<p>{{ member.is_superuser }}</p>
+<main role="main" class="container">
+  Member:
+  <p>{{ member.full_name }}</p>
+  <p>{{ member.typ }} {{ member.ham }} </p>
+  <p>{{ member.sign_in_count }}</p>
+  <p>{{ member.is_superuser }}</p>
+</main><!-- /.container -->
 {% endblock %}
