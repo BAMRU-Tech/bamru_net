@@ -8,7 +8,9 @@
 
 {% for period in event.period_set.all %}
 <h3>OP {{period.position}}</h3>
-<a href="{% url 'event_participant_add' period.id %}">Add participant</a>
+<p><a href="{% url 'event_participant_add' period.id %}">Add participant</a></p>
+<p><a href="{% url 'message_add' %}?period={{ period.id }}&period_format=leave">Page leave</a></p>
+<p><a href="{% url 'message_add' %}?period={{ period.id }}&period_format=return">Page return</a></p>
 <table class="table">
 <tr>
   <th>Name</th>

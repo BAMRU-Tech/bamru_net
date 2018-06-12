@@ -1,0 +1,21 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+Message:
+<p>from {{ message.author }}</p>
+<p>{{ message.text }}</p>
+<p>Period: {{ message.period }}</p>
+<p>Period format: {{ message.period_format }}</p>
+
+
+<table class="table">
+{% for d in message.distribution_set.all %}
+<tr>
+  <td>{{ d.member }}</td>
+  <td>{{ d.outboundsms_set.first }}</td>
+  <td>{{ d.outboundemail_set.first }}</td>
+</tr>
+{% endfor %}
+</table>
+
+{% endblock %}

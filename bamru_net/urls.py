@@ -23,6 +23,7 @@ urlpatterns = [
     path('member/', views.MemberIndexView.as_view(), name='member_index'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(),
          name='member_detail'),
+
     path('event/', views.EventIndexView.as_view(), name='event_index'),
     path('event/all', views.EventAllView.as_view(), name='event_all'),
     path('event/<int:pk>/', views.EventDetailView.as_view(),
@@ -35,6 +36,16 @@ urlpatterns = [
     path('event/<int:event>/participant/delete/<int:pk>/',
          views.ParticipantDeleteView.as_view(),
          name='event_participant_delete'),
+
+    path('message/<int:pk>/', views.MessageDetailView.as_view(),
+         name='message_detail'),
+    path('message/add/',
+         views.MessageCreateView.as_view(),
+         name='message_add'),
+
+    # TODO: move this to webhooks/, also updating mailgun and twilio
+    path('bnet/', include('bnet.urls')),
+
     path('admin/', admin.site.urls),
 
     url(r'^accounts/login/$', auth_views.login, name='login'),

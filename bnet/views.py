@@ -9,7 +9,8 @@ from django_twilio.client import twilio_client
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
-from .models import Event, InboundSms, Member, OutboundSms, Participant, Period
+from .forms import MessageCreateForm
+from .models import Event, InboundSms, Member, OutboundSms, Participant, Period, Message
 
 from datetime import datetime, timedelta
 
@@ -148,6 +149,48 @@ class ParticipantDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
     def get_success_url(self):
         event = get_object_or_404(Event, pk=self.kwargs.get('event'))
         return event.get_absolute_url()
+
+
+class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
+    model = Message
+    form_class = MessageCreateForm
+    template_name = 'base_form.html'
+
+    def get_success_url(self):
+        if self.object.period is not None:
+            return self.object.period.event.get_absolute_url()
+        return ''  # TODO
+
+    def get_initial(self):
+        initial = super(MessageCreateView, self).get_initial().copy()
+        initial['author'] = self.request.user.pk
+        if self.request.GET.get('period'):
+            initial['format'] = 'page'
+            initial['period'] = self.request.GET.get('period')
+            initial['period_format'] = self.request.GET.get('period_format')
+            try:
+                initial['text'] = str(Period.objects.get(pk=initial['period']))
+            except Period.DoesNotExist:
+                pass
+        return initial
+
+    def form_valid(self, form):
+        message = form.instance
+        message.save()
+        if self.request.POST.get('period'):
+            period = get_object_or_404(Period, pk=self.request.POST.get('period'))
+            for p in period.participant_set.all():
+                message.distribution_set.create(
+                    member=p.member,
+                    email=form.cleaned_data['email'],
+                    phone=form.cleaned_data['phone'])
+        message.send()
+        return super().form_valid(form)
+
+
+class MessageDetailView(LoginRequiredMixin, generic.DetailView):
+    model = Message
+    template_name = 'message_detail.html'
 
 
 @twilio_view
