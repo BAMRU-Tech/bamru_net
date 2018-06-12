@@ -1,5 +1,31 @@
 {% extends 'base_table.html' %}
 
+{% block js %}
+  {{ block.super }}
+  <script>
+    $(document).ready(function() {
+      $('#dTbl').DataTable( {
+      "responsive": true,
+      "paging":   false,
+       "info":     false,
+      "order": [[ 4, "desc" ]],
+      columnDefs: [
+        { width: "35%", targets: 0 },
+        { width: "30%", targets: 1 },
+        { width: "5%", targets: 2 },
+        { width: "15%", targets: 3 },
+        { width: "15%", targets: 3 },
+        { type: "string", targets: 3 },
+        { responsivePriority: 0, targets: 0 },
+        { responsivePriority: 1, targets: 4 },
+        { responsivePriority: 2, targets: 1 },
+        { responsivePriority: 3, targets: 3 }
+        ]
+      });
+    });
+  </script>
+{% endblock %}
+
 {% block content %}
 <main>
   {% if event_list %}
@@ -15,7 +41,7 @@
       <tr>
         <td><a href="{% url 'event_detail' event.id %}">{{ event.display_title }}</a></td>
         <td>{{ event.display_location }}</td>
-        <td>{{ event.typ }}</td>
+        <td>{{ event.type }}</td>
         <td>{{ event.leaders }}</td>
         <td data-sort="{{ event.start_order }}">{{ event.display_start }}</td>
       </tr>
@@ -43,6 +69,7 @@
   </ul>
 {% endblock %}
 
+  
 {# - title ||= "Title" #}
 {#    - if "all" == "#{@view}" #}
 {#      = event_summary_stats #}

@@ -1,27 +1,27 @@
 TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution, bnet_rsvptemplates CASCADE;
 
-insert into bnet_member (id, first_name, last_name, username, typ, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
+insert into bnet_member (id, first_name, last_name, username, member_rank, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
 select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
 
-insert into bnet_address (id, member_id, typ, address1, address2, city, state, zip, position, created_at, updated_at)
+insert into bnet_address (id, member_id, type, address1, address2, city, state, zip, position, created_at, updated_at)
 select id, member_id, typ, address1, address2, city, state, zip, COALESCE(position, 1), created_at, updated_at from addresses;
 
-insert into bnet_email (id, member_id, typ, pagable, address, position, created_at, updated_at)
+insert into bnet_email (id, member_id, type, pagable, address, position, created_at, updated_at)
 select id, member_id, typ, case pagable when '1' then true else false end, address, position, created_at, updated_at from emails;
 
-insert into bnet_phone (id, member_id, typ, pagable, number, sms_email, position, created_at, updated_at)
+insert into bnet_phone (id, member_id, type, pagable, number, sms_email, position, created_at, updated_at)
 select id, member_id, typ, case pagable when '1' then true else false end, number, sms_email, position, created_at, updated_at from phones;
 
-insert into bnet_emergencycontact (id, member_id, typ, name, number, position, created_at, updated_at)
+insert into bnet_emergencycontact (id, member_id, type, name, number, position, created_at, updated_at)
 select id, member_id, typ, name, number, position, created_at, updated_at from emergency_contacts;
 
-insert into bnet_role (id, member_id, typ, created_at, updated_at)
+insert into bnet_role (id, member_id, role, created_at, updated_at)
 select id, member_id, typ, created_at, updated_at from roles;
 
 insert into bnet_otherinfo (id, member_id, label, value, position, created_at, updated_at)
 select id, member_id, label, value, position, created_at, updated_at from other_infos;
 
-insert into bnet_event (id, typ, title, leaders, description, location, lat, lon, start, finish, all_day, published, created_at, updated_at)
+insert into bnet_event (id, type, title, leaders, description, location, lat, lon, start, finish, all_day, published, created_at, updated_at)
 select id, typ, title, leaders, description, location, lat, lon, start, finish, all_day, published, created_at, updated_at from events;
 
 insert into bnet_period (id, event_id, position, start, finish, created_at, updated_at)

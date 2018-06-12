@@ -5,8 +5,10 @@
   <div id="content">
     <h2>Event: {{ event.title}}</h2>
     <p><a href="{% url 'event_update' event.id %}">Edit</a></p>
-    <p>{{ event.typ }}</p>
+    <p>{{ event.type }}</p>
     <p>{{ event.description }}</p>
+    <p>{{ event.location }}</p>
+    <p>{{ event.leaders }}</p>
 
     {% for period in event.period_set.all %}
     <h3>OP {{period.position}}</h3>

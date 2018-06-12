@@ -1,5 +1,24 @@
 {% extends 'base_table.html' %}
 
+{% block js %}
+{{ block.super }}
+  <script>
+    $(document).ready( function() {
+      $('#dTbl').DataTable( {
+        responsive: true,
+        paging:   false,
+        info:     false,
+        order: [[ 0, "asc" ]],
+        columnDefs: [
+          { responsivePriority: 1, targets: 0 },
+          { responsivePriority: 2, targets: 3 },
+          { responsivePriority: 3, targets: 4}
+        ]
+      });
+    });
+  </script>
+{% endblock %}
+
 {% block content %}
 <main>
   {% if member_list %}
@@ -12,13 +31,13 @@
 
     <tbody>
       {% for member in member_list %}
-      {% if member.isActive %} {# XXX #}
+      {% if member.isActive %} {# FIXME: Needs a filter #}
       <tr>
         <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
         <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td> <!--  -->
-        <td> {{ member.phone }}</td>
-        <td> {{ member.email }}</td>
+        <td> {{ member.display_phone }}</td>
+        <td> {{ member.display_email }}</td>
       </tr>
       {% endif %}
       {% endfor %}

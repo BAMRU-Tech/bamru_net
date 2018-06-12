@@ -5,6 +5,7 @@ from . import views
 
 app_name = 'bnet'
 urlpatterns = [
+
     url(r'^anymail/', include('anymail.urls')),
     path('sms_callback/', views.sms_callback, name='sms_callback'),
     url(r'^sms/$', views.sms),

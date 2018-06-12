@@ -2,10 +2,33 @@
 
 {% block content %}
 <main role="main" class="container">
-  Member:
-  <p>{{ member.full_name }}</p>
-  <p>{{ member.typ }} {{ member.ham }} </p>
-  <p>{{ member.sign_in_count }}</p>
-  <p>{{ member.is_superuser }}</p>
+  <p> Member: {{ member.full_name }}</p>
+  <p> Username: {{ member.username }}</p>
+  <p> Rank: {{ member.rank }}</p>
+  <p> Dl: {{ member.dl }}</p>
+  <p> Ham: {{ member.ham }}</p>
+  <p> V9: {{ member.v9 }}</p>
+  <p> Is Active: {{ member.is_active }}</p>
+  <p> Is Staff: {{ member.is_staff }}</p>
+  <p> Is Current DO: {{ member.is_current_do }}</p>
+  <p> Sign In Count: {{ member.sign_in_count }}</p>
+  <p> Last Sign In at: {{ member.last_sign_in_at }}</p>
+  <p> Phone numbers:
+    {% for ph in member.phone_set.all %}
+    <p>{{ ph.number }}/{{ ph.type }}/{{ ph.pagable }}</p>
+    {% endfor %}
+  </p>
+  <p> Addresses:
+    {% for ad in member.address_set.all %}
+    <p>{{ ad.type }} / {{ ad.address1 }} / {{ ad.address2 }} / {{ ad.city }} / {{ ad.state }} / {{ ad.zip }}
+    </p>
+    {% endfor %}
+  </p>
+  <p> Emergency Contacts:
+    {% for ec in member.emergencycontact_set.all %}
+    <p>{{ ec.name }}/{{ ec.type }}/{{ ec.number }}</p>
+    {% endfor %}
+  </p>
+
 </main><!-- /.container -->
 {% endblock %}

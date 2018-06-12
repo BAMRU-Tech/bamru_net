@@ -11,26 +11,4 @@
     <script type="text/javascript"
             src="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.js">
     </script>
-    <script>
-      $(document).ready(function() {
-        $('#dTbl').DataTable( {
-          "responsive": true,
-          "paging":   false,
-          "info":     false,
-          "order": [[ 4, "desc" ]],
-          columnDefs: [
-            { width: "35%", targets: 0 },
-            { width: "30%", targets: 1 },
-            { width: "5%", targets: 2 },
-            { width: "15%", targets: 3 },
-            { width: "15%", targets: 3 },
-            { type: "string", targets: 3 },
-            { responsivePriority: 0, targets: 0 },
-            { responsivePriority: 1, targets: 4 },
-            { responsivePriority: 2, targets: 1 },
-            { responsivePriority: 3, targets: 3 }
-          ]
-        });
-      });
-    </script>
 {% endblock %}
