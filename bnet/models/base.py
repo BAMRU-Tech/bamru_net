@@ -13,7 +13,7 @@ class BaseModel(models.Model):
 
 class BasePositionModel(BaseModel):
     """Common handling for user-sorted items."""
-    position = models.IntegerField(default=1)
+    position = models.IntegerField(default=1, null=True) #FIXME: old data has nulls
     class Meta:
         abstract = True
         ordering = ['position',]

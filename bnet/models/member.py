@@ -58,7 +58,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def rank(self):
-        return self.member_rank
+        return self.member_rank  # Don't rename member.rank to rank, postgres gets upset
 
 
     @property
@@ -206,3 +206,32 @@ class OtherInfo(BasePositionModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     label = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
+
+
+class Unavailable(BaseModel):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+
+    start_on = models.DateField(blank=True, null=True)
+    end_on = models.DateField(blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+
+
+class Cert(BasePositionModel):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    type = models.TextField(blank=True, null=True)
+    expiration = models.DateField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+    link = models.TextField(blank=True, null=True)
+    cert_file = models.TextField(blank=True, null=True)
+    cert_file_name = models.TextField(blank=True, null=True)
+    cert_content_type = models.TextField(blank=True, null=True)
+    cert_file_size = models.TextField(blank=True, null=True)
+    cert_updated_at = models.TextField(blank=True, null=True)
+    ninety_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
+    thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
+    expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
+
+
+
+

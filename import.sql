@@ -1,4 +1,4 @@
-TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution, bnet_rsvptemplates CASCADE;
+TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_unavailable, bnet_cert, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution, bnet_rsvptemplates CASCADE;
 
 insert into bnet_member (id, first_name, last_name, username, member_rank, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
 select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
@@ -20,6 +20,13 @@ select id, member_id, typ, created_at, updated_at from roles;
 
 insert into bnet_otherinfo (id, member_id, label, value, position, created_at, updated_at)
 select id, member_id, label, value, position, created_at, updated_at from other_infos;
+
+insert into bnet_unavailable (id, member_id, start_on, end_on, comment, created_at, updated_at)
+select id, member_id, start_on, end_on, comment, created_at, updated_at from avail_ops;
+
+insert into bnet_cert (id, member_id, type, expiration, description, comment, link, position, cert_file, cert_file_name, cert_content_type, cert_file_size, cert_updated_at, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at)
+select id, member_id, typ, expiration, description, comment, link, position, cert_file, cert_file_name, cert_content_type, cert_file_size, cert_updated_at, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at from certs;
+
 
 insert into bnet_event (id, type, title, leaders, description, location, lat, lon, start, finish, all_day, published, created_at, updated_at)
 select id, typ, title, leaders, description, location, lat, lon, start, finish, all_day, published, created_at, updated_at from events;

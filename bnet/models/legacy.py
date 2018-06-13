@@ -16,37 +16,6 @@ class AvailDos(models.Model):
     updated_at = models.DateTimeField(blank=True, null=True)
 
 
-class AvailOps(models.Model):
-    id = models.IntegerField(primary_key=True)  # AutoField?
-    member_id = models.IntegerField(blank=True, null=True)
-    start_on = models.DateField(blank=True, null=True)
-    end_on = models.DateField(blank=True, null=True)
-    comment = models.TextField(blank=True, null=True)  # This field type is a guess.
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
-
-class Certs(models.Model):
-    id = models.IntegerField(primary_key=True)  # AutoField?
-    member_id = models.IntegerField(blank=True, null=True)
-    typ = models.TextField(blank=True, null=True)  # This field type is a guess.
-    expiration = models.DateField(blank=True, null=True)
-    description = models.TextField(blank=True, null=True)  # This field type is a guess.
-    comment = models.TextField(blank=True, null=True)  # This field type is a guess.
-    link = models.TextField(blank=True, null=True)  # This field type is a guess.
-    position = models.IntegerField(blank=True, null=True)
-    cert_file = models.TextField(blank=True, null=True)  # This field type is a guess.
-    cert_file_name = models.TextField(blank=True, null=True)  # This field type is a guess.
-    cert_content_type = models.TextField(blank=True, null=True)  # This field type is a guess.
-    cert_file_size = models.TextField(blank=True, null=True)  # This field type is a guess.
-    cert_updated_at = models.TextField(blank=True, null=True)  # This field type is a guess.
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-    ninety_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
-    thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
-    expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
-
-
 class DataFiles(models.Model):
     id = models.IntegerField(primary_key=True)  # AutoField?
     member_id = models.IntegerField(blank=True, null=True)
