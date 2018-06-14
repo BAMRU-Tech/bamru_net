@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views import generic
 from django_twilio.client import twilio_client
 from django_twilio.decorators import twilio_view
@@ -157,9 +158,7 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
     template_name = 'base_form.html'
 
     def get_success_url(self):
-        if self.object.period is not None:
-            return self.object.period.event.get_absolute_url()
-        return ''  # TODO
+        return self.object.get_absolute_url()
 
     def get_initial(self):
         initial = super(MessageCreateView, self).get_initial().copy()
@@ -218,6 +217,22 @@ def sms(request):
     except:
         logger.error("Unable to save message: " + request.body)
         response.message('BAMRU.net Error: unable to parse your message.')
+        return response
+
+    date_from = timezone.now() - timedelta(hours=12)
+    outbound = OutboundSms.objects.filter(member_number=twilio_request.from_).filter(created_at__gte=date_from).order_by('-pk').first()
+    # TODO filter by texts that have associated question
+    if outbound:
+        yn = twilio_request.body[0].lower()
+        if yn == 'y' or yn == 'n':
+            d = outbound.distribution
+            d.rsvp = True
+            d.rsvp_answer = (yn == 'y')
+            d.save()
+            response.message('RSVP {} to {} successful.'.format(yn, d.message.period))
+        else:
+            logger.error("Unable to parse y/n message: " + request.body)
+            response.message('Could not parse yes/no in your message.')
         return response
 
     response.message('BAMRU.net Warning: not sure what to do with your message.')

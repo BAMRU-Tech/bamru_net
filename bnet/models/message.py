@@ -46,6 +46,10 @@ class Message(BaseModel):
     period = models.ForeignKey(Period, on_delete=models.CASCADE, blank = True, null=True)
     period_format = models.CharField(choices=PERIOD_FORMATS, max_length=255, blank=True, null=True)
 
+    @models.permalink
+    def get_absolute_url(self):
+        return ('message_detail', [str(self.id)])
+
     def send(self):
         for d in self.distribution_set.all():
             d.send()
@@ -92,16 +96,21 @@ class OutboundSms(BaseModel):
         self.member_number = e164
         logger.info('Sending text to {}: {}'.format(self.member_number,
                                                     self.distribution.message.text))
-        message = twilio_client.messages.create(
-            body=self.distribution.message.text,
-            to=e164,
-            from_=settings.TWILIO_SMS_FROM,
-            status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
+        try:
+            message = twilio_client.messages.create(
+                body=self.distribution.message.text,
+                to=e164,
+                from_=settings.TWILIO_SMS_FROM,
+                status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
             )
-        self.sid = message.sid
-        self.status = message.status
-        self.error_code = self.error_code
-        self.error_message = message.error_message
+        except Exception as e:
+            self.status = str(e)
+            logger.error('Twilio error: {}'.format(e))
+        else:
+            self.sid = message.sid
+            self.status = message.status
+            self.error_code = self.error_code
+            self.error_message = message.error_message
         self.save()
 
 class InboundSms(BaseModel):
@@ -121,17 +130,22 @@ class OutboundEmail(BaseModel):
 
     def send(self):
         body = self.distribution.message.text
-        message = AnymailMessage(
-            subject="BAMRU.net page",
-            body=body,
-            to=[self.email.address],
-            from_email=settings.MAILGUN_EMAIL_FROM,
+        try:
+            message = AnymailMessage(
+                subject="BAMRU.net page",
+                body=body,
+                to=[self.email.address],
+                from_email=settings.MAILGUN_EMAIL_FROM,
             )
-        message.attach_alternative('<html>{}</html>'.format(body), 'text/html')
-        message.send()
-        self.sid = message.anymail_status.message_id
-        self.status = message.anymail_status.status
-        logger.info(dir(message.anymail_status))
+            message.attach_alternative('<html>{}</html>'.format(body), 'text/html')
+            message.send()
+        except Exception as e:
+            self.status = str(e)
+            logger.error('Anymail error: {}'.format(e))
+        else:
+            self.sid = message.anymail_status.message_id
+            self.status = message.anymail_status.status
+            logger.info(dir(message.anymail_status))
         self.save()
 
 @receiver(tracking)
