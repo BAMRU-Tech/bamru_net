@@ -215,28 +215,61 @@ def sms(request):
                                         to_number=twilio_request.to,
                                         body=twilio_request.body)
     except:
-        logger.error("Unable to save message: " + request.body)
+        logger.error('Unable to save message: ' + request.body)
         response.message('BAMRU.net Error: unable to parse your message.')
         return response
 
     date_from = timezone.now() - timedelta(hours=12)
-    outbound = OutboundSms.objects.filter(member_number=twilio_request.from_).filter(created_at__gte=date_from).order_by('-pk').first()
+    outbound = (OutboundSms.objects
+                .filter(member_number=twilio_request.from_,
+                        created_at__gte=date_from)
+                .order_by('-pk').first())
     # TODO filter by texts that have associated question
-    if outbound:
-        yn = twilio_request.body[0].lower()
-        if yn == 'y' or yn == 'n':
-            d = outbound.distribution
-            d.rsvp = True
-            d.rsvp_answer = (yn == 'y')
-            d.save()
-            response.message('RSVP {} to {} successful.'.format(yn, d.message.period))
-        else:
-            logger.error("Unable to parse y/n message: " + request.body)
-            response.message('Could not parse yes/no in your message.')
+    if not outbound:
+        logger.error('No matching OutboundSms for: ' + request.body)
+        response.message('BAMRU.net Warning: not sure what to do with your message. Maybe it was too long ago.')
         return response
+        
+    yn = twilio_request.body[0].lower()
+    if yn != 'y' and yn != 'n':
+        logger.error('Unable to parse y/n message: ' + request.body)
+        response.message('Could not parse yes/no in your message.')
+        return response
+        
+    d = outbound.distribution
+    d.rsvp = True
+    d.rsvp_answer = (yn == 'y')
+    d.save()
 
-    response.message('BAMRU.net Warning: not sure what to do with your message.')
+    if not d.rsvp_answer:  # Answered no = nothing to do
+        response.message('Response no to {} received.'.format(d.message.period))
+        return response
+    
+    participant_filter = {'period':d.message.period,
+                          'member':d.member}
+    if d.message.period_format == 'invite':
+        Participant.objects.get_or_create(**participant_filter)
+        response.message('RSVP yes to {} successful.'.format(d.message.period))
+        return response
+        
+    p = Participant.objects.filter(**participant_filter).first()
+    if p:
+        if d.message.period_format == 'leave':
+            p.en_route_at = timezone.now()
+            response.message('Departure time recorded for {}.'.format(d.message.period))
+        elif d.message.period_format == 'return':
+            p.return_home_at = timezone.now()
+            response.message('Return time recorded for {}.'.format(d.message.period))
+        else:
+            response.message('Unknown response for {} page for {}.'
+                             .format(d.message.period_format, d.message.period))
+        p.save()
+    else:
+        response.message('Error: You were not found as a participant for {}.'
+                         .format(d.message.period))
+        logger.error('Participant not found for: ' + request.body)
     return response
+
 
 
 @login_required

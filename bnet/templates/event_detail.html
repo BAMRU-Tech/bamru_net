@@ -22,7 +22,7 @@
 <tr>
   <td>{{ participant.member }}</td>
   <td>{{ participant.en_route_at }}</td>
-  <td>{{ participant.signed_out_at }}</td>
+  <td>{{ participant.return_home_at  }}</td>
   <td><a href="{% url 'event_participant_delete' event=event.id pk=participant.id %}">delete</a></td>
 </tr>
 {% endfor %}

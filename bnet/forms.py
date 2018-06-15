@@ -2,8 +2,8 @@ from django import forms
 from .models import Message
 
 class MessageCreateForm(forms.ModelForm):
-    email = forms.BooleanField()
-    phone = forms.BooleanField()
+    email = forms.BooleanField(required=False)
+    phone = forms.BooleanField(required=False)
 
     class Meta:
         model = Message

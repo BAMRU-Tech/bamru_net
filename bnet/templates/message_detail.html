@@ -26,13 +26,7 @@ Message:
     {{ d.outboundemail_set.first.status }}
     {{ d.outboundemail_set.first.error_message|default_if_none:"" }}
   </td>
-  <td>
-    {% if d.rsvp %}
-      {{ d.rsvp_answer }}
-    {% else %}
-      PENDING
-    {% endif %}
-  </td>
+  <td>{{ d.rsvp_display }}</td>
 </tr>
 {% endfor %}
 </table>

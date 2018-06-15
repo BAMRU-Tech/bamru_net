@@ -81,6 +81,15 @@ class Distribution(BaseModel):
                 if created:
                     email.send()
 
+    def rsvp_display(self):
+        if self.rsvp:
+            if self.rsvp_answer:
+                return 'Yes'
+            else:
+                return 'No'
+        else:
+            return 'PENDING'
+
 class OutboundSms(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
     phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
