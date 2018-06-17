@@ -46,16 +46,6 @@ class MemberAdmin(MemberUserAdmin):
         ]
 
 
-class DistributionInline(InlineDefaults):
-    model = Distribution
-
-@admin.register(Message)
-class MessageAdmin(admin.ModelAdmin):
-    list_display = ('author', 'text', 'created_at', 'format', 'period_format', )
-    inlines = [
-        DistributionInline,
-        ]
-
 class ParticipantInline(InlineDefaults):
     model = Participant
 

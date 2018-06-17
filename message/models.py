@@ -12,9 +12,9 @@ import phonenumbers
 import logging
 logger = logging.getLogger(__name__)
 
-from .base import BaseModel, BasePositionModel
-from .member import Member, Phone, Email
-from .event import Period
+from bnet.models import BaseModel, BasePositionModel
+from bnet.models import Member, Phone, Email
+from bnet.models import Period
 
 class RsvpTemplates(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -48,7 +48,7 @@ class Message(BaseModel):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('message_detail', [str(self.id)])
+        return ('message:message_detail', [str(self.id)])
 
     def send(self):
         for d in self.distribution_set.all():

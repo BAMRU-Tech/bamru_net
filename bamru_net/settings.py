@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'anymail',
     'bootstrap4',
     'bnet',
+    'message',
 ]
 
 MIDDLEWARE = [
