@@ -33,8 +33,8 @@ class MemberUserAdmin(UserAdmin):
 
 @admin.register(Member)
 class MemberAdmin(MemberUserAdmin):
-    list_display = ('last_name', 'first_name', 'typ')
-    list_filter = ('typ', )
+    list_display = ('last_name', 'first_name', 'rank')
+#xxx    list_filter = ('rank', )
     search_fields = ['last_name', 'first_name', 'username',]
     inlines = [
         AddressInline,
@@ -64,7 +64,7 @@ class PeriodInline(InlineDefaults):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'typ', 'start', 'finish',)
+    list_display = ('title', 'type', 'start', 'finish',)
     inlines = [
         PeriodInline,
         ]

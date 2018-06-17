@@ -12,7 +12,12 @@ def utc_to_local(utc_dt):
     return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
 
 class Event(BaseModel):
-    typ = models.CharField(max_length=255)  # TODO choice XXX short version M,T,C,O
+    TYPES = (
+        ('Meeting', 'Meeting'),
+        ('Operation', 'Operation'),
+        ('Training', 'Training'),
+        ('Community', 'Community'))
+    type = models.CharField(choices=TYPES, max_length=255)
     title = models.CharField(max_length=255)
     leaders = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -30,7 +35,6 @@ class Event(BaseModel):
     @property
     def display_title(self):
         """ Return event title, properly sized for table display """
-        """ XXX database has titles with leading spaces, seems wrong """
         title = self.title
         title = (title[:50] + '..') if len(title) > 50 else title
         return title.strip()
@@ -65,6 +69,7 @@ class Period(BaseModel):
     finish = models.DateTimeField(blank=True, null=True)
     def __str__(self):
         return "{} OP{}".format(self.event.title, self.position)
+
 
 class Participant(BaseModel):
     period = models.ForeignKey(Period, on_delete=models.CASCADE)

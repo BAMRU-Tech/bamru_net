@@ -16,7 +16,7 @@ class CustomUserManager(BaseUserManager):
 
 class PageMemberManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(typ__in=['TM','FM','T'])
+        return super().get_queryset().filter(member_rank__in=['TM','FM','T'])
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
@@ -40,7 +40,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
-    typ = models.CharField(choices=TYPES, max_length=255)
+    member_rank = models.CharField(choices=TYPES, max_length=255, blank=True)
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
     v9 = models.CharField(max_length=255, blank=True, null=True)
@@ -63,14 +63,14 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def rank(self):
-        """ Return member rank."""
-        return self.typ
-    
+        return self.member_rank  # Don't rename member.rank to rank, postgres gets upset
+
+
     @property
     def rank_order(self):
         """ Return int, lowest value is TM, follows order in Member.TYPES """
         for rankTuple in Member.TYPES:
-            if rankTuple[0] == self.typ:
+            if rankTuple[0] == self.rank:
                 return Member.TYPES.index(rankTuple)
         return len(Member.TYPES)
 
@@ -78,14 +78,14 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def roles(self):
         """ Return string, list of ordered roles """
         roles = self.role_set.all()
-        result = [ [ r.role_ordinal, r.typ ] for r in roles ]
+        result = [ [ r.role_ordinal, r.role ] for r in roles ]
         return ', '.join([ r[1] for r in sorted(result) ])
 
     @property
     def role_order(self):
         """ Return int for the highest priority role """
         roles = self.role_set.all()
-        result = [ [ r.role_ordinal, r.typ ] for r in roles ]
+        result = [ [ r.role_ordinal, r.role ] for r in roles ]
         try:
             return [ r[0] for r in sorted(result) ][0]
         except:
@@ -93,16 +93,16 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
 
     @property
-    def default_email(self):
-        """ Return first email XXX."""
+    def display_email(self): # FIXME: needs a priority
+        """ Return first email """
         try:
             return self.email_set.first().address
         except:
             return ''
             
     @property
-    def default_phone(self):
-        """ Return first phone XXX."""
+    def display_phone(self): # FIXME: needs a priority
+        """ Return first phone """
         try:
             return self.phone_set.first().number
         except:
@@ -113,12 +113,11 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         "Returns the short name for the user."
         return self.first_name
 
-    def isActive(self):
-        """ Return member status, True is active member XXX"""
-        return self.typ in ['TM', 'FM', 'T']
+    def isActive(self): # FIXME: Needs a filter
+        """ Return member status, True is active member """
+        return self.rank in ['TM', 'FM', 'T']
 
 
-# UL, Bd, XO, OO, SEC, TO, TRS, REG, WEB, Bd, OL,
 class Role(BaseModel):
     TYPES = (
         ('UL', 'Unit Leader'),
@@ -137,13 +136,13 @@ class Role(BaseModel):
         ('T', 'Active Trainee'),
     )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    typ = models.CharField(max_length=255)  # TODO choices
+    role = models.CharField(choices=TYPES, max_length=255, blank=True)
 
     @property
     def role_ordinal(self):
         """ Return int, lowest value is UL, follows order in TYPES """
         for roleTuple in Role.TYPES:
-            if roleTuple[0] == self.typ:
+            if roleTuple[0] == self.role:
                 return Role.TYPES.index(roleTuple)
         return len(Role.TYPES)
 
@@ -156,7 +155,7 @@ class Address(BasePositionModel):
         ('Other', 'Other'),
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    typ = models.CharField(choices=TYPES, max_length=255)
+    type = models.CharField(choices=TYPES, max_length=255)
     address1 = models.CharField(max_length=255)
     address2 = models.CharField(max_length=255, blank=True)
     city = models.CharField(max_length=255)
@@ -175,7 +174,7 @@ class Email(BasePositionModel):
         ('Other', 'Other'),
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    typ = models.CharField(choices=TYPES, max_length=255)
+    type = models.CharField(choices=TYPES, max_length=255)
     pagable = models.BooleanField(default=True)
     address = models.CharField(max_length=255)
 
@@ -189,7 +188,7 @@ class Phone(BasePositionModel):
         ('Other', 'Other'),
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    typ = models.CharField(choices=TYPES, max_length=255)
+    type = models.CharField(choices=TYPES, max_length=255)
     number = models.CharField(max_length=255)
     pagable = models.BooleanField(default=True)
     sms_email = models.CharField(max_length=255, blank=True, null=True)
@@ -205,10 +204,39 @@ class EmergencyContact(BasePositionModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     number = models.CharField(max_length=255)
-    typ = models.CharField(choices=TYPES, max_length=255)
+    type = models.CharField(choices=TYPES, max_length=255)
     
 
 class OtherInfo(BasePositionModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     label = models.CharField(max_length=255)
     value = models.CharField(max_length=255)
+
+
+class Unavailable(BaseModel):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+
+    start_on = models.DateField(blank=True, null=True)
+    end_on = models.DateField(blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+
+
+class Cert(BasePositionModel):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    type = models.TextField(blank=True, null=True)
+    expiration = models.DateField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+    link = models.TextField(blank=True, null=True)
+    cert_file = models.TextField(blank=True, null=True)
+    cert_file_name = models.TextField(blank=True, null=True)
+    cert_content_type = models.TextField(blank=True, null=True)
+    cert_file_size = models.TextField(blank=True, null=True)
+    cert_updated_at = models.TextField(blank=True, null=True)
+    ninety_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
+    thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
+    expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
+
+
+
+

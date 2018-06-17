@@ -3,7 +3,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -13,26 +13,29 @@
 
     <link rel="stylesheet" href="{% static 'style.css' %}" />
 
-    <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
-    <script src="https://cdn.fontawesome.com:443/js/stats.js"></script>
     <link href="https://use.fontawesome.com/5fb07bfd2c.css"
           media="all" rel="stylesheet">
 
+    {% block css %}{% endblock %}
+
     <title>{% block title %}BAMRU.net{% endblock %}</title>
-</head>
+  </head>
 
 
-<body>
-{% include 'navbar.html' %}
-{% bootstrap_messages %}
+  <body>
+    {% include 'navbar.html' %}
+    <nav class="navbar  navbar-expand-sm text-primary subhead">
+      {% block subheader %}{% endblock %}{# still needs more work #}
+    </nav>
 
-  <main role="main" class="container">
-    <div id="content">
-        {% block content %}{% endblock %}
-    </div>
-  </main><!-- /.container -->
+    {% bootstrap_messages %}
 
-{% bootstrap_javascript jquery="slim" %}
+    {% block content %}{% endblock %}
 
-</body>
+    {% block js %}
+      {% bootstrap_javascript jquery="slim" %}
+      <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
+      <script src="https://cdn.fontawesome.com:443/js/stats.js"></script>
+    {% endblock %}
+  </body>
 </html>

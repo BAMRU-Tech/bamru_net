@@ -13,6 +13,8 @@ from twilio.twiml.messaging_response import MessagingResponse
 from .forms import MessageCreateForm
 from .models import Event, InboundSms, Member, OutboundSms, Participant, Period, Message
 
+from django.forms.widgets import Select, Widget, SelectDateWidget
+
 from datetime import datetime, timedelta
 
 import logging
@@ -27,16 +29,16 @@ class OrderListJson(BaseDatatableView):
     model = Member
 
     # define the columns that will be returned
-    columns = ['last_name', 'typ', 'role', 'phone', 'email']
+    columns = ['last_name', 'member_rank', 'role', 'phone', 'email']
         
     # define column names that will be used in sorting
     # order is important and should be same as order of columns
     # displayed by datatables. For non sortable columns use empty
     # value like ''
-    order_columns = ['last_name', 'typ', 'role', '', '']
+    order_columns = ['last_name', 'member_rank', 'role', '', '']
 
-    # set max limit of records returned, this is used to protect our site if someone tries to attack our site
-    # and make it return huge amount of data
+    # set max limit of records returned, this is used to protect our site
+    # if someone tries to attack our site and make it return huge amount of data
     max_display_length = 500
 
     def render_column(self, row, column):
@@ -124,11 +126,42 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
-    fields = ['title', 'leaders', 'description', 'location', 'start', 'finish']
+    fields = ['type', 'title', 'description',
+              'location', 'leaders',
+              'start', 'finish',
+              'all_day', 'published',
+              ]
+
     template_name = 'base_form.html'
+
+    def get_form(self):
+        '''add date picker in forms'''
+        form = super(EventUpdateView, self).get_form()
+        form.fields['start'].widget = SelectDateWidget()
+        form.fields['finish'].widget = SelectDateWidget()
+        return form
+
+
+class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
+    model = Event
+    fields = ['type', 'title', 'description',
+              'location', 'leaders',
+              'start', 'finish',
+              'all_day', 'published',
+              ]
+
+    template_name = 'base_form.html'
+
+    def get_form(self):
+        '''add date picker in forms'''
+        form = super(EventCreateView, self).get_form()
+        form.fields['start'].widget = SelectDateWidget()
+        form.fields['finish'].widget = SelectDateWidget()
+        return form
 
 
 class ParticipantCreateView(LoginRequiredMixin, generic.edit.CreateView):
+    
     model = Participant
     fields = ['member', 'ahc', 'ol', 'period']
     template_name = 'base_form.html'
