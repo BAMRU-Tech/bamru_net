@@ -149,7 +149,8 @@ class OutboundEmail(BaseModel):
             message.attach_alternative('<html>{}</html>'.format(body), 'text/html')
             message.send()
         except Exception as e:
-            self.status = str(e)
+            self.status = 'Anymail exception'
+            self.error_message = str(e)[:255]
             logger.error('Anymail error: {}'.format(e))
         else:
             self.sid = message.anymail_status.message_id

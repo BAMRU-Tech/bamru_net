@@ -14,6 +14,9 @@ class CustomUserManager(BaseUserManager):
         case_insensitive_username_field = '{}__iexact'.format(self.model.USERNAME_FIELD)
         return self.get(**{case_insensitive_username_field: username})
 
+class PageMemberManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(typ__in=['TM','FM','T'])
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
@@ -46,6 +49,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     is_current_do = models.BooleanField(default=False)
     sign_in_count = models.IntegerField(default=0)
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
+
+    page_objects = PageMemberManager()
 
     def __str__(self):
         return self.full_name

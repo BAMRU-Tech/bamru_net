@@ -8,6 +8,7 @@
 
 {% for period in event.period_set.all %}
 <h3>OP {{period.position}}</h3>
+<p><a href="{% url 'message_add' %}?period={{ period.id }}&period_format=invite">Page team to invite</a></p>
 <p><a href="{% url 'event_participant_add' period.id %}">Add participant</a></p>
 <p><a href="{% url 'message_add' %}?period={{ period.id }}&period_format=leave">Page leave</a></p>
 <p><a href="{% url 'message_add' %}?period={{ period.id }}&period_format=return">Page return</a></p>

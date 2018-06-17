@@ -178,11 +178,18 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
         message.save()
         if self.request.POST.get('period'):
             period = get_object_or_404(Period, pk=self.request.POST.get('period'))
-            for p in period.participant_set.all():
-                message.distribution_set.create(
-                    member=p.member,
-                    email=form.cleaned_data['email'],
-                    phone=form.cleaned_data['phone'])
+            if self.request.GET.get('period_format') == 'invite':
+                for m in Member.page_objects.all():
+                    message.distribution_set.create(
+                        member=m,
+                        email=form.cleaned_data['email'],
+                        phone=form.cleaned_data['phone'])
+            else:
+                for p in period.participant_set.all():
+                    message.distribution_set.create(
+                        member=p.member,
+                        email=form.cleaned_data['email'],
+                        phone=form.cleaned_data['phone'])
         message.send()
         return super().form_valid(form)
 
