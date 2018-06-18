@@ -117,6 +117,10 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         """ Return member status, True is active member """
         return self.rank in ['TM', 'FM', 'T']
 
+    @models.permalink
+    def get_absolute_url(self):
+        return ('member_detail', [str(self.id)])
+
 
 class Role(BaseModel):
     TYPES = (
