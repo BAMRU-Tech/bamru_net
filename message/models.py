@@ -2,26 +2,38 @@ from django.conf import settings
 from django.db import models
 from django.dispatch import receiver
 from django.urls import reverse
+from django.utils import timezone
 from django_twilio.client import twilio_client
 
-#from datetime import datetime
+from datetime import datetime, timedelta
 
 from anymail.message import AnymailMessage
 from anymail.signals import tracking
 import phonenumbers
 import logging
+import uuid
+
 logger = logging.getLogger(__name__)
 
 from bnet.models import BaseModel, BasePositionModel
 from bnet.models import Member, Phone, Email
 from bnet.models import Period
 
-class RsvpTemplates(BasePositionModel):
+class RsvpTemplate(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
     prompt = models.CharField(max_length=255, blank=True, null=True)
     yes_prompt = models.CharField(max_length=255, blank=True, null=True)
     no_prompt = models.CharField(max_length=255, blank=True, null=True)
 
+    def __str__(self):
+        return self.name
+
+    def html(self, base_url):
+        yn = ''.join(['<p><a href="{}?rsvp={}">{}</a></p>'
+                      .format(base_url, yn, prompt)
+                      for yn, prompt in
+                      (('yes', self.yes_prompt), ('no', self.no_prompt))])
+        return '<p>{}</p>{}'.format(self.prompt, yn)
 
 class Message(BaseModel):
     FORMATS = (
@@ -45,6 +57,7 @@ class Message(BaseModel):
     ancestry = models.CharField(max_length=255, blank=True, null=True)
     period = models.ForeignKey(Period, on_delete=models.CASCADE, blank = True, null=True)
     period_format = models.CharField(choices=PERIOD_FORMATS, max_length=255, blank=True, null=True)
+    rsvp_template = models.ForeignKey(RsvpTemplate, on_delete=models.CASCADE, blank=True, null=True)
 
     @models.permalink
     def get_absolute_url(self):
@@ -66,10 +79,12 @@ class Distribution(BaseModel):
     response_seconds = models.IntegerField(blank=True, null=True)
     rsvp = models.BooleanField(default=False)
     rsvp_answer = models.NullBooleanField()
-    unauth_rsvp_token = models.CharField(max_length=255, unique=True, blank=True, null=True)
+    unauth_rsvp_token = models.CharField(max_length=255, unique=True, null=True, default=uuid.uuid4, editable=False)
     unauth_rsvp_expires_at = models.DateTimeField(blank=True, null=True)
 
     def send(self):
+        self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
+        self.save()
         if self.phone:
             for p in self.member.phone_set.filter(pagable=True):
                 sms, created = OutboundSms.objects.get_or_create(distribution=self, phone=p)
@@ -139,6 +154,12 @@ class OutboundEmail(BaseModel):
 
     def send(self):
         body = self.distribution.message.text
+        html_body = body
+        if self.distribution.message.rsvp_template:
+            url = 'http://{}{}'.format(settings.HOSTNAME,
+                reverse('message:unauth_rsvp', args=[self.distribution.unauth_rsvp_token]))
+            html_body = body + self.distribution.message.rsvp_template.html(
+                url)
         try:
             message = AnymailMessage(
                 subject="BAMRU.net page",
@@ -146,7 +167,7 @@ class OutboundEmail(BaseModel):
                 to=[self.email.address],
                 from_email=settings.MAILGUN_EMAIL_FROM,
             )
-            message.attach_alternative('<html>{}</html>'.format(body), 'text/html')
+            message.attach_alternative('<html>{}</html>'.format(html_body), 'text/html')
             message.send()
         except Exception as e:
             self.status = 'Anymail exception'

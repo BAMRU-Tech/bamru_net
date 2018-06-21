@@ -12,6 +12,9 @@ urlpatterns = [
          views.MessageCreateView.as_view(),
          name='message_add'),
 
+    path('unauth_rsvp/<slug:token>/', views.unauth_rsvp, name='unauth_rsvp'),
+
+
     # TODO: move this to webhooks/, also updating mailgun and twilio
     url(r'^bnet/anymail/', include('anymail.urls')),
     path('bnet/sms_callback/', views.sms_callback, name='sms_callback'),

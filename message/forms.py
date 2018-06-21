@@ -7,4 +7,4 @@ class MessageCreateForm(forms.ModelForm):
 
     class Meta:
         model = Message
-        fields = ['author', 'text', 'format', 'period', 'period_format']
+        fields = ['author', 'text', 'format', 'period', 'period_format', 'rsvp_template']

@@ -43,5 +43,5 @@ select id, author_id, text, format, linked_rsvp_id, ancestry, period_id, period_
 insert into bnet_distribution (id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, rsvp_answer, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at)
 select id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, case rsvp_answer when 'Yes' then true when 'No' then false else null end, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at from distributions where message_id in (select distinct id from bnet_message);
 
-insert into bnet_rsvptemplates (id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at)
+insert into bnet_rsvptemplate (id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at)
 select id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at from rsvp_templates;

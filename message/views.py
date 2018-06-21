@@ -10,9 +10,9 @@ from django_twilio.client import twilio_client
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
-from bnet.models import Period
+from bnet.models import Period, Participant
 from .forms import MessageCreateForm
-from .models import InboundSms, OutboundSms, Message
+from .models import Distribution, InboundSms, OutboundSms, Message
 
 from django.forms.widgets import Select, Widget, SelectDateWidget
 
@@ -72,6 +72,53 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
     template_name = 'message_detail.html'
 
 
+def handle_distribution_rsvp(distribution, rsvp=False):
+    """Helper function to process a RSVP response.
+    distribution -- A Distribution object
+    rsvp -- boolean RSVP response
+    """
+    distribution.rsvp = True
+    distribution.rsvp_answer = rsvp
+    distribution.save()
+
+    if not distribution.rsvp_answer:  # Answered no = nothing to do
+        return 'Response no to {} received.'.format(distribution.message.period)
+
+    participant_filter = {'period':distribution.message.period,
+                          'member':distribution.member}
+    if distribution.message.period_format == 'invite':
+        Participant.objects.get_or_create(**participant_filter)
+        return 'RSVP yes to {} successful.'.format(distribution.message.period)
+
+    p = Participant.objects.filter(**participant_filter).first()
+    if p:
+        if distribution.message.period_format == 'leave':
+            p.en_route_at = timezone.now()
+            p.save()
+            return 'Departure time recorded for {}.'.format(distribution.message.period)
+        elif distribution.message.period_format == 'return':
+            p.return_home_at = timezone.now()
+            p.save()
+            return 'Return time recorded for {}.'.format(distribution.message.period)
+        else:
+            return ('Unknown response for {} page for {}.'
+                    .format(distribution.message.period_format, distribution.message.period))
+
+    logger.error('Participant not found for: ' + request.body)
+    return ('Error: You were not found as a participant for {}.'
+            .format(distribution.message.period))
+
+
+def unauth_rsvp(request, token):
+    d = get_object_or_404(Distribution, unauth_rsvp_token=token)
+    if d.unauth_rsvp_expires_at < timezone.now():
+        response_text =  'Error: token expired'
+    else:
+        rsvp = request.GET.get('rsvp')[0].lower() == 'y'
+        response_text = handle_distribution_rsvp(d, rsvp)
+    return HttpResponse(response_text)  # TODO template
+
+
 @twilio_view
 def sms_callback(request):
     logger.info(request.body)
@@ -86,6 +133,7 @@ def sms_callback(request):
 
 @twilio_view
 def sms(request):
+    """Handle an incomming SMS message."""
     logger.info(request.body)
     response = MessagingResponse()
     twilio_request = decompose(request)
@@ -116,38 +164,7 @@ def sms(request):
         response.message('Could not parse yes/no in your message.')
         return response
         
-    d = outbound.distribution
-    d.rsvp = True
-    d.rsvp_answer = (yn == 'y')
-    d.save()
-
-    if not d.rsvp_answer:  # Answered no = nothing to do
-        response.message('Response no to {} received.'.format(d.message.period))
-        return response
-    
-    participant_filter = {'period':d.message.period,
-                          'member':d.member}
-    if d.message.period_format == 'invite':
-        Participant.objects.get_or_create(**participant_filter)
-        response.message('RSVP yes to {} successful.'.format(d.message.period))
-        return response
-        
-    p = Participant.objects.filter(**participant_filter).first()
-    if p:
-        if d.message.period_format == 'leave':
-            p.en_route_at = timezone.now()
-            response.message('Departure time recorded for {}.'.format(d.message.period))
-        elif d.message.period_format == 'return':
-            p.return_home_at = timezone.now()
-            response.message('Return time recorded for {}.'.format(d.message.period))
-        else:
-            response.message('Unknown response for {} page for {}.'
-                             .format(d.message.period_format, d.message.period))
-        p.save()
-    else:
-        response.message('Error: You were not found as a participant for {}.'
-                         .format(d.message.period))
-        logger.error('Participant not found for: ' + request.body)
+    response.message(handle_distribution_rsvp(outbound.distribution, (yn == 'y')))
     return response
 
 
