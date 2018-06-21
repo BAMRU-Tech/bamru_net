@@ -1,29 +1,29 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.dispatch import receiver
+from django.forms.widgets import Select, Widget, SelectDateWidget
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
 from django.views import generic
+
+from anymail.signals import tracking
+from datetime import datetime, timedelta
 from django_twilio.client import twilio_client
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
+
 from bnet.models import Period, Participant
 from .forms import MessageCreateForm
-from .models import Distribution, InboundSms, OutboundSms, Message
-
-from django.forms.widgets import Select, Widget, SelectDateWidget
-
-from datetime import datetime, timedelta
+from .models import Distribution, InboundSms, OutboundSms, OutboundEmail, Message
 
 import logging
 logger = logging.getLogger(__name__)
 
-
-from django_datatables_view.base_datatable_view import BaseDatatableView
-from django.utils.html import escape
 
 class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Message
@@ -178,3 +178,16 @@ def test_send(request):
         status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
         )
     return HttpResponse('done ' + message.sid)
+
+
+@receiver(tracking)
+def handle_outbound_email_tracking(sender, event, esp_name, **kwargs):
+    logger.info('{}: {} ({})'.format(event.message_id, event.event_type, event.description))
+    email = OutboundEmail.objects.get(sid=event.message_id)
+    email.status = event.event_type
+    email.error_message = event.description
+    if event.event_type == 'delivered':
+        email.delivered = True
+    if event.event_type == 'opened':
+        email.opened = True
+    email.save()

@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db import models
-from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import timezone
 from django_twilio.client import twilio_client
@@ -8,7 +7,6 @@ from django_twilio.client import twilio_client
 from datetime import datetime, timedelta
 
 from anymail.message import AnymailMessage
-from anymail.signals import tracking
 import phonenumbers
 import logging
 import uuid
@@ -178,15 +176,3 @@ class OutboundEmail(BaseModel):
             self.status = message.anymail_status.status
             logger.info(dir(message.anymail_status))
         self.save()
-
-@receiver(tracking)
-def handle_outbound_email_tracking(sender, event, esp_name, **kwargs):
-    logger.info('{}: {} ({})'.format(event.message_id, event.event_type, event.description))
-    email = OutboundEmail.objects.get(sid=event.message_id)
-    email.status = event.event_type
-    email.error_message = event.description
-    if event.event_type == 'delivered':
-        email.delivered = True
-    if event.event_type == 'opened':
-        email.opened = True
-    email.save()
