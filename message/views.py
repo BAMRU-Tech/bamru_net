@@ -1,27 +1,29 @@
+import logging
+from datetime import datetime, timedelta
+
+from anymail.signals import tracking
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.dispatch import receiver
-from django.forms.widgets import Select, Widget, SelectDateWidget
+from django.forms.widgets import Select, SelectDateWidget, Widget
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.views import generic
-
-from anymail.signals import tracking
-from datetime import datetime, timedelta
 from django_twilio.client import twilio_client
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
 
-from bnet.models import Period, Participant
-from .forms import MessageCreateForm
-from .models import Distribution, InboundSms, OutboundSms, OutboundEmail, Message
+from bnet.models import Participant, Period
 
-import logging
+from .forms import MessageCreateForm
+from .models import (Distribution, InboundSms, Message, OutboundEmail,
+                     OutboundSms)
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,7 +52,8 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
         message = form.instance
         message.save()
         if self.request.POST.get('period'):
-            period = get_object_or_404(Period, pk=self.request.POST.get('period'))
+            period = get_object_or_404(
+                Period, pk=self.request.POST.get('period'))
             if self.request.GET.get('period_format') == 'invite':
                 for m in Member.page_objects.all():
                     message.distribution_set.create(
@@ -84,8 +87,8 @@ def handle_distribution_rsvp(distribution, rsvp=False):
     if not distribution.rsvp_answer:  # Answered no = nothing to do
         return 'Response no to {} received.'.format(distribution.message.period)
 
-    participant_filter = {'period':distribution.message.period,
-                          'member':distribution.member}
+    participant_filter = {'period': distribution.message.period,
+                          'member': distribution.member}
     if distribution.message.period_format == 'invite':
         Participant.objects.get_or_create(**participant_filter)
         return 'RSVP yes to {} successful.'.format(distribution.message.period)
@@ -112,7 +115,7 @@ def handle_distribution_rsvp(distribution, rsvp=False):
 def unauth_rsvp(request, token):
     d = get_object_or_404(Distribution, unauth_rsvp_token=token)
     if d.unauth_rsvp_expires_at < timezone.now():
-        response_text =  'Error: token expired'
+        response_text = 'Error: token expired'
     else:
         rsvp = request.GET.get('rsvp')[0].lower() == 'y'
         response_text = handle_distribution_rsvp(d, rsvp)
@@ -155,18 +158,19 @@ def sms(request):
     # TODO filter by texts that have associated question
     if not outbound:
         logger.error('No matching OutboundSms for: ' + request.body)
-        response.message('BAMRU.net Warning: not sure what to do with your message. Maybe it was too long ago.')
+        response.message(
+            'BAMRU.net Warning: not sure what to do with your message. Maybe it was too long ago.')
         return response
-        
+
     yn = twilio_request.body[0].lower()
     if yn != 'y' and yn != 'n':
         logger.error('Unable to parse y/n message: ' + request.body)
         response.message('Could not parse yes/no in your message.')
         return response
-        
-    response.message(handle_distribution_rsvp(outbound.distribution, (yn == 'y')))
-    return response
 
+    response.message(handle_distribution_rsvp(
+        outbound.distribution, (yn == 'y')))
+    return response
 
 
 @login_required
@@ -175,14 +179,16 @@ def test_send(request):
         body="test message",
         to="+18182747750",
         from_=settings.TWILIO_SMS_FROM,
-        status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
-        )
+        status_callback='http://{}{}'.format(
+            settings.HOSTNAME, reverse('bnet:sms_callback')),
+    )
     return HttpResponse('done ' + message.sid)
 
 
 @receiver(tracking)
 def handle_outbound_email_tracking(sender, event, esp_name, **kwargs):
-    logger.info('{}: {} ({})'.format(event.message_id, event.event_type, event.description))
+    logger.info('{}: {} ({})'.format(event.message_id,
+                                     event.event_type, event.description))
     email = OutboundEmail.objects.get(sid=event.message_id)
     email.status = event.event_type
     email.error_message = event.description

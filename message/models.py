@@ -1,21 +1,21 @@
+import logging
+import uuid
+from datetime import datetime, timedelta
+
+import phonenumbers
+from anymail.message import AnymailMessage
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 from django_twilio.client import twilio_client
 
-from datetime import datetime, timedelta
-
-from anymail.message import AnymailMessage
-import phonenumbers
-import logging
-import uuid
+from bnet.models import (BaseModel, BasePositionModel, Email, Member, Period,
+                         Phone)
 
 logger = logging.getLogger(__name__)
 
-from bnet.models import BaseModel, BasePositionModel
-from bnet.models import Member, Phone, Email
-from bnet.models import Period
+
 
 class RsvpTemplate(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -33,6 +33,7 @@ class RsvpTemplate(BasePositionModel):
                       (('yes', self.yes_prompt), ('no', self.no_prompt))])
         return '<p>{}</p>{}'.format(self.prompt, yn)
 
+
 class Message(BaseModel):
     FORMATS = (
         ('page', 'Page'),
@@ -40,22 +41,26 @@ class Message(BaseModel):
         ('cert_notice', 'Cert notice'),
         ('do_shift_starting', 'DO Shift Starting'),
         ('do_shift_pending', 'DO Shift Pending'),
-        )
+    )
     PERIOD_FORMATS = (
         ('invite', 'invite'),
         ('info', 'info'),
         ('broadcast', 'broadcast'),
         ('leave', 'leave'),
         ('return', 'return'),
-        )
+    )
     author = models.ForeignKey(Member, on_delete=models.CASCADE)
     text = models.TextField()
     format = models.CharField(choices=FORMATS, max_length=255)
-    linked_rsvp = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
+    linked_rsvp = models.ForeignKey(
+        'self', on_delete=models.CASCADE, blank=True, null=True)
     ancestry = models.CharField(max_length=255, blank=True, null=True)
-    period = models.ForeignKey(Period, on_delete=models.CASCADE, blank = True, null=True)
-    period_format = models.CharField(choices=PERIOD_FORMATS, max_length=255, blank=True, null=True)
-    rsvp_template = models.ForeignKey(RsvpTemplate, on_delete=models.CASCADE, blank=True, null=True)
+    period = models.ForeignKey(
+        Period, on_delete=models.CASCADE, blank=True, null=True)
+    period_format = models.CharField(
+        choices=PERIOD_FORMATS, max_length=255, blank=True, null=True)
+    rsvp_template = models.ForeignKey(
+        RsvpTemplate, on_delete=models.CASCADE, blank=True, null=True)
 
     @models.permalink
     def get_absolute_url(self):
@@ -77,7 +82,8 @@ class Distribution(BaseModel):
     response_seconds = models.IntegerField(blank=True, null=True)
     rsvp = models.BooleanField(default=False)
     rsvp_answer = models.NullBooleanField()
-    unauth_rsvp_token = models.CharField(max_length=255, unique=True, null=True, default=uuid.uuid4, editable=False)
+    unauth_rsvp_token = models.CharField(
+        max_length=255, unique=True, null=True, default=uuid.uuid4, editable=False)
     unauth_rsvp_expires_at = models.DateTimeField(blank=True, null=True)
 
     def send(self):
@@ -85,12 +91,14 @@ class Distribution(BaseModel):
         self.save()
         if self.phone:
             for p in self.member.phone_set.filter(pagable=True):
-                sms, created = OutboundSms.objects.get_or_create(distribution=self, phone=p)
+                sms, created = OutboundSms.objects.get_or_create(
+                    distribution=self, phone=p)
                 if created:
                     sms.send()
         if self.email:
             for e in self.member.email_set.filter(pagable=True):
-                email, created = OutboundEmail.objects.get_or_create(distribution=self, email=e)
+                email, created = OutboundEmail.objects.get_or_create(
+                    distribution=self, email=e)
                 if created:
                     email.send()
 
@@ -102,6 +110,7 @@ class Distribution(BaseModel):
                 return 'No'
         else:
             return 'PENDING'
+
 
 class OutboundSms(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
@@ -123,7 +132,8 @@ class OutboundSms(BaseModel):
                 body=self.distribution.message.text,
                 to=e164,
                 from_=settings.TWILIO_SMS_FROM,
-                status_callback= 'http://{}{}'.format(settings.HOSTNAME, reverse('bnet:sms_callback')),
+                status_callback='http://{}{}'.format(
+                    settings.HOSTNAME, reverse('bnet:sms_callback')),
             )
         except Exception as e:
             self.status = str(e)
@@ -135,11 +145,13 @@ class OutboundSms(BaseModel):
             self.error_message = message.error_message
         self.save()
 
+
 class InboundSms(BaseModel):
     sid = models.CharField(max_length=255, blank=True, null=True)
     from_number = models.CharField(max_length=255, blank=True, null=True)
     to_number = models.CharField(max_length=255, blank=True, null=True)
     body = models.CharField(max_length=255, blank=True, null=True)
+
 
 class OutboundEmail(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
@@ -155,7 +167,7 @@ class OutboundEmail(BaseModel):
         html_body = body
         if self.distribution.message.rsvp_template:
             url = 'http://{}{}'.format(settings.HOSTNAME,
-                reverse('message:unauth_rsvp', args=[self.distribution.unauth_rsvp_token]))
+                                       reverse('message:unauth_rsvp', args=[self.distribution.unauth_rsvp_token]))
             html_body = body + self.distribution.message.rsvp_template.html(
                 url)
         try:
@@ -165,7 +177,8 @@ class OutboundEmail(BaseModel):
                 to=[self.email.address],
                 from_email=settings.MAILGUN_EMAIL_FROM,
             )
-            message.attach_alternative('<html>{}</html>'.format(html_body), 'text/html')
+            message.attach_alternative(
+                '<html>{}</html>'.format(html_body), 'text/html')
             message.send()
         except Exception as e:
             self.status = 'Anymail exception'
