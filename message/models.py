@@ -16,7 +16,6 @@ from bnet.models import (BaseModel, BasePositionModel, Email, Member, Period,
 logger = logging.getLogger(__name__)
 
 
-
 class RsvpTemplate(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
     prompt = models.CharField(max_length=255, blank=True, null=True)

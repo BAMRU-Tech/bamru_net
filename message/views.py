@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.dispatch import receiver
 from django.forms.widgets import Select, SelectDateWidget, Widget
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -18,35 +18,64 @@ from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
 
-from bnet.models import Participant, Period
+from bnet.models import Member, Participant, Period
 
 from .forms import MessageCreateForm
 from .models import (Distribution, InboundSms, Message, OutboundEmail,
-                     OutboundSms)
+                     OutboundSms, RsvpTemplate)
 
 logger = logging.getLogger(__name__)
 
 
 class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Message
-    form_class = MessageCreateForm
     template_name = 'base_form.html'
 
     def get_success_url(self):
         return self.object.get_absolute_url()
 
-    def get_initial(self):
-        initial = super(MessageCreateView, self).get_initial().copy()
+    def get_form(self, form_class=None):
+        """Return an instance of the form to be used in this view."""
+        kwargs = self.get_form_kwargs()
+        initial = kwargs['initial']
         initial['author'] = self.request.user.pk
-        if self.request.GET.get('period'):
-            initial['format'] = 'page'
-            initial['period'] = self.request.GET.get('period')
-            initial['period_format'] = self.request.GET.get('period_format')
+        members = None
+        period_id = self.request.GET.get('period')
+        period_format = self.request.GET.get('period_format')
+        if period_id:
             try:
-                initial['text'] = str(Period.objects.get(pk=initial['period']))
+                period = Period.objects.get(pk=period_id)
             except Period.DoesNotExist:
-                pass
-        return initial
+                logger.error('Period not found for: ' + self.request.body)
+                raise Http404(
+                    'Period {} specified, but does not exist'.format(period_id))
+            initial['format'] = 'page'
+            initial['period'] = period_id
+            initial['period_format'] = period_format
+            initial['text'] = str(period)
+
+            if period_format == 'invite':
+                members = Member.page_objects.exclude(
+                    participant__period=period_id)
+                template_str = 'Available?'
+            else:
+                members = Member.objects.filter(participant__period=period_id)
+                if period_format == 'leave':
+                    template_str = 'Left?'
+                else:
+                    template_str = 'Returned?'
+
+            initial['members'] = [m.id for m in members]
+
+            try:
+                initial['rsvp_template'] = RsvpTemplate.objects.get(
+                    name=template_str).id
+            except RsvpTemplate.DoesNotExist:
+                logger.error('RsvpTemplate {} not found for: {}'.format(
+                    template_str, self.request.body))
+
+        kwargs['initial'] = initial
+        return MessageCreateForm(members, **kwargs)
 
     def form_valid(self, form):
         message = form.instance
@@ -54,18 +83,11 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
         if self.request.POST.get('period'):
             period = get_object_or_404(
                 Period, pk=self.request.POST.get('period'))
-            if self.request.GET.get('period_format') == 'invite':
-                for m in Member.page_objects.all():
-                    message.distribution_set.create(
-                        member=m,
-                        email=form.cleaned_data['email'],
-                        phone=form.cleaned_data['phone'])
-            else:
-                for p in period.participant_set.all():
-                    message.distribution_set.create(
-                        member=p.member,
-                        email=form.cleaned_data['email'],
-                        phone=form.cleaned_data['phone'])
+            for m in form.cleaned_data['members']:
+                message.distribution_set.create(
+                    member_id=m,
+                    email=form.cleaned_data['email'],
+                    phone=form.cleaned_data['phone'])
         message.send()
         return super().form_valid(form)
 
