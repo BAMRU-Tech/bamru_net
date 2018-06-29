@@ -16,11 +16,13 @@ docutils==0.14
 elpy==1.21.0
 flake8==3.5.0
 idna==2.6
+isort==4.3.4
 jedi==0.12.0
 Mako==1.0.7
 markdown2==2.3.5
 MarkupSafe==1.0
 mccabe==0.6.1
+model-mommy==1.6.0
 parso==0.2.1
 phonenumberslite==8.9.7
 Plim==0.9.12
