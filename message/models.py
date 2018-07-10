@@ -185,6 +185,6 @@ class OutboundEmail(BaseModel):
             logger.error('Anymail error: {}'.format(e))
         else:
             self.sid = message.anymail_status.message_id
-            self.status = message.anymail_status.status
+            self.status = message.anymail_status.status.pop()
             logger.info(dir(message.anymail_status))
         self.save()
