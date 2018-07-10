@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+import raven
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     'django_twilio',
     'anymail',
     'bootstrap4',
+    'raven.contrib.django.raven_compat',
     'bnet',
     'message',
 ]
@@ -138,6 +140,15 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Raven config for Sentry.io logging
+if 'USE_RAVEN' in os.environ:
+    RAVEN_CONFIG = {
+        'dsn': os.environ['RAVEN_DSN'],
+        # If you are using git, you can also automatically configure the
+        # release based on the git info.
+        'release': raven.fetch_git_sha(os.path.abspath(BASE_DIR)),
+    }
+
 TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
 
@@ -149,23 +160,75 @@ ANYMAIL = {
 MAILGUN_EMAIL_FROM = os.environ['MAILGUN_EMAIL_FROM']
 DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
 
-# TODO: add file logging
+
+from django.utils.log import DEFAULT_LOGGING
+LOG_ROOT = os.environ['LOG_ROOT']
+LOGGING_CONFIG = None
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    'disable_existing_loggers': True,
+    'root': {
+        'level': 'WARNING',
+        'handlers': ['sentry'],
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(name)s:%(module)s:%(lineno)d '
+                      '%(process)d %(thread)d %(message)s'
         },
+        'django.server': DEFAULT_LOGGING['formatters']['django.server'],
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'verbose',
+            'filename': os.path.join(LOG_ROOT, 'django.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB
+            'backupCount': 90,
+        },
+        'sentry': {
+            'level': 'WARNING',
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        },
+        'django.server': DEFAULT_LOGGING['handlers']['django.server'],
     },
     'loggers': {
-        'django': {
+        'django.db.backends': {
+            'level': 'ERROR',
             'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
         },
-        'bnet': {
+        'raven': {
+            'level': 'DEBUG',
             'handlers': ['console'],
+            'propagate': False,
+        },
+        'sentry.errors': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        # Default runserver request logging
+        'django.server': DEFAULT_LOGGING['loggers']['django.server'],
+        # Project logging
+        'bnet': {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'handlers': ['console', 'sentry', 'file'],
+            'propagate': False,
+        },
+        'message': {
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'handlers': ['console', 'sentry', 'file'],
+            'propagate': False,
         },
     },
 }
+
+import logging.config
+logging.config.dictConfig(LOGGING)
