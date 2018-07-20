@@ -66,6 +66,11 @@ class Message(BaseModel):
         return ('message:message_detail', [str(self.id)])
 
     def send(self):
+        """
+        Send the message.
+        Because this can take some time, it should only be called by the
+        message_send task.
+        """
         for d in self.distribution_set.all():
             d.send()
 
@@ -162,6 +167,7 @@ class OutboundEmail(BaseModel):
     opened = models.BooleanField(default=False)
 
     def send(self):
+        logger.info('Sending email to {}'.format(self.email.address))
         body = self.distribution.message.text
         html_body = body
         if self.distribution.message.rsvp_template:
@@ -186,5 +192,4 @@ class OutboundEmail(BaseModel):
         else:
             self.sid = message.anymail_status.message_id
             self.status = message.anymail_status.status.pop()
-            logger.info(dir(message.anymail_status))
         self.save()

@@ -23,6 +23,7 @@ from bnet.models import Member, Participant, Period
 from .forms import MessageCreateForm
 from .models import (Distribution, InboundSms, Message, OutboundEmail,
                      OutboundSms, RsvpTemplate)
+from .tasks import message_send
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,8 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
                     member_id=m,
                     email=form.cleaned_data['email'],
                     phone=form.cleaned_data['phone'])
-        message.send()
+        logger.info('Calling message_send {}'.format(message.pk))
+        message_send.delay(message.pk)
         return super().form_valid(form)
 
 

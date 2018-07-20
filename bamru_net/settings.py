@@ -160,6 +160,8 @@ ANYMAIL = {
 MAILGUN_EMAIL_FROM = os.environ['MAILGUN_EMAIL_FROM']
 DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
 
+CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
+CELERYD_HIJACK_ROOT_LOGGER = False
 
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']
@@ -212,6 +214,11 @@ LOGGING = {
         'sentry.errors': {
             'level': 'DEBUG',
             'handlers': ['console'],
+            'propagate': False,
+        },
+        'celery': {
+            'level': 'WARNING',
+            'handlers': ['sentry'],
             'propagate': False,
         },
         # Default runserver request logging
