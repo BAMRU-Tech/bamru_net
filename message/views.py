@@ -60,11 +60,16 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
                     participant__period=period_id)
                 template_str = 'Available?'
             else:
-                members = Member.objects.filter(participant__period=period_id)
                 if period_format == 'leave':
                     template_str = 'Left?'
+                    members = Member.objects.filter(
+                        participant__period=period_id,
+                        participant__en_route_at__isnull=True)
                 else:
                     template_str = 'Returned?'
+                    members = Member.objects.filter(
+                        participant__period=period_id,
+                        participant__return_home_at__isnull=True)
 
             initial['members'] = [m.id for m in members]
 
