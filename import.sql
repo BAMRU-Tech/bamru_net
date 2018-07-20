@@ -1,4 +1,4 @@
-TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_unavailable, bnet_cert, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution, bnet_rsvptemplates CASCADE;
+TRUNCATE bnet_member, bnet_address, bnet_email, bnet_phone, bnet_emergencycontact, bnet_role, bnet_otherinfo, bnet_unavailable, bnet_cert, bnet_event, bnet_period, bnet_participant, bnet_message, bnet_distribution, bnet_rsvptemplate CASCADE;
 
 insert into bnet_member (id, first_name, last_name, username, member_rank, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
 select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
