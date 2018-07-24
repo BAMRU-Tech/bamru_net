@@ -104,6 +104,24 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
     template_name = 'message_detail.html'
 
 
+class MessageListView(LoginRequiredMixin, generic.ListView):
+    template_name = 'message_list.html'
+    context_object_name = 'message_list'
+
+    def get_queryset(self):
+        """Return event list within the last year """
+        qs = Message.objects.all()
+        qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=365))
+        return qs.order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add column sort for datatable (zero origin)
+        context['sortOrder'] = '2, "dsc"'
+        return context
+
+
+
 def handle_distribution_rsvp(distribution, rsvp=False):
     """Helper function to process a RSVP response.
     distribution -- A Distribution object

@@ -10,6 +10,10 @@ class BaseModel(models.Model):
         abstract = True
         app_label = 'bnet'
 
+    @property
+    def created_order(self):
+        return self.created_at.timestamp()
+
 
 class BasePositionModel(BaseModel):
     """Common handling for user-sorted items."""

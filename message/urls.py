@@ -8,6 +8,8 @@ urlpatterns = [
 
     path('message/<int:pk>/', views.MessageDetailView.as_view(),
          name='message_detail'),
+    path('message/', views.MessageListView.as_view(),
+         name='message_list'),
     path('message/add/',
          views.MessageCreateView.as_view(),
          name='message_add'),
