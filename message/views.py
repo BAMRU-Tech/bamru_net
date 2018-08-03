@@ -13,7 +13,6 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.views import generic
-from django_twilio.client import twilio_client
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
@@ -121,7 +120,6 @@ class MessageListView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-
 def handle_distribution_rsvp(distribution, rsvp=False):
     """Helper function to process a RSVP response.
     distribution -- A Distribution object
@@ -175,6 +173,8 @@ def sms_callback(request):
     twilio_request = decompose(request)
     sms = OutboundSms.objects.get(sid=twilio_request.messagesid)
     sms.status = twilio_request.messagestatus
+    if sms.status == 'delivered':
+        sms.delivered = True
     if hasattr(twilio_request, 'errorcode'):
         sms.error_code = twilio_request.errorcode
     sms.save()
@@ -199,7 +199,7 @@ def sms(request):
 
     date_from = timezone.now() - timedelta(hours=12)
     outbound = (OutboundSms.objects
-                .filter(member_number=twilio_request.from_,
+                .filter(destination=twilio_request.from_,
                         created_at__gte=date_from)
                 .order_by('-pk').first())
     # TODO filter by texts that have associated question
@@ -222,12 +222,13 @@ def sms(request):
 
 @login_required
 def test_send(request):
+    from django_twilio.client import twilio_client
     message = twilio_client.messages.create(
         body="test message",
         to="+18182747750",
         from_=settings.TWILIO_SMS_FROM,
         status_callback='http://{}{}'.format(
-            settings.HOSTNAME, reverse('bnet:sms_callback')),
+            settings.HOSTNAME, reverse('message:sms_callback')),
     )
     return HttpResponse('done ' + message.sid)
 

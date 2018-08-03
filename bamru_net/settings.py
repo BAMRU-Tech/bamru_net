@@ -152,7 +152,14 @@ if 'USE_RAVEN' in os.environ:
 TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
 
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+if 'MESSAGE_FILE_PATH' in os.environ:
+    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    EMAIL_FILE_PATH = os.environ['MESSAGE_FILE_PATH']
+    SMS_FILE_PATH = EMAIL_FILE_PATH
+else:
+    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+    SMS_FILE_PATH = None
+
 ANYMAIL = {
     'WEBHOOK_SECRET': os.environ['MAILGUN_WEBHOOK_SECRET'],
     'MAILGUN_API_KEY': os.environ['MAILGUN_API_KEY'],

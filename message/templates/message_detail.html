@@ -19,12 +19,18 @@ Message:
 <tr>
   <td>{{ d.member }}</td>
   <td>
-    {{ d.outboundsms_set.first.status }}
-    {{ d.outboundsms_set.first.error_message|default_if_none:"" }}
+    {% for m in d.outboundsms_set.all %}
+      {{ m.destination }}:
+      {{ m.status }}
+      {{ m.error_message|default_if_none:"" }}
+    {% endfor %}
   </td>
   <td>
-    {{ d.outboundemail_set.first.status }}
-    {{ d.outboundemail_set.first.error_message|default_if_none:"" }}
+    {% for m in d.outboundemail_set.all %}
+      {{ m.email.address }}:
+      {{ m.status }}
+      {{ m.error_message|default_if_none:"" }}
+    {% endfor %}
   </td>
   <td>{{ d.rsvp_display }}</td>
 </tr>

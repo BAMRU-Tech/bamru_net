@@ -8,7 +8,6 @@ from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-from django_twilio.client import twilio_client
 
 from bnet.models import (BaseModel, BasePositionModel, Email, Member, Period,
                          Phone)
@@ -31,6 +30,10 @@ class RsvpTemplate(BasePositionModel):
                       for yn, prompt in
                       (('yes', self.yes_prompt), ('no', self.no_prompt))])
         return '<p>{}</p>{}'.format(self.prompt, yn)
+
+    @property
+    def text(self):
+        return self.prompt
 
 
 class Message(BaseModel):
@@ -65,6 +68,21 @@ class Message(BaseModel):
     def get_absolute_url(self):
         return ('message:message_detail', [str(self.id)])
 
+    @property
+    def expanded_text(self):
+        if self.rsvp_template:
+            return '{} {}'.format(self.text, self.rsvp_template.text)
+        return self.text
+
+    def html(self, unauth_rsvp_token):
+        html_body = self.text
+        if self.rsvp_template:
+            url = 'http://{}{}'.format(settings.HOSTNAME,
+                                       reverse('message:unauth_rsvp',
+                                               args=[unauth_rsvp_token]))
+            html_body += self.rsvp_template.html(url)
+        return html_body
+
     def send(self):
         """
         Send the message.
@@ -89,6 +107,14 @@ class Distribution(BaseModel):
     unauth_rsvp_token = models.CharField(
         max_length=255, unique=True, null=True, default=uuid.uuid4, editable=False)
     unauth_rsvp_expires_at = models.DateTimeField(blank=True, null=True)
+
+    @property
+    def text(self):
+        return self.message.expanded_text
+
+    @property
+    def html(self):
+        return self.message.html(self.unauth_rsvp_token)
 
     def send(self):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
@@ -116,36 +142,61 @@ class Distribution(BaseModel):
             return 'PENDING'
 
 
-class OutboundSms(BaseModel):
+class OutboundMessage(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
-    phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
-    member_number = models.CharField(max_length=255, blank=True, null=True)
+    destination = models.CharField(max_length=255, blank=True, null=True)
     sid = models.CharField(max_length=255, blank=True, null=True)
     status = models.CharField(max_length=255, blank=True, null=True)
-    error_code = models.IntegerField(blank=True, null=True)
     error_message = models.CharField(max_length=255, blank=True, null=True)
+    delivered = models.BooleanField(default=False)
+
+    class Meta(BaseModel.Meta):
+        abstract = True
+
+
+class OutboundSms(OutboundMessage):
+    phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
+    error_code = models.IntegerField(blank=True, null=True)
 
     def send(self):
         e164 = phonenumbers.format_number(phonenumbers.parse(self.phone.number, 'US'),
                                           phonenumbers.PhoneNumberFormat.E164)
-        self.member_number = e164
-        logger.info('Sending text to {}: {}'.format(self.member_number,
-                                                    self.distribution.message.text))
+        self.destination = e164
+        logger.info('Sending text to {}: {}'.format(self.destination,
+                                                    self.distribution.text))
+
+        kwargs = {
+            'body': self.distribution.text,
+            'to': e164,
+            'from_': settings.TWILIO_SMS_FROM,
+            'status_callback': 'http://{}{}'.format(
+                settings.HOSTNAME, reverse('message:sms_callback')),
+        }
+
         try:
-            message = twilio_client.messages.create(
-                body=self.distribution.message.text,
-                to=e164,
-                from_=settings.TWILIO_SMS_FROM,
-                status_callback='http://{}{}'.format(
-                    settings.HOSTNAME, reverse('bnet:sms_callback')),
-            )
+            if settings.SMS_FILE_PATH:
+                import json
+                logger.info('Writing to file: {}'.format(
+                    settings.SMS_FILE_PATH))
+                with open(settings.SMS_FILE_PATH + '/sms.log', 'a') as f:
+                    f.write(json.dumps(kwargs))
+                    f.write('\n')
+                message = {
+                    'sid': 'FAKE_' + uuid.uuid4().hex,
+                    'status': 'Delivered',
+                    'error_code': None,
+                    'error_message': None,
+                }
+            else:
+                from django_twilio.client import twilio_client
+                message = twilio_client.messages.create(**kwargs)
         except Exception as e:
             self.status = str(e)
             logger.error('Twilio error: {}'.format(e))
         else:
             self.sid = message.sid
             self.status = message.status
-            self.error_code = self.error_code
+            self.error_code = message.error_code
             self.error_message = message.error_message
         self.save()
 
@@ -157,29 +208,20 @@ class InboundSms(BaseModel):
     body = models.CharField(max_length=255, blank=True, null=True)
 
 
-class OutboundEmail(BaseModel):
-    distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
+class OutboundEmail(OutboundMessage):
     email = models.ForeignKey(Email, on_delete=models.CASCADE)
-    sid = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(max_length=255, blank=True, null=True)
-    error_message = models.CharField(max_length=255, blank=True, null=True)
-    delivered = models.BooleanField(default=False)
     opened = models.BooleanField(default=False)
 
     def send(self):
         logger.info('Sending email to {}'.format(self.email.address))
-        body = self.distribution.message.text
-        html_body = body
-        if self.distribution.message.rsvp_template:
-            url = 'http://{}{}'.format(settings.HOSTNAME,
-                                       reverse('message:unauth_rsvp', args=[self.distribution.unauth_rsvp_token]))
-            html_body = body + self.distribution.message.rsvp_template.html(
-                url)
+        self.destination = self.email.address
+        body = self.distribution.text
+        html_body = self.distribution.html
         try:
             message = AnymailMessage(
                 subject="BAMRU.net page",
                 body=body,
-                to=[self.email.address],
+                to=[self.destination],
                 from_email=settings.MAILGUN_EMAIL_FROM,
             )
             message.attach_alternative(
@@ -191,5 +233,9 @@ class OutboundEmail(BaseModel):
             logger.error('Anymail error: {}'.format(e))
         else:
             self.sid = message.anymail_status.message_id
-            self.status = message.anymail_status.status.pop()
+            status = message.anymail_status.status
+            if status:
+                self.status = status.pop()
+            else:
+                self.status = 'No server status'
         self.save()
