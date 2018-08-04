@@ -70,6 +70,16 @@ class Period(BaseModel):
     def __str__(self):
         return "{} OP{}".format(self.event.title, self.position)
 
+    def members_for_left_page(self):
+        return Member.objects.filter(
+            participant__period=self.id,
+            participant__en_route_at__isnull=True)
+
+    def members_for_returned_page(self):
+        return Member.objects.filter(
+            participant__period=self.id,
+            participant__return_home_at__isnull=True)
+
 
 class Participant(BaseModel):
     period = models.ForeignKey(Period, on_delete=models.CASCADE)

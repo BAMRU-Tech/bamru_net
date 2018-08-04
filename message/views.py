@@ -61,14 +61,10 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
             else:
                 if period_format == 'leave':
                     template_str = 'Left?'
-                    members = Member.objects.filter(
-                        participant__period=period_id,
-                        participant__en_route_at__isnull=True)
+                    members = period.members_for_left_page()
                 else:
                     template_str = 'Returned?'
-                    members = Member.objects.filter(
-                        participant__period=period_id,
-                        participant__return_home_at__isnull=True)
+                    members = period.members_for_returned_page()
 
             initial['members'] = [m.id for m in members]
 
