@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 import phonenumbers
 from anymail.message import AnymailMessage
+from argparse import Namespace
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
@@ -92,6 +93,7 @@ class Message(BaseModel):
         for d in self.distribution_set.all():
             d.send()
 
+    # TODO: Do not repage unavailable on invite
     def repage(self, author=None):
         from .tasks import message_send  # Here to avoid circular dependency
         old_id = self.pk
@@ -207,12 +209,12 @@ class OutboundSms(OutboundMessage):
                 with open(settings.SMS_FILE_PATH + '/sms.log', 'a') as f:
                     f.write(json.dumps(kwargs))
                     f.write('\n')
-                message = {
-                    'sid': 'FAKE_' + uuid.uuid4().hex,
-                    'status': 'Delivered',
-                    'error_code': None,
-                    'error_message': None,
-                }
+                message = Namespace(
+                    sid='FAKE_' + uuid.uuid4().hex,
+                    status='Delivered',
+                    error_code=None,
+                    error_message=None,
+                )
             else:
                 from django_twilio.client import twilio_client
                 message = twilio_client.messages.create(**kwargs)

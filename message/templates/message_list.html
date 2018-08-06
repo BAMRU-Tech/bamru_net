@@ -14,7 +14,8 @@
         { width: "30%", targets: 1 },
         { width: "15%", targets: 2 },
         { width: "5%", targets: 3 },
-        { width: "15%", targets: 3 },
+        { width: "5%", targets: 4 },
+        { width: "15%", targets: 5 },
         { type: "string", targets: 3 },
         { responsivePriority: 0, targets: 0 },
         { responsivePriority: 1, targets: 4 },
@@ -32,7 +33,7 @@
   <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
     <thead>
       <tr>
-        <th>Text</th><th>From</th><th>Sent at</th><th>Type</th><th>Event</th>
+        <th>Text</th><th>From</th><th>Sent at</th><th>Type</th><th>Period Type</th><th>Event</th>
       </tr>
     </thead>
 
@@ -43,6 +44,7 @@
         <td>{{ message.author }}</td>
         <td data-sort="{{ event.created_order }}">{{ message.created_at }}</td>
         <td>{{ message.format }}</td>
+        <td>{{ message.period_format }}</td>
         <td>
           {% if message.period %}
           <a href="{% url 'event_detail' message.period.event.pk %}">{{ message.period.event }}</a>
