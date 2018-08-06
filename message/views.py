@@ -165,7 +165,6 @@ def unauth_rsvp(request, token):
 
 @twilio_view
 def sms_callback(request):
-    logger.info(request.body)
     twilio_request = decompose(request)
     sms = OutboundSms.objects.get(sid=twilio_request.messagesid)
     sms.status = twilio_request.messagestatus
@@ -174,6 +173,7 @@ def sms_callback(request):
     if hasattr(twilio_request, 'errorcode'):
         sms.error_code = twilio_request.errorcode
     sms.save()
+    logger.info('sms_callback for {}: {}'.format(sms.sid, sms.status))
     return HttpResponse('')
 
 

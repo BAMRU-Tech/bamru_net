@@ -1,10 +1,10 @@
 import logging
 import uuid
+from argparse import Namespace
 from datetime import datetime, timedelta
 
 import phonenumbers
 from anymail.message import AnymailMessage
-from argparse import Namespace
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
