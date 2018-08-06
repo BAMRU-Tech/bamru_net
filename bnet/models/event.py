@@ -24,7 +24,7 @@ class Event(BaseModel):
     location = models.CharField(max_length=255)
     lat = models.CharField(max_length=255, blank=True, null=True)
     lon = models.CharField(max_length=255, blank=True, null=True)
-    start = models.DateTimeField(blank=True)
+    start = models.DateTimeField()
     finish = models.DateTimeField(blank=True, null=True)
     all_day = models.BooleanField(default=False)
     published = models.BooleanField(default=False)

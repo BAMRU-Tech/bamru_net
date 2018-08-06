@@ -180,7 +180,6 @@ def sms_callback(request):
 @twilio_view
 def sms(request):
     """Handle an incomming SMS message."""
-    logger.info(request.body)
     response = MessagingResponse()
     twilio_request = decompose(request)
     try:
@@ -188,6 +187,8 @@ def sms(request):
                                         from_number=twilio_request.from_,
                                         to_number=twilio_request.to,
                                         body=twilio_request.body)
+        logger.info('Received SMS from {}: {}'.format(twilio_request.from_,
+                                                      twilio_request.body))
     except:
         logger.error('Unable to save message: ' + request.body)
         response.message('BAMRU.net Error: unable to parse your message.')

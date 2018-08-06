@@ -7,7 +7,7 @@ from django.test import Client, TestCase
 from django.test.utils import override_settings
 from model_mommy import mommy
 
-from bnet.models import Email
+from bnet.models import Email, Participant
 
 from .models import *
 
@@ -52,8 +52,10 @@ class OutgoingSmsTestCase(TestCase):
         self.c = Client()
 
     def test_send(self):
+        # Send a generic page
         self.distribution.message.send()
 
+        # Check that it is logged
         f = settings.SMS_FILE_PATH + '/sms.log'
         proc = subprocess.Popen(['tail', '-n', '1', f], stdout=subprocess.PIPE)
         lines = proc.stdout.readlines()
@@ -62,6 +64,7 @@ class OutgoingSmsTestCase(TestCase):
         self.assertEqual(data['to'], self.number)
         self.assertEqual(data['body'], self.distribution.message.text)
 
+        # Emulate a status callback
         sms = self.distribution.outboundsms_set.first()
         sms_id = sms.id
         self.assertEqual(sms.delivered, False)
@@ -71,7 +74,48 @@ class OutgoingSmsTestCase(TestCase):
                                 })
         self.assertEqual(response.status_code, 200)
 
+        # Make sure it's now marked as delivered
         sms = OutboundSms.objects.get(id=sms_id)
         self.assertEqual(sms.delivered, True)
 
-        # TODO Test SMS response
+
+@override_settings(MESSAGE_FILE_PATH='/tmp/message_log',
+                   DJANGO_TWILIO_FORGERY_PROTECTION=False)
+class IncommingSmsTestCase(TestCase):
+    def setUp(self):
+        self.number = '+15552345678'
+        self.phone = mommy.make(Phone,
+                                number=self.number,
+                                make_m2m=True)
+        self.participant = mommy.make(Participant,
+                                      member=self.phone.member,
+                                      make_m2m=True)
+        self.distribution = mommy.make(Distribution,
+                                       member=self.phone.member,
+                                       message__period=self.participant.period,
+                                       message__format='page',
+                                       message__period_format='leave',
+                                       email=False,
+                                       phone=True,
+                                       make_m2m=True)
+        self.c = Client()
+
+    def test_send(self):
+        # Send a transit page
+        self.distribution.message.send()
+
+        # Check no RSVP before
+        self.assertIsNone(self.participant.en_route_at)
+
+        # Respond Yes to page
+        response = self.c.post(reverse('message:sms'),
+                               {'To': '+5550123456',
+                                'From': self.number,
+                                'MessageSid': 'FAKE_SID_SMS',
+                                'Body': 'Yes',
+                                })
+        self.assertEqual(response.status_code, 200)
+
+        # Check that RSVP is now there
+        p2 = Participant.objects.get(pk=self.participant.id)
+        self.assertIsNotNone(p2.en_route_at)
