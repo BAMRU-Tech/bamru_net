@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 
 from django.conf import settings
@@ -19,11 +20,19 @@ class OutgoingEmailTestCase(TestCase):
         self.email = mommy.make(Email,
                                 address=self.address,
                                 make_m2m=True)
+        self.period = mommy.make(Period,
+                                 make_m2m=True)
+        self.rsvp_template = mommy.make(RsvpTemplate)
         self.distribution = mommy.make(Distribution,
                                        member=self.email.member,
+                                       message__period=self.period,
+                                       message__format='page',
+                                       message__period_format='invite',
+                                       message__rsvp_template=self.rsvp_template,
                                        email=True,
                                        phone=False,
                                        make_m2m=True)
+        self.c = Client()
 
     def test_send(self):
         self.distribution.message.send()
@@ -31,9 +40,24 @@ class OutgoingEmailTestCase(TestCase):
         # Test that one message was sent:
         self.assertEqual(len(mail.outbox), 1)
 
-        self.assertEqual(mail.outbox[0].to, [self.address])
+        msg = mail.outbox[0]
+        self.assertEqual(msg.to, [self.address])
 
-        # TODO test click on link
+        # Extract the html part
+        html = msg.alternatives[0][0]
+
+        # First link should be Yes
+        url = re.search('href="([^"]+)"', html).group(1)
+        relative = re.search('{}(/.*)'.format(settings.HOSTNAME), url).group(1)
+
+        # Respond Yes to page
+        response = self.c.get(relative)
+        self.assertEqual(response.status_code, 200)
+
+        # Check that member is added to the event
+        p = Participant.objects.get(member=self.email.member,
+                                    period=self.period)
+        self.assertIsNotNone(p)
 
 
 @override_settings(MESSAGE_FILE_PATH='/tmp/message_log',
