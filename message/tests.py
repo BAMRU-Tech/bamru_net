@@ -34,6 +34,14 @@ class OutgoingEmailTestCase(TestCase):
                                        make_m2m=True)
         self.c = Client()
 
+    def follow_link(self, html, index):
+        url = re.findall('href="([^"]+)"', html)[index]
+        relative = re.search('{}(/.*)'.format(settings.HOSTNAME), url).group(1)
+
+        # Respond to page
+        response = self.c.get(relative)
+        self.assertEqual(response.status_code, 200)
+
     def test_send(self):
         self.distribution.message.send()
 
@@ -46,18 +54,27 @@ class OutgoingEmailTestCase(TestCase):
         # Extract the html part
         html = msg.alternatives[0][0]
 
-        # First link should be Yes
-        url = re.search('href="([^"]+)"', html).group(1)
-        relative = re.search('{}(/.*)'.format(settings.HOSTNAME), url).group(1)
+        # Second link should be No and have no effect
+        self.follow_link(html, 1)
+        self.assertFalse(Participant.objects.filter(
+            member=self.email.member,
+            period=self.period).exists())
 
-        # Respond Yes to page
-        response = self.c.get(relative)
-        self.assertEqual(response.status_code, 200)
+        # First link should be Yes
+        self.follow_link(html, 0)
 
         # Check that member is added to the event
-        p = Participant.objects.get(member=self.email.member,
-                                    period=self.period)
-        self.assertIsNotNone(p)
+        self.assertTrue(Participant.objects.filter(
+            member=self.email.member,
+            period=self.period).exists())
+
+        # Second link should be No
+        self.follow_link(html, 1)
+
+        # Check that member is removed from the event
+        self.assertFalse(Participant.objects.filter(
+            member=self.email.member,
+            period=self.period).exists())
 
 
 @override_settings(MESSAGE_FILE_PATH='/tmp/message_log',

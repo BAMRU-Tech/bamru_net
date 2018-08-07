@@ -125,14 +125,20 @@ def handle_distribution_rsvp(distribution, rsvp=False):
     distribution.rsvp_answer = rsvp
     distribution.save()
 
-    if not distribution.rsvp_answer:  # Answered no = nothing to do
-        return 'Response no to {} received.'.format(distribution.message.period)
-
     participant_filter = {'period': distribution.message.period,
                           'member': distribution.member}
     if distribution.message.period_format == 'invite':
-        Participant.objects.get_or_create(**participant_filter)
-        return 'RSVP yes to {} successful.'.format(distribution.message.period)
+        if distribution.rsvp_answer:
+            Participant.objects.get_or_create(**participant_filter)
+            return 'RSVP yes to {} successful.'.format(distribution.message.period)
+        p = Participant.objects.filter(**participant_filter).first()
+        if p:
+            p.delete()
+            return 'Canceled RSVP to {}.'.format(distribution.message.period)
+
+    # Answered no to anything but invite = nothing to do
+    if not distribution.rsvp_answer:
+        return 'Response no to {} received.'.format(distribution.message.period)
 
     p = Participant.objects.filter(**participant_filter).first()
     if p:
