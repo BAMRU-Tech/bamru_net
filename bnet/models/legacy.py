@@ -3,19 +3,6 @@
 # Models below this line have not been looked at
 #####################################################################
 
-
-class AvailDos(models.Model):
-    id = models.IntegerField(primary_key=True)  # AutoField?
-    member_id = models.IntegerField(blank=True, null=True)
-    year = models.IntegerField(blank=True, null=True)
-    quarter = models.IntegerField(blank=True, null=True)
-    week = models.IntegerField(blank=True, null=True)
-    typ = models.TextField(blank=True, null=True)  # This field type is a guess.
-    comment = models.TextField(blank=True, null=True)  # This field type is a guess.
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
-
 class DataFiles(models.Model):
     id = models.IntegerField(primary_key=True)  # AutoField?
     member_id = models.IntegerField(blank=True, null=True)
@@ -60,23 +47,6 @@ class DataPhotos(models.Model):
     published = models.NullBooleanField()
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
-
-
-class DoAssignments(models.Model):
-    id = models.IntegerField(primary_key=True)  # AutoField?
-    org_id = models.IntegerField(blank=True, null=True)
-    year = models.IntegerField(blank=True, null=True)
-    quarter = models.IntegerField(blank=True, null=True)
-    week = models.IntegerField(blank=True, null=True)
-    name = models.TextField(blank=True, null=True)  # This field type is a guess.
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-    primary_id = models.IntegerField(blank=True, null=True)
-    backup_id = models.IntegerField(blank=True, null=True)
-    start = models.DateTimeField(blank=True, null=True)
-    finish = models.DateTimeField(blank=True, null=True)
-    reminder_notice_sent_at = models.DateTimeField(blank=True, null=True)
-    alert_notice_sent_at = models.DateTimeField(blank=True, null=True)
 
 
 class EventFiles(models.Model):

@@ -4,6 +4,7 @@
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.utils import timezone
 
 from .base import BaseModel, BasePositionModel
 
@@ -223,6 +224,45 @@ class Unavailable(BaseModel):
     start_on = models.DateField(blank=True, null=True)
     end_on = models.DateField(blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
+
+
+class DoAvailable(BaseModel):  # was AvailDos
+    """Model for Duty Officer availablilty and assignment"""
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    year = models.IntegerField()
+    quarter = models.IntegerField()
+    week = models.IntegerField()
+    available = models.BooleanField(default=False)
+    assigned = models.BooleanField(default=False)
+    comment = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return '{}-{}-{} {}'.format(self.year, self.quarter, self.week,
+                                    self.member)
+
+    @property
+    def start(self):
+        return 'TODO'
+
+    @staticmethod
+    def current_year():
+        return timezone.now().year
+
+    @staticmethod
+    def current_quarter():
+        return int(timezone.now().month/4)+1
+
+    @property
+    def end(self):
+        return 'TODO'
+
+    @staticmethod
+    def num_weeks_in_quarter(year, quarter):
+        return 13  # TODO: Calculate for 53-week years
+
+    @classmethod
+    def weeks(cls, year, quarter):
+        return range(1, 1 + cls.num_weeks_in_quarter(year, quarter))
 
 
 class Cert(BasePositionModel):

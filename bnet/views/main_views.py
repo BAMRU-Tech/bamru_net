@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Prefetch
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
-from .models import Event, Member, Participant, Period
+from bnet.models import DoAvailable, Event, Member, Participant, Period
 
 from django.forms.widgets import Select, Widget, SelectDateWidget
 

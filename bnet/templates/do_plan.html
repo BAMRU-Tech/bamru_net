@@ -1,0 +1,59 @@
+{% extends 'base_do.html' %}
+
+{% block do_title %}
+DO Availability Planning
+{% endblock %}
+
+{% block js %}
+  {{ block.super }}
+  <script>
+    $(document).ready(function() {
+      $('#dTbl').DataTable( {
+      "responsive": true,
+      "paging":   false,
+       "info":     false,
+      "order": [[ 0, "asc" ]],
+      columnDefs: []
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<main>
+  {% if members %}
+  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+    <thead>
+      <tr>
+        <th>Name</th>
+        {% for w in weeks %}
+        <th>{{ w }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for m, x in members %}
+      <tr>
+        <td>{{ m }}</td>
+        {% for w in x %}
+        {% if w %}
+        <td title="{{ w.comment }}">
+          {% if w.assigned %}X{% endif %}
+          {% if w.available %}A{% else %}-{% endif %}
+          {% if w.comment %}*{% endif %}
+        </td>
+        {% else %}
+          <td></td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      </tbody>
+  </table>
+  {% else %}
+  <p>No DO available entries are available.</p>
+  {% endif %}
+ </div>
+</main>
+{% endblock %}

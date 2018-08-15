@@ -33,6 +33,10 @@ urlpatterns = [
     path('event/<int:event>/participant/delete/<int:pk>/',
          views.ParticipantDeleteView.as_view(), name='event_participant_delete'),
 
+    path('do/', views.DoListView.as_view(), name='do_index'),
+    path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
+    path('do/edit/', views.DoEditView.as_view(), name='do_form'),
+
     path('', include('message.urls')),
 
     path('admin/', admin.site.urls),

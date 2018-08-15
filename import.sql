@@ -45,3 +45,13 @@ select id, message_id, member_id, email, phone, read, bounced, read_at, response
 
 insert into bnet_rsvptemplate (id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at)
 select id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at from rsvp_templates;
+
+insert into bnet_doavailable (id, member_id, year, quarter, week, available, comment, created_at, updated_at)
+select id, member_id, year, quarter, week, case typ when 'available' then true else false end, comment, created_at, updated_at from avail_dos where member_id in (select distinct id from bnet_member);
+
+update bnet_doavailable set assigned = true
+from do_assignments where
+bnet_doavailable.member_id = do_assignments.primary_id and
+bnet_doavailable.year = do_assignments.year and
+bnet_doavailable.quarter = do_assignments.quarter and
+bnet_doavailable.week = do_assignments.week;
