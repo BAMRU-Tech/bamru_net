@@ -38,7 +38,7 @@
             <i class="fa fa-address-book"></i>
             Members
           </a>
-          <a class="dropdown-item" href="/avail/days">
+          <a class="dropdown-item" href="{% url 'unavailable_list' %}">
             <i class="fa fa-calendar"></i>
             Availability
           </a>
@@ -119,7 +119,7 @@
             <i class="fa fa-inbox"></i>
             Inbox (n)
           </a>
-          <a class="dropdown-item" href="/avail/days/#{current_user.user_name}">
+          <a class="dropdown-item" href="{% url 'unavailable_edit' %}">
             <i class="fa fa-calendar"></i>
             Busy periods
           </a>

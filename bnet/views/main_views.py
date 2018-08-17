@@ -2,16 +2,18 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
+from django.forms.models import modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse
 from django.utils import timezone
 from django.views import generic
-from bnet.models import DoAvailable, Event, Member, Participant, Period
+from bnet.models import DoAvailable, Event, Member, Participant, Period, Unavailable
 
 from django.forms.widgets import Select, Widget, SelectDateWidget
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+import datetime
 
 import logging
 logger = logging.getLogger(__name__)
@@ -76,6 +78,87 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     template_name = 'member_detail.html'
 
 
+class UnavailableListView(LoginRequiredMixin, generic.ListView):
+    template_name = 'unavailable_list.html'
+    context_object_name = 'member_list'
+
+    # TODO split this into a Mixin shared with DoAbstractView
+    def get_date_param(self, name):
+        today = timezone.now().today().date()
+        val = self.request.GET.get(name, '')
+        setattr(self, name, int(val) if val.isnumeric() else getattr(today,name))
+
+    def get_params(self):
+        self.get_date_param('year')
+        self.get_date_param('month')
+        self.get_date_param('day')
+        self.days = int(self.request.GET.get('days', 5))
+        self.date = datetime.date(self.year, self.month, self.day)
+
+    def get_queryset(self):
+        self.get_params()
+        today = self.date
+        unavailable_set = Unavailable.objects.filter(
+            end_on__gte=today).order_by('start_on')
+        qs = Member.objects.prefetch_related(
+            Prefetch('unavailable_set',
+                     queryset=unavailable_set,
+                     to_attr='unavailable_filtered')
+        ).order_by('id')
+        for m in qs:
+            m.days = [('',1) for x in range(self.days)]
+            for u in m.unavailable_filtered:
+                if u.start_on >= today + timedelta(days=self.days):
+                    continue  # starts off the screen
+                if u.start_on <= today:
+                    start = 0
+                else:
+                    start = (u.start_on - today).days
+
+                # Add one to include the end day
+                end_delta = (u.end_on - today).days + 1
+                if end_delta > self.days:
+                    end_delta = self.days
+                    m.end_date = u.end_on
+
+                for day in range(start, end_delta):
+                    m.days[day] = (u.comment, end_delta-start)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['days'] = self.days
+        context['headers'] = [self.date + timedelta(days=d)
+                              for d in range(self.days)]
+        return context
+
+class UnavailableEditView(LoginRequiredMixin, generic.base.TemplateView):
+    template_name = 'unavailable_form.html'
+
+    def post(self, *args, **kwargs):
+        return self.get(*args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        UnavailableFormSet = modelformset_factory(
+            Unavailable,
+            fields=['start_on', 'end_on', 'comment',],
+        )
+
+        qs = Unavailable.objects.filter(member=self.request.user)
+
+        if self.request.method == 'POST':
+            formset = UnavailableFormSet(self.request.POST)
+            if formset.is_valid():
+                instances = formset.save()
+        else:
+            formset = UnavailableFormSet(
+                queryset=qs)
+        context['formset'] = formset
+        return context
+
 class EventIndexView(LoginRequiredMixin, generic.ListView):
     """ Render current event list """
     template_name = 'event_list.html'
@@ -83,11 +166,12 @@ class EventIndexView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return current event list """
+        today = timezone.now().today()
         qs = Event.objects.all()
-        upcoming = qs.filter(start__gte=datetime.today()) \
-                     .exclude(start__gte=datetime.today() + timedelta(days=14))
-        recent = qs.filter(start__lt=datetime.today()) \
-                   .exclude(start__lt=datetime.today() - timedelta(days=30))
+        upcoming = qs.filter(start__gte=today) \
+                     .exclude(start__gte=today + timedelta(days=14))
+        recent = qs.filter(start__lt=today) \
+                   .exclude(start__lt=today - timedelta(days=30))
         qs = upcoming | recent
         return qs.order_by('start')
 
@@ -105,7 +189,7 @@ class EventAllView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return event list within the last year """
         qs = Event.objects.all()
-        qs = qs.filter(start__gte=datetime.today() - timedelta(days=365))
+        qs = qs.filter(start__gte=timezone.now().today() - timedelta(days=365))
         return qs.order_by('start')
 
     def get_context_data(self, **kwargs):

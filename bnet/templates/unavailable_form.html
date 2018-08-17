@@ -1,0 +1,20 @@
+{% extends 'base_generic.html' %}
+{% load bootstrap4 %}
+
+{% block content %}
+<main role="main" class="container">
+  <div id="content">
+    <form method="post">
+      {% csrf_token %}
+      {# % bootstrap_form form % #}
+
+      {{ formset.management_form }}
+
+      {% for form in formset %}
+        <p>{{ form }}</p>
+      {% endfor %}
+      <input type="submit" value="Update" />
+    </form>
+  </div>
+</main><!-- /.container -->
+{% endblock %}
