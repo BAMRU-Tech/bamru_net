@@ -223,7 +223,7 @@ class Unavailable(BaseModel):
 
     start_on = models.DateField(blank=True, null=True)
     end_on = models.DateField(blank=True, null=True)
-    comment = models.CharField(max_length=255)
+    comment = models.CharField(max_length=255, blank=True)
 
 
 class DoAvailable(BaseModel):  # was AvailDos

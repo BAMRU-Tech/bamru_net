@@ -121,8 +121,11 @@ class UnavailableListView(LoginRequiredMixin, generic.ListView):
                     end_delta = self.days
                     m.end_date = u.end_on
 
+                comment = u.comment
+                if not comment:
+                    comment = 'BUSY'
                 for day in range(start, end_delta):
-                    m.days[day] = (u.comment, end_delta-start)
+                    m.days[day] = (comment, end_delta-start)
 
         return qs
 
@@ -152,7 +155,10 @@ class UnavailableEditView(LoginRequiredMixin, generic.base.TemplateView):
         if self.request.method == 'POST':
             formset = UnavailableFormSet(self.request.POST)
             if formset.is_valid():
-                instances = formset.save()
+                instances = formset.save(commit=False)
+                for instance in instances:
+                    instance.member = self.request.user
+                    instance.save()
         else:
             formset = UnavailableFormSet(
                 queryset=qs)
