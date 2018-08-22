@@ -115,6 +115,19 @@ class MessageListView(LoginRequiredMixin, generic.ListView):
         context['sortOrder'] = '2, "dsc"'
         return context
 
+class MessageInboxView(LoginRequiredMixin, generic.ListView):
+    template_name = 'message_list.html'
+    context_object_name = 'message_list'
+
+    def get_queryset(self):
+        """Return event list within the last year """
+        qs = Message.objects.all()
+        qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=365))
+        member_id = self.kwargs.get('member_id', None)
+        if member_id:
+            qs = qs.filter(distribution__member__id=member_id)
+        return qs.order_by('-created_at')
+
 
 def handle_distribution_rsvp(distribution, rsvp=False):
     """Helper function to process a RSVP response.
