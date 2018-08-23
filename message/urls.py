@@ -10,6 +10,8 @@ urlpatterns = [
          name='message_detail'),
     path('message/', views.MessageListView.as_view(),
          name='message_list'),
+    path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(),
+         name='message_inbox'),
     path('message/add/',
          views.MessageCreateView.as_view(),
          name='message_add'),

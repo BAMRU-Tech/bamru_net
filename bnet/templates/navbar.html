@@ -119,7 +119,7 @@
             <i class="fa fa-user-circle"></i>{{ request.user }}
         </a>
         <div class="dropdown-menu">
-          <a class="dropdown-item" href="/wip">
+          <a class="dropdown-item" href="{% url 'message:message_inbox' request.user.id%}">
             <i class="fa fa-inbox"></i>
             Inbox (n)
           </a>
