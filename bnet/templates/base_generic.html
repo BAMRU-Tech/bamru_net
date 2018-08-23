@@ -11,7 +11,7 @@
     <!-- Bootstrap CSS -->
     {% bootstrap_css %}
 
-    <link rel="stylesheet" href="{% static 'style.css' %}" />
+    <link rel="stylesheet" href="/static/css/style.css" />
 
     <link href="https://use.fontawesome.com/5fb07bfd2c.css"
           media="all" rel="stylesheet">
@@ -35,7 +35,6 @@
     {% block js %}
       {% bootstrap_javascript jquery="slim" %}
       <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
-      <script src="https://cdn.fontawesome.com:443/js/stats.js"></script>
     {% endblock %}
   </body>
 </html>

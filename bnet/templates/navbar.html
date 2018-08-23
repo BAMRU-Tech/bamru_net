@@ -19,13 +19,13 @@
             Create new event
           </a>
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="{% url 'event_index' %}">
-            <i class="fa fa-calendar"></i>
-            Current events
-          </a>
           <a class="dropdown-item" href="{% url 'event_all' %}">
             <i class="fa fa-calendar"></i>
-            All events
+            Events
+          </a>
+          <a class="dropdown-item" href="{% url 'event_immediate' %}">
+            <i class="fa fa-calendar"></i>
+            Immediate events
           </a>
         </div>
       </li>
@@ -61,6 +61,10 @@
           <i class="fa fa-book"></i>Library
         </a>
         <div class="dropdown-menu">
+          <a class="dropdown-item" href="/SMCSO">
+            <i class="fa fa-file"></i>
+            SMCSO Contacts
+          </a>
           <a class="dropdown-item" href="/reports">
             <i class="fa fa-file"></i>
             Reports
@@ -138,10 +142,5 @@
         </div>
       </li>
     </ul>
-    <form class="form-inline my-2 my-lg-0">
-      <input class="form-control mr-sm-2" type="search" placeholder="Search">
-      <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-    </form>
   </div>
 </nav>
-

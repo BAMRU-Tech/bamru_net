@@ -26,8 +26,8 @@ urlpatterns = [
     path('availability/', views.UnavailableListView.as_view(), name='unavailable_list'),
     path('availability/edit/', views.UnavailableEditView.as_view(), name='unavailable_edit'),
 
-    path('event/', views.EventIndexView.as_view(), name='event_index'),
-    path('event/all', views.EventAllView.as_view(), name='event_all'),
+    path('event/proximate', views.EventImmediateView.as_view(), name='event_immediate'),
+    path('event/', views.EventAllView.as_view(), name='event_all'),
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
     path('event/add', views.EventCreateView.as_view(), name='event_add'),
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),

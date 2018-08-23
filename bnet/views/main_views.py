@@ -165,7 +165,7 @@ class UnavailableEditView(LoginRequiredMixin, generic.base.TemplateView):
         context['formset'] = formset
         return context
 
-class EventIndexView(LoginRequiredMixin, generic.ListView):
+class EventImmediateView(LoginRequiredMixin, generic.ListView):
     """ Render current event list """
     template_name = 'event_list.html'
     context_object_name = 'event_list'

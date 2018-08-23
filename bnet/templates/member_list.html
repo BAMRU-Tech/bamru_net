@@ -2,25 +2,124 @@
 
 {% block js %}
 {{ block.super }}
-  <script>
-    $(document).ready( function() {
-      $('#dTbl').DataTable( {
+<script>
+
+const labelShowDetail = "Show Detail";
+const labelHideDetail = "Hide Detail";
+const labelShowFilter = "Filter";
+const labelHideFilter = "Hide Filter";
+
+var table;
+$(document).ready( function() {
+    table = $("#dTbl").DataTable( {
+        dom: "Bfrtip",
         responsive: true,
         paging:   false,
         info:     false,
         order: [[ 0, "asc" ]],
         columnDefs: [
-          { responsivePriority: 1, targets: 0 },
-          { responsivePriority: 2, targets: 3 },
-          { responsivePriority: 3, targets: 4}
+            { responsivePriority: 1, targets: 0 },
+            { responsivePriority: 2, targets: 3 },
+            { responsivePriority: 3, targets: 4}
+        ],
+        buttons: [
+            {
+                text: labelShowFilter,
+                action: function ( e, dt, node, config ) {
+                    if($("#show-filter").css("display") == "none") {
+                        $("#show-filter").css({"display":"block"})
+                        node[0].innerText = labelHideFilter;
+                    } else {
+                        $("#show-filter").css({"display":"none"})
+                        node[0].innerText = labelShowFilter;
+                    }
+                }
+            },
+            {
+                text: labelShowDetail,
+                action: function ( e, dt, node, config ) {
+                    if (node[0].innerText == labelShowDetail) {
+                        dt.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
+                        node[0].innerText = labelHideDetail;
+                    } else {
+                        dt.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
+                        node[0].innerText = labelShowDetail;
+                    }                          
+                }
+            },
+            {
+                text: 'More',
+                extend: 'collection',
+                autoClose: true,
+                buttons: [
+                    'copy', 'csv', 'excel', 'pdf', 'print', 'colvis'
+                ]
+            }
         ]
-      });
     });
-  </script>
+
+    /*FIXME*/ 
+    table.buttons().container()
+        .appendTo( '#example_wrapper .col-md-6:eq(0)' );
+
+    UpdateTableBasedOnSettings(table);
+
+});
+
+var showRanks = [];
+
+/* Custom filtering function */
+$.fn.dataTable.ext.search.push(
+    function( settings, data, dataIndex ) {
+        if ( showRanks.includes(data[1]) ) {
+            return true;
+        }
+        return false;
+    }
+);
+
+function UpdateTableBasedOnSettings(table) {
+    showRanks = [];
+    $("#filter-rank option").each(function() {
+        if (!this.selected) {
+            showRanks.push(this.value);
+        }
+    });
+    $("#subhdr")[0].innerText = "Members (" + showRanks.join(", ") + ")";
+    table.draw();
+};
+
+$("#filter-rank").multiSelect({
+    selectableHeader: "<div class='custom-header'>Show</div>",
+    selectionHeader: "<div class='custom-header'>Hide</div>",
+    afterSelect: function(values){
+        UpdateTableBasedOnSettings(table);
+    },
+    afterDeselect: function(values){
+        UpdateTableBasedOnSettings(table);
+    }
+});
+
+</script>
 {% endblock %}
 
 {% block content %}
 <main>
+  <div id="show-filter" style="display: none">
+    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+      <option value='TM'>Technical Member</option>
+      <option value='FM'>Field Member</option>
+      <option value='T'>Trainee</option>
+      <option value='R' selected >Reserve</option>
+      <option value='S' selected >Support</option>
+      <option value='A' selected >Associate</option>
+      <option value='G' selected >Guest</option>
+      <option value='MA' selected >Member Alum</option>
+      <option value='GA' selected >Guest Alum</option>
+      <option value='MN' selected >Member No-contact</option>
+      <option value='GN' selected >Guest No-contact</option>
+    </select>
+  </div>
   {% if member_list %}
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
@@ -50,19 +149,7 @@
 {% endblock %}
 
 {% block subheader %}
-<a class="navbar-brand" href="#">
-  <i class="fa fa-chevron-right"></i>Members
-</a>
-<ul class="navbar-nav ml-auto">
-  <li class="nav-item dropdown">
-    <a class="nav-link">
-      "[sub action 1]"
-    </a>
-  </li>
-  <li class="nav-item dropdown">
-    <a class="nav-link">
-      "[sub action 2]"
-    </a>
-  </li>
-</ul>
+<div id="subhdr">
+    Members
+</div>
 {% endblock %}

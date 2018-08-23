@@ -2,33 +2,58 @@
 
 {% block content %}
 <main role="main" class="container">
-  <p> Member: {{ member.full_name }}</p>
-  <p> Username: {{ member.username }}</p>
-  <p> Rank: {{ member.rank }}</p>
-  <p> Dl: {{ member.dl }}</p>
-  <p> Ham: {{ member.ham }}</p>
-  <p> V9: {{ member.v9 }}</p>
-  <p> Is Active: {{ member.is_active }}</p>
-  <p> Is Staff: {{ member.is_staff }}</p>
-  <p> Is Current DO: {{ member.is_current_do }}</p>
-  <p> Sign In Count: {{ member.sign_in_count }}</p>
-  <p> Last Sign In at: {{ member.last_sign_in_at }}</p>
-  <p> Phone numbers:
+  {% if not member.is_current_do %}
+    <p style="color:red">CURRENT DO until</p>
+  {% endif %}
+  <strong>Phone numbers:</strong>
+  <ul>
     {% for ph in member.phone_set.all %}
-    <p>{{ ph.number }}/{{ ph.type }}/{{ ph.pagable }}</p>
+    <li>{{ ph.number }} ({{ ph.type }}{% if ph.pagable %}, pageable{% endif %})</li>
     {% endfor %}
-  </p>
-  <p> Addresses:
+  </ul>
+  <strong>Addresses:</strong>
+  <ul>
     {% for ad in member.address_set.all %}
-    <p>{{ ad.type }} / {{ ad.address1 }} / {{ ad.address2 }} / {{ ad.city }} / {{ ad.state }} / {{ ad.zip }}
-    </p>
+    <li>
+      {{ ad.address1 }}
+      {% if ad.address2 %}
+        {{ ad.address2 }}
+      {% endif %}
+      {{ ad.city }}, {{ ad.state }} {{ ad.zip }} ({{ ad.type }})
+    </li>
     {% endfor %}
-  </p>
-  <p> Emergency Contacts:
+  </ul>
+  <strong>Emergency Contacts:</strong>
+  <ul>
     {% for ec in member.emergencycontact_set.all %}
-    <p>{{ ec.name }}/{{ ec.type }}/{{ ec.number }}</p>
+    <li>{{ ec.name }}: {{ ec.number }} ({{ ec.type }})</li>
     {% endfor %}
-  </p>
+  </ul>
+  <p> <strong>Username:</strong> {{ member.username }}</p>
+  <p> <strong>Last Sign In at:</strong> {{ member.last_sign_in_at }}</p>
+
+  {% if member.ham %}<strong>Ham:</strong> {{ member.ham }}{% endif %}
+  {% if member.v9 %}<strong>V9:</strong>{{ member.v9 }}{% endif %}
+  {% if member.is_active %}<strong>Active</strong>{% endif %}
+  {% if member.is_staff %}<strong>Staff</strong>{% endif %}
 
 </main><!-- /.container -->
+{% endblock %}
+
+{% block subheader %}
+<a href="{% url 'member_index' %}"> Members </a>
+>{{member.full_name }} ({{ member.rank }})
+
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link">
+      Availability
+    </a>
+  </li>
+  <li class="nav-item dropdown">
+   <a class="nav-link">
+      Inbox
+    </a>
+  </li>
+</ul>
 {% endblock %}
