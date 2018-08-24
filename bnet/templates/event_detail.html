@@ -57,7 +57,10 @@
       <div class="collapse navbar-collapse" id="OP{{period.position}}">
         <ul class="navbar-nav ml-auto">
           <li class="nav-item">
-            <a  class="nav-link" href="{% url 'event_update' event.id %}">New OP</a>
+            <a  class="nav-link" href="{% url 'event_period_add' event.id %}">New OP</a>
+          </li>
+          <li class="nav-item">
+            <a  class="nav-link" href="{% url 'event_period_delete' event.id period.id %}">Delete OP</a>
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
@@ -144,7 +147,7 @@
       <a  class="nav-link" href="{% url 'event_update' event.id %}">Edit</a>
     </li>
     <li class="nav-item">
-      <a class="nav-link">Delete</a>
+      <a class="nav-link" href="{% url 'event_delete' event.id %}">Delete</a>
     </li>
   </ul>
 {% endblock %}

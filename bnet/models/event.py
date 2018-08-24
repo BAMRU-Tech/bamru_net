@@ -5,7 +5,7 @@ from django.db import models
 
 from datetime import datetime, timezone
 
-from .base import BaseModel
+from .base import BaseModel, BasePositionModel
 from .member import Member, Role
 
 def utc_to_local(utc_dt):
@@ -29,8 +29,23 @@ class Event(BaseModel):
     all_day = models.BooleanField(default=False)
     published = models.BooleanField(default=False)
 
+    def save(self, *args, **kwargs):
+        created = self.pk is None
+        super(Event, self).save(*args, **kwargs)
+        if created:
+            self.add_period()
+
     def __str__(self):
         return self.title
+
+    def add_period(self):
+        q = self.period_set.all().aggregate(models.Max('position'))
+        current = q['position__max']
+        if current:
+            next = current + 1
+        else:
+            next = 1
+        self.period_set.create(position=next)
 
     @property
     def display_title(self):
@@ -62,9 +77,8 @@ class Event(BaseModel):
         return ('event_detail', [str(self.id)])
 
 
-class Period(BaseModel):
+class Period(BasePositionModel):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    position = models.IntegerField(default=1)
     start = models.DateTimeField(blank=True, null=True)
     finish = models.DateTimeField(blank=True, null=True)
     def __str__(self):
