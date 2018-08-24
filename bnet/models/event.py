@@ -13,10 +13,10 @@ def utc_to_local(utc_dt):
 
 class Event(BaseModel):
     TYPES = (
-        ('Meeting', 'Meeting'),
-        ('Operation', 'Operation'),
-        ('Training', 'Training'),
-        ('Community', 'Community'))
+        ('meeting', 'Meeting'),
+        ('operation', 'Operation'),
+        ('training', 'Training'),
+        ('community', 'Community'))
     type = models.CharField(choices=TYPES, max_length=255)
     title = models.CharField(max_length=255)
     leaders = models.CharField(max_length=255, blank=True, null=True)
