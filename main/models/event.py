@@ -30,22 +30,21 @@ class Event(BaseModel):
     published = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
-        created = self.pk is None
         super(Event, self).save(*args, **kwargs)
-        if created:
-            self.add_period()
+        self.add_period(True)
 
     def __str__(self):
         return self.title
 
-    def add_period(self):
+    def add_period(self, only_if_empty=False):
         q = self.period_set.all().aggregate(models.Max('position'))
         current = q['position__max']
         if current:
             next = current + 1
+            if not only_if_empty:
+                self.period_set.create(position=next)
         else:
-            next = 1
-        self.period_set.create(position=next)
+            self.period_set.create()
 
     @property
     def display_title(self):

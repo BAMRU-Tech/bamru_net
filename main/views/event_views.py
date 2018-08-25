@@ -66,6 +66,11 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
     model = Event
     template_name = 'event_detail.html'
 
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        obj.add_period(True)
+        return obj
+
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
