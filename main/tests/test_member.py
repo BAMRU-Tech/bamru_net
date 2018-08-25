@@ -1,6 +1,6 @@
 from django.test import Client, TestCase
 from django.urls import reverse
-from bnet.models import Member
+from main.models import Member
 
 class MemberTestCase(TestCase):
     def setUp(self):

@@ -3,7 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms.models import modelformset_factory
 from django.views import generic
 
-from bnet.models import DoAvailable
+from main.models import DoAvailable
 
 from collections import defaultdict
 

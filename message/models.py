@@ -10,7 +10,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from bnet.models import (BaseModel, BasePositionModel, Email, Member, Period,
+from main.models import (BaseModel, BasePositionModel, Email, Member, Period,
                          Phone)
 
 logger = logging.getLogger(__name__)

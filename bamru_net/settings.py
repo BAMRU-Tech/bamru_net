@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'anymail',
     'bootstrap4',
     'raven.contrib.django.raven_compat',
-    'bnet',
+    'main',
     'message',
 ]
 
@@ -93,7 +93,7 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'bnet.Member'
+AUTH_USER_MODEL = 'main.Member'
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
@@ -233,7 +233,7 @@ LOGGING = {
         # Default runserver request logging
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
         # Project logging
-        'bnet': {
+        'main': {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'handlers': ['console', 'sentry', 'file'],
             'propagate': False,

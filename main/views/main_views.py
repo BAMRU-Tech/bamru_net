@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from bnet.models import DoAvailable, Event, Member, Participant, Period, Unavailable
+from main.models import DoAvailable, Event, Member, Participant, Period, Unavailable
 
 from django.forms.widgets import Select, Widget, SelectDateWidget
 

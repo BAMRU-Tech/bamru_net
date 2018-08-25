@@ -17,7 +17,7 @@ from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
 
-from bnet.models import Member, Participant, Period
+from main.models import Member, Participant, Period
 
 from .forms import MessageCreateForm
 from .models import (Distribution, InboundSms, Message, OutboundEmail,

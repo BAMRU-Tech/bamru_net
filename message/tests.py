@@ -8,7 +8,7 @@ from django.test import Client, TestCase
 from django.test.utils import override_settings
 from model_mommy import mommy
 
-from bnet.models import Email, Participant
+from main.models import Email, Participant
 
 from .models import *
 
