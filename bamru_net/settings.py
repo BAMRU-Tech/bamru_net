@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'anymail',
     'bootstrap4',
     'raven.contrib.django.raven_compat',
+    'rest_framework',
     'main',
     'message',
 ]

@@ -20,6 +20,12 @@ from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from main import views
 
+from rest_framework import routers
+
+router = routers.DefaultRouter()
+router.register(r'events', views.EventViewSet)
+router.register(r'members', views.MemberViewSet)
+
 urlpatterns = [
     path('member/', views.MemberIndexView.as_view(), name='member_index'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
@@ -48,6 +54,9 @@ urlpatterns = [
     path('do/edit/', views.DoEditView.as_view(), name='do_form'),
 
     path('', include('message.urls')),
+
+    url(r'^api/', include(router.urls)),
+    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
     path('admin/', admin.site.urls),
 
