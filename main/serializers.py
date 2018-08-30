@@ -5,7 +5,7 @@ class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
         read_only_fields = ('full_name', 'rank', 'display_email', 'display_phone', 'short_name',)
-        fields = ('id', 'url', 'first_name', 'last_name', 'username', 'dl', 'ham', 'v9',  'is_active', 'is_staff', 'is_current_do', 'is_superuser', 'last_login',) + read_only_fields
+        fields = ('id', 'url', 'first_name', 'last_name', 'username', 'member_rank', 'dl', 'ham', 'v9',  'is_active', 'is_staff', 'is_current_do', 'is_superuser', 'last_login',) + read_only_fields
 
 
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django_twilio',
     'anymail',
     'bootstrap4',
+    'django_filters',
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'main',
@@ -60,6 +61,14 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    )
+}
 
 ROOT_URLCONF = 'bamru_net.urls'
 

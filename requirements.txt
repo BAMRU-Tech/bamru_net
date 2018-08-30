@@ -12,6 +12,7 @@ Django==2.0.5
 django-anymail==3.0
 django-bootstrap4==0.0.6
 django-datatables-view==1.16.0
+django-filter==2.0.0
 django-phonenumber-field==2.0.0
 django-tables2==1.21.2
 django-twilio==0.9.0
