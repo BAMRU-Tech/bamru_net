@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from .base import BaseModel, BasePositionModel
 
+from datetime import timedelta
 
 class CustomUserManager(BaseUserManager):
     """Allows username to be case insensitive."""
@@ -15,14 +16,21 @@ class CustomUserManager(BaseUserManager):
         case_insensitive_username_field = '{}__iexact'.format(self.model.USERNAME_FIELD)
         return self.get(**{case_insensitive_username_field: username})
 
-class PageMemberManager(models.Manager):
+class ActiveMemberManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(member_rank__in=['TM','FM','T'])
+
+class CurrentMemberManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            member_rank__in=['TM','FM','T','R','S','A'])
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     objects = CustomUserManager()
+    active = ActiveMemberManager()
+    members = CurrentMemberManager()
     
     TYPES = (
         ('TM', 'Technical Member'),
@@ -50,8 +58,6 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     is_current_do = models.BooleanField(default=False)
     sign_in_count = models.IntegerField(default=0)
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
-
-    page_objects = PageMemberManager()
 
     def __str__(self):
         return self.full_name
@@ -266,8 +272,20 @@ class DoAvailable(BaseModel):  # was AvailDos
 
 
 class Cert(BasePositionModel):
+    TYPES = (
+        ('medical', 'medical'),
+        ('cpr', 'cpr'),
+        ('ham', 'ham'),
+        ('tracking', 'tracking'),
+        ('avalanche', 'avalanche'),
+        ('rigging', 'rigging'),
+        ('ics', 'ics'),
+        ('overhead', 'overhead'),
+        ('driver', 'driver'),
+        ('background', 'background'),
+        )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    type = models.TextField(blank=True, null=True)
+    type = models.CharField(choices=TYPES, max_length=255)
     expiration = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
@@ -281,6 +299,25 @@ class Cert(BasePositionModel):
     thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
 
+    def __str__(self):
+        return self.description
 
+    @property
+    def is_expired(self):
+        # We will allow certs expiring today, thus < not <=
+        return ((self.expiration is None) or
+                (self.expiration < timezone.now().date()))
 
-
+    @property
+    def color(self):
+        exp = self.expiration
+        now = timezone.now().date()
+        if not exp:
+            return "white"
+        if exp < now:
+            return "pink"
+        if exp < now + timedelta(days=30):
+            return "orange"
+        if exp < now + timedelta(days=90):
+            return "yellow"
+        return "limegreen"

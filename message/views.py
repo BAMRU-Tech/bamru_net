@@ -55,7 +55,7 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
             initial['text'] = str(period)
 
             if period_format == 'invite':
-                members = Member.page_objects.exclude(
+                members = Member.active.exclude(
                     participant__period=period_id)
                 template_str = 'Available?'
             else:

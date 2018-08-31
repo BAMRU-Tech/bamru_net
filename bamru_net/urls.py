@@ -53,6 +53,8 @@ urlpatterns = [
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
     path('do/edit/', views.DoEditView.as_view(), name='do_form'),
 
+    path('cert/', views.CertListView.as_view(), name='cert_list'),
+
     path('', include('message.urls')),
 
     url(r'^api/', include(router.urls)),

@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from main.models import DoAvailable, Event, Member, Participant, Period, Unavailable
+from main.models import Cert, Member, Unavailable
 
 from django.forms.widgets import Select, Widget, SelectDateWidget
 
@@ -21,47 +21,6 @@ logger = logging.getLogger(__name__)
 
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
-
-class OrderListJson(BaseDatatableView):
-    # The model we're going to show
-    model = Member
-
-    # define the columns that will be returned
-    columns = ['last_name', 'member_rank', 'role', 'phone', 'email']
-        
-    # define column names that will be used in sorting
-    # order is important and should be same as order of columns
-    # displayed by datatables. For non sortable columns use empty
-    # value like ''
-    order_columns = ['last_name', 'member_rank', 'role', '', '']
-
-    # set max limit of records returned, this is used to protect our site
-    # if someone tries to attack our site and make it return huge amount of data
-    max_display_length = 500
-
-    def render_column(self, row, column):
-        # We want to render user as a custom column
-        return super(OrderListJson, self).render_column(row, column)
-
-    def filter_queryset(self, qs):
-        # use parameters passed in GET request to filter queryset
-
-        # simple example:
-        search = self.request.GET.get(u'search[value]', None)
-        if search:
-            qs = qs.filter(name__istartswith=search)
-
-        # more advanced example using extra parameters
-        filter_customer = self.request.GET.get(u'customer', None)
-
-        if filter_customer:
-            customer_parts = filter_customer.split(' ')
-            qs_params = None
-            for part in customer_parts:
-                q = Q(customer_firstname__istartswith=part)|Q(customer_lastname__istartswith=part)
-                qs_params = qs_params | q if qs_params else q
-            qs = qs.filter(qs_params)
-        return qs
 
 
 class MemberIndexView(LoginRequiredMixin, generic.ListView):
@@ -76,6 +35,41 @@ class MemberIndexView(LoginRequiredMixin, generic.ListView):
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_detail.html'
+
+
+class CertListView(LoginRequiredMixin, generic.ListView):
+    template_name = 'cert_list.html'
+    context_object_name = 'member_list'
+
+    def get_queryset(self):
+        # 0 = cert
+        # 1 = count
+        cert_lookup = {}
+        for idx, t in enumerate(Cert.TYPES):
+            cert_lookup[t[0]] = idx
+        qs = Member.members.prefetch_related('cert_set')
+        for m in qs:
+            m.certs = [{'cert':None, 'count':0} for x in cert_lookup]
+            #m.cert_count = cert_count.copy()
+            for c in m.cert_set.all():
+                idx = cert_lookup[c.type]
+                prev = m.certs[idx]['cert']
+                # Choose when to replace the existing one in the list
+                if ((not prev) or
+                    (not prev.position) or
+                    ((prev.position > c.position) and
+                     (prev.is_expired or not c.is_expired)) or
+                    (prev.is_expired and not c.is_expired)
+                ):
+                    m.certs[idx]['cert'] = c
+                m.certs[idx]['count'] += 1
+                #m.cert_count[idx] += 1
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['headers'] = [x[1] for x in Cert.TYPES]
+        return context
 
 
 class UnavailableListView(LoginRequiredMixin, generic.ListView):
