@@ -1,0 +1,26 @@
+# Used for SMS and email callbacks and links:
+export DJANGO_HOSTNAME={{ django_hostname }}
+
+export DJANGO_SECRET_KEY='{{ django_secret_key}}'
+export DJANGO_ALLOWED_HOST={{ django_allowed_host }}
+export DJANGO_DB_NAME={{ db_name }}
+export DJANGO_DB_USER={{ db_user }}
+export DJANGO_DB_PASS={{ db_pass }}
+export DJANGO_DB_HOST={{ db_host }}
+
+# set this to use file instead of servers
+#export MESSAGE_FILE_PATH=/home/{{ app_user }}/logs/message
+export LOG_ROOT=/home/{{ app_user }}/logs/django
+
+export USE_RAVEN={{ use_raven }}
+export RAVEN_DSN='{{ raven_dsn }}'
+
+export TWILIO_ACCOUNT_SID={{ twilio_account_sid }}
+export TWILIO_AUTH_TOKEN={{ twilio_auth_token }}
+export TWILIO_SMS_FROM='{{ twilio_sms_from }}'
+
+export MAILGUN_WEBHOOK_SECRET='{{ mailgun_webhook_secret }}'
+export MAILGUN_API_KEY='{{ mailgun_api_key }}'
+export MAILGUN_EMAIL_FROM='{{ mailgun_email_from }}'
+
+export CELERY_BROKER_URL='{{ celery_broker_url }}'

@@ -14,3 +14,8 @@ __pycache__/
 migrations/
 
 TODO*
+
+deploy/*.log
+deploy/*.retry
+deploy/.vagrant
+deploy/inventory.ansible

@@ -1,0 +1,187 @@
+- hosts: all
+  gather_facts: no
+
+  tasks:
+    - include_vars: vault.yml
+
+    - name: install packages
+      apt:
+        pkg: python,python3.5,python3-pip,python3-virtualenv,python3-psycopg2,virtualenv,postgresql,postgresql-client,rabbitmq-server,nginx,git,supervisor
+        update_cache: yes
+        cache_valid_time: 3600
+      become: yes
+      when: install_packages
+
+    - name: start postgres
+      service:
+        name: postgresql
+        enabled: yes
+        state: started
+            
+    - name: postgres database
+      block:
+        - postgresql_db:
+            name: "{{ db_name }}"
+            state: absent
+        - postgresql_db:
+            name: "{{ db_name }}"
+            state: present
+        - postgresql_user:
+            name: "{{ db_user }}"
+            password: "{{ db_pass }}"
+            db: "{{ db_name }}"
+            priv: ALL
+      become: true
+      become_user: postgres
+      when: update_database
+
+    - name: create app user
+      user:
+        name: "{{ app_user }}"
+      become: true
+
+    - name: bamru user setup
+      block:
+        - file:
+            path: ~/.ssh
+            state: directory
+            mode: 0755
+        - name: make app user directories
+          file:
+            path: "{{ item }}"
+            state: directory
+          with_items:
+          - ~/bin
+          - ~/data
+          - ~/logs/django
+          - ~/run
+          - ~/static
+      
+        - template:
+            src: template/dot_env.j2
+            dest: ~/.env
+            
+        - template:
+            src: template/gunicorn_start.j2
+            dest: ~/bin/gunicorn_start
+            mode: 0755
+            
+        - name: copy ssh key
+          copy:
+            src: "{{ data_dir }}/access_key_rsa"
+            dest: ~/.ssh/id_rsa
+            mode: 0600
+
+        - copy:
+            src: "{{ data_dir }}/bnet.sql"
+            dest: ~/data/
+      
+        - name: erase existing repo
+          file:
+            path: ~/repo
+            state: absent
+          when: not use_git
+        - name: git clone
+          git:
+            repo: "{{ git_repo }}"
+            dest: ~/repo
+            accept_hostkey: yes
+          when: use_git
+        - synchronize:
+            src: ../../  # Not sure why this needs the extra ../ ?
+            dest: /home/{{ app_user }}/repo
+            archive: no
+            recursive: yes
+            rsync_opts:
+              - "--exclude=.env"
+              - "--exclude=.vagrant"
+          when: not use_git
+            
+        - copy:
+            src: ../requirements.txt
+            dest: ~/data/requirements.txt
+
+        - name: pip virtualenv
+          pip:
+            requirements: ~/data/requirements.txt
+            virtualenv: "{{ venv_path }}"
+            
+        - template:
+            src: template/django_setup.sh.j2
+            dest: ~/bin/django_setup.sh
+            mode: 0755
+      become: true
+      become_user: "{{ app_user }}"
+
+      
+    - name: fix repo directory owner
+      file:
+        path: /home/{{ app_user }}/repo
+        state: directory
+        recurse: yes
+        owner: bamru
+        group: bamru
+      become: true
+      
+    - shell: ~/bin/django_setup.sh
+      args:
+        chdir: ~/repo
+      when: update_database
+      become: true
+      become_user: "{{ app_user }}"
+
+      
+    - name: rabbitmq
+      block:
+        - rabbitmq_vhost:
+            name: "{{ rabbitmq_vhost }}"
+            state: present
+        - rabbitmq_user:
+            user: "{{ rabbitmq_user }}"
+            password: "{{ rabbitmq_pass }}"
+            tags: mytag
+            permissions:
+              - vhost: "{{ rabbitmq_vhost }}"
+                configure_priv: .*
+                read_priv: .*
+                write_priv: .*
+            state: present
+      become: true
+
+      
+    - name: webservers
+      block:
+        - template:
+            src: template/supervisor_gunicorn.conf.j2
+            dest: /etc/supervisor/conf.d/gunicorn.conf
+        - template:
+            src: template/supervisor_celery.conf.j2
+            dest: /etc/supervisor/conf.d/celery.conf
+        - template:
+            src: template/nginx.j2
+            dest: /etc/nginx/sites-available/bamru_net
+        - file:
+            src: /etc/nginx/sites-available/bamru_net
+            dest: /etc/nginx/sites-enabled/bamru_net
+            state: link
+        - file:
+            dest: /etc/nginx/sites-enabled/default
+            state: absent
+        - name: start supervisord
+          service:
+            name: supervisor
+            enabled: yes
+            state: restarted
+        - supervisorctl:
+            name: gunicorn
+            state: present
+        - supervisorctl:
+            name: gunicorn
+            state: restarted
+        - name: start nginx
+          service:
+            name: nginx
+            enabled: yes
+            state: restarted
+      become: true
+            

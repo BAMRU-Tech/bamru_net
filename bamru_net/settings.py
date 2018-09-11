@@ -100,6 +100,7 @@ DATABASES = {
         'NAME': os.environ['DJANGO_DB_NAME'],
         'USER': os.environ['DJANGO_DB_USER'],
         'PASSWORD': os.environ['DJANGO_DB_PASS'],
+        'HOST': os.environ['DJANGO_DB_HOST'],
     }
 }
 
@@ -151,7 +152,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Raven config for Sentry.io logging
-if 'USE_RAVEN' in os.environ:
+if os.environ.get('USE_RAVEN'):
     RAVEN_CONFIG = {
         'dsn': os.environ['RAVEN_DSN'],
         # If you are using git, you can also automatically configure the
@@ -162,7 +163,7 @@ if 'USE_RAVEN' in os.environ:
 TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
 
-if 'MESSAGE_FILE_PATH' in os.environ:
+if os.environ.get('MESSAGE_FILE_PATH'):
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     EMAIL_FILE_PATH = os.environ['MESSAGE_FILE_PATH']
     SMS_FILE_PATH = EMAIL_FILE_PATH

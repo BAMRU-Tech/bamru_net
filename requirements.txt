@@ -20,6 +20,7 @@ djangorestframework==3.8.2
 docutils==0.14
 elpy==1.21.0
 flake8==3.5.0
+gunicorn==19.9.0
 idna==2.6
 isort==4.3.4
 jedi==0.12.0

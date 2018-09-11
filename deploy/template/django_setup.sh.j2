@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# exit on error
+set -e
+
+# load virtual environment for pip
+source {{ venv_path }}/bin/activate
+
+# clean migration
+rm */migrations/00*
+./manage.py makemigrations
+./manage.py migrate
+
+# import and clean up database
+python manage.py dbshell < ../data/bnet.sql
+python manage.py dbshell < import.sql
+echo "update main_member set is_staff=TRUE, is_superuser=TRUE where id in (367, 559);" | python manage.py dbshell
+python manage.py sqlsequencereset main | python manage.py dbshell
+python manage.py sqlsequencereset message | python manage.py dbshell
