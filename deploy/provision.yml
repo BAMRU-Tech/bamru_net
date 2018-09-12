@@ -6,7 +6,7 @@
     # Install system packages
     install_packages: true
     # Completely wipe the database and re-import
-    update_database: false
+    update_database: true
 
   tasks:
     - include_vars: vault.yml
