@@ -1,16 +1,41 @@
 - hosts: all
   gather_facts: no
+  vars:
+    # Get a clean copy of the repo using git instead of coping the local dir
+    use_git: false
+    # Install system packages
+    install_packages: true
+    # Completely wipe the database and re-import
+    update_database: true
 
   tasks:
     - include_vars: vault.yml
 
     - name: install packages
-      apt:
-        pkg: python,python3.5,python3-pip,python3-virtualenv,python3-psycopg2,virtualenv,postgresql,postgresql-client,rabbitmq-server,nginx,git,supervisor
-        update_cache: yes
-        cache_valid_time: 3600
+      block:
+        - apt_repository:
+            repo: ppa:certbot/certbot
+        - apt:
+            name: "{{ item }}"
+            update_cache: yes
+            cache_valid_time: 3600
+          with_items:
+            - git
+            - nginx
+            - postgresql
+            - postgresql-client
+            - python
+            - python-certbot-nginx
+            - python3-pip
+            - python3-psycopg2
+            - python3-virtualenv
+            - python3.5
+            - rabbitmq-server
+            - supervisor
+            - virtualenv
       become: yes
       when: install_packages
+
 
     - name: start postgres
       service:
@@ -185,3 +210,6 @@
             state: restarted
       become: true
             
+    - name: certbot
+      shell: "certbot --nginx --noninteractive --agree-tos -m {{ certbot_email }} -d {{ certbot_domain }}"
+      become: true
