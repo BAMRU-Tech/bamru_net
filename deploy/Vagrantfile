@@ -1,0 +1,23 @@
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/xenial64"
+  config.vm.boot_timeout = 600
+
+  # vagrant plugin install vagrant-dotenv
+  #config.dotenv.enabled = true
+
+  # Public access tp 8080
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network "forwarded_port", guest: 443, host: 8443
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "provision.yml"
+    ansible.verbose = "extra"
+    #ansible.extra_vars = { ansible_python_interpreter: "env python3" }
+    #ansible.extra_vars = { ansible_python_interpreter: "/usr/bin/python3" }
+    ansible.host_vars = {
+      "default" => {"ansible_python_interpreter" => "/usr/bin/python3"},
+    }
+
+  end
+end

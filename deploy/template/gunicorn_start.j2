@@ -1,0 +1,27 @@
+#!/bin/bash
+
+NAME="bamru_net"
+DIR=/home/{{ app_user }}/repo
+USER={{ app_user }}
+GROUP={{ app_user }}
+WORKERS=3
+BIND=unix:/home/{{ app_user }}/run/gunicorn.sock
+DJANGO_SETTINGS_MODULE=bamru_net.settings
+DJANGO_WSGI_MODULE=bamru_net.wsgi
+LOG_LEVEL=error
+
+cd $DIR
+source {{ venv_path }}/bin/activate
+source ../.env
+
+export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+export PYTHONPATH=$DIR:$PYTHONPATH
+
+exec {{ venv_path }}/bin/gunicorn ${DJANGO_WSGI_MODULE}:application \
+  --name $NAME \
+  --workers $WORKERS \
+  --user=$USER \
+  --group=$GROUP \
+  --bind=$BIND \
+  --log-level=$LOG_LEVEL \
+  --log-file=-

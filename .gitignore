@@ -9,3 +9,13 @@ __pycache__/
 
 # environment file
 .env
+
+# migrations
+migrations/
+
+TODO*
+
+deploy/*.log
+deploy/*.retry
+deploy/.vagrant
+deploy/inventory.ansible

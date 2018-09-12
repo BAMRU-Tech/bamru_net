@@ -1,0 +1,58 @@
+{% extends 'base_do.html' %}
+
+{% block do_title %}
+Duty Officers
+{% endblock %}
+
+{% block js %}
+  {{ block.super }}
+  <script>
+    $(document).ready(function() {
+      $('#dTbl').DataTable( {
+      "responsive": true,
+      "paging":   false,
+       "info":     false,
+      "order": [[ 0, "asc" ]],
+      columnDefs: [
+        { width: "10%", targets: 0 },
+        { width: "20%", targets: 1 },
+        { width: "20%", targets: 2 },
+        { width: "40%", targets: 3 },
+        { type: "string", targets: 3 },
+        { responsivePriority: 0, targets: 3 },
+        { responsivePriority: 1, targets: 0 },
+        { responsivePriority: 2, targets: 1 },
+        { responsivePriority: 3, targets: 2 }
+        ]
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<main>
+  {% if do_list %}
+  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+    <thead>
+      <tr>
+        <th>Week</th><th>Start</th><th>End</th><th>Duty Officer</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for do in do_list %}
+      <tr>
+        <td>{{ do.week }}</td>
+        <td>{{ do.start }}</td>
+        <td>{{ do.end }}</td>
+        <td>{{ do.member }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+  </table>
+  {% else %}
+  <p>No duty officers are scheduled.</p>
+  {% endif %}
+ </div>
+</main>
+{% endblock %}

@@ -11,13 +11,14 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+import raven
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, 'static'),
+    os.path.join(BASE_DIR, 'main/static'),
 )
 
 # Quick-start development settings - unsuitable for production
@@ -27,9 +28,9 @@ STATICFILES_DIRS = (
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ['DJANGO_DEBUG']
 
-ALLOWED_HOSTS = [os.environ['DJANGO_ALLOWED_HOST'], 'localhost', ]
+ALLOWED_HOSTS = os.environ['DJANGO_ALLOWED_HOST'].split(',') + ['localhost', ]
 
 
 # Application definition
@@ -44,7 +45,11 @@ INSTALLED_APPS = [
     'django_twilio',
     'anymail',
     'bootstrap4',
-    'bnet',
+    'django_filters',
+    'raven.contrib.django.raven_compat',
+    'rest_framework',
+    'main',
+    'message',
 ]
 
 MIDDLEWARE = [
@@ -56,6 +61,14 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    )
+}
 
 ROOT_URLCONF = 'bamru_net.urls'
 
@@ -87,10 +100,11 @@ DATABASES = {
         'NAME': os.environ['DJANGO_DB_NAME'],
         'USER': os.environ['DJANGO_DB_USER'],
         'PASSWORD': os.environ['DJANGO_DB_PASS'],
+        'HOST': os.environ['DJANGO_DB_HOST'],
     }
 }
 
-AUTH_USER_MODEL = 'bnet.Member'
+AUTH_USER_MODEL = 'main.Member'
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
@@ -136,11 +150,28 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT')
+
+# Raven config for Sentry.io logging
+if os.environ.get('USE_RAVEN'):
+    RAVEN_CONFIG = {
+        'dsn': os.environ['RAVEN_DSN'],
+        # If you are using git, you can also automatically configure the
+        # release based on the git info.
+        'release': raven.fetch_git_sha(os.path.abspath(BASE_DIR)),
+    }
 
 TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
 
-EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+if os.environ.get('MESSAGE_FILE_PATH'):
+    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    EMAIL_FILE_PATH = os.environ['MESSAGE_FILE_PATH']
+    SMS_FILE_PATH = EMAIL_FILE_PATH
+else:
+    EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
+    SMS_FILE_PATH = None
+
 ANYMAIL = {
     'WEBHOOK_SECRET': os.environ['MAILGUN_WEBHOOK_SECRET'],
     'MAILGUN_API_KEY': os.environ['MAILGUN_API_KEY'],
@@ -148,23 +179,84 @@ ANYMAIL = {
 MAILGUN_EMAIL_FROM = os.environ['MAILGUN_EMAIL_FROM']
 DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
 
-# TODO: add file logging
+CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
+CELERYD_HIJACK_ROOT_LOGGER = False
+# Add a five-minute timeout to all Celery tasks.
+CELERYD_TASK_SOFT_TIME_LIMIT = 300
+
+from django.utils.log import DEFAULT_LOGGING
+LOG_ROOT = os.environ['LOG_ROOT']
+LOGGING_CONFIG = None
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    'disable_existing_loggers': True,
+    'root': {
+        'level': 'WARNING',
+        'handlers': ['sentry'],
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(name)s:%(module)s:%(lineno)d '
+                      '%(process)d %(thread)d %(message)s'
         },
+        'django.server': DEFAULT_LOGGING['formatters']['django.server'],
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'verbose',
+            'filename': os.path.join(LOG_ROOT, 'django.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB
+            'backupCount': 90,
+        },
+        'sentry': {
+            'level': 'WARNING',
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        },
+        'django.server': DEFAULT_LOGGING['handlers']['django.server'],
     },
     'loggers': {
-        'django': {
+        'django.db.backends': {
+            'level': 'ERROR',
             'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
         },
-        'bnet': {
+        'raven': {
+            'level': 'DEBUG',
             'handlers': ['console'],
+            'propagate': False,
+        },
+        'sentry.errors': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'celery': {
+            'level': 'WARNING',
+            'handlers': ['sentry'],
+            'propagate': False,
+        },
+        # Default runserver request logging
+        'django.server': DEFAULT_LOGGING['loggers']['django.server'],
+        # Project logging
+        'main': {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'handlers': ['console', 'sentry', 'file'],
+            'propagate': False,
+        },
+        'message': {
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'handlers': ['console', 'sentry', 'file'],
+            'propagate': False,
         },
     },
 }
+
+import logging.config
+logging.config.dictConfig(LOGGING)

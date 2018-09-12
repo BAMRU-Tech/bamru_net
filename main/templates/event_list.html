@@ -1,0 +1,150 @@
+{% extends 'base_table.html' %}
+
+{% block js %}
+{{ block.super }}
+<script>
+
+const labelShowFilter = "Filter";
+const labelHideFilter = "Hide Filter";
+
+var table;
+$(document).ready(function() {
+    table = $('#dTbl').DataTable( {
+        dom: "Bfrtip",
+        "responsive": true,
+        "paging":   false,
+        "info":     false,
+        "order": [[ 4, "desc" ]],
+        columnDefs: [
+            { width: "35%", targets: 0 },
+            { width: "30%", targets: 1 },
+            { width: "5%", targets: 2 },
+            { width: "15%", targets: 3 },
+            { width: "15%", targets: 3 },
+            { type: "string", targets: 3 },
+            { responsivePriority: 0, targets: 0 },
+            { responsivePriority: 1, targets: 4 },
+            { responsivePriority: 2, targets: 1 },
+            { responsivePriority: 3, targets: 3 }
+        ],
+        buttons: [
+            {
+                text: labelShowFilter,
+                action: function ( e, dt, node, config ) {
+                    if($("#show-filter").css("display") == "none") {
+                        $("#show-filter").css({"display":"block"})
+                        node[0].innerText = labelHideFilter;
+                    } else {
+                        $("#show-filter").css({"display":"none"})
+                        node[0].innerText = labelShowFilter;
+                    }
+                }
+            },
+            {
+                text: 'More',
+                extend: 'collection',
+                autoClose: true,
+                buttons: [ 'copy', 'csv', 'excel', 'pdf', 'print', 'colvis']
+            }
+        ]
+    })
+
+    UpdateTableBasedOnSettings(table);
+
+});
+
+var filterTypes = [];
+var filterTypesCap = []; /*FIXME: Bug allows event type to be Capitalized when stored in the DB */
+
+/* Custom filtering function */
+$.fn.dataTable.ext.search.push(
+    function( settings, data, dataIndex ) {
+        if ( filterTypes.includes(data[2]) || filterTypesCap.includes(data[2]) ) {
+            return true;
+        }
+        return false;
+    }
+);
+
+function UpdateTableBasedOnSettings(table) {
+    filterTypes = [];
+    filterTypesCap = [];
+
+    $("#filter-type option").each(function() {
+        if (!this.selected) {
+            filterTypes.push(this.value);
+            filterTypesCap.push(this.value.charAt(0).toUpperCase() + this.value.substr(1));
+        }
+    });
+    $("#subhdr")[0].innerText = "Events (" + filterTypes.join(", ") + ")";
+    table.draw();
+};
+
+$("#filter-type").multiSelect({
+    selectableHeader: "<div class='custom-header'>Show</div>",
+    selectionHeader: "<div class='custom-header'>Hide</div>",
+    afterSelect: function(values){
+        UpdateTableBasedOnSettings(table);
+    },
+    afterDeselect: function(values){
+        UpdateTableBasedOnSettings(table);
+    }
+});
+
+</script>
+{% endblock %}
+
+{% block content %}
+<main>
+  <div id="show-filter" style="display: none">
+    <select id="filter-type" multiple="multiple" selectableHeader="Display type">
+      <option value='meeting'>Meeting</option>
+      <option value='operation'>Operation</option>
+      <option value='training'>Training</option>
+      <option value='community'>Community</option>
+    </select>
+  </div>
+  {% if event_list %}
+  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+    <thead>
+      <tr>
+        <th>Title</th><th>Location</th><th>Type</th><th>Leaders</th><th>Start</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for event in event_list %}
+      <tr>
+        <td><a href="{% url 'event_detail' event.id %}">{{ event.display_title }}</a></td>
+        <td>{{ event.display_location }}</td>
+        <td>{{ event.type }}</td>
+        <td>{{ event.leaders }}</td>
+        <td data-sort="{{ event.start_order }}">{{ event.display_start }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+  </table>
+  {% else %}
+  <p>No events are available.</p>
+  {% endif %}
+ </div>
+</main>
+{% endblock %}
+
+{% block subheader %}
+<div id="subhdr">
+  Events
+</div>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link" href="{% url 'event_add' %}"> 
+      Create New Event</a>
+  </li>
+</ul>
+
+{% endblock %}
+
+  
+{# - title ||= "Title" #}
+{#    - if "all" == "#{@view}" #}
+{#      = event_summary_stats #}

@@ -1,0 +1,148 @@
+<nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
+  <a class="navbar-brand" href="#">
+    <i class="fa fa-area-chart"></i>BAMRU.net
+  </a>
+  <button class="navbar-toggler" type="button"
+          data-toggle="collapse" data-target="#navbarSupportedContent">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-calendar-check-o"></i>Event
+        </a>
+        <div class="dropdown-menu">
+          <a class="dropdown-item" href="{% url 'event_add' %}"> 
+            <i class="fa fa-calendar-plus-o"></i>
+            Create new event
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="{% url 'event_all' %}">
+            <i class="fa fa-calendar"></i>
+            Events
+          </a>
+          <a class="dropdown-item" href="{% url 'event_immediate' %}">
+            <i class="fa fa-calendar"></i>
+            Immediate events
+          </a>
+        </div>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-user"></i>Team
+        </a>
+        <div class="dropdown-menu">
+          <a class="dropdown-item" href="{% url 'member_index' %}">
+            <i class="fa fa-address-book"></i>
+            Members
+          </a>
+          <a class="dropdown-item" href="{% url 'unavailable_list' %}">
+            <i class="fa fa-calendar"></i>
+            Availability
+          </a>
+          <a class="dropdown-item" href="{% url 'cert_list' %}">
+            <i class="fa fa-certificate"></i>
+            Certifications
+          </a>
+          <a class="dropdown-item" href="/wip">
+            <i class="fa fa-camera-retro"></i>
+            Member photos
+          </a>
+          <a class="dropdown-item" href="/paging/new">
+            <i class="fa fa-bullhorn"></i>
+            Page team
+          </a>
+        </div>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-book"></i>Library
+        </a>
+        <div class="dropdown-menu">
+          <a class="dropdown-item" href="/SMCSO">
+            <i class="fa fa-file"></i>
+            SMCSO Contacts
+          </a>
+          <a class="dropdown-item" href="/reports">
+            <i class="fa fa-file"></i>
+            Reports
+          </a>
+          <a class="dropdown-item" href="http://wiki.bamru.net/?username=Craig.Taylor" target="_blank">
+            <i class="fa fa-university"></i>
+            Wiki
+          </a>
+          <a class="dropdown-item" href="https://groups.yahoo.com/neo/groups/BAMRU/info" target="_blank">
+            <i class="fa fa-google"></i>
+            Forum posts
+          </a>
+          <a class="dropdown-item" href="/wip">
+            <i class="fa fa-upload"></i>
+            Files
+          </a>
+          <a class="dropdown-item" href="{% url 'do_index' %}">
+            <i class="fa fa-calendar"></i>
+            Quarterly DO schedule
+          </a>
+          <a class="dropdown-item" href="{% url 'message:message_list' %}">
+            <i class="fa fa-list"></i>
+            Paging log
+          </a>
+        </div>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+          <i class="fa fa-bolt"></i>Action
+        </a>
+        <div class="dropdown-menu">
+          <a class="dropdown-item" href="/zcst/initiate_callout">
+            <i class="fa fa-bolt"></i>
+            Initiate a callout
+          </a>
+          <a class="dropdown-item" href="/zcst/become_do">
+            <i class="fa fa-bolt"></i>
+            Becoming DO
+          </a>
+          <a class="dropdown-item" href="/wip">
+            <i class="fa fa-bolt"></i>
+            Temporary DO change
+          </a>
+          <a class="dropdown-item" href="/admin">
+            <i class="fa fa-edit"></i>
+            Perform admin tasks
+          </a>
+        </div>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+            <i class="fa fa-user-circle"></i>{{ request.user }}
+        </a>
+        <div class="dropdown-menu">
+          {% if request.user.is_authenticated %}
+          <a class="dropdown-item" href="{% url 'message:message_inbox' request.user.id%}">
+            <i class="fa fa-inbox"></i>
+            Inbox (n)
+          </a>
+          {% endif %}
+          <a class="dropdown-item" href="{% url 'unavailable_edit' %}">
+            <i class="fa fa-calendar"></i>
+            Busy periods
+          </a>
+          <a class="dropdown-item" href="/members/#{current_user.user_name}">
+            <i class="fa fa-certificate"></i>
+            Certifications
+          </a>
+          <a class="dropdown-item" href="/members/#{current_user.user_name}">
+            <i class="fa fa-cogs"></i>
+            Settings
+          </a>
+          <a class="dropdown-item" href="{% url 'logout' %}">
+            <i class="fa fa-sign-out"></i>
+            Log out
+          </a>
+        </div>
+      </li>
+    </ul>
+  </div>
+</nav>

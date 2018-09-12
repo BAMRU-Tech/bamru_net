@@ -1,0 +1,155 @@
+{% extends 'base_table.html' %}
+
+{% block js %}
+{{ block.super }}
+  <script>
+    $(document).ready( function() {
+      var table = $('#dTbl').DataTable( {
+        responsive: true,
+        paging:   false,
+        info:     false,
+        order: [[ 0, "asc" ]],
+        columnDefs: [
+          { responsivePriority: 1, targets: 0 },
+          { responsivePriority: 2, targets: 1 },
+          { responsivePriority: 3, targets: 3}
+        ]
+      });
+
+      $('#btn-show-rows').on('click', function(){
+        // Expand rows
+        $('#dTbl').toggle();
+      });
+
+      // Handle click on "Expand All" button
+      $('#btn-show-all-children').on('click', function(){
+        // Expand row details
+        table.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
+      });
+
+      // Handle click on "Collapse All" button
+      $('#btn-hide-all-children').on('click', function(){
+        // Collapse row details
+        table.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
+      });
+
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<main role="main" class="container">
+  <div id="content">
+    <p><strong>Description:</strong> {{ event.description }}</p>
+    <p><strong>Location:</strong> {{ event.location }}</p>
+    <p><strong>Leaders:</strong> {{ event.leaders }}</p>
+
+    {% for period in event.period_set.all %}
+    <nav class="navbar navbar-expand-md navbar-light bg-light">
+      <a class="navbar-brand" href="#">
+        <i class="fa fa-area-chart"></i>OP {{period.position}}
+      </a>
+      <button class="navbar-toggler" type="button"
+              data-toggle="collapse" data-target="#OP{{period.position}}">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="OP{{period.position}}">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a  class="nav-link" href="{% url 'event_period_add' event.id %}">New OP</a>
+          </li>
+          <li class="nav-item">
+            <a  class="nav-link" href="{% url 'event_period_delete' event.id period.id %}">Delete OP</a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+              <i class="fa fa-calendar-check-o"></i>Page
+            </a>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="{% url 'message:message_add' %}?period={{ period.id }}&period_format=invite">
+                <i class="fa fa-calendar-plus-o"></i>
+                Heads Up
+              </a>
+              <a class="dropdown-item" href="{% url 'message:message_add' %}?period={{ period.id }}&period_format=invite">
+                <i class="fa fa-calendar-plus-o"></i>
+                Are you available
+              </a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url 'message:message_add' %}?period={{ period.id }}&period_format=leave">
+                <i class="fa fa-calendar"></i>
+                  Have you left
+              </a>
+              <a class="dropdown-item" href="{% url 'message:message_add' %}?period={{ period.id }}&period_format=return">
+                <i class="fa fa-calendar"></i>
+                Are you home
+              </a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="{% url 'message:message_add' %}?period={{ period.id }}&period_format=test">
+                <i class="fa fa-calendar-plus-o"></i>
+                Test
+              </a>
+            </div>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
+              <i class="fa fa-user"></i>Other
+            </a>
+            <div class="dropdown-menu">
+              <a class="dropdown-item" href="{% url 'event_participant_add' period.id %}">
+                <i class="fa fa-address-book"></i>
+                Add participant
+              </a>
+              <a class="dropdown-item" href="{% url 'event_participant_add' period.id %}">
+                <i class="fa fa-address-book"></i>
+                Print Roster
+              </a>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+      <tr>
+        <th>Name</th>
+        <th>Left</th>
+        <th>Returned</th>
+        <th>Signed in</th>
+        <th>Signed out</th>
+        <th></th>
+      </tr>
+      {% for participant in period.participant_set.all %}
+      <tr>
+        <td>{{ participant.member }}</td>
+        <td>{{ participant.en_route_at }}</td>
+	    <td>{{ participant.return_home_at }}</td>
+	    <td>{{ participant.signed_in_at }}</td>
+	    <td>{{ participant.signed_out_at }}</td>
+        <td><a href="{% url 'event_participant_delete' event=event.id pk=participant.id %}">
+            delete
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endfor %}
+  </div>
+</main><!-- /.container -->
+{% endblock %}
+
+{% block subheader %}
+<a href="{% url 'event_all' %}"> Events </a>
+>{{ event.title}} ({{ event.type }})
+
+  <ul class="navbar-nav ml-auto">
+    <li class="nav-item">
+      <a  class="nav-link" href="{% url 'event_update' event.id %}">Edit</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'event_delete' event.id %}">Delete</a>
+    </li>
+  </ul>
+{% endblock %}
+
+  

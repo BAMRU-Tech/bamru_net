@@ -1,0 +1,40 @@
+{% load static %}
+{% load bootstrap4 %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    {% bootstrap_css %}
+
+    <link rel="stylesheet" href="/static/css/style.css" />
+
+    <link href="https://use.fontawesome.com/5fb07bfd2c.css"
+          media="all" rel="stylesheet">
+
+    {% block css %}{% endblock %}
+
+    <title>{% block title %}BAMRU.net{% endblock %}</title>
+  </head>
+
+
+  <body>
+    {% include 'navbar.html' %}
+    <nav class="navbar  navbar-expand-sm text-primary subhead">
+      {% block subheader %}{% endblock %}{# still needs more work #}
+    </nav>
+
+    {% bootstrap_messages %}
+
+    {% block content %}{% endblock %}
+
+    {% block js %}
+      {% bootstrap_javascript jquery="slim" %}
+      <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
+    {% endblock %}
+  </body>
+</html>

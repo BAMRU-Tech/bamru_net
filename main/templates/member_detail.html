@@ -1,0 +1,59 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<main role="main" class="container">
+  {% if not member.is_current_do %}
+    <p style="color:red">CURRENT DO until</p>
+  {% endif %}
+  <strong>Phone numbers:</strong>
+  <ul>
+    {% for ph in member.phone_set.all %}
+    <li>{{ ph.number }} ({{ ph.type }}{% if ph.pagable %}, pageable{% endif %})</li>
+    {% endfor %}
+  </ul>
+  <strong>Addresses:</strong>
+  <ul>
+    {% for ad in member.address_set.all %}
+    <li>
+      {{ ad.address1 }}
+      {% if ad.address2 %}
+        {{ ad.address2 }}
+      {% endif %}
+      {{ ad.city }}, {{ ad.state }} {{ ad.zip }} ({{ ad.type }})
+    </li>
+    {% endfor %}
+  </ul>
+  <strong>Emergency Contacts:</strong>
+  <ul>
+    {% for ec in member.emergencycontact_set.all %}
+    <li>{{ ec.name }}: {{ ec.number }} ({{ ec.type }})</li>
+    {% endfor %}
+  </ul>
+  <p> <strong>Username:</strong> {{ member.username }}</p>
+  <p> <strong>Last Sign In at:</strong> {{ member.last_sign_in_at }}</p>
+
+  {% if member.ham %}<strong>Ham:</strong> {{ member.ham }}{% endif %}
+  {% if member.v9 %}<strong>V9:</strong>{{ member.v9 }}{% endif %}
+  {% if member.is_active %}<strong>Active</strong>{% endif %}
+  {% if member.is_staff %}<strong>Staff</strong>{% endif %}
+
+</main><!-- /.container -->
+{% endblock %}
+
+{% block subheader %}
+<a href="{% url 'member_index' %}"> Members </a>
+>{{member.full_name }} ({{ member.rank }})
+
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link">
+      Availability
+    </a>
+  </li>
+  <li class="nav-item dropdown">
+   <a class="nav-link">
+      Inbox
+    </a>
+  </li>
+</ul>
+{% endblock %}

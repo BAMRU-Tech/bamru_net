@@ -1,0 +1,72 @@
+{% extends 'base_table.html' %}
+
+{% block js %}
+{{ block.super }}
+  <script>
+    $(document).ready( function() {
+      $('#dTbl').DataTable( {
+        responsive: true,
+        paging:   false,
+        info:     false,
+        order: [[ 0, "asc" ]],
+        columnDefs: [
+          { responsivePriority: 1, targets: 0 },
+          { responsivePriority: 2, targets: 3 },
+          { responsivePriority: 3, targets: 4}
+        ]
+      });
+    });
+  </script>
+{% endblock %}
+
+{% block content %}
+<main>
+  {% if member_list %}
+  <table id="dTbl" class="display table-bordered wrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>Name</th><th>Rank</th>
+        {% for h in headers %}<th>{{h}}</th>{% endfor %}
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for member in member_list %}
+      <tr>
+        <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
+        <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
+        {% for c in member.certs %}
+        <td bgcolor="{{c.cert.color | default:"white" }}">
+          {% if c.count %}
+          {{ c.cert }}
+          {% if c.count > 1 %}*{% endif %}
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No members are available.</p>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block subheader %}
+<a class="navbar-brand" href="#">
+  <i class="fa fa-chevron-right"></i>Members
+</a>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link">
+      "[sub action 1]"
+    </a>
+  </li>
+  <li class="nav-item dropdown">
+    <a class="nav-link">
+      "[sub action 2]"
+    </a>
+  </li>
+</ul>
+{% endblock %}
