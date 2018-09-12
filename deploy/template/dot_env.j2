@@ -1,8 +1,10 @@
 # Used for SMS and email callbacks and links:
 export DJANGO_HOSTNAME={{ django_hostname }}
 
+export DJANGO_DEBUG={{ django_debug }}
 export DJANGO_SECRET_KEY='{{ django_secret_key}}'
 export DJANGO_ALLOWED_HOST={{ django_allowed_host }}
+export DJANGO_STATIC_ROOT={{ django_static_root }}
 export DJANGO_DB_NAME={{ db_name }}
 export DJANGO_DB_USER={{ db_user }}
 export DJANGO_DB_PASS={{ db_pass }}

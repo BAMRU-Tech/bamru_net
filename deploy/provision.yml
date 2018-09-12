@@ -6,7 +6,7 @@
     # Install system packages
     install_packages: true
     # Completely wipe the database and re-import
-    update_database: true
+    update_database: false
 
   tasks:
     - include_vars: vault.yml
@@ -151,7 +151,6 @@
     - shell: ~/bin/django_setup.sh
       args:
         chdir: ~/repo
-      when: update_database
       become: true
       become_user: "{{ app_user }}"
 
