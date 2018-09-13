@@ -29,6 +29,7 @@ router.register(r'members', views.MemberViewSet)
 urlpatterns = [
     path('member/', views.MemberIndexView.as_view(), name='member_index'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
+    path('member/<int:pk>/certs/', views.MemberCertsView.as_view(), name='member_certs'),
     path('availability/', views.UnavailableListView.as_view(), name='unavailable_list'),
     path('availability/edit/', views.UnavailableEditView.as_view(), name='unavailable_edit'),
 

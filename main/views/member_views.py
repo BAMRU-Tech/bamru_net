@@ -37,6 +37,21 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     template_name = 'member_detail.html'
 
 
+class MemberCertsView(LoginRequiredMixin, generic.ListView):
+    template_name = 'member_cert_list.html'
+    context_object_name = 'cert_list'
+
+    def get_queryset(self):
+        qs = Cert.objects.filter(member=self.kwargs['pk'])
+        qs = qs.order_by(Cert.type_order_expression(), '-expiration', '-id')
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['member'] = Member.objects.filter(id=self.kwargs['pk']).first()
+        return context
+
+
 class CertListView(LoginRequiredMixin, generic.ListView):
     template_name = 'cert_list.html'
     context_object_name = 'member_list'
