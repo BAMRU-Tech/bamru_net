@@ -77,7 +77,10 @@ class MemberTestCase(TestCase):
         response = self.client.get(self.user.get_absolute_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_cert_list(self):
+
+class CertTestCase(MemberTestCase):
+    def setUp(self):
+        super().setUp()
         today = timezone.now().date()
         Cert.objects.create(
             member=self.user,
@@ -104,12 +107,14 @@ class MemberTestCase(TestCase):
             type='driver',
             expiration=today + timedelta(days=-10),
         )
+
+    def test_cert_list(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse('cert_list'))
         self.assertEqual(response.status_code, 200)
 
 
-class CertTestCase(MemberTestCase):
+class UnavailableTestCase(MemberTestCase):
     def setUp(self):
         super().setUp()
         today = timezone.now().date()
