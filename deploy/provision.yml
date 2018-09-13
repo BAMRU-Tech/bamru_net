@@ -151,7 +151,6 @@
     - shell: ~/bin/django_setup.sh
       args:
         chdir: ~/repo
-      when: update_database
       become: true
       become_user: "{{ app_user }}"
 
