@@ -2,7 +2,7 @@
 
 {% block content %}
 <main role="main" class="container">
-  {% if not member.is_current_do %}
+  {% if member.is_current_do %}
     <p style="color:red">CURRENT DO until</p>
   {% endif %}
   <strong>Phone numbers:</strong>
