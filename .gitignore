@@ -19,3 +19,6 @@ deploy/*.log
 deploy/*.retry
 deploy/.vagrant
 deploy/inventory.ansible
+
+# This will hold user settings and shouldn't be checked in
+deploy/vault_user.yml
