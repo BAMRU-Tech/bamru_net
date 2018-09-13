@@ -300,6 +300,8 @@ class Cert(BasePositionModel):
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
+        if self.description is None:
+            return ""
         return self.description
 
     @property

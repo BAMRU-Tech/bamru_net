@@ -1,6 +1,10 @@
 from django.test import Client, TestCase
 from django.urls import reverse
-from main.models import Member, Role
+from django.utils import timezone
+from main.models import Cert, Member, Role, Unavailable
+
+from datetime import timedelta
+
 
 class MemberTestCase(TestCase):
     def setUp(self):
@@ -71,4 +75,76 @@ class MemberTestCase(TestCase):
     def test_detail_logged_in(self):
         self.client.force_login(self.user)
         response = self.client.get(self.user.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+
+
+class CertTestCase(MemberTestCase):
+    def setUp(self):
+        super().setUp()
+        today = timezone.now().date()
+        Cert.objects.create(
+            member=self.user,
+            type='medical',
+            description="WFR",
+            expiration=today + timedelta(days=100),
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='cpr',
+            expiration=today + timedelta(days=50),
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='ham',
+            expiration=today + timedelta(days=10),
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='tracking',
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='driver',
+            expiration=today + timedelta(days=-10),
+        )
+
+    def test_cert_list(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('cert_list'))
+        self.assertEqual(response.status_code, 200)
+
+
+class UnavailableTestCase(MemberTestCase):
+    def setUp(self):
+        super().setUp()
+        today = timezone.now().date()
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=-2),
+            end_on=today,
+        )
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=2),
+            end_on=today + timedelta(days=2),
+        )
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=4),
+            end_on=today + timedelta(days=7),
+        )
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=10),
+            end_on=today + timedelta(days=10),
+        )
+
+    def test_unavailable_list(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('unavailable_list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_unavailable_edit(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('unavailable_edit'))
         self.assertEqual(response.status_code, 200)
