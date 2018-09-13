@@ -273,16 +273,16 @@ class DoAvailable(BaseModel):  # was AvailDos
 
 class Cert(BasePositionModel):
     TYPES = (
-        ('medical', 'medical'),
-        ('cpr', 'cpr'),
-        ('ham', 'ham'),
-        ('tracking', 'tracking'),
-        ('avalanche', 'avalanche'),
-        ('rigging', 'rigging'),
-        ('ics', 'ics'),
-        ('overhead', 'overhead'),
-        ('driver', 'driver'),
-        ('background', 'background'),
+        ('medical', 'Medical'),
+        ('cpr', 'CPR'),
+        ('ham', 'Ham'),
+        ('tracking', 'Tracking'),
+        ('avalanche', 'Avalanche'),
+        ('rigging', 'Rigging'),
+        ('ics', 'ICS'),
+        ('overhead', 'Overhead'),
+        ('driver', 'SO Driver'),
+        ('background', 'SO Background'),
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     type = models.CharField(choices=TYPES, max_length=255)
@@ -323,3 +323,13 @@ class Cert(BasePositionModel):
         if exp < now + timedelta(days=90):
             return "yellow"
         return "limegreen"
+
+    @classmethod
+    def type_order_expression(cls):
+        cases = [models.When(type=cls.TYPES[i][0], then=models.Value(i))
+                 for i in range(len(cls.TYPES))]
+        return models.Case(
+            *cases,
+            default=models.Value(len(cls.TYPES)),
+            output_field=models.IntegerField(),
+        )

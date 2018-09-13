@@ -113,6 +113,11 @@ class CertTestCase(MemberTestCase):
         response = self.client.get(reverse('cert_list'))
         self.assertEqual(response.status_code, 200)
 
+    def test_member_cert_list(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('member_certs', args=[self.user.id]))
+        self.assertEqual(response.status_code, 200)
+
 
 class UnavailableTestCase(MemberTestCase):
     def setUp(self):

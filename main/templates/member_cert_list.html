@@ -1,0 +1,46 @@
+{% extends 'base_table.html' %}
+
+{% block content %}
+<main>
+  {% if cert_list %}
+  <table id="dTbl" class="display table-bordered wrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Expiration</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for cert in cert_list %}
+      <tr>
+        <td>{{ cert.get_type_display }}</td>
+        <td>{{ cert.description }}</td>
+        <td><span style="background-color: {{cert.color | default:"white" }}">{{ cert.expiration }}</span></td>
+        <td><!-- red is for TODO --><a href="#" style="color: red">edit</a> | <a href="#" style="color: red">delete</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No certificates are available.</p>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block subheader %}
+<div id="subhdr">
+<a href="{% url 'member_index' %}"> Members </a>
+&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+&gt; Certs
+</div>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a href="#" class="nav-link" style="color: red"><!-- red is for TODO -->
+      Add cert
+    </a>
+  </li>
+</ul>
+{% endblock %}
