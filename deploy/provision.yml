@@ -9,7 +9,11 @@
     update_database: true
 
   tasks:
-    - include_vars: vault.yml
+    - name: Include vars from user vault or default vault
+      include_vars: "{{ item }}"
+      with_first_found:
+        - vault_user.yml
+        - vault_default.yml
 
     - name: install packages
       block:
@@ -148,7 +152,8 @@
         group: bamru
       become: true
       
-    - shell: ~/bin/django_setup.sh
+    - name: django setup script
+      shell: ~/bin/django_setup.sh
       args:
         chdir: ~/repo
       become: true
@@ -212,3 +217,4 @@
     - name: certbot
       shell: "certbot --nginx --noninteractive --agree-tos -m {{ certbot_email }} -d {{ certbot_domain }}"
       become: true
+      when: use_certbot

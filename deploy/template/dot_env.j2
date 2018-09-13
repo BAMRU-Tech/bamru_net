@@ -11,11 +11,15 @@ export DJANGO_DB_PASS={{ db_pass }}
 export DJANGO_DB_HOST={{ db_host }}
 
 # set this to use file instead of servers
-#export MESSAGE_FILE_PATH=/home/{{ app_user }}/logs/message
+{% if use_message_file %}
+export MESSAGE_FILE_PATH=/home/{{ app_user }}/logs/message
+{% endif %}
 export LOG_ROOT=/home/{{ app_user }}/logs/django
 
-export USE_RAVEN={{ use_raven }}
+{% if use_raven %}
+export USE_RAVEN=True
 export RAVEN_DSN='{{ raven_dsn }}'
+{% endif %}
 
 export TWILIO_ACCOUNT_SID={{ twilio_account_sid }}
 export TWILIO_AUTH_TOKEN={{ twilio_auth_token }}
