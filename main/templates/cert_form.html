@@ -1,0 +1,28 @@
+{% extends 'base_generic.html' %}
+{% load bootstrap4 %}
+
+{% block content %}
+<main role="main" class="container">
+  <div id="content">
+    <h4>{% if new %}New{% else %}Editing{% endif %} {{ cert.get_type_display }} certificate</h4>
+    <form method="post">
+      {% csrf_token %}
+      {# % bootstrap_form form % #}
+
+      <table>
+        {{ form }}
+      </table>
+      <input type="submit" value="Submit" />
+    </form>
+  </div>
+</main><!-- /.container -->
+{% endblock %}
+
+{% block subheader %}
+<div id="subhdr">
+<a href="{% url 'member_index' %}"> Members </a>
+&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+&gt; <a href="{% url 'member_certs' member.id %}">Certs</a>
+&gt; {% if new %}Add{% else %}Edit{% endif %} cert
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base_generic.html' %}
+{% load bootstrap4 %}
+
+{% block content %}
+<main role="main" class="container">
+  <div id="content">
+    <form method="post">
+      {% csrf_token %}
+      Really delete {{ cert.get_type_display }} cert "{{ cert.description }}" with expiration {{ cert.expiration }}?
+      <input type="submit" value="Delete" />
+    </form>
+  </div>
+</main><!-- /.container -->
+{% endblock %}
+
+{% block subheader %}
+<div id="subhdr">
+<a href="{% url 'member_index' %}"> Members </a>
+&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+&gt; <a href="{% url 'member_certs' member.id %}">Certs</a>
+&gt; Delete cert
+</div>
+{% endblock %}

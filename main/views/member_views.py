@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
-from django.forms.models import modelformset_factory
+from django.forms import widgets
+from django.forms.models import modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
@@ -10,7 +12,7 @@ from django.utils import timezone
 from django.views import generic
 from main.models import Cert, Member, Unavailable
 
-from django.forms.widgets import Select, Widget, SelectDateWidget
+from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from datetime import timedelta
 import datetime
@@ -49,6 +51,99 @@ class MemberCertsView(LoginRequiredMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['member'] = Member.objects.filter(id=self.kwargs['pk']).first()
+        context['cert_types'] = Cert.TYPES
+        return context
+
+
+class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
+    template_name = 'cert_form.html'
+
+    def post(self, *args, **kwargs):
+        if self.kwargs['member'] != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
+            raise PermissionDenied
+
+        CertForm = self.get_form_class(self.request.POST['type'])
+        if self.kwargs['cert'] == 'new':
+            form = CertForm(self.request.POST)
+        else:
+            existing_cert = Cert.objects.get(id=self.kwargs['cert'])
+            if existing_cert.member.id != self.kwargs['member']:
+                return HttpResponseBadRequest()
+            form = CertForm(self.request.POST, instance=existing_cert)
+
+        if form.is_valid():
+            cert = form.save(commit=False)
+            cert.member = self.request.user
+            cert.save()
+        return HttpResponseRedirect(reverse('member_certs', args=[cert.member.id]))
+
+    def get_form_class(self, cert_type):
+        fields = ['id', 'type', 'expiration', 'description']
+        if cert_type == "ham":
+            fields += ['link']
+        else:
+            fields += [
+                # TODO: file upload
+                'comment',
+            ]
+        CertForm = modelform_factory(
+            Cert,
+            fields=fields,
+            widgets={
+                'id': widgets.HiddenInput(),
+                'type': widgets.HiddenInput(),
+                'description': widgets.TextInput(),
+                'comment': widgets.TextInput(),
+                'link': widgets.TextInput(),
+            },
+        )
+        return CertForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        new = self.kwargs['cert'] == 'new'
+
+        if new:
+            cert_type = self.request.GET.get('type', 'medical')
+            cert = Cert(type=cert_type)
+        else:
+            cert = Cert.objects.get(id=self.kwargs['cert'])
+            cert_type = cert.type
+
+        CertForm = self.get_form_class(cert_type)
+        form = CertForm(instance=cert)
+
+        context['new'] = new
+        context['cert'] = cert
+        context['form'] = form
+        context['member'] = Member.objects.get(id=self.kwargs['member'])
+        return context
+
+
+class CertDeleteView(LoginRequiredMixin, generic.base.TemplateView):
+    template_name = 'cert_delete.html'
+
+    def post(self, *args, **kwargs):
+        if self.kwargs['member'] != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
+            raise PermissionDenied
+
+        cert = Cert.objects.get(id=self.kwargs['cert'])
+        member_id = cert.member.id
+
+        if self.kwargs['member'] != cert.member.id:
+            return HttpResponseBadRequest()
+
+        cert.delete()
+        return HttpResponseRedirect(reverse('member_certs', args=[member_id]))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        cert = Cert.objects.get(id=self.kwargs['cert'])
+        context['cert'] = cert
+        context['member'] = cert.member
         return context
 
 
