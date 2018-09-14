@@ -1,6 +1,10 @@
 from django.test import Client, TestCase
 from django.urls import reverse
-from main.models import Member, Role
+from django.utils import timezone
+from main.models import Cert, Member, Role, Unavailable
+
+from datetime import timedelta
+
 
 class MemberTestCase(TestCase):
     def setUp(self):
@@ -71,4 +75,134 @@ class MemberTestCase(TestCase):
     def test_detail_logged_in(self):
         self.client.force_login(self.user)
         response = self.client.get(self.user.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+
+
+class CertTestCase(MemberTestCase):
+    def setUp(self):
+        super().setUp()
+        today = timezone.now().date()
+        self.cert = Cert.objects.create(
+            member=self.user,
+            type='medical',
+            description="WFR",
+            expiration=today + timedelta(days=100),
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='cpr',
+            expiration=today + timedelta(days=50),
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='ham',
+            expiration=today + timedelta(days=10),
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='tracking',
+        )
+        Cert.objects.create(
+            member=self.user,
+            type='driver',
+            expiration=today + timedelta(days=-10),
+        )
+
+    def test_cert_list(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('cert_list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_member_cert_list(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('member_certs', args=[self.user.id]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_new_cert(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('new_cert', args=[self.user.id]) + '?type=medical')
+        self.assertEqual(response.status_code, 200)
+
+        orig_num_certs = Cert.objects.filter(member=self.user).count()
+
+        response = self.client.post(reverse('new_cert', args=[self.user.id]) + '?type=medical', {
+            'type': 'medical',
+            'expiration': '2018-12-31',
+            'description': 'WFR',
+            'comment': '',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        new_num_certs = Cert.objects.filter(member=self.user).count()
+        self.assertEqual(orig_num_certs + 1, new_num_certs)
+
+    def test_edit_cert(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('edit_cert', args=[self.user.id, self.cert.id]))
+        self.assertEqual(response.status_code, 200)
+
+        orig_num_certs = Cert.objects.filter(member=self.user).count()
+
+        new_expiration = timezone.now().date() + timedelta(days=200)
+
+        response = self.client.post(reverse('edit_cert', args=[self.user.id, self.cert.id]), {
+            'type': 'medical',
+            'expiration': new_expiration,
+            'description': 'WFR',
+            'comment': '',
+        })
+        self.assertEqual(response.status_code, 302)
+
+        new_num_certs = Cert.objects.filter(member=self.user).count()
+        self.assertEqual(orig_num_certs, new_num_certs)
+
+        self.assertEqual(Cert.objects.get(id=self.cert.id).expiration, new_expiration)
+
+    def test_delete_cert(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('delete_cert', args=[self.user.id, self.cert.id]))
+        self.assertEqual(response.status_code, 200)
+
+        orig_num_certs = Cert.objects.filter(member=self.user).count()
+
+        response = self.client.post(reverse('delete_cert', args=[self.user.id, self.cert.id]))
+        self.assertEqual(response.status_code, 302)
+
+        new_num_certs = Cert.objects.filter(member=self.user).count()
+        self.assertEqual(orig_num_certs - 1, new_num_certs)
+
+
+class UnavailableTestCase(MemberTestCase):
+    def setUp(self):
+        super().setUp()
+        today = timezone.now().date()
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=-2),
+            end_on=today,
+        )
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=2),
+            end_on=today + timedelta(days=2),
+        )
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=4),
+            end_on=today + timedelta(days=7),
+        )
+        Unavailable.objects.create(
+            member=self.user,
+            start_on=today + timedelta(days=10),
+            end_on=today + timedelta(days=10),
+        )
+
+    def test_unavailable_list(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('unavailable_list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_unavailable_edit(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse('unavailable_edit'))
         self.assertEqual(response.status_code, 200)

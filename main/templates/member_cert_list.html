@@ -1,0 +1,60 @@
+{% extends 'base_table.html' %}
+
+{% block content %}
+<main>
+  {% if cert_list %}
+  <table id="dTbl" class="display table-bordered wrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Documentation</th>
+        <th>Expiration</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for cert in cert_list %}
+      <tr>
+        <td>{{ cert.get_type_display }}</td>
+        <td>{{ cert.description }}</td>
+        <td>
+          {% if cert.link %}
+            <a href="{{ cert.link }}">{{cert.link}}</a>
+          {% endif %}
+        </td>
+        <td><span style="background-color: {{cert.color | default:"white" }}">{{ cert.expiration }}</span></td>
+        <td>
+          <a href="{% url 'edit_cert' member.id cert.id %}">edit</a>
+          | <a href="{% url 'delete_cert' member.id cert.id %}">delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No certificates are available.</p>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block subheader %}
+<div id="subhdr">
+<a href="{% url 'member_index' %}"> Members </a>
+&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+&gt; Certs
+</div>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Add Cert
+    </button>
+    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
+      {% for type in cert_types %}
+        <a class="dropdown-item" href="{% url 'new_cert' member.id %}?type={{type.0}}">Add {{type.1}} Cert</a>
+      {% endfor %}
+    </div>
+  </li>
+</ul>
+{% endblock %}

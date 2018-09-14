@@ -22,4 +22,4 @@ source {{ venv_path }}/bin/activate
 {% endif %}
 
 # Collect static files for webserver
-python manage.py collectstatic
+python manage.py collectstatic --clear --noinput
