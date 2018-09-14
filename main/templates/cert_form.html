@@ -4,7 +4,7 @@
 {% block content %}
 <main role="main" class="container">
   <div id="content">
-    {% if new %}New{% else %}Editing{% endif %} {{ cert.get_type_display }} certificate
+    <h4>{% if new %}New{% else %}Editing{% endif %} {{ cert.get_type_display }} certificate</h4>
     <form method="post">
       {% csrf_token %}
       {# % bootstrap_form form % #}

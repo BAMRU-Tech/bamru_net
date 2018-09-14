@@ -59,7 +59,8 @@ class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
     template_name = 'cert_form.html'
 
     def post(self, *args, **kwargs):
-        if self.kwargs['pk'] != self.request.user.id:
+        if self.kwargs['member'] != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
             raise PermissionDenied
 
         CertForm = self.get_form_class(self.request.POST['type'])
@@ -67,7 +68,7 @@ class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
             form = CertForm(self.request.POST)
         else:
             existing_cert = Cert.objects.get(id=self.kwargs['cert'])
-            if existing_cert.member.id != self.kwargs['pk']:
+            if existing_cert.member.id != self.kwargs['member']:
                 return HttpResponseBadRequest()
             form = CertForm(self.request.POST, instance=existing_cert)
 
@@ -117,7 +118,7 @@ class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
         context['new'] = new
         context['cert'] = cert
         context['form'] = form
-        context['member'] = Member.objects.get(id=self.kwargs['pk'])
+        context['member'] = Member.objects.get(id=self.kwargs['member'])
         return context
 
 
@@ -125,13 +126,14 @@ class CertDeleteView(LoginRequiredMixin, generic.base.TemplateView):
     template_name = 'cert_delete.html'
 
     def post(self, *args, **kwargs):
-        if self.kwargs['pk'] != self.request.user.id:
+        if self.kwargs['member'] != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
             raise PermissionDenied
 
         cert = Cert.objects.get(id=self.kwargs['cert'])
         member_id = cert.member.id
 
-        if self.kwargs['pk'] != cert.member.id:
+        if self.kwargs['member'] != cert.member.id:
             return HttpResponseBadRequest()
 
         cert.delete()
