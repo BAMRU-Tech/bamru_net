@@ -17,10 +17,13 @@ tr {
     page-break-inside:avoid;
     page-break-after:auto;
 }
-td, th {
+thead th, tbody td {
     vertical-align: top;
     padding: 5px;
     border: 2px solid black;
+}
+tfoot td {
+    padding: 5px;
 }
 thead tr {
     background-color: #ccc;
@@ -78,5 +81,6 @@ tr:nth-child(even) {
       </td>
     </tr>
   {% endfor %}
+  <tfoot><tr><td colspan="5">BAMRU Confidential</td></tr></tfoot>
 </table>
 </body>
