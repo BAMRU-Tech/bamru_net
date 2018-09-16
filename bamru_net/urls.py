@@ -68,4 +68,6 @@ urlpatterns = [
 
     url(r'^accounts/login/$', auth_views.login, name='login'),
     url(r'^accounts/logout/$', auth_views.logout, {'next_page': '/'}, name='logout'),
+
+    path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
 ]

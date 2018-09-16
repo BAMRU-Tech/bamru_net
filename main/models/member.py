@@ -46,6 +46,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         ('GN', 'Guest No-contact'),
         )
 
+    ACTIVE_RANKS = ['TM', 'FM', 'T']
+
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
@@ -122,7 +124,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     def isActive(self): # FIXME: Needs a filter
         """ Return member status, True is active member """
-        return self.rank in ['TM', 'FM', 'T']
+        return self.rank in self.ACTIVE_RANKS
 
     @models.permalink
     def get_absolute_url(self):
@@ -174,7 +176,19 @@ class Address(BasePositionModel):
     zip = models.CharField(max_length=255)
 
     def __str__(self):
-        return "{}, {}, {}, {} {}".format(self.address1, self.address2, self.city, self.state, self.zip)
+        return self.oneline()
+
+    def address_lines(self):
+        lines = [self.address1]
+        if self.address2:
+            lines.append(self.address2)
+        return lines
+
+    def oneline(self):
+        return "{}, {}, {} {}".format(', '.join(self.address_lines()), self.city, self.state, self.zip)
+
+    def multiline(self):
+        return "{}\n{}, {} {}".format('\n'.join(self.address_lines()), self.city, self.state, self.zip)
 
 
 class Email(BasePositionModel):
