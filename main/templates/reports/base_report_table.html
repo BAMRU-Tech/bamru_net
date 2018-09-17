@@ -1,0 +1,24 @@
+<html>
+<head>
+<style type="text/css">
+body { font-family: sans-serif }
+table { page-break-inside:auto }
+tr    { page-break-inside:avoid; page-break-after:auto }
+thead { display:table-header-group }
+tfoot { display:table-footer-group }
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+thead tr {
+    background-color: #ccc;
+}
+tr:nth-child(even) {
+    background-color: #eee;
+}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>

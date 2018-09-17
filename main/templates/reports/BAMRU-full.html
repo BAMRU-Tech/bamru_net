@@ -1,21 +1,13 @@
-<html>
-<head>
+{% extends 'reports/base_report_table.html' %}
+
+{% block head %}
 <meta name="pdfkit-orientation" content="landscape" />
 <style type="text/css">
-body { font-family: sans-serif }
-.header { text-align: center }
-table { page-break-inside:auto }
-tr    { page-break-inside:avoid; page-break-after:auto }
-thead { display:table-header-group }
-tfoot { display:table-footer-group }
 table {
-    width: 100%;
-    border-collapse: collapse;
     font-size: 12px;
 }
-tr {
-    page-break-inside:avoid;
-    page-break-after:auto;
+.header {
+    text-align: center
 }
 thead th, tbody td {
     vertical-align: top;
@@ -25,15 +17,10 @@ thead th, tbody td {
 tfoot td {
     padding: 5px;
 }
-thead tr {
-    background-color: #ccc;
-}
-tr:nth-child(even) {
-    background-color: #eee;
-}
 </style>
-</head>
-<body>
+{% endblock %}
+
+{% block body %}
 <div class="header">
   <h3>BAMRU Full Roster</h3>
   <p>Updated {{now.date}} - BAMRU Confidential</p>
@@ -83,4 +70,4 @@ tr:nth-child(even) {
   {% endfor %}
   <tfoot><tr><td colspan="5">BAMRU Confidential</td></tr></tfoot>
 </table>
-</body>
+{% endblock %}
