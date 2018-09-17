@@ -91,6 +91,14 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return ', '.join([ r[1] for r in sorted(result) ])
 
     @property
+    def classic_roles(self):
+        """ Return string, list of ordered roles """
+        roles = [r.role for r in self.role_set.all()] + [self.rank]
+        CLASSIC_ROSTER_TYPES = ['Bd', 'OL', 'TM', 'FM', 'T']
+        result = [r for r in CLASSIC_ROSTER_TYPES if r in roles]
+        return ' '.join(result)
+
+    @property
     def role_order(self):
         """ Return int for the highest priority role """
         roles = self.role_set.all()
@@ -187,6 +195,7 @@ class Role(BaseModel):
         ('FM', 'Active Field Member'),
         ('T', 'Active Trainee'),
     )
+    CLASSIC_ROSTER_TYPES = ['Bd', 'OL', 'TM', 'FM', 'T']
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     role = models.CharField(choices=TYPES, max_length=255, blank=True)
 
