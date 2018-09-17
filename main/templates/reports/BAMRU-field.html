@@ -1,0 +1,52 @@
+{% extends 'reports/base_report_table.html' %}
+
+{% block head %}
+<style type="text/css">
+table {
+    font-size: 10px;
+    border: 2px solid black;
+}
+thead th, tbody td {
+    text-align: left;
+    padding: 2px 5px;
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<h4>
+  BAMRU Field Roster / Active Members / Updated {{now.date}} / BAMRU Confidential
+</h4>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Last</th>
+      <th>First</th>
+      <th>Rank</th>
+      <th>Mobile</th>
+      <th>Home</th>
+      <th>Work</th>
+      <th>Personal Email</th>
+      <th>Work Email</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for member in members %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ member.last_name }}</td>
+        <td>{{ member.first_name }}</td>
+        <td>{{ member.rank }}</td>
+        <td>{{ member.mobile_phone }}</td>
+        <td>{{ member.home_phone }}</td>
+        <td>{{ member.work_phone }}</td>
+        <td>{{ member.personal_email }}</td>
+        <td>{{ member.work_email }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

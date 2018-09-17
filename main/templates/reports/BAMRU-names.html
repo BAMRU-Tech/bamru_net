@@ -1,0 +1,62 @@
+{% extends 'reports/base_report_table.html' %}
+
+{% block head %}
+<style type="text/css">
+table {
+    font-size: 10px;
+    border: 2px solid black;
+}
+thead th, tbody td {
+    text-align: left;
+    padding: 2px 5px;
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+}
+
+{% if report_filetype == "pdf" %}
+.memberlist {
+    /* hack for wkhtmltopdf: https://github.com/wkhtmltopdf/wkhtmltopdf/issues/1872 */
+    /* You *must* define a fixed height which is
+       large enough to fit the whole content,
+       otherwise the layout is unpredictable. */
+    height: 25em;
+    /* Width and count aren't respected, but you
+       have to give at least some dummy value (??). */
+    -webkit-columns: 0 0;
+    /* This is the strange way to define the number of columns:
+       50% = 2 columns, 33% = 3 columns 25% = 4 columns */
+    width: 33%; 
+    /* Gap and rule do work. */
+    -webkit-column-gap: 2em;
+    -webkit-column-rule: 1px solid black;
+}
+{% else %}
+.memberlist {
+    columns: 3 auto;
+    column-rule: 1px solid black;
+}
+{% endif %}
+</style>
+{% endblock %}
+
+{% block body %}
+<h3 style="text-align: center">
+  BAMRU Roster
+</h3>
+<p>
+  BAMRU is a resource of the San Mateo County Sheriff's Office of Emergency Services. Learn more at
+  <a href="http://hsd.smcsheriff.com/divisions/homeland-security-division/emergency-services-bureau/search-rescue">http://hsd.smcsheriff.com/divisions/homeland-security-division/emergency-services-bureau/search-rescue</a>
+</p>
+<p>
+  Find BAMRU online at <a href="http://bamru.org">http://bamru.org</a>
+</p>
+<p>
+  This roster is current as of {{now.date}}.
+</p>
+<p class="memberlist">
+  {% for member in members %}
+    {{member.full_name}}<br/>
+  {% endfor %}
+</p>
+BAMRU Confidential
+{% endblock %}

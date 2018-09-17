@@ -100,7 +100,6 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         except:
             return len(Role.TYPES)
 
-
     @property
     def display_email(self): # FIXME: needs a priority
         """ Return first email """
@@ -108,7 +107,23 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
             return self.email_set.first().address
         except:
             return ''
-            
+
+    @property
+    def personal_email(self):
+        # FIXME: needs a priority
+        try:
+            return self.email_set.filter(type='Personal').first().address
+        except:
+            return ''
+
+    @property
+    def work_email(self):
+        # FIXME: needs a priority
+        try:
+            return self.email_set.filter(type='Work').first().address
+        except:
+            return ''
+
     @property
     def display_phone(self): # FIXME: needs a priority
         """ Return first phone """
@@ -116,7 +131,31 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
             return self.phone_set.first().number
         except:
             return ''
-        
+
+    @property
+    def mobile_phone(self):
+        # FIXME: needs a priority
+        try:
+            return self.phone_set.filter(type='Mobile').first().number
+        except:
+            return ''
+
+    @property
+    def home_phone(self):
+        # FIXME: needs a priority
+        try:
+            return self.phone_set.filter(type='Home').first().number
+        except:
+            return ''
+
+    @property
+    def work_phone(self):
+        # FIXME: needs a priority
+        try:
+            return self.phone_set.filter(type='Work').first().number
+        except:
+            return ''
+
     @property
     def short_name(self):
         "Returns the short name for the user."

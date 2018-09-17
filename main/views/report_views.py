@@ -22,6 +22,8 @@ class BaseReportView(View):
         except loader.TemplateDoesNotExist:
             raise Http404
 
+        context['report_filetype'] = report_filetype
+
         content = template.render(context, self.request)
 
         if report_filetype == 'html':
