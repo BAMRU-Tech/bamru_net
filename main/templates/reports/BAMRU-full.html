@@ -1,0 +1,73 @@
+{% extends 'reports/base_report_table.html' %}
+
+{% block head %}
+<meta name="pdfkit-orientation" content="landscape" />
+<style type="text/css">
+table {
+    font-size: 12px;
+}
+.header {
+    text-align: center
+}
+thead th, tbody td {
+    vertical-align: top;
+    padding: 5px;
+    border: 2px solid black;
+}
+tfoot td {
+    padding: 5px;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="header">
+  <h3>BAMRU Full Roster</h3>
+  <p>Updated {{now.date}} - BAMRU Confidential</p>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Name / Role</th>
+      <th>Addresses</th>
+      <th>Phone Numbers</th>
+      <th>Email Addresses</th>
+      <th>Emergency Contacts</th>
+    </tr>
+  </thead>
+  {% for member in members %}
+    <tr>
+      <td>{{ member.full_name }}<br/>{% if member.roles %}{{ member.roles }}, {% endif %}{{member.rank}}</td>
+      <td>
+        {% for address in member.address_set.all %}
+          <p>
+            {{ address.get_type_display }}<br/>
+            {{ address.multiline|linebreaksbr }}
+          </p>
+        {% endfor %}
+      </td>
+      <td>
+        {% for phone in member.phone_set.all %}
+          {{ phone.get_type_display }}
+          {{ phone.number }}
+          {% if phone.pagable %}[pagable]{% endif %}
+          <br/>
+        {% endfor %}
+      </td>
+      <td>
+        {% for email in member.email_set.all %}
+          {{ email.get_type_display }}
+          {{ email.address }}
+          <br/>
+        {% endfor %}
+      </td>
+      <td>
+        {% for contact in member.emergencycontact_set.all %}
+          {{ contact.name }} - {{ contact.type }} {{ contact.number }}<br/>
+        {% endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  <tfoot><tr><td colspan="5">BAMRU Confidential</td></tr></tfoot>
+</table>
+{% endblock %}
