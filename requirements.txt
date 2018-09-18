@@ -31,7 +31,6 @@ MarkupSafe==1.0
 mccabe==0.6.1
 model-mommy==1.6.0
 parso==0.2.1
-pdfkit==0.6.1
 phonenumberslite==8.9.7
 Plim==0.9.12
 psycopg2-binary==2.7.4

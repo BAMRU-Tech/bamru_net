@@ -1,15 +1,11 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
 from django.views import View
 
 from main.models import Member
 
-import pdfkit
-from pdfkit import PDFKit
-
-import mock
 import os
 import tempfile
 
@@ -21,17 +17,17 @@ class BaseReportView(View):
     def render(self, report_filename, context):
         report_name, report_filetype = report_filename.rsplit('.', 1)
 
-        template = loader.get_template('reports/{}.html'.format(report_name))
-        # TODO: 404 if template doesn't exist
+        try:
+            template = loader.get_template('reports/{}.html'.format(report_name))
+        except loader.TemplateDoesNotExist:
+            raise Http404
 
         content = template.render(context, self.request)
 
         if report_filetype == 'html':
             return HttpResponse(content)
-        elif report_filetype == 'pdf':
-            response = HttpResponse(pdfkit.from_string(content, None))
-            response['Content-Type'] = 'application/pdf'
-            return response
+        else:
+            raise Http404
 
 
 class ReportRosterView(LoginRequiredMixin, BaseReportView):
