@@ -2,40 +2,22 @@
 
 {% block head %}
 <style type="text/css">
-table {
-    font-size: 10px;
-    border: 2px solid black;
-}
-thead th, tbody td {
-    text-align: left;
-    padding: 2px 5px;
-    border-left: 2px solid black;
-    border-right: 2px solid black;
-}
 
-{% if report_filetype == "pdf" %}
-.memberlist {
-    /* hack for wkhtmltopdf: https://github.com/wkhtmltopdf/wkhtmltopdf/issues/1872 */
-    /* You *must* define a fixed height which is
-       large enough to fit the whole content,
-       otherwise the layout is unpredictable. */
-    height: 25em;
-    /* Width and count aren't respected, but you
-       have to give at least some dummy value (??). */
-    -webkit-columns: 0 0;
-    /* This is the strange way to define the number of columns:
-       50% = 2 columns, 33% = 3 columns 25% = 4 columns */
-    width: 33%; 
-    /* Gap and rule do work. */
-    -webkit-column-gap: 2em;
-    -webkit-column-rule: 1px solid black;
+@page {
+    margin: 1.5cm;
 }
-{% else %}
 .memberlist {
     columns: 3 auto;
-    column-rule: 1px solid black;
+    column-rule: 1px solid grey;
+    margin: 20px;
 }
-{% endif %}
+@media print {
+    .memberlist {
+        column-rule: 1pt solid grey;
+        margin: 1cm;
+    }
+}
+
 </style>
 {% endblock %}
 
@@ -53,10 +35,10 @@ thead th, tbody td {
 <p>
   This roster is current as of {{now.date}}.
 </p>
-<p class="memberlist">
+<div class="memberlist">
   {% for member in members %}
-    {{member.full_name}}<br/>
+    <div>{{member.full_name}}</div>
   {% endfor %}
-</p>
-BAMRU Confidential
+</div>
+<p style="text-align: center">BAMRU Confidential</p>
 {% endblock %}

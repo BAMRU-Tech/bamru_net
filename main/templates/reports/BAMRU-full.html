@@ -3,9 +3,6 @@
 {% block head %}
 <meta name="pdfkit-orientation" content="landscape" />
 <style type="text/css">
-table {
-    font-size: 12px;
-}
 .header {
     text-align: center
 }
@@ -17,13 +14,26 @@ thead th, tbody td {
 tfoot td {
     padding: 5px;
 }
+@media print {
+    table {
+        font-size: 7pt;
+        border: 1pt solid black;
+    }
+    thead th, tbody td {
+        padding: 3pt;
+        border: 1pt solid black;
+    }
+    tfoot td {
+        padding: 3pt;
+    }
+}
 </style>
 {% endblock %}
 
 {% block body %}
 <div class="header">
   <h3>BAMRU Full Roster</h3>
-  <p>Updated {{now.date}} - BAMRU Confidential</p>
+  <p>{{now.date}} - BAMRU Confidential</p>
 </div>
 <table>
   <thead>
