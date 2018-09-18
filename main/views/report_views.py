@@ -11,6 +11,7 @@ import csv
 import io
 import os
 import tempfile
+import vobject
 
 import logging
 logger = logging.getLogger(__name__)
@@ -122,3 +123,57 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         data['v9'] = member.v9
 
         return data
+
+
+class ReportRosterVcfView(LoginRequiredMixin, View):
+    def get(self, request, **kwargs):
+        members = (
+            Member.objects
+                .prefetch_related('address_set', 'phone_set', 'email_set')
+                .filter(member_rank__in=Member.ACTIVE_RANKS)
+                .order_by('last_name', 'first_name')
+        )
+        cards = [self.vcard_for_member(m) for m in members]
+
+        response = HttpResponse(''.join([c.serialize() for c in cards]))
+        response['Content-Type'] = 'text/vcard'
+        return response
+
+    def vcard_for_member(self, member):
+        card = vobject.vCard()
+        # This mapping of last/first to family/given is not quite correct, but
+        # we don't have the data to do better (and as far as I know it's right
+        # for current BAMRU members).
+        card.add('n').value = vobject.vcard.Name(
+            family=member.last_name, given=member.first_name)
+        card.add('fn').value = member.full_name
+        card.add('org').value = ["BAMRU"]
+        card.add('title').value = member.classic_roles
+        for address in member.address_set.all():
+            a = vobject.vcard.Address()
+            if len(address.address_lines()) > 1:
+                a.extended = address.address1
+                a.street = address.address2
+            else:
+                a.street = address.address1
+            a.city = address.city
+            a.region = address.state
+            a.code = address.zip
+            a.country = "United States of America"
+
+            adr = card.add('adr')
+            adr.type_param = address.type
+            adr.value = a
+        for phone in member.phone_set.all():
+            p = card.add('tel')
+            p.type_param = phone.type
+            p.value = phone.number
+        for email in member.email_set.all():
+            e = card.add('email')
+            e.type_param = email.type
+            e.value = email.address
+        if member.ham:
+            card.add('note').value = "Ham License - {}".format(member.ham)
+        if member.v9:
+            card.add('note').value = "V9 - {}".format(member.v9)
+        return card
