@@ -109,16 +109,8 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         except Exception:
             data['home_email'] = ''
 
-        try:
-            data['personal_email'] = member.email_set.filter(type='Personal').first().address
-        except Exception:
-            data['personal_email'] = ''
-
-        try:
-            data['work_email'] = member.email_set.filter(type='Work').first().address
-        except Exception:
-            data['work_email'] = ''
-
+        data['personal_email'] = member.personal_email
+        data['work_email'] = member.work_email
         data['ham'] = member.ham
         data['v9'] = member.v9
 
