@@ -103,65 +103,59 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         """ Return int for the highest priority role """
         roles = self.role_set.all()
         result = [ [ r.role_ordinal, r.role ] for r in roles ]
-        try:
-            return [ r[0] for r in sorted(result) ][0]
-        except:
+        if len(result) == 0:
             return len(Role.TYPES)
+        return [ r[0] for r in sorted(result) ][0]
 
     @property
-    def display_email(self): # FIXME: needs a priority
+    def display_email(self):
         """ Return first email """
         try:
             return self.email_set.first().address
-        except:
+        except AttributeError:
             return ''
 
     @property
     def personal_email(self):
-        # FIXME: needs a priority
         try:
             return self.email_set.filter(type='Personal').first().address
-        except:
+        except AttributeError:
             return ''
 
     @property
     def work_email(self):
-        # FIXME: needs a priority
         try:
             return self.email_set.filter(type='Work').first().address
-        except:
+        except AttributeError:
             return ''
 
     @property
-    def display_phone(self): # FIXME: needs a priority
+    def display_phone(self):
         """ Return first phone """
         try:
             return self.phone_set.first().number
-        except:
+        except AttributeError:
             return ''
 
     @property
     def mobile_phone(self):
-        # FIXME: needs a priority
         try:
             return self.phone_set.filter(type='Mobile').first().number
-        except:
+        except AttributeError:
             return ''
 
     @property
     def home_phone(self):
-        # FIXME: needs a priority
         try:
             return self.phone_set.filter(type='Home').first().number
-        except:
+        except AttributeError:
             return ''
 
     @property
     def work_phone(self):
-        # FIXME: needs a priority
         try:
             return self.phone_set.filter(type='Work').first().number
-        except:
+        except AttributeError:
             return ''
 
     @property

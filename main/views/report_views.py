@@ -86,27 +86,27 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
 
         try:
             data['other_phone'] = member.phone_set.filter(type='Other').first().number
-        except Exception:
+        except AttributeError:
             data['other_phone'] = ''
 
         try:
             data['home_address'] = member.address_set.filter(type='Home').first().oneline()
-        except Exception:
+        except AttributeError:
             data['home_address'] = ''
 
         try:
             data['work_address'] = member.address_set.filter(type='Work').first().oneline()
-        except Exception:
+        except AttributeError:
             data['work_address'] = ''
 
         try:
             data['other_address'] = member.address_set.filter(type='Other').first().oneline()
-        except Exception:
+        except AttributeError:
             data['other_address'] = ''
 
         try:
             data['home_email'] = member.email_set.filter(type='Home').first().address
-        except Exception:
+        except AttributeError:
             data['home_email'] = ''
 
         data['personal_email'] = member.personal_email
