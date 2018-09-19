@@ -27,6 +27,7 @@ router.register(r'events', views.EventViewSet)
 router.register(r'members', views.MemberViewSet)
 
 urlpatterns = [
+    path('', views.IndexView.as_view()),
     path('member/', views.MemberIndexView.as_view(), name='member_index'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('member/<int:pk>/certs/', views.MemberCertsView.as_view(), name='member_certs'),
