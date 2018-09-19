@@ -1,0 +1,61 @@
+{% extends 'reports/base_report_table.html' %}
+
+{% block head %}
+<meta name="pdfkit-orientation" content="landscape" />
+<style type="text/css">
+table {
+    border: 2px solid black;
+}
+thead th, tbody td {
+    text-align: left;
+    padding: 2px 5px;
+    border-left: 2px solid black;
+    border-right: 2px solid black;
+}
+body {
+    display: flex;
+    flex-direction: row;
+}
+.instructions {
+    float: right;
+    flex-grow: 1;
+    text-align: center;
+}
+@media print {
+    table {
+        font-size: 5pt;
+        border: 1pt solid black;
+    }
+    thead th, tbody td {
+        padding: 1pt 2pt;
+        border-left: 1pt solid black;
+        border-right: 1pt solid black;
+    }
+    .creditcard {
+        font-size: 5pt;
+        width: 3in;
+        border-right: 1pt dashed black;
+        padding: 0 3mm;
+    }
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="creditcard">
+  <h4 style="text-align: center; margin: 5px">BAMRU Roster - {{now.date}} - BAMRU Confidential</h4>
+  <table>
+    {% for member in members %}
+      <tr>
+        <td>{{ member.full_name }}</td>
+        <td>{{ member.display_phone }}</td>
+        <td>{{ member.display_email }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="instructions">
+  <h3>Credit card size roster for your wallet</h3>
+  Print, trim, fold.
+</div>
+{% endblock %}

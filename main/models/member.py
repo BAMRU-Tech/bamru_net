@@ -91,32 +91,73 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return ', '.join([ r[1] for r in sorted(result) ])
 
     @property
+    def classic_roles(self):
+        """ Return string, list of ordered roles """
+        roles = [r.role for r in self.role_set.all()] + [self.rank]
+        CLASSIC_ROSTER_TYPES = ['Bd', 'OL', 'TM', 'FM', 'T']
+        result = [r for r in CLASSIC_ROSTER_TYPES if r in roles]
+        return ' '.join(result)
+
+    @property
     def role_order(self):
         """ Return int for the highest priority role """
         roles = self.role_set.all()
         result = [ [ r.role_ordinal, r.role ] for r in roles ]
-        try:
-            return [ r[0] for r in sorted(result) ][0]
-        except:
+        if len(result) == 0:
             return len(Role.TYPES)
-
+        return [ r[0] for r in sorted(result) ][0]
 
     @property
-    def display_email(self): # FIXME: needs a priority
+    def display_email(self):
         """ Return first email """
         try:
             return self.email_set.first().address
-        except:
+        except AttributeError:
             return ''
-            
+
     @property
-    def display_phone(self): # FIXME: needs a priority
+    def personal_email(self):
+        try:
+            return self.email_set.filter(type='Personal').first().address
+        except AttributeError:
+            return ''
+
+    @property
+    def work_email(self):
+        try:
+            return self.email_set.filter(type='Work').first().address
+        except AttributeError:
+            return ''
+
+    @property
+    def display_phone(self):
         """ Return first phone """
         try:
             return self.phone_set.first().number
-        except:
+        except AttributeError:
             return ''
-        
+
+    @property
+    def mobile_phone(self):
+        try:
+            return self.phone_set.filter(type='Mobile').first().number
+        except AttributeError:
+            return ''
+
+    @property
+    def home_phone(self):
+        try:
+            return self.phone_set.filter(type='Home').first().number
+        except AttributeError:
+            return ''
+
+    @property
+    def work_phone(self):
+        try:
+            return self.phone_set.filter(type='Work').first().number
+        except AttributeError:
+            return ''
+
     @property
     def short_name(self):
         "Returns the short name for the user."
