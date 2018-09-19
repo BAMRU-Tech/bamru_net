@@ -195,7 +195,6 @@ class Role(BaseModel):
         ('FM', 'Active Field Member'),
         ('T', 'Active Trainee'),
     )
-    CLASSIC_ROSTER_TYPES = ['Bd', 'OL', 'TM', 'FM', 'T']
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     role = models.CharField(choices=TYPES, max_length=255, blank=True)
 
