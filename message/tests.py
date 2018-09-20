@@ -78,7 +78,7 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
 
-@override_settings(SMS_FILE_PATH='/tmp/message_log',
+@override_settings(SMS_FILE_PATH='/tmp',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class OutgoingSmsTestCase(TestCase):
     def setUp(self):
@@ -122,7 +122,7 @@ class OutgoingSmsTestCase(TestCase):
         self.assertEqual(sms.delivered, True)
 
 
-@override_settings(SMS_FILE_PATH='/tmp/message_log',
+@override_settings(SMS_FILE_PATH='/tmp',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class IncommingSmsTestCase(TestCase):
     def setUp(self):
