@@ -151,7 +151,6 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
             a.city = address.city
             a.region = address.state
             a.code = address.zip
-            a.country = "United States of America"
 
             adr = card.add('adr')
             adr.type_param = address.type
