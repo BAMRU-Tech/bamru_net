@@ -11,7 +11,6 @@ jobs:
       - image: circleci/python:3.5
         environment:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: bnet_development
       
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
@@ -62,7 +61,7 @@ jobs:
             DJANGO_DEBUG: True
             DJANGO_SECRET_KEY: "TEST_ONLY_INSECURE_SECRET_KEY"
             DJANGO_ALLOWED_HOST: 'localhost'
-            DJANGO_DB_NAME: bnet_development
+            DJANGO_DB_NAME: postgres
             DJANGO_DB_USER: postgres
             DJANGO_DB_PASS: postgres
             DJANGO_DB_HOST: 127.0.0.1
