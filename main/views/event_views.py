@@ -74,7 +74,7 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
-    fields = ['type', 'title', 'description',
+    fields = ['title', 'description', 'type',
               'location', 'leaders',
               'start', 'finish',
               'all_day', 'published',
@@ -92,7 +92,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
     model = Event
-    fields = ['type', 'title', 'description',
+    fields = ['title', 'description', 'type',
               'location', 'leaders',
               'start', 'finish',
               'all_day', 'published',
@@ -105,6 +105,13 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
         form = super(EventCreateView, self).get_form()
         form.fields['start'].widget = SelectDateWidget()
         form.fields['finish'].widget = SelectDateWidget()
+
+        # Mark required fields
+        form.fields['title'].label = "Title*"
+        form.fields['type'].label = "Type*"
+        form.fields['location'].label = "Location*"
+        form.fields['start'].label = "Start*"
+
         return form
 
 
