@@ -143,11 +143,7 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
         card.add('title').value = member.classic_roles
         for address in member.address_set.all():
             a = vobject.vcard.Address()
-            if len(address.address_lines()) > 1:
-                a.extended = address.address1
-                a.street = address.address2
-            else:
-                a.street = address.address1
+            a.street = '\n'.join(address.address_lines())
             a.city = address.city
             a.region = address.state
             a.code = address.zip
