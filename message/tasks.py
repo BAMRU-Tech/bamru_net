@@ -14,7 +14,7 @@ def message_send(message_id):
     """
     # Import here to avoid circular dependency
     from .models import OutboundEmail, OutboundSms
-    logger.info('Running message_send {}'.format(message_id))
+    logger.info('Running message_send triggered by {}'.format(message_id))
     # TODO: separate worker threads for sms/email
     for sms in OutboundSms.objects.filter(status=""):
         sms.send()

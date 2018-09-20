@@ -201,16 +201,16 @@ class OutboundSms(OutboundMessage):
         try:
             if settings.SMS_FILE_PATH:
                 import json
-                logger.info('Writing to file: {}'.format(
-                    settings.SMS_FILE_PATH))
-                with open(settings.SMS_FILE_PATH + '/sms.log', 'a') as f:
+                logfile = settings.SMS_FILE_PATH + '/sms.log'
+                logger.info('Writing to file: {}'.format(logfile))
+                with open(logfile, 'a') as f:
                     f.write(json.dumps(kwargs))
                     f.write('\n')
                 message = Namespace(
                     sid='FAKE_' + uuid.uuid4().hex,
                     status='Delivered',
                     error_code=None,
-                    error_message=None,
+                    error_message='',
                 )
             else:
                 from django_twilio.client import twilio_client
