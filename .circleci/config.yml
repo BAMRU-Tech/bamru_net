@@ -11,7 +11,7 @@ jobs:
       - image: circleci/python:3.5
         environment:
           POSTGRES_PASSWORD: postgres
-
+          POSTGRES_DB: bnet_development
       
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
