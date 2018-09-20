@@ -84,14 +84,14 @@ class Message(BaseModel):
             html_body += self.rsvp_template.html(url)
         return html_body
 
-    def send(self):
+    def queue(self):
         """
-        Send the message.
-        Because this can take some time, it should only be called by the
-        message_send task.
+        Queues the message for sending.
+        Because sending can take some time, we only create the OutgoingMessages.
+        Actual sending is done in the message_send task.
         """
         for d in self.distribution_set.all():
-            d.send()
+            d.queue()
 
     # TODO: Do not repage unavailable on invite
     def repage(self, author=None):
@@ -117,6 +117,7 @@ class Message(BaseModel):
                 email=d.email,
                 phone=d.phone)
         logger.info('Repaging {} as {}'.format(old_id, message.pk))
+        message.queue()
         message_send.delay(message.pk)
         return message
 
@@ -144,21 +145,17 @@ class Distribution(BaseModel):
     def html(self):
         return self.message.html(self.unauth_rsvp_token)
 
-    def send(self):
+    def queue(self):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
         self.save()
         if self.phone:
             for p in self.member.phone_set.filter(pagable=True):
                 sms, created = OutboundSms.objects.get_or_create(
                     distribution=self, phone=p)
-                if created:
-                    sms.send()
         if self.email:
             for e in self.member.email_set.filter(pagable=True):
                 email, created = OutboundEmail.objects.get_or_create(
                     distribution=self, email=e)
-                if created:
-                    email.send()
 
     def rsvp_display(self):
         if self.rsvp:

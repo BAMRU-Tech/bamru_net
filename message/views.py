@@ -90,6 +90,7 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
                     email=form.cleaned_data['email'],
                     phone=form.cleaned_data['phone'])
         logger.info('Calling message_send {}'.format(message.pk))
+        message.queue()
         message_send.delay(message.pk)
         return super().form_valid(form)
 
@@ -114,6 +115,7 @@ class MessageListView(LoginRequiredMixin, generic.ListView):
         # Add column sort for datatable (zero origin)
         context['sortOrder'] = '2, "dsc"'
         return context
+
 
 class MessageInboxView(LoginRequiredMixin, generic.ListView):
     template_name = 'message_list.html'
