@@ -1,6 +1,11 @@
 from main.models import Member
 
+from django.views.generic.base import TemplateView
 from django_datatables_view.base_datatable_view import BaseDatatableView
+
+
+class IndexView(TemplateView):
+    template_name = 'index.html'
 
 
 class OrderListJson(BaseDatatableView):
