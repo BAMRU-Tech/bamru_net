@@ -172,10 +172,10 @@ class Distribution(BaseModel):
 
 class OutboundMessage(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
-    destination = models.CharField(max_length=255, blank=True, null=True)
-    sid = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(max_length=255, blank=True, null=True)
-    error_message = models.CharField(max_length=255, blank=True, null=True)
+    destination = models.CharField(max_length=255, blank=True)
+    sid = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=255, blank=True)
+    error_message = models.CharField(max_length=255, blank=True)
     delivered = models.BooleanField(default=False)
 
     class Meta(BaseModel.Meta):
