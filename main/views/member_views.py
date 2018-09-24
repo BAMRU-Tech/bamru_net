@@ -4,13 +4,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
 from django.forms import widgets
-from django.forms.models import modelform_factory, modelformset_factory
+from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from main.models import Cert, Member, Unavailable
+from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Unavailable
 
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
@@ -37,6 +37,63 @@ class MemberIndexView(LoginRequiredMixin, generic.ListView):
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_detail.html'
+
+
+class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
+    template_name = 'member_form.html'
+
+    MemberForm = modelform_factory(Member,
+            fields=['first_name', 'last_name', 'ham', 'v9', 'dl'])
+    PhonesForm = inlineformset_factory(Member, Phone,
+            fields=['type', 'number', 'pagable', 'sms_email'],
+            extra=0)
+    EmailsForm = inlineformset_factory(Member, Email,
+            fields=['type', 'address', 'pagable'],
+            extra=0)
+    AddressesForm = inlineformset_factory(Member, Address,
+            fields=['type', 'address1', 'address2', 'city', 'state', 'zip'],
+            extra=0)
+    ContactsForm = inlineformset_factory(Member, EmergencyContact,
+            fields=['name', 'number', 'type'],
+            extra=0)
+
+    forms = None
+
+    def get_forms(self, member):
+        if self.forms is None:
+            if self.request.method == 'POST':
+                args = [self.request.POST]
+            else:
+                args = []
+            forms = {}
+            forms['member_form'] = self.MemberForm(*args, prefix='member', instance=member)
+            forms['phones_form'] = self.PhonesForm(*args, prefix='phones', instance=member)
+            forms['emails_form'] = self.EmailsForm(*args, prefix='emails', instance=member)
+            forms['addresses_form'] = self.AddressesForm(*args, prefix='addresses', instance=member)
+            forms['contacts_form'] = self.ContactsForm(*args, prefix='contacts', instance=member)
+            self.forms = forms
+        return self.forms
+
+    def post(self, *args, **kwargs):
+        if self.kwargs['pk'] != self.request.user.id:
+            raise PermissionDenied
+
+        member = Member.objects.get(id=self.kwargs['pk'])
+
+        forms = self.get_forms(member)
+        if not all([f.is_valid() for f in forms.values()]):
+            return self.get(*args, **kwargs)
+        for f in forms.values():
+            f.save()
+        return HttpResponseRedirect(reverse('member_detail', args=[member.id]))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        member = Member.objects.get(id=self.kwargs['pk'])
+        context['member'] = member
+        context.update(self.get_forms(member))
+        return context
 
 
 class MemberCertsView(LoginRequiredMixin, generic.ListView):

@@ -1,0 +1,68 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<main role="main" class="container">
+<form method="post">
+  {% csrf_token %}
+  <table>
+  {{member_form}}
+  </table>
+
+  <br />
+  <h4>Phone Numbers</h4>
+  <table id="container-phones">
+  {{phones_form}}
+  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='phones'>+</button></td></tr>
+  </table>
+
+  <br />
+  <h4>Emails</h4>
+  <table id="container-emails">
+  {{emails_form}}
+  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='emails'>+</button></td></tr>
+  </table>
+
+  <br />
+  <h4>Addresses</h4>
+  <table id="container-addresses">
+  {{addresses_form}}
+  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='addresses'>+</button></td></tr>
+  </table>
+
+  <br />
+  <h4>Emergency Contacts</h4>
+  <table id="container-contacts">
+  {{contacts_form}}
+  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='contacts'>+</button></td></tr>
+  </table>
+
+  <input type="submit" value="Submit" />
+</form>
+
+<div style="display: none">
+  <table id="empty-phones">
+    {{phones_form.empty_form}}
+  </table>
+  <table id="empty-emails">
+    {{emails_form.empty_form}}
+  </table>
+  <table id="empty-addresses">
+    {{addresses_form.empty_form}}
+  </table>
+  <table id="empty-contacts">
+    {{contacts_form.empty_form}}
+  </table>
+</div>
+</main><!-- /.container -->
+{% endblock %}
+
+{% block js %}
+  {{ block.super }}
+  <script src="/static/js/dynamic_formset.js" type="text/javascript"></script>
+{% endblock %}
+
+{% block subheader %}
+<a href="{% url 'member_index' %}">Members</a>
+&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+&gt; Edit
+{% endblock %}
