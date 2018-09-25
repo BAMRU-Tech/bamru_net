@@ -10,54 +10,97 @@
 
   <br />
   <h4>Phone Numbers</h4>
-  <table id="container-phones">
-  {{phones_form}}
-  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='phones'>+</button></td></tr>
-  </table>
+  {{phones_form.management_form}}
+  <ul id="container-phones" class="sortable">
+    {% for form in phones_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='phones'>Add</a>
 
+  <br />
   <br />
   <h4>Emails</h4>
-  <table id="container-emails">
-  {{emails_form}}
-  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='emails'>+</button></td></tr>
-  </table>
+  {{emails_form.management_form}}
+  <ul id="container-emails" class="sortable">
+    {% for form in emails_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='emails'>Add</a>
 
+  <br />
   <br />
   <h4>Addresses</h4>
-  <table id="container-addresses">
-  {{addresses_form}}
-  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='addresses'>+</button></td></tr>
-  </table>
+  {{addresses_form.management_form}}
+  <ul id="container-addresses" class="sortable">
+    {% for form in addresses_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='addresses'>Add</a>
 
   <br />
+  <br />
   <h4>Emergency Contacts</h4>
-  <table id="container-contacts">
-  {{contacts_form}}
-  <tr><td colspan="2"><button class="add-form-row" data-form-prefix='contacts'>+</button></td></tr>
-  </table>
+  {{contacts_form.management_form}}
+  <ul id="container-contacts" class="sortable">
+    {% for form in contacts_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='contacts'>Add</a>
 
+  <br />
+  <br />
   <input type="submit" value="Submit" />
 </form>
 
 <div style="display: none">
-  <table id="empty-phones">
-    {{phones_form.empty_form}}
-  </table>
-  <table id="empty-emails">
-    {{emails_form.empty_form}}
-  </table>
-  <table id="empty-addresses">
-    {{addresses_form.empty_form}}
-  </table>
-  <table id="empty-contacts">
-    {{contacts_form.empty_form}}
-  </table>
+  <ul id="empty-phones">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{phones_form.empty_form}}
+    </li>
+  </ul>
+  <ul id="empty-emails">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{emails_form.empty_form}}
+    </li>
+  </ul>
+  <ul id="empty-addresses">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{addresses_form.empty_form}}
+    </li>
+  </ul>
+  <ul id="empty-contacts">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{contacts_form.empty_form}}
+    </li>
+  </ul>
 </div>
 </main><!-- /.container -->
 {% endblock %}
 
 {% block js %}
   {{ block.super }}
+  <!-- there's a newer version available, but https://github.com/RubaXa/Sortable/issues/1052 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.4.2/Sortable.min.js" integrity="sha256-3jMcJ+64WZszWMWQ9rF5uS3m/9JgLypNpjtYs4wc3j8=" crossorigin="anonymous"></script>
   <script src="/static/js/dynamic_formset.js" type="text/javascript"></script>
 {% endblock %}
 

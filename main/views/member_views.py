@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
 from django.forms import widgets
+from django.forms.formsets import BaseFormSet
 from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
@@ -45,16 +46,37 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
     MemberForm = modelform_factory(Member,
             fields=['first_name', 'last_name', 'ham', 'v9', 'dl'])
     PhonesForm = inlineformset_factory(Member, Phone,
-            fields=['type', 'number', 'pagable', 'sms_email'],
+            fields=['type', 'number', 'pagable', 'sms_email', 'position'],
+            widgets={
+                'number': widgets.TextInput(attrs={'placeholder': 'Number'}),
+                'position': widgets.HiddenInput(),
+            },
             extra=0)
     EmailsForm = inlineformset_factory(Member, Email,
-            fields=['type', 'address', 'pagable'],
+            fields=['type', 'address', 'pagable', 'position'],
+            widgets={
+                'address': widgets.TextInput(attrs={'placeholder': 'Email address'}),
+                'position': widgets.HiddenInput(),
+            },
             extra=0)
     AddressesForm = inlineformset_factory(Member, Address,
-            fields=['type', 'address1', 'address2', 'city', 'state', 'zip'],
+            fields=['type', 'address1', 'address2', 'city', 'state', 'zip', 'position'],
+            widgets={
+                'address1': widgets.TextInput(attrs={'placeholder': 'Address line 1'}),
+                'address2': widgets.TextInput(attrs={'placeholder': 'Address line 2'}),
+                'city': widgets.TextInput(attrs={'placeholder': 'City'}),
+                'state': widgets.TextInput(attrs={'placeholder': 'State', 'size': 5}),
+                'zip': widgets.TextInput(attrs={'placeholder': 'Zip', 'size': 5}),
+                'position': widgets.HiddenInput(),
+            },
             extra=0)
     ContactsForm = inlineformset_factory(Member, EmergencyContact,
-            fields=['name', 'number', 'type'],
+            fields=['name', 'number', 'type', 'position'],
+            widgets={
+                'name': widgets.TextInput(attrs={'placeholder': 'Name'}),
+                'number': widgets.TextInput(attrs={'placeholder': 'Number'}),
+                'position': widgets.HiddenInput(),
+            },
             extra=0)
 
     forms = None
@@ -71,6 +93,16 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
             forms['emails_form'] = self.EmailsForm(*args, prefix='emails', instance=member)
             forms['addresses_form'] = self.AddressesForm(*args, prefix='addresses', instance=member)
             forms['contacts_form'] = self.ContactsForm(*args, prefix='contacts', instance=member)
+            # Hack to prevent undesired behaivour on page refresh: Our
+            # javascript modifies the value of TOTAL_FORMS when the user adds a
+            # phone/email/etc. If the user then refreshes the page, the browser
+            # remembers the incremented TOTAL_FORMS value and restores it. But
+            # it does not restore the added form, so submitting results in
+            # errors. Setting autocomplete off makes the browser leave
+            # TOTAL_FORMS alone.
+            for f in forms.values():
+                if hasattr(f, 'management_form'):
+                    f.management_form.fields['TOTAL_FORMS'].widget.attrs['autocomplete'] = 'off'
             self.forms = forms
         return self.forms
 
@@ -85,6 +117,28 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
             return self.get(*args, **kwargs)
         for f in forms.values():
             f.save()
+            #if not (isinstance(f, BaseFormSet) and f.can_order):
+            #    f.save()
+            #else:
+                # Apparently it's not very easy to use can_order with a
+                # ModelFormSet. Or possibly I'm missing something.
+                #print()
+                #print("instances direct:")
+                #_ = f.save(commit=False)
+                #for obj in instances:
+                #    print(obj)
+                #    #obj.save()
+                #print("ordered forms:")
+                #for i, individual_form in enumerate(f.ordered_forms):
+                #    obj = individual_form.save(commit=False)
+                #    obj.position = i
+                #    print(obj, individual_form.has_changed())
+                #    #obj.save()
+                #print("deleted:")
+                #for obj in f.deleted_objects:
+                #    print(obj)
+                ##    obj.delete()
+
         return HttpResponseRedirect(reverse('member_detail', args=[member.id]))
 
     def get_context_data(self, **kwargs):

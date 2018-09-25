@@ -6,3 +6,24 @@ body {
   padding-top:    0px;
   padding-bottom: 4px;
 }
+
+.sortable {
+  list-style-type: none;
+  padding: 0;
+}
+
+.sortable .errorlist {
+  display: inline-block;
+  list-style-type: none;
+  padding: 0;
+  color: red;
+}
+
+.sortable-chosen {
+  background-color: #e7e7e7;
+}
+
+.sort-handle:hover {
+  cursor: move;
+  cursor: -webkit-grabbing;
+}
