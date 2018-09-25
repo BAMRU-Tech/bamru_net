@@ -11,7 +11,7 @@ from model_mommy import mommy
 from main.models import Email, Participant
 
 from .models import *
-
+from .tasks import *
 
 @override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')
 class OutgoingEmailTestCase(TestCase):
@@ -43,7 +43,8 @@ class OutgoingEmailTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_send(self):
-        self.distribution.message.send()
+        self.distribution.message.queue()
+        message_send(0)
 
         # Test that one message was sent:
         self.assertEqual(len(mail.outbox), 1)
@@ -77,7 +78,7 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
 
-@override_settings(MESSAGE_FILE_PATH='/tmp/message_log',
+@override_settings(SMS_FILE_PATH='/tmp',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class OutgoingSmsTestCase(TestCase):
     def setUp(self):
@@ -94,7 +95,8 @@ class OutgoingSmsTestCase(TestCase):
 
     def test_send(self):
         # Send a generic page
-        self.distribution.message.send()
+        self.distribution.message.queue()
+        message_send(0)
 
         # Check that it is logged
         f = settings.SMS_FILE_PATH + '/sms.log'
@@ -120,7 +122,7 @@ class OutgoingSmsTestCase(TestCase):
         self.assertEqual(sms.delivered, True)
 
 
-@override_settings(MESSAGE_FILE_PATH='/tmp/message_log',
+@override_settings(SMS_FILE_PATH='/tmp',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class IncommingSmsTestCase(TestCase):
     def setUp(self):
@@ -143,7 +145,8 @@ class IncommingSmsTestCase(TestCase):
 
     def test_send(self):
         # Send a transit page
-        self.distribution.message.send()
+        self.distribution.message.queue()
+        message_send(0)
 
         # Check no RSVP before
         self.assertIsNone(self.participant.en_route_at)
