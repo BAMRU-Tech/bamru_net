@@ -46,7 +46,7 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
     MemberForm = modelform_factory(Member,
             fields=['first_name', 'last_name', 'ham', 'v9', 'dl'])
     PhonesForm = inlineformset_factory(Member, Phone,
-            fields=['type', 'number', 'pagable', 'sms_email', 'position'],
+            fields=['type', 'number', 'pagable', 'position'],
             widgets={
                 'number': widgets.TextInput(attrs={'placeholder': 'Number'}),
                 'position': widgets.HiddenInput(),
@@ -108,6 +108,7 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
 
     def post(self, *args, **kwargs):
         if self.kwargs['pk'] != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
             raise PermissionDenied
 
         member = Member.objects.get(id=self.kwargs['pk'])
@@ -117,27 +118,6 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
             return self.get(*args, **kwargs)
         for f in forms.values():
             f.save()
-            #if not (isinstance(f, BaseFormSet) and f.can_order):
-            #    f.save()
-            #else:
-                # Apparently it's not very easy to use can_order with a
-                # ModelFormSet. Or possibly I'm missing something.
-                #print()
-                #print("instances direct:")
-                #_ = f.save(commit=False)
-                #for obj in instances:
-                #    print(obj)
-                #    #obj.save()
-                #print("ordered forms:")
-                #for i, individual_form in enumerate(f.ordered_forms):
-                #    obj = individual_form.save(commit=False)
-                #    obj.position = i
-                #    print(obj, individual_form.has_changed())
-                #    #obj.save()
-                #print("deleted:")
-                #for obj in f.deleted_objects:
-                #    print(obj)
-                ##    obj.delete()
 
         return HttpResponseRedirect(reverse('member_detail', args=[member.id]))
 
