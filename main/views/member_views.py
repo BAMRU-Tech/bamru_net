@@ -4,13 +4,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
 from django.forms import widgets
-from django.forms.models import modelform_factory, modelformset_factory
+from django.forms.formsets import BaseFormSet
+from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from main.models import Cert, Member, Unavailable
+from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Unavailable
 
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
@@ -37,6 +38,96 @@ class MemberIndexView(LoginRequiredMixin, generic.ListView):
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_detail.html'
+
+
+class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
+    template_name = 'member_form.html'
+
+    MemberForm = modelform_factory(Member,
+            fields=['first_name', 'last_name', 'ham', 'v9', 'dl'])
+    PhonesForm = inlineformset_factory(Member, Phone,
+            fields=['type', 'number', 'pagable', 'position'],
+            widgets={
+                'number': widgets.TextInput(attrs={'placeholder': 'Number'}),
+                'position': widgets.HiddenInput(),
+            },
+            extra=0)
+    EmailsForm = inlineformset_factory(Member, Email,
+            fields=['type', 'address', 'pagable', 'position'],
+            widgets={
+                'address': widgets.TextInput(attrs={'placeholder': 'Email address'}),
+                'position': widgets.HiddenInput(),
+            },
+            extra=0)
+    AddressesForm = inlineformset_factory(Member, Address,
+            fields=['type', 'address1', 'address2', 'city', 'state', 'zip', 'position'],
+            widgets={
+                'address1': widgets.TextInput(attrs={'placeholder': 'Address line 1'}),
+                'address2': widgets.TextInput(attrs={'placeholder': 'Address line 2'}),
+                'city': widgets.TextInput(attrs={'placeholder': 'City'}),
+                'state': widgets.TextInput(attrs={'placeholder': 'State', 'size': 5}),
+                'zip': widgets.TextInput(attrs={'placeholder': 'Zip', 'size': 5}),
+                'position': widgets.HiddenInput(),
+            },
+            extra=0)
+    ContactsForm = inlineformset_factory(Member, EmergencyContact,
+            fields=['name', 'number', 'type', 'position'],
+            widgets={
+                'name': widgets.TextInput(attrs={'placeholder': 'Name'}),
+                'number': widgets.TextInput(attrs={'placeholder': 'Number'}),
+                'position': widgets.HiddenInput(),
+            },
+            extra=0)
+
+    forms = None
+
+    def get_forms(self, member):
+        if self.forms is None:
+            if self.request.method == 'POST':
+                args = [self.request.POST]
+            else:
+                args = []
+            forms = {}
+            forms['member_form'] = self.MemberForm(*args, prefix='member', instance=member)
+            forms['phones_form'] = self.PhonesForm(*args, prefix='phones', instance=member)
+            forms['emails_form'] = self.EmailsForm(*args, prefix='emails', instance=member)
+            forms['addresses_form'] = self.AddressesForm(*args, prefix='addresses', instance=member)
+            forms['contacts_form'] = self.ContactsForm(*args, prefix='contacts', instance=member)
+            # Hack to prevent undesired behaivour on page refresh: Our
+            # javascript modifies the value of TOTAL_FORMS when the user adds a
+            # phone/email/etc. If the user then refreshes the page, the browser
+            # remembers the incremented TOTAL_FORMS value and restores it. But
+            # it does not restore the added form, so submitting results in
+            # errors. Setting autocomplete off makes the browser leave
+            # TOTAL_FORMS alone.
+            for f in forms.values():
+                if hasattr(f, 'management_form'):
+                    f.management_form.fields['TOTAL_FORMS'].widget.attrs['autocomplete'] = 'off'
+            self.forms = forms
+        return self.forms
+
+    def post(self, *args, **kwargs):
+        if self.kwargs['pk'] != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
+            raise PermissionDenied
+
+        member = Member.objects.get(id=self.kwargs['pk'])
+
+        forms = self.get_forms(member)
+        if not all([f.is_valid() for f in forms.values()]):
+            return self.get(*args, **kwargs)
+        for f in forms.values():
+            f.save()
+
+        return HttpResponseRedirect(reverse('member_detail', args=[member.id]))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        member = Member.objects.get(id=self.kwargs['pk'])
+        context['member'] = member
+        context.update(self.get_forms(member))
+        return context
 
 
 class MemberCertsView(LoginRequiredMixin, generic.ListView):
