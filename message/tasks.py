@@ -16,7 +16,7 @@ def message_send(message_id):
     from .models import OutboundEmail, OutboundSms
     logger.info('Running message_send triggered by {}'.format(message_id))
     # TODO: separate worker threads for sms/email
-    for sms in OutboundSms.objects.filter(status=""):
+    for sms in OutboundSms.unsent.all():
         sms.send()
-    for email in OutboundEmail.objects.filter(status=""):
+    for email in OutboundEmail.unsent.all():
         email.send()

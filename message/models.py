@@ -168,14 +168,22 @@ class Distribution(BaseModel):
             return 'PENDING'
 
 
+class OutboundMessageManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(sending_started=False)
+
+
 class OutboundMessage(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
     destination = models.CharField(max_length=255, blank=True)
     sid = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=255, blank=True)
     error_message = models.TextField(blank=True)
+    sending_started = models.BooleanField(default=False)
     delivered = models.BooleanField(default=False)
 
+    objects = models.Manager() # The default manager
+    unsent = OutboundMessageManager()
     class Meta(BaseModel.Meta):
         abstract = True
 
@@ -185,8 +193,14 @@ class OutboundSms(OutboundMessage):
     error_code = models.IntegerField(blank=True, null=True)
 
     def send(self):
-        e164 = phonenumbers.format_number(phonenumbers.parse(self.phone.number, 'US'),
-                                          phonenumbers.PhoneNumberFormat.E164)
+        if self.sending_started:
+            logger.error('send() called twice on sms {}'.format(self.pk))
+            return
+        self.sending_started = True
+        self.save()
+        e164 = phonenumbers.format_number(
+            phonenumbers.parse(self.phone.number, 'US'),
+            phonenumbers.PhoneNumberFormat.E164)
         self.destination = e164
         logger.info('Sending text to {}: {}'.format(self.destination,
                                                     self.distribution.text))
@@ -251,6 +265,11 @@ class OutboundEmail(OutboundMessage):
     opened = models.BooleanField(default=False)
 
     def send(self):
+        if self.sending_started:
+            logger.error('send() called twice on email {}'.format(self.pk))
+            return
+        self.sending_started = True
+        self.save()
         logger.info('Sending email to {}'.format(self.email.address))
         self.destination = self.email.address
         body = self.distribution.text
