@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 
@@ -163,3 +164,35 @@ class IncommingSmsTestCase(TestCase):
         # Check that RSVP is now there
         p2 = Participant.objects.get(pk=self.participant.id)
         self.assertIsNotNone(p2.en_route_at)
+
+
+
+@override_settings(TWILIO_SMS_FROM='+15005550006')
+class OutgoingSmsTwilioTestCase(TestCase):
+    def send_number_expect_code(self, number, code):
+        self.number = number
+        self.phone = mommy.make(Phone,
+                                number=self.number,
+                                make_m2m=True)
+        self.distribution = mommy.make(Distribution,
+                                       member=self.phone.member,
+                                       email=False,
+                                       phone=True,
+                                       make_m2m=True)
+        self.distribution.message.queue()
+        message_send(0)
+        self.sms = self.distribution.outboundsms_set.first()
+        self.assertEqual(self.sms.error_code, code)
+
+    def test_send(self):
+        # We need to override the client setting, but it is set up at
+        # module load. Thus we need to overide the created
+        # twilio_clent object.
+        from django_twilio import client
+        from twilio.rest import Client
+        client.twilio_client = Client(os.environ['TWILIO_TEST_ACCOUNT_SID'],
+                                      os.environ['TWILIO_TEST_AUTH_TOKEN'])
+
+        self.send_number_expect_code('+15550000001', 21211) # invalid #
+        self.send_number_expect_code('+15550000009', 21614) # incapable
+        self.send_number_expect_code('+14058675309', None)  # Success
