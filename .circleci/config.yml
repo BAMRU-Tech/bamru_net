@@ -56,8 +56,6 @@ jobs:
             # Many of these aren't used in testing, but the django app expects
             # them in the environment.
 
-            DJANGO_HOSTNAME: 'localhost:8000'
-
             DJANGO_DEBUG: True
             DJANGO_SECRET_KEY: "TEST_ONLY_INSECURE_SECRET_KEY"
             DJANGO_ALLOWED_HOST: 'localhost'
