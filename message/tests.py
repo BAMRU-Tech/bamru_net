@@ -185,6 +185,8 @@ class OutgoingSmsTwilioTestCase(TestCase):
         self.assertEqual(self.sms.error_code, code)
 
     def test_send(self):
+        old_path = settings.SMS_FILE_PATH
+        settings.SMS_FILE_PATH = None
         # We need to override the client setting, but it is set up at
         # module load. Thus we need to overide the created
         # twilio_clent object.
@@ -193,6 +195,8 @@ class OutgoingSmsTwilioTestCase(TestCase):
         client.twilio_client = Client(os.environ['TWILIO_TEST_ACCOUNT_SID'],
                                       os.environ['TWILIO_TEST_AUTH_TOKEN'])
 
-        self.send_number_expect_code('+15550000001', 21211) # invalid #
-        self.send_number_expect_code('+15550000009', 21614) # incapable
+        self.send_number_expect_code('+15005550001', 21211) # invalid #
+        self.send_number_expect_code('+15005550009', 21614) # incapable
         self.send_number_expect_code('+14058675309', None)  # Success
+
+        settings.SMS_FILE_PATH = old_path

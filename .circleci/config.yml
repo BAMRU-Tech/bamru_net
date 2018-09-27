@@ -69,10 +69,6 @@ jobs:
             MESSAGE_FILE_PATH: /tmp
             LOG_ROOT: /tmp
 
-            TWILIO_ACCOUNT_SID: ''
-            TWILIO_AUTH_TOKEN: ''
-            TWILIO_SMS_FROM: ''
-
             MAILGUN_WEBHOOK_SECRET: ''
             MAILGUN_API_KEY: ''
             MAILGUN_EMAIL_FROM: 'bamru_net@example.com'

@@ -228,7 +228,7 @@ class OutboundSms(OutboundMessage):
         except Exception as e:
             self.status = 'ERROR'
             self.error_message = str(e)
-            logger.error('Unknown twilio error: {}'.format(dir(e)))
+            logger.error('Unknown twilio error {}: {}'.format(type(e), e))
         else:
             self.sid = message.sid
             self.status = message.status
