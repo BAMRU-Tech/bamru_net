@@ -234,6 +234,8 @@ class OutboundSms(OutboundMessage):
             self.status = message.status
             self.error_code = message.error_code
             self.error_message = message.error_message
+        if self.error_message is None:
+            self.error_message = ''
         self.save()
 
 
