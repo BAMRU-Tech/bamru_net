@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
   <a class="navbar-brand" href="#">
-    <i class="fa fa-area-chart"></i>BAMRU.net
+    <i class="fa fa-area-chart"></i> BAMRU.net
   </a>
   <button class="navbar-toggler" type="button"
           data-toggle="collapse" data-target="#navbarSupportedContent">
@@ -11,7 +11,7 @@
     <ul class="navbar-nav ml-auto">
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
-          <i class="fa fa-calendar-check-o"></i>Event
+          <i class="fa fa-calendar-check-o"></i> Event
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="{% url 'event_add' %}"> 
@@ -31,7 +31,7 @@
       </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
-          <i class="fa fa-user"></i>Team
+          <i class="fa fa-user"></i> Team
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="{% url 'member_index' %}">
@@ -58,7 +58,7 @@
       </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
-          <i class="fa fa-book"></i>Library
+          <i class="fa fa-book"></i> Library
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="/SMCSO">
@@ -93,7 +93,7 @@
       </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
-          <i class="fa fa-bolt"></i>Action
+          <i class="fa fa-bolt"></i> Action
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="/zcst/initiate_callout">
@@ -116,7 +116,7 @@
       </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
-            <i class="fa fa-user-circle"></i>{{ request.user }}
+            <i class="fa fa-user-circle"></i> {{ request.user }}
         </a>
         <div class="dropdown-menu">
           {% if request.user.is_authenticated %}

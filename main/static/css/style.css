@@ -1,10 +1,15 @@
 body {
-  padding-top: 5rem;
+  padding-top: 3.5rem;
 }
 .subhead {
   background: #e7e7e7;
   padding-top:    0px;
-  padding-bottom: 4px;
+  padding-bottom: 0px;
+}
+
+.breadcrumbs > :not(:first-child):before {
+  /*background: #ff0;*/
+  content: "> "
 }
 
 .sortable {
