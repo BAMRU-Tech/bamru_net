@@ -1,5 +1,6 @@
 import logging
 import uuid
+import twilio
 from argparse import Namespace
 from datetime import datetime, timedelta
 
@@ -172,7 +173,7 @@ class OutboundMessage(BaseModel):
     destination = models.CharField(max_length=255, blank=True)
     sid = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=255, blank=True)
-    error_message = models.CharField(max_length=255, blank=True)
+    error_message = models.TextField(blank=True)
     delivered = models.BooleanField(default=False)
 
     class Meta(BaseModel.Meta):
@@ -213,16 +214,28 @@ class OutboundSms(OutboundMessage):
                     error_message='',
                 )
             else:
+                # Import needed here to enable replacement for testing
+                # and so developers without Twilio accounts can test
+                # using the file output.
                 from django_twilio.client import twilio_client
                 message = twilio_client.messages.create(**kwargs)
+        except twilio.base.exceptions.TwilioRestException as e:
+            self.status = 'Twilio Error'
+            self.error_code = e.code
+            self.error_message = e.msg
+            logger.error('Twilio error {} sending to {} using {}: {}'.format(
+                e.code, e164, e.uri, e.msg))
         except Exception as e:
-            self.status = str(e)
-            logger.error('Twilio error: {}'.format(e))
+            self.status = 'ERROR'
+            self.error_message = str(e)
+            logger.error('Unknown twilio error {}: {}'.format(type(e), e))
         else:
             self.sid = message.sid
             self.status = message.status
             self.error_code = message.error_code
             self.error_message = message.error_message
+        if self.error_message is None:
+            self.error_message = ''
         self.save()
 
 
