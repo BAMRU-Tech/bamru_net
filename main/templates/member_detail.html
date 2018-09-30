@@ -41,8 +41,10 @@
 {% endblock %}
 
 {% block subheader %}
-<a href="{% url 'member_index' %}"> Members </a>
->{{member.full_name }} ({{ member.rank }})
+  <strong>
+    <a href="{% url 'member_index' %}"> Members </a>
+    > {{member.full_name }} ({{ member.rank }})
+  </strong>
 
 <ul class="navbar-nav ml-auto">
   <li class="nav-item dropdown">

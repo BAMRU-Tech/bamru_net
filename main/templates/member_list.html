@@ -1,14 +1,17 @@
 {% extends 'base_table.html' %}
 
+{% block title %}Team Members{% endblock title %}
+
 {% block js %}
 {{ block.super }}
 <script>
 
-const labelShowDetail = "Show Detail";
-const labelHideDetail = "Hide Detail";
-const labelShowFilter = "Filter";
-const labelHideFilter = "Hide Filter";
-const apiUrlMemberRank = "/api/members/?member_rank=";
+    const labelShowFilter = '<i class="fa fa-filter"></i> Filter';
+    const labelHideFilter = '<i class="fa fa-minus-square-o"></i> Hide Filter';
+    const textShowDetail = " Expand Detail";
+    const htmlShowDetail = '<i class="fa fa-plus-square-o"></i>' + textShowDetail;
+    const labelHideDetail = '<i class="fa fa-minus-square-o"></i> Hide Detail';
+    const apiUrlMemberRank = "/api/members/?member_rank=";
 
 
 var table;
@@ -31,27 +34,27 @@ $(document).ready( function() {
                 action: function ( e, dt, node, config ) {
                     if($("#show-filter").css("display") == "none") {
                         $("#show-filter").css({"display":"block"})
-                        node[0].innerText = labelHideFilter;
+                        node[0].innerHTML = labelHideFilter;
                     } else {
                         $("#show-filter").css({"display":"none"})
-                        node[0].innerText = labelShowFilter;
+                        node[0].innerHTML = labelShowFilter;
                     }
                 }
             },
             {
-                text: labelShowDetail,
+                text: htmlShowDetail,
                 action: function ( e, dt, node, config ) {
-                    if (node[0].innerText == labelShowDetail) {
+                    if (node[0].innerText == textShowDetail) {
                         dt.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
-                        node[0].innerText = labelHideDetail;
+                        node[0].innerHTML = labelHideDetail;
                     } else {
                         dt.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
-                        node[0].innerText = labelShowDetail;
+                        node[0].innerHTML = htmlShowDetail;
                     }                          
                 }
             },
             {
-                text: 'More',
+                text: '<i class="fa fa-newspaper-o"></i> More',
                 extend: 'collection',
                 autoClose: true,
                 buttons: [
@@ -87,7 +90,7 @@ function AddRows(table, values)
             
             table.row.add(data).invalidate(); // invalidate needed to force rank and role display
         }
-        table.draw();  // not sure why this is required but it is needed
+        table.draw();  // not sure why this is required here but it is needed (was later in execution path)
     });
 }
 
@@ -112,7 +115,7 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $("#subhdr")[0].innerText = "Members (" + showRanks.join(", ") + ")";
+    $("#subhdr")[0].innerHTML = "Members (" + showRanks.join(", ") + ")";
 
 };
 
@@ -179,7 +182,9 @@ $("#filter-rank").multiSelect({
 {% endblock %}
 
 {% block subheader %}
-<div id="subhdr">
-    Members
-</div>
+  <strong>
+    <div id="subhdr">
+      Members
+    </div>
+  </strong>
 {% endblock %}

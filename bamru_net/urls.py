@@ -34,8 +34,8 @@ urlpatterns = [
     path('member/<int:member>/certs/new', views.CertEditView.as_view(), name='new_cert', kwargs={'cert': 'new'}),
     path('member/<int:member>/certs/<int:cert>', views.CertEditView.as_view(), name='edit_cert'),
     path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='delete_cert'),
-    path('availability/', views.UnavailableListView.as_view(), name='unavailable_list'),
-    path('availability/edit/', views.UnavailableEditView.as_view(), name='unavailable_edit'),
+    path('availability/', views.AvailableListView.as_view(), name='available_list'),
+    path('availability/edit/', views.AvailableEditView.as_view(), name='available_edit'),
 
     path('event/proximate', views.EventImmediateView.as_view(), name='event_immediate'),
     path('event/', views.EventAllView.as_view(), name='event_all'),
