@@ -30,6 +30,7 @@ urlpatterns = [
     path('', views.IndexView.as_view()),
     path('member/', views.MemberIndexView.as_view(), name='member_index'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
+    path('member/<int:pk>/edit', views.MemberEditView.as_view(), name='member_edit'),
     path('member/<int:pk>/certs/', views.MemberCertsView.as_view(), name='member_certs'),
     path('member/<int:member>/certs/new', views.CertEditView.as_view(), name='new_cert', kwargs={'cert': 'new'}),
     path('member/<int:member>/certs/<int:cert>', views.CertEditView.as_view(), name='edit_cert'),

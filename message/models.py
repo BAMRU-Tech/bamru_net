@@ -1,5 +1,6 @@
 import logging
 import uuid
+import twilio
 from argparse import Namespace
 from datetime import datetime, timedelta
 
@@ -84,14 +85,14 @@ class Message(BaseModel):
             html_body += self.rsvp_template.html(url)
         return html_body
 
-    def send(self):
+    def queue(self):
         """
-        Send the message.
-        Because this can take some time, it should only be called by the
-        message_send task.
+        Queues the message for sending.
+        Because sending can take some time, we only create the OutgoingMessages.
+        Actual sending is done in the message_send task.
         """
         for d in self.distribution_set.all():
-            d.send()
+            d.queue()
 
     # TODO: Do not repage unavailable on invite
     def repage(self, author=None):
@@ -117,6 +118,7 @@ class Message(BaseModel):
                 email=d.email,
                 phone=d.phone)
         logger.info('Repaging {} as {}'.format(old_id, message.pk))
+        message.queue()
         message_send.delay(message.pk)
         return message
 
@@ -144,21 +146,17 @@ class Distribution(BaseModel):
     def html(self):
         return self.message.html(self.unauth_rsvp_token)
 
-    def send(self):
+    def queue(self):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
         self.save()
         if self.phone:
             for p in self.member.phone_set.filter(pagable=True):
                 sms, created = OutboundSms.objects.get_or_create(
                     distribution=self, phone=p)
-                if created:
-                    sms.send()
         if self.email:
             for e in self.member.email_set.filter(pagable=True):
                 email, created = OutboundEmail.objects.get_or_create(
                     distribution=self, email=e)
-                if created:
-                    email.send()
 
     def rsvp_display(self):
         if self.rsvp:
@@ -172,10 +170,10 @@ class Distribution(BaseModel):
 
 class OutboundMessage(BaseModel):
     distribution = models.ForeignKey(Distribution, on_delete=models.CASCADE)
-    destination = models.CharField(max_length=255, blank=True, null=True)
-    sid = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(max_length=255, blank=True, null=True)
-    error_message = models.CharField(max_length=255, blank=True, null=True)
+    destination = models.CharField(max_length=255, blank=True)
+    sid = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=255, blank=True)
+    error_message = models.TextField(blank=True)
     delivered = models.BooleanField(default=False)
 
     class Meta(BaseModel.Meta):
@@ -204,28 +202,40 @@ class OutboundSms(OutboundMessage):
         try:
             if settings.SMS_FILE_PATH:
                 import json
-                logger.info('Writing to file: {}'.format(
-                    settings.SMS_FILE_PATH))
-                with open(settings.SMS_FILE_PATH + '/sms.log', 'a') as f:
+                logfile = settings.SMS_FILE_PATH + '/sms.log'
+                logger.info('Writing to file: {}'.format(logfile))
+                with open(logfile, 'a') as f:
                     f.write(json.dumps(kwargs))
                     f.write('\n')
                 message = Namespace(
                     sid='FAKE_' + uuid.uuid4().hex,
                     status='Delivered',
                     error_code=None,
-                    error_message=None,
+                    error_message='',
                 )
             else:
+                # Import needed here to enable replacement for testing
+                # and so developers without Twilio accounts can test
+                # using the file output.
                 from django_twilio.client import twilio_client
                 message = twilio_client.messages.create(**kwargs)
+        except twilio.base.exceptions.TwilioRestException as e:
+            self.status = 'Twilio Error'
+            self.error_code = e.code
+            self.error_message = e.msg
+            logger.error('Twilio error {} sending to {} using {}: {}'.format(
+                e.code, e164, e.uri, e.msg))
         except Exception as e:
-            self.status = str(e)
-            logger.error('Twilio error: {}'.format(e))
+            self.status = 'ERROR'
+            self.error_message = str(e)
+            logger.error('Unknown twilio error {}: {}'.format(type(e), e))
         else:
             self.sid = message.sid
             self.status = message.status
             self.error_code = message.error_code
             self.error_message = message.error_message
+        if self.error_message is None:
+            self.error_message = ''
         self.save()
 
 

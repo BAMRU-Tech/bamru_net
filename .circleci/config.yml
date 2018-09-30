@@ -56,8 +56,6 @@ jobs:
             # Many of these aren't used in testing, but the django app expects
             # them in the environment.
 
-            DJANGO_HOSTNAME: 'localhost:8000'
-
             DJANGO_DEBUG: True
             DJANGO_SECRET_KEY: "TEST_ONLY_INSECURE_SECRET_KEY"
             DJANGO_ALLOWED_HOST: 'localhost'
@@ -68,10 +66,6 @@ jobs:
 
             MESSAGE_FILE_PATH: /tmp
             LOG_ROOT: /tmp
-
-            TWILIO_ACCOUNT_SID: ''
-            TWILIO_AUTH_TOKEN: ''
-            TWILIO_SMS_FROM: ''
 
             MAILGUN_WEBHOOK_SECRET: ''
             MAILGUN_API_KEY: ''

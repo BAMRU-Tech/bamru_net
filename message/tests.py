@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 
@@ -11,7 +12,7 @@ from model_mommy import mommy
 from main.models import Email, Participant
 
 from .models import *
-
+from .tasks import *
 
 @override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')
 class OutgoingEmailTestCase(TestCase):
@@ -43,7 +44,8 @@ class OutgoingEmailTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_send(self):
-        self.distribution.message.send()
+        self.distribution.message.queue()
+        message_send(0)
 
         # Test that one message was sent:
         self.assertEqual(len(mail.outbox), 1)
@@ -77,7 +79,7 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
 
-@override_settings(MESSAGE_FILE_PATH='/tmp/message_log',
+@override_settings(SMS_FILE_PATH='/tmp',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class OutgoingSmsTestCase(TestCase):
     def setUp(self):
@@ -94,7 +96,8 @@ class OutgoingSmsTestCase(TestCase):
 
     def test_send(self):
         # Send a generic page
-        self.distribution.message.send()
+        self.distribution.message.queue()
+        message_send(0)
 
         # Check that it is logged
         f = settings.SMS_FILE_PATH + '/sms.log'
@@ -120,7 +123,7 @@ class OutgoingSmsTestCase(TestCase):
         self.assertEqual(sms.delivered, True)
 
 
-@override_settings(MESSAGE_FILE_PATH='/tmp/message_log',
+@override_settings(SMS_FILE_PATH='/tmp',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class IncommingSmsTestCase(TestCase):
     def setUp(self):
@@ -143,7 +146,8 @@ class IncommingSmsTestCase(TestCase):
 
     def test_send(self):
         # Send a transit page
-        self.distribution.message.send()
+        self.distribution.message.queue()
+        message_send(0)
 
         # Check no RSVP before
         self.assertIsNone(self.participant.en_route_at)
@@ -160,3 +164,39 @@ class IncommingSmsTestCase(TestCase):
         # Check that RSVP is now there
         p2 = Participant.objects.get(pk=self.participant.id)
         self.assertIsNotNone(p2.en_route_at)
+
+
+
+@override_settings(TWILIO_SMS_FROM='+15005550006')
+class OutgoingSmsTwilioTestCase(TestCase):
+    def send_number_expect_code(self, number, code):
+        self.number = number
+        self.phone = mommy.make(Phone,
+                                number=self.number,
+                                make_m2m=True)
+        self.distribution = mommy.make(Distribution,
+                                       member=self.phone.member,
+                                       email=False,
+                                       phone=True,
+                                       make_m2m=True)
+        self.distribution.message.queue()
+        message_send(0)
+        self.sms = self.distribution.outboundsms_set.first()
+        self.assertEqual(self.sms.error_code, code)
+
+    def test_send(self):
+        old_path = settings.SMS_FILE_PATH
+        settings.SMS_FILE_PATH = None
+        # We need to override the client setting, but it is set up at
+        # module load. Thus we need to overide the created
+        # twilio_clent object.
+        from django_twilio import client
+        from twilio.rest import Client
+        client.twilio_client = Client(os.environ['TWILIO_TEST_ACCOUNT_SID'],
+                                      os.environ['TWILIO_TEST_AUTH_TOKEN'])
+
+        self.send_number_expect_code('+15005550001', 21211) # invalid #
+        self.send_number_expect_code('+15005550009', 21614) # incapable
+        self.send_number_expect_code('+14058675309', None)  # Success
+
+        settings.SMS_FILE_PATH = old_path

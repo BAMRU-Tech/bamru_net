@@ -1,0 +1,111 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<main role="main" class="container">
+<form method="post">
+  {% csrf_token %}
+  <table>
+  {{member_form}}
+  </table>
+
+  <br />
+  <h4>Phone Numbers</h4>
+  {{phones_form.management_form}}
+  <ul id="container-phones" class="sortable">
+    {% for form in phones_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='phones'>Add</a>
+
+  <br />
+  <br />
+  <h4>Emails</h4>
+  {{emails_form.management_form}}
+  <ul id="container-emails" class="sortable">
+    {% for form in emails_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='emails'>Add</a>
+
+  <br />
+  <br />
+  <h4>Addresses</h4>
+  {{addresses_form.management_form}}
+  <ul id="container-addresses" class="sortable">
+    {% for form in addresses_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='addresses'>Add</a>
+
+  <br />
+  <br />
+  <h4>Emergency Contacts</h4>
+  {{contacts_form.management_form}}
+  <ul id="container-contacts" class="sortable">
+    {% for form in contacts_form %}
+      <li>
+        <span class="sort-handle">☰</span>
+        {{form}}
+      </li>
+    {% endfor %}
+  </ul>
+  <a href="#" class="add-form-row" data-form-prefix='contacts'>Add</a>
+
+  <br />
+  <br />
+  <input type="submit" value="Submit" />
+</form>
+
+<div style="display: none">
+  <ul id="empty-phones">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{phones_form.empty_form}}
+    </li>
+  </ul>
+  <ul id="empty-emails">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{emails_form.empty_form}}
+    </li>
+  </ul>
+  <ul id="empty-addresses">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{addresses_form.empty_form}}
+    </li>
+  </ul>
+  <ul id="empty-contacts">
+    <li>
+      <span class="sort-handle">☰</span>
+      {{contacts_form.empty_form}}
+    </li>
+  </ul>
+</div>
+</main><!-- /.container -->
+{% endblock %}
+
+{% block js %}
+  {{ block.super }}
+  <!-- there's a newer version available, but https://github.com/RubaXa/Sortable/issues/1052 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.4.2/Sortable.min.js" integrity="sha256-3jMcJ+64WZszWMWQ9rF5uS3m/9JgLypNpjtYs4wc3j8=" crossorigin="anonymous"></script>
+  <script src="/static/js/dynamic_formset.js" type="text/javascript"></script>
+{% endblock %}
+
+{% block subheader %}
+<a href="{% url 'member_index' %}">Members</a>
+&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+&gt; Edit
+{% endblock %}
