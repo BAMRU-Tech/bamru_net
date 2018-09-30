@@ -1,0 +1,200 @@
+{% extends 'base_table.html' %}
+
+{% block title %}Member Add - {{ event.title }}{% endblock title %}{# FIXME #}
+
+{% block js %}
+{{ block.super }}
+<script>
+
+    const labelShowFilter = '<i class="fa fa-filter"></i> Filter';
+    const labelHideFilter = '<i class="fa fa-minus-square-o"></i> Hide Filter';
+    const textShowDetail = " Expand Detail";
+    const htmlShowDetail = '<i class="fa fa-plus-square-o"></i>' + textShowDetail;
+    const labelHideDetail = '<i class="fa fa-minus-square-o"></i> Hide Detail';
+    const apiUrlMemberRank = "/api/members/?member_rank=";
+
+
+var table;
+$(document).ready( function() {
+    // Initialize datatable with responsive behavior and datatable buttons
+    table = $("#dTbl").DataTable( {
+        dom: "Bfrtip",
+        responsive: true,
+        select: 'os',
+        paging: false,
+        info: false,
+        order: [[ 2, "asc" ]],
+        columnDefs: [
+            { responsivePriority: 1, targets: 0 },
+            { responsivePriority: 5, targets: 1 },
+            { responsivePriority: 2, targets: 2 },
+            { responsivePriority: 3, targets: 3},
+            { responsivePriority: 4, targets: 4}
+        ],
+        buttons: [
+            {
+                text: "Add",
+                action: function ( e, dt, node, config ) {
+                    var count = dt.rows( { selected: true } ).count();
+                    console.log("Row count= " + count);
+                }
+            },
+            {
+                text: labelShowFilter,
+                action: function ( e, dt, node, config ) {
+                    if($("#show-filter").css("display") == "none") {
+                        $("#show-filter").css({"display":"block"})
+                        node[0].innerHTML = labelHideFilter;
+                    } else {
+                        $("#show-filter").css({"display":"none"})
+                        node[0].innerHTML = labelShowFilter;
+                    }
+                }
+            },
+            {
+                text: htmlShowDetail,
+                action: function ( e, dt, node, config ) {
+                    if (node[0].innerText == textShowDetail) {
+                        dt.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
+                        node[0].innerHTML = labelHideDetail;
+                    } else {
+                        dt.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
+                        node[0].innerHTML = htmlShowDetail;
+                    }                          
+                }
+            },
+            {
+                text: '<i class="fa fa-newspaper-o"></i> More',
+                extend: 'collection',
+                autoClose: true,
+                buttons: [
+                    'copy', 'csv', 'excel', 'pdf', 'print', 'colvis'
+                ]
+            }
+        ]
+    });
+
+    /*FIXME*/ 
+    table.buttons().container()
+        .appendTo( '#example_wrapper .col-md-6:eq(0)' );
+
+    UpdateSubheaderBasedOnSettings(table);
+
+});
+
+function AddRows(table, values)
+{
+    // Add row data via AJAX based on rank
+    urlData = apiUrlMemberRank+values[0];
+    $.getJSON(urlData, null, function( json ) {
+        
+        for (var i=0; i<json.length; i++)
+        {
+            data = [
+                "<a href="+json[i]["url"]+">"+json[i]["full_name"]+"</a>",
+                {"display": json[i]["rank"], "@data-sort": json[i]["rank_order"]},
+                {"display": json[i]["roles"], "@data-sort": json[i]["role_order"]},
+                json[i]["display_phone"],
+                json[i]["display_email"]
+            ]
+            
+            table.row.add(data).invalidate(); // invalidate needed to force rank and role display
+        }
+        table.draw();  // not sure why this is required here but it is needed (was later in execution path)
+    });
+}
+
+function RemoveRows(table, values)
+{
+    // Remove rows based on rank
+    table.rows(
+        function ( idx, data, node ) {
+            return data[1]["display"] == values[0];
+        } )
+        .remove();
+
+    table.draw();
+}
+
+function UpdateSubheaderBasedOnSettings(table) {
+    // Extract currently selected ranks based on filter
+    var showRanks = [];
+    $("#filter-rank option").each(function() {
+        if (!this.selected) {
+            showRanks.push(this.value);
+        }
+    });
+
+    $("#subhdr")[0].innerHTML = "Members (" + showRanks.join(", ") + ")";
+
+};
+
+$("#filter-rank").multiSelect({
+    // The sense of the multiSelect is inverted: show = deselect, hide = select
+    selectableHeader: "<div class='custom-header'>Show</div>",
+    selectionHeader: "<div class='custom-header'>Hide</div>",
+    afterSelect: function(values){
+        RemoveRows(table,values);
+        UpdateSubheaderBasedOnSettings(table);
+    },
+    afterDeselect: function(values){
+        AddRows(table,values);
+        UpdateSubheaderBasedOnSettings(table);
+    }
+});
+
+</script>
+{% endblock %}
+
+{% block content %}
+<main>
+  <div id="show-filter" style="display: none">
+    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+      <option value='TM'>Technical Member</option>
+      <option value='FM'>Field Member</option>
+      <option value='T'>Trainee</option>
+      <option value='R' selected >Reserve</option>
+      <option value='S' selected >Support</option>
+      <option value='A' selected >Associate</option>
+      <option value='G' selected >Guest</option>
+      <option value='MA' selected >Member Alum</option>
+      <option value='GA' selected >Guest Alum</option>
+      <option value='MN' selected >Member No-contact</option>
+      <option value='GN' selected >Guest No-contact</option>
+    </select>
+  </div>
+  {% if member_list %}
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>Name</th><th>Rank</th><th>Role</th><th>Phone</th><th>eMail</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for member in member_list %}
+      {% if member.isActive %} {# FIXME: Needs a filter #}
+      <tr>
+        <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
+        <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
+        <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td> <!--  -->
+        <td> {{ member.display_phone }}</td>
+        <td> {{ member.display_email }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No members are available.</p>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block subheader %}
+  <strong>
+    <div id="subhdr">
+      Members
+    </div>
+  </strong>
+{% endblock %}
