@@ -25,6 +25,7 @@ from rest_framework import routers
 router = routers.DefaultRouter()
 router.register(r'events', views.EventViewSet)
 router.register(r'members', views.MemberViewSet)
+router.register(r'certs', views.CertViewSet)
 
 urlpatterns = [
     path('', views.IndexView.as_view()),

@@ -12,6 +12,14 @@ class MemberViewSet(viewsets.ModelViewSet):
     search_fields = ('username',  )
 
 
+class CertViewSet(viewsets.ModelViewSet):
+    queryset = Cert.objects.all()
+    serializer_class = CertSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_fields = ('member__member_rank', 'type', )
+    search_fields = ('member__username',  )
+
+
 class EventFilter(filters.FilterSet):
     start = filters.DateFromToRangeFilter()
     class Meta:

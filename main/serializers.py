@@ -1,4 +1,4 @@
-from .models import Event, Member, Participant, Period
+from .models import Cert, Event, Member, Participant, Period
 from rest_framework import serializers
 
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
@@ -7,6 +7,13 @@ class MemberSerializer(serializers.HyperlinkedModelSerializer):
         read_only_fields = ('full_name', 'rank', 'rank_order', 'roles', 'role_order', 'display_email', 'display_phone', 'short_name',)
         fields = ('id', 'url', 'first_name', 'last_name', 'username', 'dl', 'ham', 'v9',  'is_active', 'is_staff', 'is_current_do', 'is_superuser', 'last_login',) + read_only_fields
 
+
+class CertSerializer(serializers.HyperlinkedModelSerializer):
+    member = MemberSerializer()
+    class Meta:
+        model = Cert
+        read_only_fields = ('is_expired',)
+        fields = ('id', 'url', 'member', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
 
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
     member = MemberSerializer()
