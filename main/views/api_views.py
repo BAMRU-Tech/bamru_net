@@ -12,6 +12,21 @@ class MemberViewSet(viewsets.ModelViewSet):
     search_fields = ('username',  )
 
 
+class UnavailableFilter(filters.FilterSet):
+    start_on = filters.DateFromToRangeFilter()
+    class Meta:
+        model = Unavailable
+        fields = ('member__member_rank', 'start_on', )
+
+
+class UnavailableViewSet(viewsets.ModelViewSet):
+    queryset = Unavailable.objects.all()
+    serializer_class = UnavailableSerializer
+    permission_classes = (permissions.IsAuthenticated),
+    filterset_class = UnavailableFilter
+    search_fields = ('member__username',  )
+
+
 class CertViewSet(viewsets.ModelViewSet):
     queryset = Cert.objects.all()
     serializer_class = CertSerializer
