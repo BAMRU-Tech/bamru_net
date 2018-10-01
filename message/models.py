@@ -179,6 +179,12 @@ class OutboundMessage(BaseModel):
     sid = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=255, blank=True)
     error_message = models.TextField(blank=True)
+    # The sending_started field is used to block the SMS worker thread
+    # from retrying a failed send. This is so that if there is
+    # something strange with one recepient that causes a crash, when
+    # the worker restarts, it can continue sending the remainder in
+    # the queue. It does NOT protect for thread safety. As written,
+    # only one SMS worker may run at a time.
     sending_started = models.BooleanField(default=False)
     delivered = models.BooleanField(default=False)
 
