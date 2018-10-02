@@ -197,12 +197,12 @@ class UnavailableTestCase(MemberTestCase):
             end_on=today + timedelta(days=10),
         )
 
-    def test_unavailable_list(self):
+    def test_available_list(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('unavailable_list'))
+        response = self.client.get(reverse('available_list'))
         self.assertEqual(response.status_code, 200)
 
-    def test_unavailable_edit(self):
+    def test_available_edit(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('unavailable_edit'))
+        response = self.client.get(reverse('available_edit'))
         self.assertEqual(response.status_code, 200)
