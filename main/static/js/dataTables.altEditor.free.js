@@ -1,1 +1,884 @@
-var _0x8613=["\x75\x73\x65\x20\x73\x74\x72\x69\x63\x74","\x64\x61\x74\x61\x54\x61\x62\x6C\x65","\x66\x6E","\x76\x65\x72\x73\x69\x6F\x6E\x43\x68\x65\x63\x6B","\x31\x2E\x31\x30\x2E\x38","\x57\x61\x72\x6E\x69\x6E\x67\x3A\x20\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x20\x72\x65\x71\x75\x69\x72\x65\x73\x20\x44\x61\x74\x61\x54\x61\x62\x6C\x65\x73\x20\x31\x2E\x31\x30\x2E\x38\x20\x6F\x72\x20\x67\x72\x65\x61\x74\x65\x72","\x63","\x61\x6C\x74\x45\x64\x69\x74\x6F\x72","\x64\x65\x66\x61\x75\x6C\x74\x73","\x65\x78\x74\x65\x6E\x64","\x73","\x2E\x61\x6C\x74\x45\x64\x69\x74\x6F\x72","\x64\x6F\x6D","\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x64\x74\x2D\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x68\x61\x6E\x64\x6C\x65\x22\x2F\x3E","\x70\x72\x6F\x74\x6F\x74\x79\x70\x65","\x64\x74","\x64\x65\x73\x74\x72\x6F\x79\x2E\x61\x6C\x74\x45\x64\x69\x74\x6F\x72","\x6F\x66\x66","\x6E\x61\x6D\x65\x73\x70\x61\x63\x65","\x62\x6F\x64\x79","\x74\x61\x62\x6C\x65","\x6F\x6E","\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x20\x66\x61\x64\x65\x22\x20\x69\x64\x3D\x22\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x6D\x6F\x64\x61\x6C\x22\x20\x74\x61\x62\x69\x6E\x64\x65\x78\x3D\x22\x2D\x31\x22\x20\x72\x6F\x6C\x65\x3D\x22\x64\x69\x61\x6C\x6F\x67\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x2D\x64\x69\x61\x6C\x6F\x67\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x2D\x63\x6F\x6E\x74\x65\x6E\x74\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x2D\x68\x65\x61\x64\x65\x72\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x22\x62\x75\x74\x74\x6F\x6E\x22\x20\x63\x6C\x61\x73\x73\x3D\x22\x63\x6C\x6F\x73\x65\x22\x20\x64\x61\x74\x61\x2D\x64\x69\x73\x6D\x69\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x22\x20\x61\x72\x69\x61\x2D\x6C\x61\x62\x65\x6C\x3D\x22\x43\x6C\x6F\x73\x65\x22\x3E\x3C\x73\x70\x61\x6E\x20\x61\x72\x69\x61\x2D\x68\x69\x64\x64\x65\x6E\x3D\x22\x74\x72\x75\x65\x22\x3E\x26\x74\x69\x6D\x65\x73\x3B\x3C\x2F\x73\x70\x61\x6E\x3E\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x68\x34\x20\x63\x6C\x61\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x2D\x74\x69\x74\x6C\x65\x22\x3E\x3C\x2F\x68\x34\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x2D\x62\x6F\x64\x79\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x70\x3E\x3C\x2F\x70\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x2D\x66\x6F\x6F\x74\x65\x72\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x22\x62\x75\x74\x74\x6F\x6E\x22\x20\x63\x6C\x61\x73\x73\x3D\x22\x62\x74\x6E\x20\x62\x74\x6E\x2D\x64\x65\x66\x61\x75\x6C\x74\x22\x20\x64\x61\x74\x61\x2D\x64\x69\x73\x6D\x69\x73\x73\x3D\x22\x6D\x6F\x64\x61\x6C\x22\x3E\x43\x6C\x6F\x73\x65\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x22\x62\x75\x74\x74\x6F\x6E\x22\x20\x63\x6C\x61\x73\x73\x3D\x22\x62\x74\x6E\x20\x62\x74\x6E\x2D\x70\x72\x69\x6D\x61\x72\x79\x22\x3E\x53\x61\x76\x65\x20\x63\x68\x61\x6E\x67\x65\x73\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E","\x61\x70\x70\x65\x6E\x64","\x65\x64\x69\x74\x3A\x6E\x61\x6D\x65","\x62\x75\x74\x74\x6F\x6E","\x63\x6F\x75\x6E\x74","\x72\x6F\x77\x73","\x61\x63\x74\x69\x6F\x6E","\x63\x6C\x69\x63\x6B","\x23\x65\x64\x69\x74\x52\x6F\x77\x42\x74\x6E","\x70\x72\x65\x76\x65\x6E\x74\x44\x65\x66\x61\x75\x6C\x74","\x73\x74\x6F\x70\x50\x72\x6F\x70\x61\x67\x61\x74\x69\x6F\x6E","\x64\x65\x6C\x65\x74\x65\x3A\x6E\x61\x6D\x65","\x23\x64\x65\x6C\x65\x74\x65\x52\x6F\x77\x42\x74\x6E","\x61\x64\x64\x3A\x6E\x61\x6D\x65","\x23\x61\x64\x64\x52\x6F\x77\x42\x74\x6E","\x2E\x64\x74","\x74\x72\x69\x67\x67\x65\x72\x48\x61\x6E\x64\x6C\x65\x72","\x6E\x54\x61\x62\x6C\x65","\x69\x74\x65\x72\x61\x74\x6F\x72","\x6C\x65\x6E\x67\x74\x68","\x61\x6F\x43\x6F\x6C\x75\x6D\x6E\x73","\x63\x6F\x6E\x74\x65\x78\x74","\x73\x54\x69\x74\x6C\x65","\x70\x75\x73\x68","","\x3C\x66\x6F\x72\x6D\x20\x6E\x61\x6D\x65\x3D\x27\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x66\x6F\x72\x6D\x27\x20\x72\x6F\x6C\x65\x3D\x27\x66\x6F\x72\x6D\x27\x3E","\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x27\x66\x6F\x72\x6D\x2D\x67\x72\x6F\x75\x70\x27\x3E\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x27\x63\x6F\x6C\x2D\x73\x6D\x2D\x33\x20\x63\x6F\x6C\x2D\x6D\x64\x2D\x33\x20\x63\x6F\x6C\x2D\x6C\x67\x2D\x33\x20\x74\x65\x78\x74\x2D\x72\x69\x67\x68\x74\x27\x20\x73\x74\x79\x6C\x65\x3D\x27\x70\x61\x64\x64\x69\x6E\x67\x2D\x74\x6F\x70\x3A\x37\x70\x78\x3B\x27\x3E\x3C\x6C\x61\x62\x65\x6C\x20\x66\x6F\x72\x3D\x27","\x74\x69\x74\x6C\x65","\x27\x3E","\x3A\x3C\x2F\x6C\x61\x62\x65\x6C\x3E\x3C\x2F\x64\x69\x76\x3E\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x27\x63\x6F\x6C\x2D\x73\x6D\x2D\x39\x20\x63\x6F\x6C\x2D\x6D\x64\x2D\x39\x20\x63\x6F\x6C\x2D\x6C\x67\x2D\x39\x27\x3E\x3C\x69\x6E\x70\x75\x74\x20\x74\x79\x70\x65\x3D\x27\x74\x65\x78\x74\x27\x20\x20\x69\x64\x3D\x27","\x27\x20\x6E\x61\x6D\x65\x3D\x27","\x27\x20\x70\x6C\x61\x63\x65\x68\x6F\x6C\x64\x65\x72\x3D\x27","\x27\x20\x73\x74\x79\x6C\x65\x3D\x27\x6F\x76\x65\x72\x66\x6C\x6F\x77\x3A\x68\x69\x64\x64\x65\x6E\x27\x20\x20\x63\x6C\x61\x73\x73\x3D\x27\x66\x6F\x72\x6D\x2D\x63\x6F\x6E\x74\x72\x6F\x6C\x20\x20\x66\x6F\x72\x6D\x2D\x63\x6F\x6E\x74\x72\x6F\x6C\x2D\x73\x6D\x27\x20\x76\x61\x6C\x75\x65\x3D\x27","\x64\x61\x74\x61","\x27\x3E\x3C\x2F\x64\x69\x76\x3E\x3C\x64\x69\x76\x20\x73\x74\x79\x6C\x65\x3D\x27\x63\x6C\x65\x61\x72\x3A\x62\x6F\x74\x68\x3B\x27\x3E\x3C\x2F\x64\x69\x76\x3E\x3C\x2F\x64\x69\x76\x3E","\x3C\x2F\x66\x6F\x72\x6D\x3E","\x73\x68\x6F\x77\x2E\x62\x73\x2E\x6D\x6F\x64\x61\x6C","\x45\x64\x69\x74\x20\x52\x65\x63\x6F\x72\x64","\x68\x74\x6D\x6C","\x2E\x6D\x6F\x64\x61\x6C\x2D\x74\x69\x74\x6C\x65","\x66\x69\x6E\x64","\x23\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x6D\x6F\x64\x61\x6C","\x3C\x70\x72\x65\x3E","\x3C\x2F\x70\x72\x65\x3E","\x2E\x6D\x6F\x64\x61\x6C\x2D\x62\x6F\x64\x79","\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x27\x62\x75\x74\x74\x6F\x6E\x27\x20\x64\x61\x74\x61\x2D\x63\x6F\x6E\x74\x65\x6E\x74\x3D\x27\x72\x65\x6D\x6F\x76\x65\x27\x20\x63\x6C\x61\x73\x73\x3D\x27\x62\x74\x6E\x20\x62\x74\x6E\x2D\x64\x65\x66\x61\x75\x6C\x74\x27\x20\x64\x61\x74\x61\x2D\x64\x69\x73\x6D\x69\x73\x73\x3D\x27\x6D\x6F\x64\x61\x6C\x27\x3E\x43\x6C\x6F\x73\x65\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x27\x62\x75\x74\x74\x6F\x6E\x27\x20\x64\x61\x74\x61\x2D\x63\x6F\x6E\x74\x65\x6E\x74\x3D\x27\x72\x65\x6D\x6F\x76\x65\x27\x20\x63\x6C\x61\x73\x73\x3D\x27\x62\x74\x6E\x20\x62\x74\x6E\x2D\x70\x72\x69\x6D\x61\x72\x79\x27\x20\x69\x64\x3D\x27\x65\x64\x69\x74\x52\x6F\x77\x42\x74\x6E\x27\x3E\x53\x61\x76\x65\x20\x43\x68\x61\x6E\x67\x65\x73\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E","\x2E\x6D\x6F\x64\x61\x6C\x2D\x66\x6F\x6F\x74\x65\x72","\x73\x68\x6F\x77","\x6D\x6F\x64\x61\x6C","\x66\x6F\x63\x75\x73","\x23\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x6D\x6F\x64\x61\x6C\x20\x69\x6E\x70\x75\x74\x5B\x30\x5D","\x76\x61\x6C","\x65\x61\x63\x68","\x66\x6F\x72\x6D\x5B\x6E\x61\x6D\x65\x3D\x22\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x66\x6F\x72\x6D\x22\x5D\x20\x69\x6E\x70\x75\x74","\x72\x65\x6D\x6F\x76\x65","\x23\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x6D\x6F\x64\x61\x6C\x20\x2E\x6D\x6F\x64\x61\x6C\x2D\x62\x6F\x64\x79\x20\x2E\x61\x6C\x65\x72\x74","\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x61\x6C\x65\x72\x74\x20\x61\x6C\x65\x72\x74\x2D\x73\x75\x63\x63\x65\x73\x73\x22\x20\x72\x6F\x6C\x65\x3D\x22\x61\x6C\x65\x72\x74\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x73\x74\x72\x6F\x6E\x67\x3E\x53\x75\x63\x63\x65\x73\x73\x21\x3C\x2F\x73\x74\x72\x6F\x6E\x67\x3E\x20\x54\x68\x69\x73\x20\x72\x65\x63\x6F\x72\x64\x20\x68\x61\x73\x20\x62\x65\x65\x6E\x20\x75\x70\x64\x61\x74\x65\x64\x2E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E","\x23\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2D\x6D\x6F\x64\x61\x6C\x20\x2E\x6D\x6F\x64\x61\x6C\x2D\x62\x6F\x64\x79","\x72\x6F\x77","\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x27\x66\x6F\x72\x6D\x2D\x67\x72\x6F\x75\x70\x27\x3E\x3C\x6C\x61\x62\x65\x6C\x20\x66\x6F\x72\x3D\x27","\x20\x3A\x20\x3C\x2F\x6C\x61\x62\x65\x6C\x3E\x3C\x69\x6E\x70\x75\x74\x20\x20\x74\x79\x70\x65\x3D\x27\x68\x69\x64\x64\x65\x6E\x27\x20\x20\x69\x64\x3D\x27","\x27\x20\x73\x74\x79\x6C\x65\x3D\x27\x6F\x76\x65\x72\x66\x6C\x6F\x77\x3A\x68\x69\x64\x64\x65\x6E\x27\x20\x20\x63\x6C\x61\x73\x73\x3D\x27\x66\x6F\x72\x6D\x2D\x63\x6F\x6E\x74\x72\x6F\x6C\x27\x20\x76\x61\x6C\x75\x65\x3D\x27","\x27\x20\x3E","\x3C\x2F\x69\x6E\x70\x75\x74\x3E\x3C\x2F\x64\x69\x76\x3E","\x44\x65\x6C\x65\x74\x65\x20\x52\x65\x63\x6F\x72\x64","\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x27\x62\x75\x74\x74\x6F\x6E\x27\x20\x64\x61\x74\x61\x2D\x63\x6F\x6E\x74\x65\x6E\x74\x3D\x27\x72\x65\x6D\x6F\x76\x65\x27\x20\x63\x6C\x61\x73\x73\x3D\x27\x62\x74\x6E\x20\x62\x74\x6E\x2D\x64\x65\x66\x61\x75\x6C\x74\x27\x20\x64\x61\x74\x61\x2D\x64\x69\x73\x6D\x69\x73\x73\x3D\x27\x6D\x6F\x64\x61\x6C\x27\x3E\x43\x6C\x6F\x73\x65\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x27\x62\x75\x74\x74\x6F\x6E\x27\x20\x64\x61\x74\x61\x2D\x63\x6F\x6E\x74\x65\x6E\x74\x3D\x27\x72\x65\x6D\x6F\x76\x65\x27\x20\x63\x6C\x61\x73\x73\x3D\x27\x62\x74\x6E\x20\x62\x74\x6E\x2D\x64\x61\x6E\x67\x65\x72\x27\x20\x69\x64\x3D\x27\x64\x65\x6C\x65\x74\x65\x52\x6F\x77\x42\x74\x6E\x27\x3E\x44\x65\x6C\x65\x74\x65\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E","\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x61\x6C\x65\x72\x74\x20\x61\x6C\x65\x72\x74\x2D\x73\x75\x63\x63\x65\x73\x73\x22\x20\x72\x6F\x6C\x65\x3D\x22\x61\x6C\x65\x72\x74\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x73\x74\x72\x6F\x6E\x67\x3E\x53\x75\x63\x63\x65\x73\x73\x21\x3C\x2F\x73\x74\x72\x6F\x6E\x67\x3E\x20\x54\x68\x69\x73\x20\x72\x65\x63\x6F\x72\x64\x20\x68\x61\x73\x20\x62\x65\x65\x6E\x20\x64\x65\x6C\x65\x74\x65\x64\x2E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E","\x64\x72\x61\x77","\x27\x20\x73\x74\x79\x6C\x65\x3D\x27\x6F\x76\x65\x72\x66\x6C\x6F\x77\x3A\x68\x69\x64\x64\x65\x6E\x27\x20\x20\x63\x6C\x61\x73\x73\x3D\x27\x66\x6F\x72\x6D\x2D\x63\x6F\x6E\x74\x72\x6F\x6C\x20\x20\x66\x6F\x72\x6D\x2D\x63\x6F\x6E\x74\x72\x6F\x6C\x2D\x73\x6D\x27\x20\x76\x61\x6C\x75\x65\x3D\x27\x27\x3E\x3C\x2F\x64\x69\x76\x3E\x3C\x64\x69\x76\x20\x73\x74\x79\x6C\x65\x3D\x27\x63\x6C\x65\x61\x72\x3A\x62\x6F\x74\x68\x3B\x27\x3E\x3C\x2F\x64\x69\x76\x3E\x3C\x2F\x64\x69\x76\x3E","\x41\x64\x64\x20\x52\x65\x63\x6F\x72\x64","\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x27\x62\x75\x74\x74\x6F\x6E\x27\x20\x64\x61\x74\x61\x2D\x63\x6F\x6E\x74\x65\x6E\x74\x3D\x27\x72\x65\x6D\x6F\x76\x65\x27\x20\x63\x6C\x61\x73\x73\x3D\x27\x62\x74\x6E\x20\x62\x74\x6E\x2D\x64\x65\x66\x61\x75\x6C\x74\x27\x20\x64\x61\x74\x61\x2D\x64\x69\x73\x6D\x69\x73\x73\x3D\x27\x6D\x6F\x64\x61\x6C\x27\x3E\x43\x6C\x6F\x73\x65\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x62\x75\x74\x74\x6F\x6E\x20\x74\x79\x70\x65\x3D\x27\x62\x75\x74\x74\x6F\x6E\x27\x20\x64\x61\x74\x61\x2D\x63\x6F\x6E\x74\x65\x6E\x74\x3D\x27\x72\x65\x6D\x6F\x76\x65\x27\x20\x63\x6C\x61\x73\x73\x3D\x27\x62\x74\x6E\x20\x62\x74\x6E\x2D\x70\x72\x69\x6D\x61\x72\x79\x27\x20\x69\x64\x3D\x27\x61\x64\x64\x52\x6F\x77\x42\x74\x6E\x27\x3E\x41\x64\x64\x20\x52\x65\x63\x6F\x72\x64\x3C\x2F\x62\x75\x74\x74\x6F\x6E\x3E","\x61\x64\x64\x20\x72\x6F\x77","\x6C\x6F\x67","\x3C\x64\x69\x76\x20\x63\x6C\x61\x73\x73\x3D\x22\x61\x6C\x65\x72\x74\x20\x61\x6C\x65\x72\x74\x2D\x73\x75\x63\x63\x65\x73\x73\x22\x20\x72\x6F\x6C\x65\x3D\x22\x61\x6C\x65\x72\x74\x22\x3E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x73\x74\x72\x6F\x6E\x67\x3E\x53\x75\x63\x63\x65\x73\x73\x21\x3C\x2F\x73\x74\x72\x6F\x6E\x67\x3E\x20\x54\x68\x69\x73\x20\x72\x65\x63\x6F\x72\x64\x20\x68\x61\x73\x20\x62\x65\x65\x6E\x20\x61\x64\x64\x65\x64\x2E\x0D\x20\x20\x20\x20\x20\x20\x20\x20\x20\x3C\x2F\x64\x69\x76\x3E","\x61\x64\x64","\x64\x61\x74\x61\x54\x61\x62\x6C\x65\x73\x2E\x61\x6C\x74\x45\x64\x69\x74\x6F\x72\x2E\x6A\x73","\x73\x63\x72\x69\x70\x74\x5B\x73\x72\x63\x5D","\x69\x6E\x64\x65\x78\x4F\x66","\x73\x72\x63","\x67\x72\x65\x70","\x2F","\x6C\x61\x73\x74\x49\x6E\x64\x65\x78\x4F\x66","\x73\x75\x62\x73\x74\x72\x69\x6E\x67","\x76\x65\x72\x73\x69\x6F\x6E","\x31\x2E\x30","\x63\x6C\x61\x73\x73\x65\x73","\x62\x74\x6E","\x70\x72\x65\x49\x6E\x69\x74\x2E\x64\x74\x2E\x61\x6C\x74\x45\x64\x69\x74\x6F\x72","\x6F\x49\x6E\x69\x74","\x66\x75\x6E\x63\x74\x69\x6F\x6E","\x61\x6D\x64","\x6A\x71\x75\x65\x72\x79","\x64\x61\x74\x61\x74\x61\x62\x6C\x65\x73\x2E\x6E\x65\x74","\x6F\x62\x6A\x65\x63\x74","\x65\x78\x70\x6F\x72\x74\x73","\x24","\x64\x6F\x63\x75\x6D\x65\x6E\x74"];(function(_0x74d3x22){if( typeof define=== _0x8613[111]&& define[_0x8613[112]]){define([_0x8613[113],_0x8613[114]],function(_0x74d3x1){return _0x74d3x22(_0x74d3x1,window,document)})}else {if( typeof exports=== _0x8613[115]){module[_0x8613[116]]= function(_0x74d3x23,_0x74d3x1){if(!_0x74d3x23){_0x74d3x23= window};if(!_0x74d3x1|| !_0x74d3x1[_0x8613[2]][_0x8613[1]]){_0x74d3x1= require(_0x8613[114])(_0x74d3x23,_0x74d3x1)[_0x8613[117]]};return _0x74d3x22(_0x74d3x1,_0x74d3x23,_0x74d3x23[_0x8613[118]])}}else {_0x74d3x22(jQuery,window,document)}}}(function(_0x74d3x1,_0x74d3x2,_0x74d3x3,_0x74d3x4){_0x8613[0];var _0x74d3x5=_0x74d3x1[_0x8613[2]][_0x8613[1]];var _0x74d3x6=0;var _0x74d3x7=function(_0x74d3x8,_0x74d3x9){if(!_0x74d3x5[_0x8613[3]]|| !_0x74d3x5[_0x8613[3]](_0x8613[4])){throw (_0x8613[5])};this[_0x8613[6]]= _0x74d3x1[_0x8613[9]](true,{},_0x74d3x5[_0x8613[8]][_0x8613[7]],_0x74d3x7[_0x8613[8]],_0x74d3x9);this[_0x8613[10]]= {dt: new _0x74d3x5.Api(_0x74d3x8),namespace:_0x8613[11]+ (_0x74d3x6++)};this[_0x8613[12]]= {modal:_0x74d3x1(_0x8613[13])};this._constructor()};_0x74d3x1[_0x8613[9]](_0x74d3x7[_0x8613[14]],{_constructor:function(){var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];this._setup();_0x74d3x8[_0x8613[21]](_0x8613[16],function(){_0x74d3x8[_0x8613[17]](_0x8613[11]);_0x74d3x1(_0x74d3x8[_0x8613[20]]()[_0x8613[19]]())[_0x8613[17]](_0x74d3xa[_0x8613[10]][_0x8613[18]]);_0x74d3x1(_0x74d3x3[_0x8613[19]])[_0x8613[17]](_0x74d3xa[_0x8613[10]][_0x8613[18]])})},_setup:function(){var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];_0x74d3x1(_0x8613[19])[_0x8613[23]](_0x8613[22]);if(this[_0x8613[10]][_0x8613[15]][_0x8613[25]](_0x8613[24])){this[_0x8613[10]][_0x8613[15]][_0x8613[25]](_0x8613[24])[_0x8613[28]](function(_0x74d3xb,_0x74d3x8,_0x74d3xc,_0x74d3xd){var _0x74d3xe=_0x74d3x8[_0x8613[27]]({selected:true})[_0x8613[26]]();_0x74d3xa._openEditModal()});_0x74d3x1(_0x74d3x3)[_0x8613[21]](_0x8613[29],_0x8613[30],function(_0x74d3xb){_0x74d3xb[_0x8613[31]]();_0x74d3xb[_0x8613[32]]();_0x74d3xa._editRowData()})};if(this[_0x8613[10]][_0x8613[15]][_0x8613[25]](_0x8613[33])){this[_0x8613[10]][_0x8613[15]][_0x8613[25]](_0x8613[33])[_0x8613[28]](function(_0x74d3xb,_0x74d3x8,_0x74d3xc,_0x74d3xd){var _0x74d3xe=_0x74d3x8[_0x8613[27]]({selected:true})[_0x8613[26]]();_0x74d3xa._openDeleteModal()});_0x74d3x1(_0x74d3x3)[_0x8613[21]](_0x8613[29],_0x8613[34],function(_0x74d3xb){_0x74d3xb[_0x8613[31]]();_0x74d3xb[_0x8613[32]]();_0x74d3xa._deleteRow()})};if(this[_0x8613[10]][_0x8613[15]][_0x8613[25]](_0x8613[35])){this[_0x8613[10]][_0x8613[15]][_0x8613[25]](_0x8613[35])[_0x8613[28]](function(_0x74d3xb,_0x74d3x8,_0x74d3xc,_0x74d3xd){var _0x74d3xe=_0x74d3x8[_0x8613[27]]({selected:true})[_0x8613[26]]();_0x74d3xa._openAddModal()});_0x74d3x1(_0x74d3x3)[_0x8613[21]](_0x8613[29],_0x8613[36],function(_0x74d3xb){_0x74d3xb[_0x8613[31]]();_0x74d3xb[_0x8613[32]]();_0x74d3xa._addRowData()})}},_emitEvent:function(_0x74d3xf,_0x74d3x10){this[_0x8613[10]][_0x8613[15]][_0x8613[40]](_0x8613[20],function(_0x74d3x11,_0x74d3x12){_0x74d3x1(_0x74d3x11[_0x8613[39]])[_0x8613[38]](_0x74d3xf+ _0x8613[37],_0x74d3x10)})},_openEditModal:function(){var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];var _0x74d3x13=[];for(var _0x74d3x12=0;_0x74d3x12< _0x74d3x8[_0x8613[43]][0][_0x8613[42]][_0x8613[41]];_0x74d3x12++){_0x74d3x13[_0x8613[45]]({title:_0x74d3x8[_0x8613[43]][0][_0x8613[42]][_0x74d3x12][_0x8613[44]]})};var _0x74d3x14=_0x74d3x8[_0x8613[27]]({selected:true});var _0x74d3x15=_0x8613[46];_0x74d3x15+= _0x8613[47];for(var _0x74d3x16 in _0x74d3x13){_0x74d3x15+= _0x8613[48]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[50]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[51]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[52]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[53]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[54]+ _0x74d3x14[_0x8613[55]]()[0][_0x74d3x16]+ _0x8613[56]};_0x74d3x15+= _0x8613[57];_0x74d3x1(_0x8613[63])[_0x8613[21]](_0x8613[58],function(){_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[61])[_0x8613[60]](_0x8613[59]);_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[66])[_0x8613[60]](_0x8613[64]+ _0x74d3x15+ _0x8613[65]);_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[68])[_0x8613[60]](_0x8613[67])});_0x74d3x1(_0x8613[63])[_0x8613[70]](_0x8613[69]);_0x74d3x1(_0x8613[72])[_0x8613[71]]()},_editRowData:function(){var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];var _0x74d3x15=[];_0x74d3x1(_0x8613[75])[_0x8613[74]](function(_0x74d3x12){_0x74d3x15[_0x8613[45]](_0x74d3x1(this)[_0x8613[73]]())});_0x74d3x1(_0x8613[77])[_0x8613[76]]();var _0x74d3x17=_0x8613[78];_0x74d3x1(_0x8613[79])[_0x8613[23]](_0x74d3x17);_0x74d3x8[_0x8613[80]]({selected:true})[_0x8613[55]](_0x74d3x15)},_openDeleteModal:function(){var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];var _0x74d3x13=[];for(var _0x74d3x12=0;_0x74d3x12< _0x74d3x8[_0x8613[43]][0][_0x8613[42]][_0x8613[41]];_0x74d3x12++){_0x74d3x13[_0x8613[45]]({title:_0x74d3x8[_0x8613[43]][0][_0x8613[42]][_0x74d3x12][_0x8613[44]]})};var _0x74d3x14=_0x74d3x8[_0x8613[27]]({selected:true});var _0x74d3x15=_0x8613[46];_0x74d3x15+= _0x8613[47];for(var _0x74d3x12 in _0x74d3x13){_0x74d3x15+= _0x8613[81]+ _0x74d3x13[_0x74d3x12][_0x8613[49]]+ _0x8613[50]+ _0x74d3x13[_0x74d3x12][_0x8613[49]]+ _0x8613[82]+ _0x74d3x13[_0x74d3x12][_0x8613[49]]+ _0x8613[52]+ _0x74d3x13[_0x74d3x12][_0x8613[49]]+ _0x8613[53]+ _0x74d3x13[_0x74d3x12][_0x8613[49]]+ _0x8613[83]+ _0x74d3x14[_0x8613[55]]()[0][_0x74d3x12]+ _0x8613[84]+ _0x74d3x14[_0x8613[55]]()[0][_0x74d3x12]+ _0x8613[85]};_0x74d3x15+= _0x8613[57];_0x74d3x1(_0x8613[63])[_0x8613[21]](_0x8613[58],function(){_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[61])[_0x8613[60]](_0x8613[86]);_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[66])[_0x8613[60]](_0x8613[64]+ _0x74d3x15+ _0x8613[65]);_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[68])[_0x8613[60]](_0x8613[87])});_0x74d3x1(_0x8613[63])[_0x8613[70]](_0x8613[69]);_0x74d3x1(_0x8613[72])[_0x8613[71]]()},_deleteRow:function(){var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];_0x74d3x1(_0x8613[77])[_0x8613[76]]();var _0x74d3x17=_0x8613[88];_0x74d3x1(_0x8613[79])[_0x8613[23]](_0x74d3x17);_0x74d3x8[_0x8613[80]]({selected:true})[_0x8613[76]]();_0x74d3x8[_0x8613[89]]()},_openAddModal:function(){var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];var _0x74d3x13=[];for(var _0x74d3x12=0;_0x74d3x12< _0x74d3x8[_0x8613[43]][0][_0x8613[42]][_0x8613[41]];_0x74d3x12++){_0x74d3x13[_0x8613[45]]({title:_0x74d3x8[_0x8613[43]][0][_0x8613[42]][_0x74d3x12][_0x8613[44]]})};var _0x74d3x15=_0x8613[46];_0x74d3x15+= _0x8613[47];for(var _0x74d3x16 in _0x74d3x13){_0x74d3x15+= _0x8613[48]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[50]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[51]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[52]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[53]+ _0x74d3x13[_0x74d3x16][_0x8613[49]]+ _0x8613[90]};_0x74d3x15+= _0x8613[57];_0x74d3x1(_0x8613[63])[_0x8613[21]](_0x8613[58],function(){_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[61])[_0x8613[60]](_0x8613[91]);_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[66])[_0x8613[60]](_0x8613[64]+ _0x74d3x15+ _0x8613[65]);_0x74d3x1(_0x8613[63])[_0x8613[62]](_0x8613[68])[_0x8613[60]](_0x8613[92])});_0x74d3x1(_0x8613[63])[_0x8613[70]](_0x8613[69]);_0x74d3x1(_0x8613[72])[_0x8613[71]]()},_addRowData:function(){console[_0x8613[94]](_0x8613[93]);var _0x74d3xa=this;var _0x74d3x8=this[_0x8613[10]][_0x8613[15]];var _0x74d3x15=[];_0x74d3x1(_0x8613[75])[_0x8613[74]](function(_0x74d3x12){_0x74d3x15[_0x8613[45]](_0x74d3x1(this)[_0x8613[73]]())});_0x74d3x1(_0x8613[77])[_0x8613[76]]();var _0x74d3x17=_0x8613[95];_0x74d3x1(_0x8613[79])[_0x8613[23]](_0x74d3x17);_0x74d3x8[_0x8613[80]][_0x8613[96]](_0x74d3x15)[_0x8613[89]](false)},_getExecutionLocationFolder:function(){var _0x74d3x18=_0x8613[97];var _0x74d3x19=_0x74d3x1(_0x8613[98]);var _0x74d3x1a=_0x74d3x1[_0x8613[101]](_0x74d3x19,function(_0x74d3x1b){if(_0x74d3x1b[_0x8613[100]][_0x8613[99]](_0x74d3x18)!==  -1){return _0x74d3x1b}});var _0x74d3x1c=_0x74d3x1a[0][_0x8613[100]];var _0x74d3x1d=_0x74d3x1c[_0x8613[104]](0,_0x74d3x1c[_0x8613[103]](_0x8613[102])+ 1);return _0x74d3x1d}});_0x74d3x7[_0x8613[105]]= _0x8613[106];_0x74d3x7[_0x8613[8]]= {alwaysAsk:false,focus:null,columns:_0x8613[46],update:null,editor:null};_0x74d3x7[_0x8613[107]]= {btn:_0x8613[108]};_0x74d3x1(_0x74d3x3)[_0x8613[21]](_0x8613[109],function(_0x74d3xb,_0x74d3x1e,_0x74d3x1f){if(_0x74d3xb[_0x8613[18]]!== _0x8613[15]){return};var _0x74d3x20=_0x74d3x1e[_0x8613[110]][_0x8613[7]];var _0x74d3x21=_0x74d3x5[_0x8613[8]][_0x8613[7]];if(_0x74d3x20|| _0x74d3x21){var _0x74d3x9=_0x74d3x1[_0x8613[9]]({},_0x74d3x20,_0x74d3x21);if(_0x74d3x20!== false){ new _0x74d3x7(_0x74d3x1e,_0x74d3x9)}}});_0x74d3x5[_0x8613[7]]= _0x74d3x7;return _0x74d3x7}))
+/**
+ * @summary altEditor
+ * @description Lightweight editor for DataTables
+ * @version 2.0
+ * @file dataTables.editor.free.js
+ * @author kingkode (www.kingkode.com)
+ *  Modified by: Kasper Olesen (https://github.com/KasperOlesen), Luca Vercelli (https://github.com/luca-vercelli), Zack Hable (www.cobaltdevteam.com)
+ * @contact www.kingkode.com/contact
+ * @contact zack@cobaltdevteam.com
+ * @copyright Copyright 2016 Kingkode
+ *
+ * This source file is free software, available under the following license: MIT
+ * license
+ *
+ * This source file is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the license files for details.
+ *
+ *
+ */
+(function (factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD
+        define(['jquery', 'datatables.net'], function ($) {
+            return factory($, window, document);
+        });
+    }
+    else if (typeof exports === 'object') {
+        // CommonJS
+        module.exports = function (root, $) {
+            if (!root) {
+                root = window;
+            }
+
+            if (!$ || !$.fn.dataTable) {
+                $ = require('datatables.net')(root, $).$;
+            }
+
+            return factory($, root, root.document);
+        };
+    }
+    else {
+        // Browser
+        factory(jQuery, window, document);
+    }
+})
+(function ($, window, document, undefined) {
+    'use strict';
+    var DataTable = $.fn.dataTable;
+
+    var _instance = 0;
+
+    /**
+     * altEditor provides modal editing of records for Datatables
+     *
+     * @class altEditor
+     * @constructor
+     * @param {object}
+     *            oTD DataTables settings object
+     * @param {object}
+     *            oConfig Configuration object for altEditor
+     */
+    var altEditor = function (dt, opts) {
+        if (!DataTable.versionCheck || !DataTable.versionCheck('1.10.8')) {
+            throw ("Warning: altEditor requires DataTables 1.10.8 or greater");
+        }
+
+        // User and defaults configuration object
+        this.c = $.extend(true, {}, DataTable.defaults.altEditor,
+            altEditor.defaults, opts);
+
+        /**
+         * @namespace Settings object which contains customisable information
+         *            for altEditor instance
+         */
+        this.s = {
+            /** @type {DataTable.Api} DataTables' API instance */
+            dt: new DataTable.Api(dt),
+
+            /** @type {String} Unique namespace for events attached to the document */
+            namespace: '.altEditor' + (_instance++)
+        };
+
+        /**
+         * @namespace Common and useful DOM elements for the class instance
+         */
+        this.dom = {
+            /** @type {jQuery} altEditor handle */
+            modal: $('<div class="dt-altEditor-handle"/>'),
+        };
+
+        /* Constructor logic */
+        this._constructor();
+    }
+
+    $.extend(
+        altEditor.prototype,
+        {
+            /***************************************************************
+             * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+             * Constructor * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+             */
+
+            /**
+             * Initialise the RowReorder instance
+             *
+             * @private
+             */
+            _constructor: function () {
+                var that = this;
+                var dt = this.s.dt;
+
+                if (dt.settings()[0].oInit.onAddRow)
+                    that.onAddRow = dt.settings()[0].oInit.onAddRow;
+                if (dt.settings()[0].oInit.onDeleteRow)
+                    that.onDeleteRow = dt.settings()[0].oInit.onDeleteRow;
+                if (dt.settings()[0].oInit.onEditRow)
+                    that.onEditRow = dt.settings()[0].oInit.onEditRow;
+
+                this._setup();
+
+                dt.on('destroy.altEditor', function () {
+                    dt.off('.altEditor');
+                    $(dt.table().body()).off(that.s.namespace);
+                    $(document.body).off(that.s.namespace);
+                });
+            },
+
+            /***************************************************************
+             * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+             * Private methods * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+             */
+
+            /**
+             * Setup dom and bind button actions
+             *
+             * @private
+             */
+            _setup: function () {
+                var that = this;
+                var dt = this.s.dt;
+
+                var modal = '<div class="modal fade" id="altEditor-modal" tabindex="-1" role="dialog">' +
+                    '<div class="modal-dialog">' +
+                    '<div class="modal-content">' +
+                    '<div class="modal-header">' +
+                    '<h4 style="padding-top: 1rem;padding-left: 1rem;" class="modal-title"></h4>' +
+                    '<button style="margin: initial;" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
+                    '</div>' +
+                    '<div class="modal-body">' +
+                    '<p></p>' +
+                    '</div>' +
+                    '<div class="modal-footer">' +
+                    '<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>' +
+                    '<input type="submit" form="altEditor-form" class="btn btn-primary"></input>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+                // add modal
+                $('body').append(modal);
+
+                // add Edit Button
+                if (dt.button('edit:name')) {
+                    dt.button('edit:name').action(function (e, dt, node, config) {
+                        that._openEditModal();
+                    });
+
+                    $(document).on('click', '#editRowBtn', function (e) {
+                        if (that._inputValidation()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            that._editRowData();
+                        }
+                    });
+                }
+
+                // add Delete Button
+                if (dt.button('delete:name')) {
+                    dt.button('delete:name').action(function (e, dt, node, config) {
+                        that._openDeleteModal();
+                    });
+
+                    $(document).on('click', '#deleteRowBtn', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        that._deleteRow();
+                        $(this).prop('disabled', true);
+                    });
+                }
+
+                // add Add Button
+                if (dt.button('add:name')) {
+                    dt.button('add:name').action(function (e, dt, node, config) {
+                        that._openAddModal();
+                    });
+
+                    $(document).on('click', '#addRowBtn', function (e) {
+                        if (that._inputValidation()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            that._addRowData();
+                        }
+                    });
+                }
+
+                // add Refresh button
+                if (this.s.dt.button('refresh:name')) {
+                    this.s.dt.button('refresh:name').action(function (e, dt, node, config) {
+                        if (dt.ajax && dt.ajax.url()) {
+                            dt.ajax.reload();
+                        }
+                    });
+                }
+            },
+
+            /**
+             * Emit an event on the DataTable for listeners
+             *
+             * @param {string}
+             *            name Event name
+             * @param {array}
+             *            args Event arguments
+             * @private
+             */
+            _emitEvent: function (name, args) {
+                this.s.dt.iterator('table', function (ctx, i) {
+                    $(ctx.nTable).triggerHandler(name + '.dt', args);
+                });
+            },
+
+            /**
+             * Open Edit Modal for selected row
+             *
+             * @private
+             */
+            _openEditModal: function () {
+                var that = this;
+                var dt = this.s.dt;
+                var columnDefs = [];
+
+                // Adding column attributes to object.
+                // Please set the ID as readonly.
+                for (var i in dt.context[0].aoColumns) {
+                    var obj = dt.context[0].aoColumns[i];
+                    columnDefs[i] = {
+                        title: obj.sTitle,
+                        name: obj.data ? obj.data : obj.mData,
+                        type: (obj.type ? obj.type : 'text'),
+                        options: (obj.options ? obj.options : []),
+                        msg: (obj.errorMsg ? obj.errorMsg : ''),
+                        hoverMsg: (obj.hoverMsg ? obj.hoverMsg : ''),
+                        pattern: (obj.pattern ? obj.pattern : '.*'),
+                        special: (obj.special ? obj.special : ''),
+                        unique: (obj.unique ? obj.unique : false),
+                        uniqueMsg: (obj.uniqueMsg ? obj.uniqueMsg : ''),
+                        maxLength: (obj.maxLength ? obj.maxLength : false),
+                        multiple: (obj.multiple ? obj.multiple : false),
+                        select2: (obj.select2 ? obj.select2 : false)
+                    };
+                }
+                var adata = dt.rows({
+                    selected: true
+                });
+
+                // Building edit-form
+                var data = "";
+
+                data += "<form name='altEditor-form' role='form'>";
+
+                for (var j in columnDefs) {
+                    // handle hidden fields
+                    if (columnDefs[j].type.includes("hidden")) {
+                        data += "<input type='hidden' id='" + columnDefs[j].name + "' value='" + adata.data()[0][columnDefs[j].name] + "'></input>";
+                    }
+                    else {
+                        // handle fields that are visible to the user
+                        data += "<div style='margin-left: initial;margin-right: initial;' class='form-group row'>"
+                        data += "<div class='col-sm-3 col-md-3 col-lg-3 text-right' style='padding-top:4px;'>"
+                        data += "<label for='" + columnDefs[j].title + "'>" + columnDefs[j].title + ":</label></div>"
+                        data += "<div class='col-sm-8 col-md-8 col-lg-8'>";
+
+                        // Adding text-inputs and errorlabels
+                        if (columnDefs[j].type.includes("text")) {
+                            data += "<input type='"
+                                + that._quoteattr(columnDefs[j].type)
+                                + "' id='"
+                                + that._quoteattr(columnDefs[j].name)
+                                + "'  pattern='"
+                                + that._quoteattr(columnDefs[j].pattern)
+                                + "'  title='"
+                                + that._quoteattr(columnDefs[j].hoverMsg)
+                                + "' name='"
+                                + that._quoteattr(columnDefs[j].title)
+                                + "' placeholder='"
+                                + that._quoteattr(columnDefs[j].title)
+                                + "' data-special='"
+                                + that._quoteattr(columnDefs[j].special)
+                                + "' data-errorMsg='"
+                                + that._quoteattr(columnDefs[j].msg)
+                                + "' data-uniqueMsg='"
+                                + that._quoteattr(columnDefs[j].uniqueMsg)
+                                + "' data-unique='"
+                                + columnDefs[j].unique
+                                + "'"
+                                + (columnDefs[j].maxLength == false ? "" : " maxlength='" + columnDefs[j].maxLength + "'")
+                                + " style='overflow:hidden'  class='form-control  form-control-sm' value='"
+                                + that._quoteattr(adata.data()[0][columnDefs[j].name]) + "'>";
+                            data += "<label id='" + columnDefs[j].name + "label"
+                                + "' class='errorLabel'></label>";
+                        }
+
+                        // Adding readonly-fields
+                        if (columnDefs[j].type.includes("readonly")) {
+                            data += "<input type='text' readonly  id='"
+                                + columnDefs[j].name
+                                + "' name='"
+                                + columnDefs[j].title
+                                + "' placeholder='"
+                                + columnDefs[j].title
+                                + "' style='overflow:hidden'  class='form-control  form-control-sm' value='"
+                                + adata.data()[0][columnDefs[j].name] + "'>";
+                        }
+
+                        // Adding select-fields
+                        if (columnDefs[j].type.includes("select")) {
+                            var options = "";
+                            for (var i = 0; i < columnDefs[j].options.length; i++) {
+                                // Assigning the selected value of the <selected> option
+                                if (adata.data()[0][columnDefs[j].name]
+                                    .includes(columnDefs[j].options[i])) {
+                                    options += "<option value='"
+                                        + columnDefs[j].options[i] + "'selected>"
+                                        + columnDefs[j].options[i] + "</option>";
+                                } else {
+                                    options += "<option value='"
+                                        + columnDefs[j].options[i] + "'>"
+                                        + columnDefs[j].options[i] + "</option>";
+                                }
+                            }
+                            data += "<select class='form-control" + (columnDefs[j].select2 ? ' select2' : '') + "' id='" + columnDefs[j].name + "' name='" + columnDefs[j].title + "' " + (columnDefs[j].multiple ? 'multiple' : '') + ">" + options
+                                + "</select>";
+                        }
+                        data += "</div><div style='clear:both;'></div></div>";
+
+                    }
+                }
+                // close form
+                data += "</form>";
+
+                $('#altEditor-modal').on('show.bs.modal', function () {
+                    var btns = '<button type="button" data-content="remove" class="btn btn-default" data-dismiss="modal">Close</button>' +
+                        '<button type="button" data-content="remove" class="btn btn-primary" id="editRowBtn">Edit</button>';
+                    $('#altEditor-modal').find('.modal-title').html('Edit Record');
+                    $('#altEditor-modal').find('.modal-body').html(data);
+                    $('#altEditor-modal').find('.modal-footer').html(btns);
+                });
+
+                $('#altEditor-modal').modal('show');
+                $('#altEditor-modal input[0]').focus();
+
+                // enable select 2 items
+                for (var j in columnDefs) {
+                    if (columnDefs[j].select2) {
+                        $("#altEditor-modal").find("select#" + columnDefs[j].name).select2(columnDefs[j].select2);
+                    }
+                }
+            },
+
+            /**
+             * Callback for "Edit" button
+             */
+            _editRowData: function () {
+                var that = this;
+                var dt = this.s.dt;
+
+                // Complete new row data
+                var rowDataArray = {};
+
+                var adata = dt.rows({
+                    selected: true
+                });
+
+                // Getting the inputs from the edit-modal
+                $('form[name="altEditor-form"] *').filter(':input').each(function (i) {
+                    rowDataArray[$(this).attr('id')] = $(this).val();
+                });
+
+console.log(rowDataArray); //DEBUG
+
+                that.onEditRow(that,
+                    rowDataArray,
+                    function(data,b,c,d,e){ that._editRowCallback(data,b,c,d,e); },
+                    function(data){ that._errorCallback(data);
+                });
+            },
+
+            /**
+             * Open Delete Modal for selected row
+             *
+             * @private
+             */
+            _openDeleteModal: function () {
+                var that = this;
+                var dt = this.s.dt;
+                var columnDefs = [];
+
+                // Adding attribute IDs and values to object
+                for (var i in dt.context[0].aoColumns) {
+                    columnDefs.push({
+                        title: dt.context[0].aoColumns[i].sTitle,
+                        type: (dt.context[0].aoColumns[i].type ? dt.context[0].aoColumns[i].type : 'text'),
+                        name: dt.context[0].aoColumns[i].data ? dt.context[0].aoColumns[i].data : dt.context[0].aoColumns[i].mData
+                    });
+                }
+                var adata = dt.rows({
+                    selected: true
+                });
+
+                // Building delete-modal
+                var data = "";
+
+                data += "<form name='altEditor-form' role='form'>";
+                for (var j in columnDefs) {
+                    if (columnDefs[j].type.includes("hidden")) {
+                        data += "<input type='hidden' id='" + columnDefs[j].title + "' value='" + adata.data()[0][columnDefs[j].name] + "'></input>";
+                    }
+                    else {
+                        data += "<div style='margin-left: initial;margin-right: initial;' class='form-group row'><label for='"
+                            + that._quoteattr(columnDefs[j].title)
+                            + "'>"
+                            + columnDefs[j].title
+                            + ":  </label> <input  type='hidden'  id='"
+                            + that._quoteattr(columnDefs[j].title)
+                            + "' name='"
+                            + that._quoteattr(columnDefs[j].title)
+                            + "' placeholder='"
+                            + that._quoteattr(columnDefs[j].title)
+                            + "' style='overflow:hidden'  class='form-control' value='"
+                            + that._quoteattr(adata.data()[0][columnDefs[j].name]) + "' >"
+                            + adata.data()[0][columnDefs[j].name]
+                            + "</input></div>";
+                    }
+                }
+                // close the form
+                data += "</form>";
+
+                $('#altEditor-modal').on('show.bs.modal', function () {
+                    var btns = '<button type="button" data-content="remove" class="btn btn-default" data-dismiss="modal">Close</button>' +
+                        '<button type="button"  data-content="remove" class="btn btn-danger" id="deleteRowBtn">Delete</button>';
+                    $('#altEditor-modal').find('.modal-title').html('Delete Record');
+                    $('#altEditor-modal').find('.modal-body').html(data);
+                    $('#altEditor-modal').find('.modal-footer').html(btns);
+                });
+
+                $('#altEditor-modal').modal('show');
+                $('#altEditor-modal input[0]').focus();
+            },
+
+            /**
+             * Callback for "Delete" button
+             */
+            _deleteRow: function () {
+                var that = this;
+                var dt = this.s.dt;
+
+                var jsonDataArray = {};
+
+                var adata = dt.rows({
+                    selected: true
+                });
+
+                // Getting the IDs and Values of the tablerow
+                for (var i = 0; i < dt.context[0].aoColumns.length; i++) {
+                    //FIXME .id or .idx ? or none? what's the difference?
+                    jsonDataArray[dt.context[0].aoColumns[i].idx] = adata.data()[0][dt.context[0].aoColumns[i].data];
+                }
+                that.onDeleteRow(that,
+                    jsonDataArray,
+                    function(data){ that._deleteRowCallback(data); },
+                    function(data){ that._errorCallback(data);
+                });
+                //FIXME why should we send all the data for a DELETE?
+            },
+
+            /**
+             * Open Add Modal for selected row
+             *
+             * @private
+             */
+            _openAddModal: function () {
+                var that = this;
+                var dt = this.s.dt;
+                var columnDefs = [];
+
+                // Adding column attributes to object.
+                for (var i in dt.context[0].aoColumns) {
+                    var obj = dt.context[0].aoColumns[i];
+                    columnDefs[i] = {
+                        title: obj.sTitle,
+                        name: (obj.data ? obj.data : obj.mData),
+                        type: (obj.type ? obj.type : 'text'),
+                        options: (obj.options ? obj.options : []),
+                        msg: (obj.errorMsg ? obj.errorMsg : ''),
+                        hoverMsg: (obj.hoverMsg ? obj.hoverMsg : ''),
+                        pattern: (obj.pattern ? obj.pattern : '.*'),
+                        special: (obj.special ? obj.special : ''),
+                        unique: (obj.unique ? obj.unique : false),
+                        uniqueMsg: (obj.uniqueMsg ? obj.uniqueMsg : ''),
+                        maxLength: (obj.maxLength ? obj.maxLength : false),
+                        multiple: (obj.multiple ? obj.multiple : false),
+                        select2: (obj.select2 ? obj.select2 : false)
+                    }
+                }
+
+
+                // Building add-form
+                var data = "";
+                data += "<form name='altEditor-form' role='form'>";
+                for (var j in columnDefs) {
+                    if (columnDefs[j].type.includes("hidden")) {
+                        // just do nothing for hidden fields!
+                    }
+                    else {
+                        data += "<div style='margin-left: initial;margin-right: initial;' class='form-group row'><div class='col-sm-3 col-md-3 col-lg-3 text-right' style='padding-top:4px;'><label for='"
+                            + columnDefs[j].title
+                            + "'>"
+                            + columnDefs[j].title
+                            + ":</label></div><div class='col-sm-8 col-md-8 col-lg-8'>";
+
+                        // Adding text-inputs and errorlabels
+                        if (columnDefs[j].type.includes("text")) {
+                            data += "<input type='"
+                                + that._quoteattr(columnDefs[j].type)
+                                + "' id='"
+                                + that._quoteattr(columnDefs[j].name)
+                                + "'  pattern='"
+                                + that._quoteattr(columnDefs[j].pattern)
+                                + "'  title='"
+                                + that._quoteattr(columnDefs[j].hoverMsg)
+                                + "' name='"
+                                + that._quoteattr(columnDefs[j].title)
+                                + "' placeholder='"
+                                + that._quoteattr(columnDefs[j].title)
+                                + "' data-special='"
+                                + columnDefs[j].special
+                                + "' data-errorMsg='"
+                                + that._quoteattr(columnDefs[j].msg)
+                                + "' data-uniqueMsg='"
+                                + that._quoteattr(columnDefs[j].uniqueMsg)
+                                + "' data-unique='"
+                                + columnDefs[j].unique
+                                + "'"
+                                + (columnDefs[j].maxLength == false ? "" : " maxlength='" + columnDefs[j].maxLength + "'")
+                                + " style='overflow:hidden'  class='form-control  form-control-sm' value=''>";
+                            data += "<label id='" + that._quoteattr(columnDefs[j].name) + "label"
+                                + "' class='errorLabel'></label>";
+                        }
+
+                        // Adding readonly-fields
+                        if (columnDefs[j].type.includes("readonly")) {
+                            data += "<input type='text' readonly  id='"
+                                + that._quoteattr(columnDefs[j].name)
+                                + "' name='"
+                                + that._quoteattr(columnDefs[j].title)
+                                + "' placeholder='"
+                                + that._quoteattr(columnDefs[j].title)
+                                + "' style='overflow:hidden'  class='form-control  form-control-sm' value=''>";
+                        }
+
+                        // Adding select-fields
+                        if (columnDefs[j].type.includes("select")) {
+                            var options = "";
+                            for (var i = 0; i < columnDefs[j].options.length; i++) {
+                                options += "<option value='" + that._quoteattr(columnDefs[j].options[i])
+                                    + "'>" + columnDefs[j].options[i] + "</option>";
+                            }
+                            data += "<select class='form-control" + (columnDefs[j].select2 ? ' select2' : '') + "' id='" + that._quoteattr(columnDefs[j].name) + "' name='" + that._quoteattr(columnDefs[j].title) + "' " + (columnDefs[j].multiple ? 'multiple' : '') + ">" + options
+                                + "</select>";
+                        }
+                        data += "</div><div style='clear:both;'></div></div>";
+                    }
+                }
+                data += "</form>";
+
+                $('#altEditor-modal').on('show.bs.modal', function () {
+                    var btns = '<button type="button" data-content="remove" class="btn btn-default" data-dismiss="modal">Close</button>' +
+                        '<button type="button"  data-content="remove" class="btn btn-primary" id="addRowBtn">Add</button>';
+                    $('#altEditor-modal').find('.modal-title').html(
+                        'Add Record');
+                    $('#altEditor-modal').find('.modal-body')
+                        .html(data);
+                    $('#altEditor-modal')
+                        .find('.modal-footer')
+                        .html(btns);
+                });
+
+                $('#altEditor-modal').modal('show');
+                $('#altEditor-modal input[0]').focus();
+
+                // enable select 2 items
+                for (var j in columnDefs) {
+                    if (columnDefs[j].select2) {
+                        $("#altEditor-modal").find("select#" + columnDefs[j].name).select2(columnDefs[j].select2);
+                    }
+                }
+            },
+
+            /**
+             * Callback for "Add" button
+             */
+            _addRowData: function () {
+                var that = this;
+                var dt = this.s.dt;
+
+                var rowDataArray = {};
+
+                // Getting the inputs from the modal
+                $('form[name="altEditor-form"] *').filter(':input').each(function (i) {
+                    rowDataArray[$(this).attr('id')] = $(this).val();
+                });
+
+//console.log(rowDataArray); //DEBUG
+
+                that.onAddRow(that,
+                    rowDataArray,
+                    function(data){ that._addRowCallback(data); },
+                    function(data){ that._errorCallback(data);
+                });
+
+            },
+
+            /**
+             * Called after a row has been deleted on server
+             */
+            _deleteRowCallback: function (response, status, more) {
+                    $('#altEditor-modal .modal-body .alert').remove();
+
+                    var message = '<div class="alert alert-success" role="alert">' +
+                        '<strong>Success!</strong>' +
+                        '</div>';
+                    $('#altEditor-modal .modal-body').append(message);
+
+                    this.s.dt.row({
+                        selected : true
+                    }).remove();
+                    this.s.dt.draw();
+
+                    // Disabling submit button
+                    $("div#altEditor-modal").find("button#addRowBtn").prop('disabled', true);
+                    $("div#altEditor-modal").find("button#editRowBtn").prop('disabled', true);
+                    $("div#altEditor-modal").find("button#deleteRowBtn").prop('disabled', true);
+            },
+
+            /**
+             * Called after a row has been inserted on server
+             */
+            _addRowCallback: function (response, status, more) {
+                
+                    //TODO should honor dt.ajax().dataSrc
+                    
+                    var data = JSON.parse(response);
+                    
+                    $('#altEditor-modal .modal-body .alert').remove();
+
+                    var message = '<div class="alert alert-success" role="alert">' +
+                        '<strong>Success!</strong>' +
+                        '</div>';
+                    $('#altEditor-modal .modal-body').append(message);
+
+                    this.s.dt.row.add(data).draw(false);
+
+                    // Disabling submit button
+                    $("div#altEditor-modal").find("button#addRowBtn").prop('disabled', true);
+                    $("div#altEditor-modal").find("button#editRowBtn").prop('disabled', true);
+                    $("div#altEditor-modal").find("button#deleteRowBtn").prop('disabled', true);
+            },
+
+            /**
+             * Called after a row has been updated on server
+             */
+            _editRowCallback: function (response, status, more) {
+
+                    //TODO should honor dt.ajax().dataSrc
+                    
+                    var data = JSON.parse(response);
+
+                    $('#altEditor-modal .modal-body .alert').remove();
+
+                    var message = '<div class="alert alert-success" role="alert">' +
+                        '<strong>Success!</strong>' +
+                        '</div>';
+                    $('#altEditor-modal .modal-body').append(message);
+
+                    this.s.dt.row({
+                        selected : true
+                    }).data(data);
+                    this.s.dt.draw();
+
+                    // Disabling submit button
+                    $("div#altEditor-modal").find("button#addRowBtn").prop('disabled', true);
+                    $("div#altEditor-modal").find("button#editRowBtn").prop('disabled', true);
+                    $("div#altEditor-modal").find("button#deleteRowBtn").prop('disabled', true);
+            },
+
+            /**
+             * Called after AJAX server returned an error
+             */
+            _errorCallback: function (response, status, more) {
+                    var error = resp;
+                    $('#altEditor-modal .modal-body .alert').remove();
+                    var errstr = "There was an unknown error!";
+                    if (error.responseJSON && error.responseJSON.errors) {
+                        errstr = "";
+                        for (var key in error.responseJSON.errors) {
+                            errstr += error.responseJSON.errors[key][0];
+                        }
+                    }
+                    var message = '<div class="alert alert-danger" role="alert">' +
+                        '<strong>Error!</strong> ' + (error.status == null ? "" : 'Response code: ' + error.status) + " " + errstr +
+                        '</div>';
+
+                    $('#altEditor-modal .modal-body').append(message);
+            },
+            
+            /**
+             * Default callback for insertion: mock webservice, always success.
+             */
+            onAddRow: function(dt, rowdata, success, error) {
+                console.log("Missing AJAX configuration for INSERT");
+                success(rowdata);
+            },
+
+            /**
+             * Default callback for editing: mock webservice, always success.
+             */
+            onEditRow: function(dt, rowdata, success, error) {
+                console.log("Missing AJAX configuration for UPDATE");
+                success(rowdata);
+            },
+
+            /**
+             * Default callback for deletion: mock webservice, always success.
+             */
+            onDeleteRow: function(dt, rowdata, success, error) {
+                console.log("Missing AJAX configuration for DELETE");
+                success(rowdata);
+            },
+
+            /**
+             * Validates input
+             * @returns {boolean}
+             * @private
+             */
+            _inputValidation: function () {
+                var that = this;
+                var dt = this.s.dt;
+                var isValid = false;
+                var errorcount = 0;
+
+                // Looping through all text fields
+                $('form[name="altEditor-form"] *').filter(':text').each(
+                    function (i) {
+                        var errorLabel = "#" + $(this).attr("id") + "label";
+                        // reset error display
+                        $(errorLabel).hide();
+                        $(errorLabel).empty();
+                        if (!$(this).val().match($(this).attr("pattern"))) {
+                            $(errorLabel).html($(this).attr("data-errorMsg"));
+                            $(errorLabel).show();
+                            errorcount++;
+                        }
+                        // now check if its should be unique
+                        else if ($(this).attr("data-unique") == "true") {
+                            // go through each item in this column
+                            var colData = dt.column("th:contains('" + $(this).attr("name") + "')").data();
+                            var selectedCellData = null;
+                            if (dt.row({selected: true}).index() != null)
+                                selectedCellData = dt.cell(dt.row({selected: true}).index(), dt.column("th:contains('" + $(this).attr("name") + "')").index()).data();
+                            for (var j in colData) {
+                                // if the element is in the column and its not the selected one then its not unique
+                                if ($(this).val() == colData[j] && colData[j] != selectedCellData) {
+                                    $(errorLabel).html($(this).attr("data-uniqueMsg"));
+                                    $(errorLabel).show();
+                                    errorcount++;
+                                }
+                            }
+                        }
+                    });
+
+                if (errorcount == 0) {
+                    isValid = true;
+                }
+
+                return isValid;
+            },
+
+            /**
+             * Sanitizes input for use in HTML
+             * @param s
+             * @param preserveCR
+             * @returns {string}
+             * @private
+             */
+            _quoteattr: function (s, preserveCR) {
+                preserveCR = preserveCR ? '&#13;' : '\n';
+                return ('' + s) /* Forces the conversion to string. */
+                    .replace(/&/g, '&amp;') /* This MUST be the 1st replacement. */
+                    .replace(/'/g, '&apos;') /* The 4 other predefined entities, required. */
+                    .replace(/"/g, '&quot;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\r\n/g, preserveCR) /* Must be before the next replacement. */
+                    .replace(/[\r\n]/g, preserveCR);
+            },
+        });
+
+    /**
+     * altEditor version
+     *
+     * @static
+     * @type String
+     */
+    altEditor.version = '2.0';
+
+    /**
+     * altEditor defaults
+     *
+     * @namespace
+     */
+    altEditor.defaults = {
+        /**
+         * @type {Boolean} Ask user what they want to do, even for a single
+         *       option
+         */
+        alwaysAsk: false,
+
+        /** @type {string|null} What will trigger a focus */
+        focus: null, // focus, click, hover
+
+        /** @type {column-selector} Columns to provide auto fill for */
+        columns: '', // all
+
+        /** @type {boolean|null} Update the cells after a drag */
+        update: null, // false is editor given, true otherwise
+
+        /** @type {DataTable.Editor} Editor instance for automatic submission */
+        editor: null
+    };
+
+    /**
+     * Classes used by altEditor that are configurable
+     *
+     * @namespace
+     */
+    altEditor.classes = {
+        /** @type {String} Class used by the selection button */
+        btn: 'btn'
+    };
+
+    // Attach a listener to the document which listens for DataTables
+    // initialisation
+    // events so we can automatically initialise
+    $(document).on('preInit.dt.altEditor', function (e, settings, json) {
+        if (e.namespace !== 'dt') {
+            return;
+        }
+
+        var init = settings.oInit.altEditor;
+        var defaults = DataTable.defaults.altEditor;
+
+        if (init || defaults) {
+            var opts = $.extend({}, init, defaults);
+
+            if (init !== false) {
+                new altEditor(settings, opts);
+            }
+        }
+    });
+
+    // Alias for access
+    DataTable.altEditor = altEditor;
+    return altEditor;
+});
