@@ -1,0 +1,73 @@
+{% extends 'base_table.html' %}
+
+{# Filtered table template #}
+
+{% block css %}
+    {{ block.super }}
+
+{% endblock css %}
+
+{% block js %}
+{{ block.super }}
+
+<script>
+
+const labelShowFilter = '<i class="fa fa-filter"></i> Filter';
+const labelHideFilter = '<i class="fa fa-minus-square-o"></i> Hide Filter';
+const textShowDetail = " Expand Detail";
+const htmlShowDetail = '<i class="fa fa-plus-square-o"></i>' + textShowDetail;
+const labelHideDetail = '<i class="fa fa-minus-square-o"></i> Hide Detail';
+
+var table;
+$(document).ready(function() {
+    // Initialize datatable with responsive behavior and datatable buttons
+    table = $('#dTbl').DataTable( {
+        dom: "Bfrtip",
+        "responsive": true,
+        "paging":   false,
+        "info":     false,
+        {% block table_options %}{% endblock %}
+        buttons: [
+            {% block table_buttons %}{% endblock %}
+            {
+                text: labelShowFilter,
+                action: function ( e, dt, node, config ) {
+                    if($("#show-filter").css("display") == "none") {
+                        $("#show-filter").css({"display":"block"})
+                        node[0].innerHTML = labelHideFilter;
+                    } else {
+                        $("#show-filter").css({"display":"none"})
+                        node[0].innerHTML = labelShowFilter;
+                    }
+                }
+            },
+            {
+                text: htmlShowDetail,
+                action: function ( e, dt, node, config ) {
+                    if (node[0].innerText == textShowDetail) {
+                        dt.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
+                        node[0].innerHTML = labelHideDetail;
+                    } else {
+                        dt.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
+                        node[0].innerHTML = htmlShowDetail;
+                    }                          
+                }
+            },
+            {
+                text: '<i class="fa fa-newspaper-o"></i> More',
+                extend: "collection",
+                autoClose: true,
+                buttons: [ "copy", "csv", "excel", "print", "colvis"]
+            }
+        ]
+    })
+
+    UpdateSubheaderBasedOnSettings(table);
+
+});
+
+{% block table_functions %}{% endblock %}
+
+</script>
+
+{% endblock js %}

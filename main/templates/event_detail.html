@@ -4,6 +4,7 @@
 
 {% block js %}
 {{ block.super }}
+
   <script>
     $(document).ready( function() {
     {% for period in event.period_set.all %}
@@ -31,40 +32,34 @@
                 buttons: [
                     {
                         text: '<i class="fa fa-hourglass-start"></i> Heads Up',
-
                         action: function ( e, dt, node, config ) {
                             location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
                         }
                     },
                     {
                         text: '<i class="fa fa-calendar-check-o"></i> Are you available',
-
                         action: function ( e, dt, node, config ) {
                             location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
                         }
                     },
                     {
                         text: '<i class="fa fa-clock-o"></i> Have you left',
-
                         action: function ( e, dt, node, config ) {
                             location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=leave';
                         }
                     },
                     {
                         text: '<i class="fa fa-clock-o"></i> Are you home',
-
                         action: function ( e, dt, node, config ) {
                             location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=return';
                         }
                     },
                     {
                         text: '<i class="fa fa-wrench"></i> Test',
-
                         action: function ( e, dt, node, config ) {
                             location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=test';
                         }
                     }
-
                 ]
             },
             {
@@ -89,7 +84,7 @@
                 extend: "collection",
                 autoClose: true,
                 buttons: [
-                    "copy", "csv", "excel", "pdf", "print", "colvis"
+                    "copy", "csv", "excel", "print", "colvis"
                 ]
             }
         ]
@@ -114,7 +109,10 @@
   <div class="collapse navbar-collapse" id="eventMenu">
     <ul class="navbar-nav ml-auto">
       <li class="nav-item">
-        <a  class="nav-link" href='{% url "event_update" event.id %}'><i class="fa fa-pencil"></i> Edit</a>
+        <a  class="nav-link" href='{% url "event_update" event.id %}'>
+          <i class="fa fa-pencil"></i>
+          Edit
+        </a>
       </li>
       <li class="nav-item">
         <a class="nav-link" href='{% url "event_delete" event.id %}'><i class="fa fa-trash"></i> Delete</a>

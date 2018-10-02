@@ -1,5 +1,37 @@
 {% extends 'base_generic.html' %}
 
+{% block title %}Member - {{member.username}}{% endblock title %}
+
+
+{% block subheader %}
+  <strong>
+    <a href="{% url 'member_index' %}"> Members </a>
+    > {{member.full_name }} ({{ member.rank }})
+  </strong>
+
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a href="{% url 'member_edit' member.id %}" class="nav-link">
+      <i class="fa fa-pencil"></i>
+      Edit
+    </a>
+  </li>
+  <li class="nav-item dropdown">
+    <a class="nav-link" href="{% url 'available_edit' %}">
+      <i class="fa fa-calendar-times-o"></i>
+      Availability
+    </a>
+  </li>
+  <li class="nav-item dropdown">
+   <a class="nav-link"  href="{% url 'message:message_inbox' request.user.id%}">
+     <i class="fa fa-inbox"></i>
+      Inbox
+    </a>
+  </li>
+</ul>
+{% endblock %}
+
+
 {% block content %}
 <main role="main" class="container">
   {% if member.is_current_do %}
@@ -37,30 +69,5 @@
   {% if member.is_active %}<strong>Active</strong>{% endif %}
   {% if member.is_staff %}<strong>Staff</strong>{% endif %}
 
-</main><!-- /.container -->
-{% endblock %}
-
-{% block subheader %}
-  <strong>
-    <a href="{% url 'member_index' %}"> Members </a>
-    > {{member.full_name }} ({{ member.rank }})
-  </strong>
-
-<ul class="navbar-nav ml-auto">
-  <li class="nav-item dropdown">
-    <a class="nav-link">
-      Availability
-    </a>
-  </li>
-  <li class="nav-item dropdown">
-   <a class="nav-link">
-      Inbox
-    </a>
-  </li>
-  <li class="nav-item dropdown">
-    <a href="{% url 'member_edit' member.id %}" class="nav-link">
-      Edit
-    </a>
-  </li>
-</ul>
+</main>
 {% endblock %}

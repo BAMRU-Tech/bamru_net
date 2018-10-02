@@ -1,78 +1,32 @@
-{% extends 'base_table.html' %}
+{% extends 'base_ftable.html' %}
 
 {% block title %}Team Certifications{% endblock title %}
 
-{% block js %}
-{{ block.super }}
-  <script>
-    const labelShowFilter = '<i class="fa fa-filter"></i> Filter';
-    const labelHideFilter = '<i class="fa fa-minus-square-o"></i> Hide Filter';
-    const textShowDetail = " Expand Detail";
-    const htmlShowDetail = '<i class="fa fa-plus-square-o"></i>' + textShowDetail;
-    const labelHideDetail = '<i class="fa fa-minus-square-o"></i> Hide Detail';
-    const apiUrlMemberRank = "/api/members/?member_rank="; {# FIXME: need api for certs #}
 
-var table;
-$(document).ready( function() {
-    // Initialize datatable with responsive behavior and datatable buttons
-    table = $("#dTbl").DataTable( {
-        dom: "Bfrtip",
-        responsive: true,
-        paging:   false,
-        info:     false,
-        order: [[ 0, "asc" ]],
-        columnDefs: [
-          { responsivePriority: 1, targets: 0 },
-          { responsivePriority: 4, targets: 1},
-          { responsivePriority: 2, targets: 2 },
-          { responsivePriority: 3, targets: 3},
-        ],
-        buttons: [
-            {
-                text: labelShowFilter,
-                action: function ( e, dt, node, config ) {
-                    if($("#show-filter").css("display") == "none") {
-                        $("#show-filter").css({"display":"block"})
-                        node[0].innerHTML = labelHideFilter;
-                    } else {
-                        $("#show-filter").css({"display":"none"})
-                        node[0].innerHTML = labelShowFilter;
-                    }
-                }
-            },
-            {
-                text: htmlShowDetail,
-                action: function ( e, dt, node, config ) {
-                    if (node[0].innerText == textShowDetail) {
-                        dt.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
-                        node[0].innerHTML = labelHideDetail;
-                    } else {
-                        dt.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
-                        node[0].innerHTML = htmlShowDetail;
-                    }                          
-                }
-            },
-            {
-                text: '<i class="fa fa-newspaper-o"></i> More',
-                extend: 'collection',
-                autoClose: true,
-                buttons: [
-                    'copy', 'csv', 'excel', 'pdf', 'print', 'colvis'
-                ]
-            }
-        ]
-    });
+{% block subheader %}
+  <strong>
+    <div id="subhdr">
+      Members
+    </div>
+  </strong>
+{% endblock subheader %}
 
-    /*FIXME*/ 
-    table.buttons().container()
-        .appendTo( '#example_wrapper .col-md-6:eq(0)' );
+{% block table_options %}
+order: [[ 0, "asc" ]],
+columnDefs: [
+    { responsivePriority: 1, targets: 0 },
+    { responsivePriority: 4, targets: 1},
+    { responsivePriority: 2, targets: 2 },
+    { responsivePriority: 3, targets: 3},
+],
+language: {
+      emptyTable: "No members selected"
+},
+{% endblock table_options %}
 
-    UpdateSubheaderBasedOnSettings(table);
-
-});
-
-function AddRows(table, values)
-{
+{% block table_functions %}
+const apiUrlMemberRank = "/api/certs/?member__member_rank=";
+function AddRows(table, values) {
     // Add row data via AJAX based on rank
     urlData = apiUrlMemberRank+values[0];
     $.getJSON(urlData, null, function( json ) {
@@ -93,8 +47,7 @@ function AddRows(table, values)
     });
 }
 
-function RemoveRows(table, values)
-{
+function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
@@ -116,7 +69,7 @@ function UpdateSubheaderBasedOnSettings(table) {
 
     $("#subhdr")[0].innerHTML = "<a href=" + {% url 'member_index' %} + ">Members</a> (" +  showRanks.join(", ") + ") > Certifications";
 
-};
+}
 
 $("#filter-rank").multiSelect({
     // The sense of the multiSelect is inverted: show = deselect, hide = select
@@ -130,9 +83,8 @@ $("#filter-rank").multiSelect({
         AddRows(table,values);
         UpdateSubheaderBasedOnSettings(table);
     }
-});
-  </script>
-{% endblock %}
+})
+{% endblock table_functions %}
 
 {% block content %}
 <main>
@@ -151,7 +103,6 @@ $("#filter-rank").multiSelect({
       <option value='GN' selected >Guest No-contact</option>
     </select>
   </div>
-  {% if member_list %}
   <table id="dTbl" class="display table-bordered wrap" style="width:100%">
     <thead>
       <tr>
@@ -177,16 +128,5 @@ $("#filter-rank").multiSelect({
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <p>No members are available.</p>
-  {% endif %}
 </main>
-{% endblock %}
-
-{% block subheader %}
-  <strong>
-    <div id="subhdr">
-      Members
-    </div>
-  </strong>
-{% endblock %}
+{% endblock content %}

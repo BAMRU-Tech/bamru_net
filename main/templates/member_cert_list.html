@@ -2,7 +2,6 @@
 
 {% block content %}
 <main>
-  {% if cert_list %}
   <table id="dTbl" class="display table-bordered wrap" style="width:100%">
     <thead>
       <tr>
@@ -33,9 +32,6 @@
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <p>No certificates are available.</p>
-  {% endif %}
 </main>
 {% endblock %}
 
