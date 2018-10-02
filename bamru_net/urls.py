@@ -25,6 +25,7 @@ from rest_framework import routers
 router = routers.DefaultRouter()
 router.register(r'events', views.EventViewSet)
 router.register(r'members', views.MemberViewSet)
+router.register(r'member_certs', views.MemberCertViewSet, base_name='member')
 router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.UnavailableViewSet)
 

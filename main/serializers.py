@@ -16,11 +16,10 @@ class UnavailableSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class CertSerializer(serializers.HyperlinkedModelSerializer):
-    member = MemberSerializer()
     class Meta:
         model = Cert
         read_only_fields = ('is_expired',)
-        fields = ('id', 'url', 'member', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
+        fields = ('id', 'url', 'member_id', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
 
 
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
@@ -28,6 +27,17 @@ class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Participant
         fields = ('id', 'member', 'ahc', 'ol')
+
+
+class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
+    certs = serializers.SerializerMethodField()
+    def get_certs(self, member):
+        ordered_certs = member.cert_set.all().order_by(Cert.type_order_expression(), '-expiration', '-id')
+        return [CertSerializer(c, context=self.context).data for c in ordered_certs]
+    class Meta:
+        model = Member
+        read_only_fields = ('full_name', 'rank', 'rank_order')
+        fields = ('id', 'url', 'certs') + read_only_fields
 
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):

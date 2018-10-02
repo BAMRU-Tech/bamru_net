@@ -22,7 +22,7 @@ class UnavailableFilter(filters.FilterSet):
 class UnavailableViewSet(viewsets.ModelViewSet):
     queryset = Unavailable.objects.all()
     serializer_class = UnavailableSerializer
-    permission_classes = (permissions.IsAuthenticated),
+    permission_classes = (permissions.IsAuthenticated)
     filterset_class = UnavailableFilter
     search_fields = ('member__username',  )
 
@@ -33,6 +33,14 @@ class CertViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     filter_fields = ('member__member_rank', 'type', )
     search_fields = ('member__username',  )
+
+
+class MemberCertViewSet(viewsets.ModelViewSet):
+    queryset = Member.members.prefetch_related('cert_set')
+    serializer_class = MemberCertSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_fields = ('member_rank', )
+    search_fields = ('username',  )
 
 
 class EventFilter(filters.FilterSet):
