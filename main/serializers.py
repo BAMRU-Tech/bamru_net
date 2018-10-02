@@ -30,6 +30,12 @@ class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'member', 'ahc', 'ol')
 
 
+class BareParticipantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Participant
+        fields = ('id', 'period', 'member', 'ahc', 'ol')
+
+
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     participant_set = ParticipantSerializer(many=True, read_only=True)
     class Meta:
