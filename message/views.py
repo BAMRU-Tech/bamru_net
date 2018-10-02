@@ -258,6 +258,8 @@ def handle_outbound_email_tracking(sender, event, esp_name, **kwargs):
     email = OutboundEmail.objects.get(sid=event.message_id)
     email.status = event.event_type
     email.error_message = event.description
+    if email.error_message is None:
+        email.error_message = ''
     if event.event_type == 'delivered':
         email.delivered = True
     if event.event_type == 'opened':
