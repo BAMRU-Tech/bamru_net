@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'main',
     'message',
+    'main.templatetags.filters',
 ]
 
 MIDDLEWARE = [

@@ -1,76 +1,23 @@
-{% extends 'base_table.html' %}
+{% extends 'base_ftable.html' %}
 
-{% block js %}
-{{ block.super }}
-<script>
+{% block title %}Team Members{% endblock title %}
 
-const labelShowDetail = "Show Detail";
-const labelHideDetail = "Hide Detail";
-const labelShowFilter = "Filter";
-const labelHideFilter = "Hide Filter";
+{% block table_options %}
+order: [[ 0, "asc" ]],
+columnDefs: [
+    { responsivePriority: 1, targets: 0 },
+    { responsivePriority: 2, targets: 3 },
+    { responsivePriority: 3, targets: 4}
+],
+language: {
+      emptyTable: "No members selected"
+},
+{% endblock table_options %}
+
+{% block table_functions %}
 const apiUrlMemberRank = "/api/members/?member_rank=";
 
-
-var table;
-$(document).ready( function() {
-    // Initialize datatable with responsive behavior and datatable buttons
-    table = $("#dTbl").DataTable( {
-        dom: "Bfrtip",
-        responsive: true,
-        paging:   false,
-        info:     false,
-        order: [[ 0, "asc" ]],
-        columnDefs: [
-            { responsivePriority: 1, targets: 0 },
-            { responsivePriority: 2, targets: 3 },
-            { responsivePriority: 3, targets: 4}
-        ],
-        buttons: [
-            {
-                text: labelShowFilter,
-                action: function ( e, dt, node, config ) {
-                    if($("#show-filter").css("display") == "none") {
-                        $("#show-filter").css({"display":"block"})
-                        node[0].innerText = labelHideFilter;
-                    } else {
-                        $("#show-filter").css({"display":"none"})
-                        node[0].innerText = labelShowFilter;
-                    }
-                }
-            },
-            {
-                text: labelShowDetail,
-                action: function ( e, dt, node, config ) {
-                    if (node[0].innerText == labelShowDetail) {
-                        dt.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
-                        node[0].innerText = labelHideDetail;
-                    } else {
-                        dt.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
-                        node[0].innerText = labelShowDetail;
-                    }                          
-                }
-            },
-            {
-                text: 'More',
-                extend: 'collection',
-                autoClose: true,
-                buttons: [
-                    'copy', 'csv', 'excel', 'pdf', 'print', 'colvis'
-                ]
-            }
-        ]
-    });
-
-    /*FIXME*/ 
-    table.buttons().container()
-        .appendTo( '#example_wrapper .col-md-6:eq(0)' );
-
-    UpdateSubheaderBasedOnSettings(table);
-
-});
-
-function AddRows(table, values)
-{
+function AddRows(table, values) {
     // Add row data via AJAX based on rank
     urlData = apiUrlMemberRank+values[0];
     $.getJSON(urlData, null, function( json ) {
@@ -85,10 +32,10 @@ function AddRows(table, values)
                 json[i]["display_email"]
             ]
             
-            table.row.add(data).invalidate(); // invalidate needed to force rank and role display
+            table.row.add(data).invalidate() // invalidate needed to force rank and role display
         }
-        table.draw();  // not sure why this is required but it is needed
-    });
+        table.draw()  // not sure why this is required here but it is needed (tried to hoist it without success)
+    })
 }
 
 function RemoveRows(table, values)
@@ -100,21 +47,8 @@ function RemoveRows(table, values)
         } )
         .remove();
 
-    table.draw();
+    table.draw()
 }
-
-function UpdateSubheaderBasedOnSettings(table) {
-    // Extract currently selected ranks based on filter
-    var showRanks = [];
-    $("#filter-rank option").each(function() {
-        if (!this.selected) {
-            showRanks.push(this.value);
-        }
-    });
-
-    $("#subhdr")[0].innerText = "Members (" + showRanks.join(", ") + ")";
-
-};
 
 $("#filter-rank").multiSelect({
     // The sense of the multiSelect is inverted: show = deselect, hide = select
@@ -128,10 +62,22 @@ $("#filter-rank").multiSelect({
         AddRows(table,values);
         UpdateSubheaderBasedOnSettings(table);
     }
-});
+})
 
-</script>
-{% endblock %}
+function UpdateSubheaderBasedOnSettings(table) {
+    // Extract currently selected ranks based on filter
+    var showRanks = [];
+    $("#filter-rank option").each(function() {
+        if (!this.selected) {
+            showRanks.push(this.value);
+        }
+    })
+
+    $("#subhdr")[0].innerHTML = "Members (" + showRanks.join(", ") + ")";
+}
+
+{% endblock table_functions %}
+
 
 {% block content %}
 <main>
@@ -179,7 +125,9 @@ $("#filter-rank").multiSelect({
 {% endblock %}
 
 {% block subheader %}
-<div id="subhdr">
-    Members
-</div>
+  <strong>
+    <div id="subhdr">
+      Members
+    </div>
+  </strong>
 {% endblock %}
