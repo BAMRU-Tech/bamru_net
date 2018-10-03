@@ -65,3 +65,7 @@ class PeriodAdmin(admin.ModelAdmin):
     inlines = [
         ParticipantInline,
         ]
+
+@admin.register(DoAvailable)
+class DoAvailableAdmin(admin.ModelAdmin):
+    search_fields = ['member__last_name', 'member__first_name', 'member__username']

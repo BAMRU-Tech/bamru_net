@@ -1,4 +1,4 @@
-from .models import Cert, Event, Member, Participant, Period, Unavailable
+from .models import Cert, DoAvailable, Event, Member, Participant, Period, Unavailable
 from rest_framework import serializers
 from collections import defaultdict
 
@@ -59,6 +59,12 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
         model = Member
         read_only_fields = ('full_name', 'rank', 'rank_order')
         fields = ('id', 'url', 'certs') + read_only_fields
+
+
+class DoSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = DoAvailable
+        fields = ('id', 'year', 'quarter', 'week', 'available', 'assigned', 'member_id')
 
         
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):

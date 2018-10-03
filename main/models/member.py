@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from .base import BaseModel, BasePositionModel
 
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 
 class CustomUserManager(BaseUserManager):
     """Allows username to be case insensitive."""
@@ -303,7 +303,11 @@ class DoAvailable(BaseModel):  # was AvailDos
 
     @property
     def start(self):
-        return 'TODO'
+        return self.shift_start(self.year, self.quarter, self.week)
+
+    @property
+    def end(self):
+        return self.shift_end(self.year, self.quarter, self.week)
 
     @staticmethod
     def current_year():
@@ -313,17 +317,49 @@ class DoAvailable(BaseModel):  # was AvailDos
     def current_quarter():
         return int(timezone.now().month/4)+1
 
-    @property
-    def end(self):
-        return 'TODO'
-
-    @staticmethod
-    def num_weeks_in_quarter(year, quarter):
-        return 13  # TODO: Calculate for 53-week years
+    @classmethod
+    def num_weeks_in_quarter(cls, year, quarter):
+        if quarter == 4 and cls.quarter_start(year, 5) != cls.quarter_start(year+1, 1):
+            return 14
+        return 13
 
     @classmethod
     def weeks(cls, year, quarter):
         return range(1, 1 + cls.num_weeks_in_quarter(year, quarter))
+
+    @classmethod
+    def year_start(cls, year):
+        """Returns the first day of the first DO shift for the given year.
+
+        Note that the year of the returned date may not be the year passed in,
+        if the shift begins in December of the previous year!
+
+        - Prior to 2014, this was the first Tuesday in January.
+        - From 2014 to 2019, this is the Tuesday between Dec 25 and Dec 31.
+        - Beginning in 2020, this is the Tuesday between Dec 26 and Jan 1, so
+          that the first DO shift of the year always includes the day of Jan 1.
+        """
+        jan1 = date(year=year, month=1, day=1)
+        days_after_tuesday = (jan1.weekday() - 1) % 7
+        do_year_start = jan1 - timedelta(days=days_after_tuesday)
+        if year < 2014 and do_year_start.day != 1:
+            do_year_start += timedelta(days=7)
+        if 2014 <= year and year < 2020 and do_year_start.day == 1:
+            do_year_start -= timedelta(days=7)
+        return do_year_start
+
+    @classmethod
+    def quarter_start(cls, year, quarter):
+        return cls.year_start(year) + timedelta(days=7*13*(quarter-1))
+
+    @classmethod
+    def shift_start(cls, year, quarter, week):
+        date = cls.quarter_start(year, quarter) + timedelta(days=7 * (week - 1))
+        return datetime(year=date.year, month=date.month, day=date.day, hour=8)
+
+    @classmethod
+    def shift_end(cls, year, quarter, week):
+        return cls.shift_start(year, quarter, week) + timedelta(days=7) - timedelta(minutes=1)
 
 
 class Cert(BasePositionModel):
