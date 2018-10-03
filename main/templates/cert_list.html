@@ -25,7 +25,7 @@ language: {
 {% endblock table_options %}
 
 {% block table_functions %}
-const apiUrlMemberRank = "/api/certs/?member__member_rank=";
+const apiUrlMemberRank = "/api/member_certs/?member_rank=";
 function AddRows(table, values) {
     // Add row data via AJAX based on rank
     urlData = apiUrlMemberRank+values[0];
@@ -33,14 +33,17 @@ function AddRows(table, values) {
         
         for (var i=0; i<json.length; i++)
         {
+            row = json[i];
             data = [
-                "<a href=/member/"+json[i]["id"]+">"+json[i]["full_name"]+"</a>",
-                {"display": json[i]["rank"], "@data-sort": json[i]["rank_order"]},
-                {"display": json[i]["roles"], "@data-sort": json[i]["role_order"]},
-                json[i]["display_phone"],
-                json[i]["display_email"]
+                "<a href=/member/"+row["id"]+">"+row["full_name"]+"</a>",
+                {"display": row["rank"], "@data-sort": row["rank_order"]},
             ]
-            
+            certs = row["certs"];
+            for (var j=0; j<certs.length; j++)
+            {
+                data.push((certs[j] && certs[j].length) ? certs[j][0]["description"] : "");
+            }
+
             table.row.add(data).invalidate(); // invalidate needed to force rank and role display
         }
         table.draw();  // not sure why this is required here but it is needed (was later in execution path)
