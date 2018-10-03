@@ -1,7 +1,6 @@
 {% extends 'base_ftable.html' %}
 
-{% block title %}Team Certifications{% endblock title %}
-
+{% block title %}Member Add - {{ event.title }}{% endblock title %}{# FIXME #}
 
 {% block subheader %}
   <strong>
@@ -12,20 +11,33 @@
 {% endblock subheader %}
 
 {% block table_options %}
-order: [[ 0, "asc" ]],
+select: "os",
+order: [[ 2, "asc" ]],
 columnDefs: [
     { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 4, targets: 1},
+    { responsivePriority: 5, targets: 1 },
     { responsivePriority: 2, targets: 2 },
     { responsivePriority: 3, targets: 3},
+    { responsivePriority: 4, targets: 4}
 ],
 language: {
       emptyTable: "No members selected"
 },
 {% endblock table_options %}
 
+{% block table_buttons %}
+{
+    text: "Add",
+    action: function ( e, dt, node, config ) {
+        var count = dt.rows( { selected: true } ).count();
+        console.log("Row count= " + count);
+    }
+},
+{% endblock table_buttons %}
+
 {% block table_functions %}
-const apiUrlMemberRank = "/api/certs/?member__member_rank=";
+const apiUrlMemberRank = "/api/members/?member_rank=";
+
 function AddRows(table, values) {
     // Add row data via AJAX based on rank
     urlData = apiUrlMemberRank+values[0];
@@ -67,7 +79,7 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $("#subhdr")[0].innerHTML = "<a href=" + {% url 'member_index' %} + ">Members</a> (" +  showRanks.join(", ") + ") > Certifications";
+    $("#subhdr")[0].innerHTML = "Members (" + showRanks.join(", ") + ")";
 
 }
 
@@ -103,30 +115,26 @@ $("#filter-rank").multiSelect({
       <option value='GN' selected >Guest No-contact</option>
     </select>
   </div>
-  <table id="dTbl" class="display table-bordered wrap" style="width:100%">
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
-        <th>Name</th><th>Rank</th>
-        {% for h in headers %}<th>{{h}}</th>{% endfor %}
+        <th>Name</th><th>Rank</th><th>Role</th><th>Phone</th><th>eMail</th>
       </tr>
     </thead>
 
     <tbody>
       {% for member in member_list %}
+      {% if member.isActive %} {# FIXME: Needs a filter #}
       <tr>
         <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
-        {% for c in member.certs %}
-        <td bgcolor="{{c.cert.color | default:"white" }}">
-          {% if c.count %}
-          {{ c.cert }}
-          {% if c.count > 1 %}*{% endif %}
-          {% endif %}
-        </td>
-        {% endfor %}
+        <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td> <!--  -->
+        <td> {{ member.display_phone }}</td>
+        <td> {{ member.display_email }}</td>
       </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>
 </main>
-{% endblock content %}
+{% endblock content%}

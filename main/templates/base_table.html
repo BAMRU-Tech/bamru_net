@@ -2,38 +2,30 @@
 
 {% block css %}
     {{ block.super }}
-    <link href="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.css" rel="stylesheet" type="text/css"/>
-    <link href="https://cdn.datatables.net/buttons/1.5.2/css/buttons.dataTables.min.css" rel="stylesheet" type="text/css"/>
 
+    {# DataTables basics and "more" features #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/ju-1.12.1/jszip-2.5.0/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/b-flash-1.5.2/b-html5-1.5.2/b-print-1.5.2/r-2.2.2/sl-1.2.6/datatables.min.css"/>
+
+    {# Multi-select used with filter #}
     <link href="/static/css/multi-select.css" media="screen" rel="stylesheet" type="text/css">
 
-{% comment %}
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.1/css/bootstrap.css rel="stylesheet" type="text/css"">
-    <link href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css rel="stylesheet" type="text/css"">
-    <link href="https://cdn.datatables.net/buttons/1.5.2/css/buttons.bootstrap4.min.css rel="stylesheet" type="text/css"">
-{% endcomment %}
-
-{% endblock %}
+{% endblock css %}
 
 {% block js %}
-    {{ block.super }}
-    <script src="https://code.jquery.com/jquery-3.3.1.js"></script> 
-    <script src="https://cdn.datatables.net/v/dt/dt-1.10.16/r-2.2.1/datatables.min.js" type="text/javascript"></script>
+{{ block.super }}
 
-    <script src="https://cdn.datatables.net/buttons/1.5.2/js/dataTables.buttons.min.js" type="text/javascript"></script>
-    <script src="https://cdn.datatables.net/buttons/1.4.1/js/buttons.flash.min.js" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js" type="text/javascript"></script>
-    <script src="https://cdn.datatables.net/buttons/1.4.1/js/buttons.html5.min.js" type="text/javascript"></script>
-    <script src="https://cdn.datatables.net/buttons/1.4.1/js/buttons.print.min.js" type="text/javascript"></script>
-    <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.colVis.min.js" type="text/javascript"></script>
+{# DataTables basics and "more" features #}
+    <script src="https://cdn.datatables.net/v/ju-1.12.1/jszip-2.5.0/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/b-flash-1.5.2/b-html5-1.5.2/b-print-1.5.2/r-2.2.2/sl-1.2.6/datatables.min.js"></script>
 
+{# FIXME: remove if we dont want to use this feature 700K load #}
+ {# <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script> #}
+ {# <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script> #}
+
+{# DataTables simple editor #}
+{# FIXME: Doesn't work with BS4 #}
+    <script src="/static/js/dataTables.altEditor.free.js"></script>
+
+{# Multi-select used with filter #}
     <script src="/static/js/jquery.multi-select.js" type="text/javascript"></script>
 
-{% comment %}
-    <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap4.min.js" type="text/javascript"></script>
-    <script src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.bootstrap4.min.js" type="text/javascript"></script>
-{% endcomment %}
-
-{% endblock %}
+{% endblock js %}

@@ -24,13 +24,6 @@ class CertSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'url', 'member_id', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
 
 
-class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
-    member = MemberSerializer()
-    class Meta:
-        model = Participant
-        fields = ('id', 'member', 'ahc', 'ol')
-
-
 class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
     certs = serializers.SerializerMethodField()
     def get_certs(self, member):
@@ -43,6 +36,19 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
         model = Member
         read_only_fields = ('full_name', 'rank', 'rank_order')
         fields = ('id', 'url', 'certs') + read_only_fields
+
+        
+class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
+    member = MemberSerializer()
+    class Meta:
+        model = Participant
+        fields = ('id', 'member', 'ahc', 'ol')
+
+        
+class BareParticipantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Participant
+        fields = ('id', 'period', 'member', 'ahc', 'ol')
 
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):

@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from main.models import Event, Participant, Period
+from main.models import Member, Event, Participant, Period
 
 from django.forms.widgets import Select, Widget, SelectDateWidget
 
@@ -74,7 +74,7 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
-    fields = ['type', 'title', 'description',
+    fields = ['title', 'description', 'type',
               'location', 'leaders',
               'start', 'finish',
               'all_day', 'published',
@@ -92,19 +92,26 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
     model = Event
-    fields = ['type', 'title', 'description',
+    fields = ['title', 'description', 'type',
               'location', 'leaders',
               'start', 'finish',
               'all_day', 'published',
               ]
 
-    template_name = 'base_form.html'
+    template_name = 'event_create.html'
 
     def get_form(self):
         '''add date picker in forms'''
         form = super(EventCreateView, self).get_form()
         form.fields['start'].widget = SelectDateWidget()
         form.fields['finish'].widget = SelectDateWidget()
+
+        # Mark required fields
+        form.fields['title'].label = "Title*"
+        form.fields['type'].label = "Type*"
+        form.fields['location'].label = "Location*"
+        form.fields['start'].label = "Start*"
+
         return form
 
 
@@ -131,10 +138,15 @@ class EventPeriodDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
         return event.get_absolute_url()
 
 
-class ParticipantCreateView(LoginRequiredMixin, generic.edit.CreateView):    
+class ParticipantCreateView(LoginRequiredMixin, generic.ListView):    
     model = Participant
     fields = ['member', 'ahc', 'ol', 'period']
-    template_name = 'base_form.html'
+    context_object_name = 'member_list'
+    template_name = 'member_add.html'
+
+    def get_queryset(self):
+        """Return the member list."""
+        return Member.objects.order_by('id')
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()

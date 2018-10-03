@@ -8,33 +8,31 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <!-- Bootstrap CSS -->
-    {% bootstrap_css %}
-
-    <link rel="stylesheet" href="/static/css/style.css" />
-
-    <link href="https://use.fontawesome.com/5fb07bfd2c.css"
-          media="all" rel="stylesheet">
-
-    {% block css %}{% endblock %}
-
-    <title>{% block title %}BAMRU.net{% endblock %}</title>
+    {% block css %}
+      <link rel="stylesheet" href="/static/css/style.css" />
+      <link href='/static/favicon_p1.ico' rel='shortcut icon' type='image/vnd.microsoft.icon'/>
+      <link href="https://use.fontawesome.com/5fb07bfd2c.css"
+            media="all" rel="stylesheet">
+      {% bootstrap_css %}
+    {% endblock css %}
+    <title>{% block title %}Create Event{% endblock title %}</title>
   </head>
 
 
-  <body>
+  <body class="container-fluid">
     {% include 'navbar.html' %}
-    <nav class="navbar  navbar-expand-sm text-primary subhead">
-      {% block subheader %}{% endblock %}{# still needs more work #}
+    <nav class="navbar navbar-expand-sm text-primary subhead">
+      {% block subheader %}{% endblock subheader %}
     </nav>
 
     {% bootstrap_messages %}
 
-    {% block content %}{% endblock %}
+    {% block content %}{% endblock content %}
 
     {% block js %}
-      {% bootstrap_javascript jquery="slim" %}
       <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
-    {% endblock %}
+      <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+      {% bootstrap_javascript %}
+    {% endblock js%}
   </body>
 </html>

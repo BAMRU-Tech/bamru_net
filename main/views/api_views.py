@@ -1,8 +1,19 @@
 from main.models import *
 from main.serializers import *
 
-from rest_framework import generics, permissions, viewsets
+from rest_framework import generics, mixins, parsers, permissions, viewsets
+from rest_framework.decorators import action
 from django_filters import rest_framework as filters
+
+
+# From https://stackoverflow.com/a/40253309
+class CreateListModelMixin(object):
+    def get_serializer(self, *args, **kwargs):
+        """ if an array is passed, set serializer to many """
+        if isinstance(kwargs.get('data', {}), list):
+            kwargs['many'] = True
+        return super(CreateListModelMixin, self).get_serializer(*args, **kwargs)
+
 
 class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.all()
@@ -59,3 +70,15 @@ class EventViewSet(viewsets.ModelViewSet):
         if getattr(self, 'action', None) == 'list':
             return EventListSerializer
         return EventDetailSerializer
+
+
+class PeriodViewSet(viewsets.ModelViewSet):
+    queryset = Period.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = PeriodSerializer
+
+
+class ParticipantViewSet(CreateListModelMixin, viewsets.ModelViewSet):
+    queryset = Participant.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = BareParticipantSerializer

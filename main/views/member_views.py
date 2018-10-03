@@ -273,8 +273,8 @@ class CertListView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class UnavailableListView(LoginRequiredMixin, generic.ListView):
-    template_name = 'unavailable_list.html'
+class AvailableListView(LoginRequiredMixin, generic.ListView):
+    template_name = 'available_list.html'
     context_object_name = 'member_list'
 
     # TODO split this into a Mixin shared with DoAbstractView
@@ -331,8 +331,8 @@ class UnavailableListView(LoginRequiredMixin, generic.ListView):
                               for d in range(self.days)]
         return context
 
-class UnavailableEditView(LoginRequiredMixin, generic.base.TemplateView):
-    template_name = 'unavailable_form.html'
+class AvailableEditView(LoginRequiredMixin, generic.base.TemplateView):
+    template_name = 'available_form.html'
 
     def post(self, *args, **kwargs):
         return self.get(*args, **kwargs)

@@ -1,6 +1,16 @@
 {% extends 'base_generic.html' %}
 {% load bootstrap4 %}
 
+{% block title %}Create Event{% endblock title %}
+
+{% block subheader %}
+  {{ block.super }}
+  <strong>
+    <a href='{% url "event_all" %}'> Events</a> > Create
+  </strong>
+{% endblock subheader %}
+
+
 {% block content %}
 <main role="main" class="container">
   <div id="content">

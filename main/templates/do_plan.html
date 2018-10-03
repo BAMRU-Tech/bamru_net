@@ -1,20 +1,34 @@
 {% extends 'base_do.html' %}
 
-{% block do_title %}
-DO Availability Planning
-{% endblock %}
+{% block title %}DO Planning{% endblock title %}
+{% block do_title %}DO Availability Planning{% endblock %}
 
 {% block js %}
   {{ block.super }}
   <script>
     $(document).ready(function() {
-      $('#dTbl').DataTable( {
-      "responsive": true,
-      "paging":   false,
-       "info":     false,
-      "order": [[ 0, "asc" ]],
-      columnDefs: []
-      });
+        $('#dTbl').DataTable( {
+            dom: "Bfrtip",
+            responsive: true,
+            paging:   false,
+            info:     false,
+            order: [[ 0, "asc" ]],
+            columnDefs: [],
+            buttons: [
+                {
+                    text: '<i class="fa fa-caret-square-o-left"></i> Prev',
+                    action: function ( e, dt, node, config ) {
+                        location.href="{{ request.path }}{{ query_prev }}";
+                    }
+                },
+                {
+                    text: '<i class="fa fa-caret-square-o-right"></i> Next',
+                    action: function ( e, dt, node, config ) {
+                        location.href="{{ request.path }}{{ query_next }}";
+                    },
+                }
+            ]
+        });
     });
   </script>
 {% endblock %}

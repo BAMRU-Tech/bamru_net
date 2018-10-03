@@ -1,7 +1,7 @@
 {% extends 'base_ftable.html' %}
+{% load filters %}
 
-{% block title %}Team Certifications{% endblock title %}
-
+{% block title %}Team Availability{% endblock title %}
 
 {% block subheader %}
   <strong>
@@ -14,18 +14,17 @@
 {% block table_options %}
 order: [[ 0, "asc" ]],
 columnDefs: [
-    { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 4, targets: 1},
-    { responsivePriority: 2, targets: 2 },
-    { responsivePriority: 3, targets: 3},
+    { responsivepriority: 8, targets: 1 },
 ],
 language: {
       emptyTable: "No members selected"
 },
 {% endblock table_options %}
 
+
 {% block table_functions %}
-const apiUrlMemberRank = "/api/certs/?member__member_rank=";
+const apiUrlMemberRank = "/api/members/?member_rank=";
+
 function AddRows(table, values) {
     // Add row data via AJAX based on rank
     urlData = apiUrlMemberRank+values[0];
@@ -44,7 +43,7 @@ function AddRows(table, values) {
             table.row.add(data).invalidate(); // invalidate needed to force rank and role display
         }
         table.draw();  // not sure why this is required here but it is needed (was later in execution path)
-    });
+    })
 }
 
 function RemoveRows(table, values) {
@@ -65,10 +64,9 @@ function UpdateSubheaderBasedOnSettings(table) {
         if (!this.selected) {
             showRanks.push(this.value);
         }
-    });
+    })
 
-    $("#subhdr")[0].innerHTML = "<a href=" + {% url 'member_index' %} + ">Members</a> (" +  showRanks.join(", ") + ") > Certifications";
-
+    $("#subhdr")[0].innerHTML = "<a href=" + {% url 'member_index' %} + ">Members</a> (" +  showRanks.join(", ") + ") > Availability";
 }
 
 $("#filter-rank").multiSelect({
@@ -103,28 +101,39 @@ $("#filter-rank").multiSelect({
       <option value='GN' selected >Guest No-contact</option>
     </select>
   </div>
-  <table id="dTbl" class="display table-bordered wrap" style="width:100%">
+  <div id="tooltip"></div>
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
         <th>Name</th><th>Rank</th>
         {% for h in headers %}<th>{{h}}</th>{% endfor %}
+        <th>Return</th>
       </tr>
     </thead>
 
     <tbody>
       {% for member in member_list %}
+      {% if member.isActive %} {# FIXME: Needs a filter #}
       <tr>
         <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
-        {% for c in member.certs %}
-        <td bgcolor="{{c.cert.color | default:"white" }}">
-          {% if c.count %}
-          {{ c.cert }}
-          {% if c.count > 1 %}*{% endif %}
-          {% endif %}
-        </td>
+        {% for day in member.days %}
+        {% if day.0 %}
+        {% ifchanged %}
+        {% for i in day.1|rangearray %}
+          <td bgcolor="#00FF00"></td>
         {% endfor %}
+{#        <td bgcolor="#00FF00" colspan={{day.1}}>{{day.0}}</td>#}
+        {% endifchanged %}
+        {% else %}
+        <td></td>
+        {% endif %}
+        {% endfor %}
+        <td{% if member.end_date %} bgcolor="#00FF00"{% endif %}>
+          {{ member.end_date }}
+        </td>
       </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>

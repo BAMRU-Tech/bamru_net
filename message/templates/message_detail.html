@@ -1,5 +1,7 @@
 {% extends 'base_generic.html' %}
 
+{% block title %}Message Detail - {{ message.period }}{% endblock title %}
+
 {% block content %}
 Message:
 <p>from {{ message.author }}</p>
@@ -37,4 +39,4 @@ Message:
 {% endfor %}
 </table>
 
-{% endblock %}
+{% endblock content%}
