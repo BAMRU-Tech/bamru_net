@@ -9,7 +9,7 @@ source {{ venv_path }}/bin/activate
 
 {% if update_database %}
   # clean migration
-  rm */migrations/00*
+  rm -f */migrations/00*
   ./manage.py makemigrations
   ./manage.py migrate
 
