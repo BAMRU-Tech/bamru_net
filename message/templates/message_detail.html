@@ -22,14 +22,12 @@ Message:
   <td>{{ d.member }}</td>
   <td>
     {% for m in d.outboundsms_set.all %}
-      {{ m.display }}
-      {% if not forloop.last %}<br/>{% endif %}
+      {{ m.display|linebreaks }}
     {% endfor %}
   </td>
   <td>
     {% for m in d.outboundemail_set.all %}
-      {{ m.display }}
-      {% if not forloop.last %}<br/>{% endif %}
+      {{ m.display|linebreaks }}
     {% endfor %}
   </td>
   <td>{{ d.rsvp_display }}</td>
