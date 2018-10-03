@@ -1,5 +1,7 @@
 from .models import Cert, Event, Member, Participant, Period, Unavailable
 from rest_framework import serializers
+from collections import defaultdict
+
 
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -16,20 +18,33 @@ class UnavailableSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class CertSerializer(serializers.HyperlinkedModelSerializer):
-    member = MemberSerializer()
     class Meta:
         model = Cert
         read_only_fields = ('is_expired',)
-        fields = ('id', 'url', 'member', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
+        fields = ('id', 'url', 'member_id', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
 
 
+class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
+    certs = serializers.SerializerMethodField()
+    def get_certs(self, member):
+        ordered_certs = member.cert_set.all().order_by('-expiration', '-id')
+        grouped_certs = defaultdict(list)
+        for c in ordered_certs:
+            grouped_certs[c.type].append(CertSerializer(c, context=self.context).data)
+        return [grouped_certs[t[0]] for t in Cert.TYPES]
+    class Meta:
+        model = Member
+        read_only_fields = ('full_name', 'rank', 'rank_order')
+        fields = ('id', 'url', 'certs') + read_only_fields
+
+        
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
     member = MemberSerializer()
     class Meta:
         model = Participant
         fields = ('id', 'member', 'ahc', 'ol')
 
-
+        
 class BareParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
