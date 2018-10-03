@@ -65,6 +65,7 @@ $(document).ready(function() {
 
     UpdateSubheaderBasedOnSettings(table);
 
+    {% block ready_functions %}{% endblock %}
 });
 
 {% block table_functions %}{% endblock %}

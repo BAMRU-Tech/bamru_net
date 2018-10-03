@@ -1,11 +1,13 @@
 {% extends 'base_ftable.html' %}
 
-{% block title %}Member Add - {{ event.title }}{% endblock title %}{# FIXME #}
+{% block title %}
+      Member Add
+{% endblock title %}
 
 {% block subheader %}
   <strong>
     <div id="subhdr">
-      Members
+      Member Add
     </div>
   </strong>
 {% endblock subheader %}
@@ -20,6 +22,13 @@ columnDefs: [
     { responsivePriority: 3, targets: 3},
     { responsivePriority: 4, targets: 4}
 ],
+columns: [
+    { "data": "Name" },
+    { "data": "Rank" },
+    { "data": "Role" },
+    { "data": "Phone" },
+    { "data": "eMail" }
+],
 language: {
       emptyTable: "No members selected"
 },
@@ -29,14 +38,52 @@ language: {
 {
     text: "Add",
     action: function ( e, dt, node, config ) {
-        var count = dt.rows( { selected: true } ).count();
-        console.log("Row count= " + count);
+        var csrftoken = getCookie('csrftoken');
+        var members = dt.rows( { selected: true } ).data().pluck( 'Name' ).toArray();
+        var data = [];
+        var regex = /\d+(?:\.\d+)?/;
+        //FIXME: Consider adding a dialog for zero selection
+        for (var i = 0; i < members.length; i++) {
+            var re = regex.exec(members[i]);
+            var member_id = re[0];
+            data.push({ 'period': period_id, 'member':member_id });
+        }
+        data = JSON.stringify(data);
+        console.log("Data= " + data);
+        console.log('csrfmiddlewaretoken: ' + csrftoken);
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+        $.ajax({
+            'type': 'POST',
+            'contentType': 'application/json',
+            'url': '/api/participants/',
+            'data': data,
+            success: function (response) {
+                console.log('Period add ' + response.length + ' members');
+                //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
+                location.href='/event/' + event_id + '#OP' + period_num;
+            },
+            error: function (xhr) {
+                console.log('Period add failed');
+                console.log(xhr);
+            }
+        })
     }
 },
 {{ block.super }}
 {% endblock table_buttons %}
 
 {% block table_functions %}
+const url = new URL(window.location.href);
+const event_name = url.searchParams.get("et");
+const event_id = url.searchParams.get("eid");
+const period_num = url.searchParams.get("pn");
+const period_id = url.searchParams.get("pid");
 const apiUrlMemberRank = "/api/members/?member_rank=";
 
 function AddRows(table, values) {
@@ -80,7 +127,8 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $("#subhdr")[0].innerHTML = "Members (" + showRanks.join(", ") + ")";
+    $("#subhdr")[0].innerHTML = ("Add " + event_name + " > Members (" + showRanks.join(", ") + ")"); //FIXME: Add link to event
+    document.title = "Members Add - " + event_name;
 
 }
 
