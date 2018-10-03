@@ -80,4 +80,6 @@ urlpatterns = [
     path('reports/roster/BAMRU-roster.csv', views.ReportRosterCsvView.as_view()),
     path('reports/roster/BAMRU-roster.vcf', views.ReportRosterVcfView.as_view()),
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
+
+    path('home/wiki', views.LegacyWikiSsoView.as_view()),
 ]

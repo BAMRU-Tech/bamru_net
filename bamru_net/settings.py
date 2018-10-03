@@ -185,6 +185,12 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 # Add a five-minute timeout to all Celery tasks.
 CELERYD_TASK_SOFT_TIME_LIMIT = 300
 
+WIKI_BASE_URL = os.environ['WIKI_BASE_URL']
+WIKI_SSH_DEST = os.environ['WIKI_SSH_DEST']
+WIKI_SSH_KEY = os.environ['WIKI_SSH_KEY']
+WIKI_AUTH_DIR = os.environ['WIKI_AUTH_DIR']
+
+
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']
 LOGGING_CONFIG = None
