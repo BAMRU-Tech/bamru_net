@@ -1,5 +1,13 @@
 {% extends 'base_generic.html' %}
-{% load bootstrap4 %}
+
+{% block subheader %}
+<div id="subhdr">
+<a href="{% url 'member_index' %}"> Members </a>
+&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+&gt; <a href="{% url 'member_certs' member.id %}">Certs</a>
+&gt; Delete cert
+</div>
+{% endblock subheader %}
 
 {% block content %}
 <main role="main" class="container">
@@ -10,14 +18,5 @@
       <input type="submit" value="Delete" />
     </form>
   </div>
-</main><!-- /.container -->
-{% endblock %}
-
-{% block subheader %}
-<div id="subhdr">
-<a href="{% url 'member_index' %}"> Members </a>
-&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
-&gt; <a href="{% url 'member_certs' member.id %}">Certs</a>
-&gt; Delete cert
-</div>
-{% endblock %}
+</main>
+{% endblock content %}
