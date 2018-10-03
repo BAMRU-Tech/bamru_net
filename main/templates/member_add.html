@@ -33,6 +33,7 @@ language: {
         console.log("Row count= " + count);
     }
 },
+{{ block.super }}
 {% endblock table_buttons %}
 
 {% block table_functions %}
@@ -46,7 +47,7 @@ function AddRows(table, values) {
         for (var i=0; i<json.length; i++)
         {
             data = [
-                "<a href="+json[i]["url"]+">"+json[i]["full_name"]+"</a>",
+                "<a href=/member/"+json[i]["id"]+">"+json[i]["full_name"]+"</a>",
                 {"display": json[i]["rank"], "@data-sort": json[i]["rank_order"]},
                 {"display": json[i]["roles"], "@data-sort": json[i]["role_order"]},
                 json[i]["display_phone"],

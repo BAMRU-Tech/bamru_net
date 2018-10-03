@@ -277,7 +277,7 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
     template_name = 'available_list.html'
     context_object_name = 'member_list'
 
-    # TODO split this into a Mixin shared with DoAbstractView
+    # TODO split this into a Mixin shared with DoAbstractView and API
     def get_date_param(self, name):
         today = timezone.now().today().date()
         val = self.request.GET.get(name, '')

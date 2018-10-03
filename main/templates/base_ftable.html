@@ -28,7 +28,7 @@ $(document).ready(function() {
         "info":     false,
         {% block table_options %}{% endblock %}
         buttons: [
-            {% block table_buttons %}{% endblock %}
+            {% block table_buttons %}
             {
                 text: labelShowFilter,
                 action: function ( e, dt, node, config ) {
@@ -59,6 +59,7 @@ $(document).ready(function() {
                 autoClose: true,
                 buttons: [ "copy", "csv", "excel", "print", "colvis"]
             }
+            {% endblock table_buttons %}
         ]
     })
 
