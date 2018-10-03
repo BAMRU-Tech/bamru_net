@@ -140,7 +140,7 @@ class EventPeriodDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
 
 class ParticipantCreateView(LoginRequiredMixin, generic.ListView):    
     model = Participant
-    fields = ['member', 'ahc', 'ol', 'period']
+    fields = ['member', 'ahc', 'ol', 'period'] #FIXME: needed?
     context_object_name = 'member_list'
     template_name = 'member_add.html'
 

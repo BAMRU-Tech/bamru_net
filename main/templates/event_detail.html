@@ -21,9 +21,6 @@
           { responsivePriority: 2, targets: 1 },
           { responsivePriority: 3, targets: [2, 3]}
         ],
-        "createdRow": function ( row, data, index ) {
-            console.log(data[0]);
-        },
         buttons: [
             {
                 text: '<i class="fa fa-bullhorn"></i> Page',
@@ -65,7 +62,7 @@
             {
                 text: '<i class="fa fa-address-book"></i> Add',
                 action: function ( e, dt, node, config ) {
-                    location.href='{% url "event_participant_add" period.id %}';
+                    location.href='{% url "event_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
                 }
             },
             {
@@ -109,7 +106,7 @@
   <div class="collapse navbar-collapse" id="eventMenu">
     <ul class="navbar-nav ml-auto">
       <li class="nav-item">
-        <a  class="nav-link" href='{% url "event_update" event.id %}'>
+        <a class="nav-link" href='{% url "event_update" event.id %}'>
           <i class="fa fa-pencil"></i>
           Edit
         </a>
@@ -175,7 +172,7 @@
   </div>
 
   <nav class="navbar navbar-expand-md navbar-light bg-light">
-    <button class="btn navbar-btn" onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
+    <button class="btn navbar-btn" onclick="var n={{event.period_set.all.count}}+2; location.href='{% url "event_period_add" event.id %}#OP'+n">
       <i class="fa fa-area-chart"></i> OP Next
     </button>
   </nav>

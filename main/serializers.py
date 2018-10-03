@@ -17,6 +17,29 @@ class UnavailableSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'url', 'member', 'start_on', 'end_on', 'comment', )
 
 
+class BareUnavailableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Unavailable
+        fields = ('id', 'member', 'start_on', 'end_on', 'comment', )
+
+
+class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
+    def __init__(self, *args, **kwargs):
+        self._unavailable_filter_kwargs = kwargs.pop('unavailable_filter_kwargs', {})
+        super().__init__(*args, **kwargs)
+
+    busy = serializers.SerializerMethodField()
+    def get_busy(self, member):
+        busy = member.unavailable_set.all()
+        busy = busy.filter(**self._unavailable_filter_kwargs)
+        return BareUnavailableSerializer(busy, context=self.context, many=True).data
+
+    class Meta:
+        model = Member
+        read_only_fields = ('full_name', 'rank', 'rank_order')
+        fields = ('id', 'url', 'busy') + read_only_fields
+
+
 class CertSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Cert

@@ -1,6 +1,7 @@
 from main.models import *
 from main.serializers import *
 
+from django import forms
 from rest_framework import generics, mixins, parsers, permissions, viewsets
 from rest_framework.decorators import action
 from django_filters import rest_framework as filters
@@ -33,9 +34,27 @@ class UnavailableFilter(filters.FilterSet):
 class UnavailableViewSet(viewsets.ModelViewSet):
     queryset = Unavailable.objects.all()
     serializer_class = UnavailableSerializer
-    permission_classes = (permissions.IsAuthenticated)
+    permission_classes = (permissions.IsAuthenticated,)
     filterset_class = UnavailableFilter
-    search_fields = ('member__username',  )
+    search_fields = ('member__username', )
+
+
+class MemberUnavailableViewSet(viewsets.ModelViewSet):
+    queryset = Member.members.prefetch_related('unavailable_set')
+    serializer_class = MemberUnavailableSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_fields = ('member_rank', )
+    search_fields = ('username',  )
+
+    def get_serializer(self, *args, **kwargs):
+        filter_kwargs = {}
+        if self.request.query_params.get('date_range_start'):
+            filter_kwargs['end_on__gte'] = forms.DateField().clean(
+                    self.request.query_params['date_range_start'])
+        if self.request.query_params.get('date_range_end'):
+            filter_kwargs['start_on__lte'] = forms.DateField().clean(
+                    self.request.query_params['date_range_end'])
+        return super().get_serializer(*args, unavailable_filter_kwargs=filter_kwargs, **kwargs)
 
 
 class CertViewSet(viewsets.ModelViewSet):
