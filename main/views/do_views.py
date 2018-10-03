@@ -63,12 +63,20 @@ class DoPlanView(DoAbstractView, generic.base.TemplateView):
             year=self.year, quarter=self.quarter
         ).select_related('member')
 
-        def default_list():
-            return [None for x in context['weeks']]
-        members = defaultdict(default_list)
+        def default_value():
+            return {
+                'assigned': False,
+                'weeks': [None for x in context['weeks']],
+            }
+        week_info = [{'assigned': False, 'week': w} for w in context['weeks']]
+        members = defaultdict(default_value)
         for x in qs:
-            members[x.member][x.week-1] = x
+            members[x.member]['weeks'][x.week-1] = x
+            if x.assigned:
+                members[x.member]['assigned'] = True
+                week_info[x.week-1]['assigned'] = True
         context['members'] = members.items()
+        context['week_info'] = week_info
         return context
 
 

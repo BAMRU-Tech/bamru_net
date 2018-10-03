@@ -33,6 +33,21 @@
   </script>
 {% endblock %}
 
+{% block css %}
+{{ block.super }}
+<style type="text/css">
+.assigned {
+    background-color: lightgreen;
+}
+.unassigned-member {
+    background-color: lightyellow !important;
+}
+.unassigned-week {
+    background-color: pink;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <main>
   {% if members %}
@@ -40,8 +55,8 @@
     <thead>
       <tr>
         <th>Name</th>
-        {% for w in weeks %}
-        <th>{{ w }}</th>
+        {% for w in week_info %}
+        <th class="{% if not w.assigned %}unassigned-week{% endif %}">{{ w.week }}</th>
         {% endfor %}
       </tr>
     </thead>
@@ -49,12 +64,12 @@
     <tbody>
       {% for m, x in members %}
       <tr>
-        <td>{{ m }}</td>
-        {% for w in x %}
+          <td class="{% if not x.assigned %}unassigned-member{% endif %}">{{ m }}</td>
+        {% for w in x.weeks %}
         {% if w %}
-        <td title="{{ w.comment }}">
-          {% if w.assigned %}X{% endif %}
+        <td title="{{ w.comment }}" class="{% if w.assigned %}assigned{% endif %}">
           {% if w.available %}A{% else %}-{% endif %}
+          {% if w.assigned %}X{% endif %}
           {% if w.comment %}*{% endif %}
         </td>
         {% else %}
