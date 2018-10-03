@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
-from django.views import View
+from django.views import generic, View
 
 from main.models import Member
 
@@ -15,6 +15,10 @@ import vobject
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+class ReportIndexView(generic.base.TemplateView):
+    template_name = 'reports/index.html'
 
 
 class BaseReportView(View):

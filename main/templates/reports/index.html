@@ -1,0 +1,22 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<main role="main" class="container">
+<h4>Rosters</h4>
+<ul>
+  <li><a href="/reports/roster/BAMRU-roster.csv">CSV Roster</a> - formatted for SMSO</li>
+  <li><a href="/reports/roster/BAMRU-roster.vcf">Contacts (VCF)</a> - For importing into Gmail/Outlook</li>
+  <li><a href="/reports/roster/BAMRU-full.html">BAMRU Full (printable HTML)</a> - Roster with full contact info</li>
+  <li><a href="/reports/roster/BAMRU-field.html">BAMRU Field (printable HTML)</a> - One page roster with basic contact info</li>
+  <li><a href="/reports/roster/BAMRU-wallet.html">BAMRU Wallet (printable HTML)</a> - Credit-card sized roster for your wallet</li>
+  <li><a href="/reports/roster/BAMRU-names.html">BAMRU Names (printable HTML)</a> - List of names for ProDeal reporting</li>
+</ul>
+
+<h4>Activity Reports</h4>
+Coming soon.
+</main>
+{% endblock %}
+
+{% block subheader %}
+Reports
+{% endblock %}

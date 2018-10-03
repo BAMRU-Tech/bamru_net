@@ -22,16 +22,12 @@ Message:
   <td>{{ d.member }}</td>
   <td>
     {% for m in d.outboundsms_set.all %}
-      {{ m.destination }}:
-      {{ m.status }}
-      {{ m.error_message|default_if_none:"" }}
+      {{ m.display|linebreaks }}
     {% endfor %}
   </td>
   <td>
     {% for m in d.outboundemail_set.all %}
-      {{ m.email.address }}:
-      {{ m.status }}
-      {{ m.error_message|default_if_none:"" }}
+      {{ m.display|linebreaks }}
     {% endfor %}
   </td>
   <td>{{ d.rsvp_display }}</td>

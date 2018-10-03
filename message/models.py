@@ -190,13 +190,38 @@ class OutboundMessage(BaseModel):
 
     objects = models.Manager() # The default manager
     unsent = OutboundMessageManager()
+
     class Meta(BaseModel.Meta):
         abstract = True
+
+    @property
+    def display(self):
+        return '{} : {}'.format(self.destination_display, self.status_display)
+
+    @property
+    def status_display(self):
+        if self.error_message:
+            return '{}: {}'.format(self.status, self.error_message)
+        if self.status:
+            return self.status
+        return 'Created'
 
 
 class OutboundSms(OutboundMessage):
     phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
     error_code = models.IntegerField(blank=True, null=True)
+
+    @property
+    def e164(self):
+        return phonenumbers.format_number(
+            phonenumbers.parse(self.phone.number, 'US'),
+            phonenumbers.PhoneNumberFormat.E164)
+
+    @property
+    def destination_display(self):
+        if self.destination:
+            return self.destination
+        return self.e164
 
     def send(self):
         if self.sending_started:
@@ -204,9 +229,7 @@ class OutboundSms(OutboundMessage):
             return
         self.sending_started = True
         self.save()
-        e164 = phonenumbers.format_number(
-            phonenumbers.parse(self.phone.number, 'US'),
-            phonenumbers.PhoneNumberFormat.E164)
+        e164 = self.e164
         self.destination = e164
         logger.info('Sending text to {}: {}'.format(self.destination,
                                                     self.distribution.text))
@@ -269,6 +292,12 @@ class InboundSms(BaseModel):
 class OutboundEmail(OutboundMessage):
     email = models.ForeignKey(Email, on_delete=models.CASCADE)
     opened = models.BooleanField(default=False)
+
+    @property
+    def destination_display(self):
+        if self.destination:
+            return self.destination
+        return self.email.address
 
     def send(self):
         if self.sending_started:
