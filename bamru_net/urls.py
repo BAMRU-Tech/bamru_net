@@ -30,11 +30,8 @@ router.register(r'members', views.MemberViewSet)
 router.register(r'member_certs', views.MemberCertViewSet, base_name='member')
 router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.UnavailableViewSet)
-<<<<<<< features/do
 router.register(r'do', views.DoViewSet)
-=======
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
->>>>>>> master
 
 urlpatterns = [
     path('', views.IndexView.as_view()),
