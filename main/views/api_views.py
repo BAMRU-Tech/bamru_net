@@ -82,3 +82,11 @@ class ParticipantViewSet(CreateListModelMixin, viewsets.ModelViewSet):
     queryset = Participant.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = BareParticipantSerializer
+
+
+class DoViewSet(viewsets.ModelViewSet):
+    queryset = DoAvailable.objects.all()
+    serializer_class = DoSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_fields = ('year', 'quarter', 'week', 'available', 'assigned')
+    search_fields = ('member__username',)
