@@ -1,10 +1,11 @@
 from main.models import Member
 
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic.base import TemplateView
 from django_datatables_view.base_datatable_view import BaseDatatableView
 
 
-class IndexView(TemplateView):
+class IndexView(LoginRequiredMixin, TemplateView):
     template_name = 'index.html'
 
 
