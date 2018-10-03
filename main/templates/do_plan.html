@@ -29,6 +29,45 @@
                 }
             ]
         });
+        function updateMemberUnassigned($tr) {
+            var assigned = false;
+            $tr.children('.assignment-cell').each(function(){
+                if ($(this).hasClass('assigned')) {
+                    assigned = true;
+                }
+            });
+            $tr.children().first().toggleClass('unassigned-member', !assigned);
+        }
+        function unassign($td) {
+            // XXX TODO ajax
+            $('th[data-week='+$td.data('week')+']').addClass('unassigned-week');
+            $td.removeClass('assigned');
+            $td.addClass('unassigned');
+            updateMemberUnassigned($td.parent());
+        }
+        function assign($td) {
+            // Unassign anyone else with this week.
+            $('td[data-week='+$td.data('week')+']').each(function(){
+                if ($(this).hasClass('assigned')) {
+                    unassign($(this));
+                }
+            });
+            // XXX TODO ajax
+            $('th[data-week='+$td.data('week')+']').removeClass('unassigned-week');
+            $td.removeClass('unassigned');
+            $td.addClass('assigned');
+            updateMemberUnassigned($td.parent());
+        }
+        $(document).on('click', '.add-assignment', function(e) {
+            e.preventDefault();
+            assign($(this).parent());
+            return false;
+        });
+        $(document).on('click', '.rm-assignment', function(e) {
+            e.preventDefault();
+            unassign($(this).parent());
+            return false;
+        });
     });
   </script>
 {% endblock %}
@@ -45,18 +84,37 @@
 .unassigned-week {
     background-color: pink;
 }
+
+.assignment-cell.unassigned .assignment {
+    display: none;
+}
+
+.add-assignment, .rm-assignment {
+    display: none;
+    font-size: x-small;
+    padding: 0 4px;
+}
+.assignment-cell:hover .assignment {
+    display: none;
+}
+.assignment-cell.assigned:hover .rm-assignment {
+    display: initial;
+}
+.assignment-cell.unassigned:hover .add-assignment {
+    display: initial;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <main>
   {% if members %}
-  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+  <table id="dTbl" class="display table-bordered compact" nowrap style="width:100%">
     <thead>
       <tr>
         <th>Name</th>
         {% for w in week_info %}
-        <th class="{% if not w.assigned %}unassigned-week{% endif %}">{{ w.week }}</th>
+        <th data-week="{{w.week}}" class="{% if not w.assigned %}unassigned-week{% endif %}">Wk {{ w.week }}</th>
         {% endfor %}
       </tr>
     </thead>
@@ -64,13 +122,15 @@
     <tbody>
       {% for m, x in members %}
       <tr>
-          <td class="{% if not x.assigned %}unassigned-member{% endif %}">{{ m }}</td>
+        <td class="{% if not x.assigned %}unassigned-member{% endif %}">{{ m }}</td>
         {% for w in x.weeks %}
         {% if w %}
-        <td title="{{ w.comment }}" class="{% if w.assigned %}assigned{% endif %}">
+        <td data-week="{{w.week}}" title="{{ w.comment }}" class="assignment-cell {% if not w.assigned %}un{% endif %}assigned">
           {% if w.available %}A{% else %}-{% endif %}
-          {% if w.assigned %}X{% endif %}
           {% if w.comment %}*{% endif %}
+          <span class="assignment">X</span>
+          <button class="add-assignment">+</button>
+          <button class="rm-assignment">-</button>
         </td>
         {% else %}
           <td></td>
