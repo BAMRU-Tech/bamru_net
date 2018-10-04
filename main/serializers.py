@@ -71,13 +71,13 @@ class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
     member = MemberSerializer()
     class Meta:
         model = Participant
-        fields = ('id', 'member', 'ahc', 'ol')
+        fields = ('id', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
 
         
 class BareParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
-        fields = ('id', 'period', 'member', 'ahc', 'ol')
+        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
 
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
