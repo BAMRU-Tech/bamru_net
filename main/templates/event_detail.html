@@ -8,120 +8,130 @@
   <script>
     $(document).ready( function() {
     {% for period in event.period_set.all %}
-      var table{{period.position}} = $("#dTbl{{period.position}}").DataTable( {
-        dom: "Bfrtip",
-        responsive: true,
-        select: "single",
-        altEditor: true,
-        paging:   false,
-        info:     false,
-        order: [[ 0, "asc" ]],
-        columnDefs: [
-            { "orderable": false, "targets": 5 },
-            { responsivePriority: 1, targets: 0 },
-            { responsivePriority: 2, targets: 1 },
-            { responsivePriority: 3, targets: [2, 3]}
-        ],
-        buttons: [
-            {
-                text: '<i class="fa fa-bullhorn"></i> Page',
-                extend: "collection",
-                autoClose: true,
-                buttons: [
-                    {
-                        text: '<i class="fa fa-hourglass-start"></i> Heads Up',
-                        action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
+        var table{{period.position}} = $("#dTbl{{period.position}}").DataTable( {
+            dom: "Bfrtip",
+            responsive: true,
+            select: "single",
+            altEditor: true,
+            paging:   false,
+            info:     false,
+            order: [[ 0, "asc" ]],
+            columnDefs: [
+                { "orderable": false, "targets": 5 },
+                { responsivePriority: 1, targets: 0 },
+                { responsivePriority: 2, targets: 1 },
+                { responsivePriority: 3, targets: [2, 3]}
+            ],
+            buttons: [
+                {
+                    text: '<i class="fa fa-bullhorn"></i> Page',
+                    extend: "collection",
+                    autoClose: true,
+                    buttons: [
+                        {
+                            text: '<i class="fa fa-hourglass-start"></i> Heads Up',
+                            action: function ( e, dt, node, config ) {
+                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
+                            }
+                        },
+                        {
+                            text: '<i class="fa fa-calendar-check-o"></i> Are you available',
+                            action: function ( e, dt, node, config ) {
+                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
+                            }
+                        },
+                        {
+                            text: '<i class="fa fa-clock-o"></i> Have you left',
+                            action: function ( e, dt, node, config ) {
+                                if (dt.rows().count() == 0) 
+                                    alert('Add members to period before paging them');
+                                else
+                                    location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=leave';
+                            }
+                        },
+                        {
+                            text: '<i class="fa fa-clock-o"></i> Are you home',
+                            action: function ( e, dt, node, config ) {
+                                if (dt.rows().count() == 0) 
+                                    alert('Add members to period before paging them');
+                                else
+                                    location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=return';
+                            }
+                        },
+                        {
+                            text: '<i class="fa fa-wrench"></i> Test',
+                            action: function ( e, dt, node, config ) {
+                                if (dt.rows().count() == 0) 
+                                    alert('Add members to period before paging them');
+                                else
+                                    location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=test';
+                            }
                         }
-                    },
-                    {
-                        text: '<i class="fa fa-calendar-check-o"></i> Are you available',
-                        action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
-                        }
-                    },
-                    {
-                        text: '<i class="fa fa-clock-o"></i> Have you left',
-                        action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=leave';
-                        }
-                    },
-                    {
-                        text: '<i class="fa fa-clock-o"></i> Are you home',
-                        action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=return';
-                        }
-                    },
-                    {
-                        text: '<i class="fa fa-wrench"></i> Test',
-                        action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=test';
+                    ]
+                },
+                {
+                    text: '<i class="fa fa-address-book"></i> Add',
+                    action: function ( e, dt, node, config ) {
+                        location.href='{% url "event_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
+                    }
+                },
+                {
+                    extend: "selected", // Bind to Selected row
+                    text: '<i class="fa fa-edit"></i> Edit',
+                    name: "edit"        // do not change name
+                },
+                {
+                    extend: "selected", // Bind to Selected row
+                    autoClose: true,
+                    text: '<i class="fa fa-trash"></i> Delete',
+                    name: "delete"      // do not change name
+                },
+                {
+                    text: '<i class="fa fa-newspaper-o"></i> More',
+                    extend: "collection",
+                    autoClose: true,
+                    buttons: [
+                        "copy", "csv", "excel", "print", "colvis"
+                    ]
+                }
+            ],
+            onDeleteRow: function(dt, rowdata, success, error) {
+                var csrftoken = getCookie('csrftoken');
+                //FIXME: Eventual this should allow mult-row select for delete and edit
+                //var members = dt.rows( { selected: true } ).data().pluck( 'Name' ).toArray();
+                var regex = /\d+(?:\.\d+)?/;
+                $.ajaxSetup({
+                    beforeSend: function(xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", csrftoken);
                         }
                     }
-                ]
-            },
-            {
-                text: '<i class="fa fa-address-book"></i> Add',
-                action: function ( e, dt, node, config ) {
-                    location.href='{% url "event_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
-                }
-            },
-            {
-                extend: "selected", // Bind to Selected row
-                text: '<i class="fa fa-edit"></i> Edit',
-                name: "edit"        // do not change name
-            },
-            {
-                extend: "selected", // Bind to Selected row
-                autoClose: true,
-                text: '<i class="fa fa-trash"></i> Delete',
-                name: "delete"      // do not change name
-            },
-            {
-                text: '<i class="fa fa-newspaper-o"></i> More',
-                extend: "collection",
-                autoClose: true,
-                buttons: [
-                    "copy", "csv", "excel", "print", "colvis"
-                ]
-            }
-        ],
-        onDeleteRow: function(dt, rowdata, success, error) {
-            var csrftoken = getCookie('csrftoken');
-            //FIXME: Eventual this should allow mult-row select for delete and edit
-            //var members = dt.rows( { selected: true } ).data().pluck( 'Name' ).toArray();
-            var regex = /\d+(?:\.\d+)?/;
-            console.log('csrfmiddlewaretoken: ' + csrftoken);
-            $.ajaxSetup({
-                beforeSend: function(xhr, settings) {
-                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                });
+                $.ajax({
+                    'type': 'DELETE',
+                    'contentType': 'application/json',
+                    'url': '/api/participants/2',
+                    success: success,
+                    error: function (xhr) {
+                        console.log('member delete failed');
+                        console.log(xhr);
+                        return error;
                     }
-                }
-            });
-            $.ajax({
-                'type': 'DELETE',
-                'contentType': 'application/json',
-                'url': '/api/participants/2',
-                success: success,
-                error: function (xhr) {
-                    console.log('member delete failed');
-                    console.log(xhr);
-                    return error;
-                }
-            })
-        },
-        onEditRow: function(datatable, rowdata, success, error) {
-            $.ajax({
-                // a tipycal url would be /{id} with type='POST'
-                url: url_ws_mock_ok,
-                type: 'GET',
-                data: rowdata,
-                success: success,
-                error: error
-            });
-        }
-          
+                })
+            },
+            onEditRow: function(datatable, rowdata, success, error) {
+                $.ajax({
+                    // a tipycal url would be /{id} with type='POST'
+                    url: url_ws_mock_ok,
+                    type: 'GET',
+                    data: rowdata,
+                    success: success,
+                    error: error
+                });
+            },
+            language: {
+                emptyTable: "No members added"
+            },
     });
     {% endfor %}
 

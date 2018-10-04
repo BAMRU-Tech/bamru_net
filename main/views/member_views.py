@@ -15,8 +15,8 @@ from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Un
 
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
-from datetime import timedelta
 import datetime
+from datetime import timedelta
 
 import logging
 logger = logging.getLogger(__name__)
@@ -301,27 +301,25 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
                      to_attr='unavailable_filtered')
         ).order_by('id')
         for m in qs:
-            m.days = [('',1) for x in range(self.days)]
+            m.days = ['' for x in range(self.days)]
             for u in m.unavailable_filtered:
                 if u.start_on >= today + timedelta(days=self.days):
-                    continue  # starts off the screen
+                    continue  # not in date range
                 if u.start_on <= today:
                     start = 0
                 else:
                     start = (u.start_on - today).days
 
-                # Add one to include the end day
-                end_delta = (u.end_on - today).days + 1
-                if end_delta > self.days:
-                    end_delta = self.days
-                    m.end_date = u.end_on
+                end = (u.end_on - today).days + 1
+                if end > self.days:
+                    end = self.days
+                    m.end_date = u.end_on.isoformat()
 
                 comment = u.comment
                 if not comment:
                     comment = 'BUSY'
-                for day in range(start, end_delta):
-                    m.days[day] = (comment, end_delta-start)
-
+                for day in range(start, end):
+                    m.days[day] = comment
         return qs
 
     def get_context_data(self, **kwargs):

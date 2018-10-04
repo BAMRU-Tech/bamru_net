@@ -163,7 +163,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         "Returns the short name for the user."
         return self.first_name
 
-    def isActive(self): # FIXME: Needs a filter
+    def isActive(self):
         """ Return member status, True is active member """
         return self.rank in self.ACTIVE_RANKS
 
