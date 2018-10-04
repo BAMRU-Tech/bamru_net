@@ -11,15 +11,16 @@
       var table{{period.position}} = $("#dTbl{{period.position}}").DataTable( {
         dom: "Bfrtip",
         responsive: true,
-        select: "os",
+        select: "single",
         altEditor: true,
         paging:   false,
         info:     false,
         order: [[ 0, "asc" ]],
         columnDefs: [
-          { responsivePriority: 1, targets: 0 },
-          { responsivePriority: 2, targets: 1 },
-          { responsivePriority: 3, targets: [2, 3]}
+            { "orderable": false, "targets": 5 },
+            { responsivePriority: 1, targets: 0 },
+            { responsivePriority: 2, targets: 1 },
+            { responsivePriority: 3, targets: [2, 3]}
         ],
         buttons: [
             {
@@ -84,7 +85,43 @@
                     "copy", "csv", "excel", "print", "colvis"
                 ]
             }
-        ]
+        ],
+        onDeleteRow: function(dt, rowdata, success, error) {
+            var csrftoken = getCookie('csrftoken');
+            //FIXME: Eventual this should allow mult-row select for delete and edit
+            //var members = dt.rows( { selected: true } ).data().pluck( 'Name' ).toArray();
+            var regex = /\d+(?:\.\d+)?/;
+            console.log('csrfmiddlewaretoken: ' + csrftoken);
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+            $.ajax({
+                'type': 'DELETE',
+                'contentType': 'application/json',
+                'url': '/api/participants/2',
+                success: success,
+                error: function (xhr) {
+                    console.log('member delete failed');
+                    console.log(xhr);
+                    return error;
+                }
+            })
+        },
+        onEditRow: function(datatable, rowdata, success, error) {
+            $.ajax({
+                // a tipycal url would be /{id} with type='POST'
+                url: url_ws_mock_ok,
+                type: 'GET',
+                data: rowdata,
+                success: success,
+                error: error
+            });
+        }
+          
     });
     {% endfor %}
 
@@ -148,6 +185,7 @@
         <th>Returned</th>
         <th>Signed in</th>
         <th>Signed out</th>
+        <th></th>
       </tr>
       </thead>
       <tbody>
@@ -158,12 +196,10 @@
 	    <td>{{ participant.return_home_at }}</td>
 	    <td>{{ participant.signed_in_at }}</td>
 	    <td>{{ participant.signed_out_at }}</td>
-        {% comment %}
         <td><a href='{% url "event_participant_delete" event=event.id pk=participant.id %}'>
-            delete
+        <i class="fa fa-trash"></i>
           </a>
         </td>
-        {% endcomment %}
       </tr>
       {% endfor %}
       </tbody>
