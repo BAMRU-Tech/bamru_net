@@ -7,15 +7,18 @@
   <ul class="navbar-nav ml-auto">
     <li class="nav-item dropdown">
       <a class="nav-link" href="{% url 'do_index' %}{{ query_this }}">
-        DO list Q{{quarter}}</a>
+        <i class="fa fa-calendar"></i>
+        Schedule</a>
     </li>
     <li class="nav-item dropdown">
       <a class="nav-link" href="{% url 'do_plan' %}{{ query_this }}">
-        Plan Q{{quarter}}</a>
+        <i class="fa fa-columns"></i>
+        Plan</a>
     </li>
     <li class="nav-item dropdown">
       <a class="nav-link" href="{% url 'do_form' %}{{ query_this }}">
-        Edit my Q{{quarter}} availability</a>
+        <i class="fa fa-calendar-check-o"></i>
+        Availability</a>
     </li>
   </ul>
 {% endblock %}

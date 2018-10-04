@@ -15,6 +15,12 @@
 order: [[ 0, "asc" ]],
 columnDefs: [
     { responsivepriority: 8, targets: 1 },
+    { targets: [ 2, 3, 4, 5, 6 ],
+      createdCell: function (td, cellData, rowData, row, col) {
+          if (cellData.length > 0)
+              $(td).attr('bgcolor', "#00FF00");
+      }
+    },
 ],
 language: {
       emptyTable: "No members selected"
@@ -23,23 +29,71 @@ language: {
 
 
 {% block table_functions %}
-const apiUrlMemberRank = "/api/members/?member_rank=";
+const apiUrlMemberRank = "/api/member_availability/?member_rank=";
+
+// Seems a little crazy that js doesn't offer better date support
+// But not worth loading another 20-30K
+function DateArray(start_date, days) {
+    //
+    // Create date array for date range, ISO formatted
+    //
+    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mn = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+
+    var result = [];
+    for (i = 0; i < days; i++) {
+        var date = new Date(start_date);
+        date.setDate(date.getDate() + i);
+        ds = date.toDateString().replace(/.{3} (.{3}) (\d{2}) (\d{4})/, '$3-$1-$2');
+        month = ds.substr(5, 3);
+        ds = ds.replace(month, mn[m.indexOf(month)]);
+        result.push(ds);
+    }
+    return result;
+}
+
+var numDays = 5;
+
+function SetBusy(busy, start, end, comment) {
+    //FIXME: make 'comment' a modal popup or tool tip or both
+    if (start < 0) start = 0;
+    if (end <= 0) end = numDays;
+    for (i = start; i < end; i++) busy[i] = comment;
+    return i;
+}
 
 function AddRows(table, values) {
-    // Add row data via AJAX based on rank
+    //
+    // Add row data via AJAX values[0]=rank
+    //
     urlData = apiUrlMemberRank+values[0];
+
+    var dd = DateArray(Date(), 5);
+    urlData += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];
     $.getJSON(urlData, null, function( json ) {
+        var dd = DateArray(Date(), 5);
         
-        for (var i=0; i<json.length; i++)
+        // Foreach member mark busy period within date range
+        for (var member=0; member<json.length; member++)
         {
-            data = [
-                "<a href=/member/"+json[i]["id"]+">"+json[i]["full_name"]+"</a>",
-                {"display": json[i]["rank"], "@data-sort": json[i]["rank_order"]},
-                {"display": json[i]["roles"], "@data-sort": json[i]["role_order"]},
-                json[i]["display_phone"],
-                json[i]["display_email"]
-            ]
-            
+            var row = json[member];
+            var data = [
+                "<a href=/member/"+row["id"]+">"+row["full_name"]+"</a>",
+                {"display": row["rank"], "@data-sort": row["rank_order"]},
+            ];
+            var busy = Array(numDays+1).fill('');
+            var period = row['busy'];
+            for (p = 0; p < period.length; p++) {
+                var start_on = dd.indexOf(period[p]['start_on']);
+                var end_on = dd.indexOf(period[p]['end_on']) + 1;
+                var comment = period[p]['comment'];
+                SetBusy(busy, start_on, end_on);
+                if (end_on <= 0)
+                    busy[numDays] = period[p]['end_on'];
+            }
+
+            data = data.concat(busy);
+
             table.row.add(data).invalidate(); // invalidate needed to force rank and role display
         }
         table.draw();  // not sure why this is required here but it is needed (was later in execution path)
@@ -112,29 +166,24 @@ $("#filter-rank").multiSelect({
     </thead>
 
     <tbody>
-      {% for member in member_list %}
-      {% if member.isActive %} {# FIXME: Needs a filter #}
+    {% for member in member_list %}
+      {% if member.isActive %}
       <tr>
         <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
         {% for day in member.days %}
-        {% if day.0 %}
-        {% ifchanged %}
-        {% for i in day.1|rangearray %}
-          <td bgcolor="#00FF00"></td>
-        {% endfor %}
-{#        <td bgcolor="#00FF00" colspan={{day.1}}>{{day.0}}</td>#}
-        {% endifchanged %}
-        {% else %}
-        <td></td>
-        {% endif %}
+          {% if day %}
+            <td bgcolor="#00FF00">{{day}}</td>
+          {% else %}
+            <td></td>
+          {% endif %}
         {% endfor %}
         <td{% if member.end_date %} bgcolor="#00FF00"{% endif %}>
           {{ member.end_date }}
         </td>
       </tr>
       {% endif %}
-      {% endfor %}
+    {% endfor %}
     </tbody>
   </table>
 </main>

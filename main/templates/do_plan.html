@@ -27,32 +27,13 @@
                         location.href="{{ request.path }}{{ query_next }}";
                     },
                 }
-            ]
+            ],
+            language: {
+                emptyTable: "No DO availability entries are available"
+            },
         });
 
-        // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
-        // TODO: put this somewhere shared
-        // using jQuery
-        function getCookie(name) {
-            var cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                var cookies = document.cookie.split(';');
-                for (var i = 0; i < cookies.length; i++) {
-                    var cookie = jQuery.trim(cookies[i]);
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
         var csrftoken = getCookie('csrftoken');
-        function csrfSafeMethod(method) {
-            // these HTTP methods do not require CSRF protection
-            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-        }
         $.ajaxSetup({
             beforeSend: function(xhr, settings) {
                 if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
@@ -148,7 +129,6 @@
 
 {% block content %}
 <main>
-  {% if members %}
   <table id="dTbl" class="display table-bordered compact" nowrap style="width:100%">
     <thead>
       <tr>
@@ -180,9 +160,6 @@
       {% endfor %}
       </tbody>
   </table>
-  {% else %}
-  <p>No DO available entries are available.</p>
-  {% endif %}
  </div>
 </main>
 {% endblock %}
