@@ -1,8 +1,9 @@
+from django import forms
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
-from django.forms.models import modelformset_factory
+from django.forms.models import ModelForm, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
@@ -72,22 +73,44 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         return obj
 
 
+class EventForm(ModelForm):
+    class Meta:
+        model = Event
+        fields = ['title', 'description', 'type',
+                  'location', 'leaders',
+                  'start', 'finish',
+                  'all_day', 'published',
+                  ]
+        field_classes = {
+            'start': forms.SplitDateTimeField,
+            'finish': forms.SplitDateTimeField,
+        }
+        widgets = {
+            'start': forms.SplitDateTimeWidget(
+                time_format='%H:%M',
+                date_attrs={'type': 'date'},
+                time_attrs={'type': 'time'},
+            ),
+            'finish': forms.SplitDateTimeWidget(
+                time_format='%H:%M',
+                date_attrs={'type': 'date'},
+                time_attrs={'type': 'time'},
+            ),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get('start')
+        finish = cleaned_data.get('finish')
+        if finish and finish < start:
+            self.add_error('finish', 'Finish time must not be earlier than start time')
+        return cleaned_data
+
+
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
-    fields = ['title', 'description', 'type',
-              'location', 'leaders',
-              'start', 'finish',
-              'all_day', 'published',
-              ]
-
+    form_class = EventForm
     template_name = 'base_form.html'
-
-    def get_form(self):
-        '''add date picker in forms'''
-        form = super(EventUpdateView, self).get_form()
-        form.fields['start'].widget = SelectDateWidget()
-        form.fields['finish'].widget = SelectDateWidget()
-        return form
 
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
