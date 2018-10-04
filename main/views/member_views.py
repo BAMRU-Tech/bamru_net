@@ -313,7 +313,7 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
                 end = (u.end_on - today).days + 1
                 if end > self.days:
                     end = self.days
-                    m.end_date = u.end_on.isoformat()
+                    m.end_date = u.end_on
 
                 comment = u.comment
                 if not comment:

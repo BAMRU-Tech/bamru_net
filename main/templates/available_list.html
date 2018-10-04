@@ -156,11 +156,17 @@ $("#filter-rank").multiSelect({
     </select>
   </div>
   <div id="tooltip"></div>
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+  <table id="dTbl" class="display table-bordered compact" style="width:100%">
     <thead>
       <tr>
         <th>Name</th><th>Rank</th>
-        {% for h in headers %}<th>{{h}}</th>{% endfor %}
+        {% for h in headers %}
+        <th>
+          <div class="d-none d-lg-block">{{h}}</div>
+          <div class="d-none d-md-block d-lg-none">{{h|date:"M d"}}</div>
+          <div class="d-block d-md-none">{{h|date:"m d"}}</div>
+        </th>
+        {% endfor %}
         <th>Return</th>
       </tr>
     </thead>
@@ -173,13 +179,19 @@ $("#filter-rank").multiSelect({
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
         {% for day in member.days %}
           {% if day %}
-            <td bgcolor="#00FF00">{{day}}</td>
+            <td bgcolor="#00FF00" title="{{day}}" style="overflow: hidden">
+              <div class="d-none d-lg-block">{{day}}</div>
+              <div class="d-none d-md-block d-lg-none">{{day|truncatechars:10}}</div>
+              <div class="d-none d-sm-block d-md-none">{{day|truncatechars:5}}</div>
+              <div class="d-block d-sm-none">*</div>
+            </td>
           {% else %}
             <td></td>
           {% endif %}
         {% endfor %}
         <td{% if member.end_date %} bgcolor="#00FF00"{% endif %}>
-          {{ member.end_date }}
+          <div class="d-none d-md-block">{{member.end_date|date:"Y-m-d"}}</div>
+          <div class="d-block d-md-none">{{member.end_date|date:"m-d"}}</div>
         </td>
       </tr>
       {% endif %}
