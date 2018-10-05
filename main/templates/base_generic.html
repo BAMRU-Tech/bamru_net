@@ -13,20 +13,30 @@
       <link rel="stylesheet" href="/static/css/style.css" />
       <link rel="stylesheet" href="/static/font-awesome-4.7.0/css/font-awesome.min.css" />
       {% bootstrap_css %}
+      <link rel="stylesheet" href="/static/css/style.css" />
     {% endblock css %}
     <title>{% block title %}BAMRU.net{% endblock title %}</title>
   </head>
 
 
-  <body class="container-fluid">
-    {% include 'navbar.html' %}
-    <nav class="navbar navbar-expand-sm text-primary subhead">
-      {% block subheader %}{% endblock subheader %}
-    </nav>
+  <body>
+      <div class="container-fluid">
+        {% include 'navbar.html' %}
+        <nav class="navbar navbar-expand-sm text-primary subhead">
+          {% block subheader %}{% endblock subheader %}
+        </nav>
 
-    {% bootstrap_messages %}
+        {% bootstrap_messages %}
 
-    {% block content %}{% endblock content %}
+        {% block content %}{% endblock content %}
+      </div>
+
+    <footer class="footer">
+        <div class="container text-center">
+            <a href="https://github.com/BAMRU-Tech/bamru_net/issues">general help</a>
+            | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
+        </div>
+    </footer>
 
     {% block js %}
       <script src="https://code.jquery.com/jquery-3.3.1.js"></script>

@@ -8,7 +8,7 @@ certifi==2018.4.16
 cffi==1.11.5
 chardet==3.0.4
 CoffeeScript==2.0.3
-Django==2.0.5
+Django==2.0.8
 django-anymail==3.0
 django-bootstrap4==0.0.6
 django-datatables-view==1.16.0
