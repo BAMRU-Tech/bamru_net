@@ -28,11 +28,11 @@
                 { 'data': "return_home_at" },
                 { 'data': "signed_in_at" },
                 { 'data': "signed_out_at" },
-                { 'data': "id" },
-                { 'data': "member" },
-                { 'data': "period" },
                 { 'data': "ahc" },
                 { 'data': "ol" },
+                { 'data': "id", type: "readonly" },
+                { 'data': "member", type: "readonly" },
+                { 'data': "period", type: "readonly" },
             ],
             buttons: [
                 {
@@ -129,7 +129,10 @@
                     'url': '/api/edit_participants/' + id + '/',
                     'data': data,
                     success: function (r, s, m) {
-                        r['name'] = r['member']['full_name'];
+                        var name = r['member']['full_name'];
+                        if (r['ahc']) name += '(AHC)';
+                        if (r['ol']) name += '(OL)';
+                        r['name'] = name;
                         //FIXME: temporary fix until we decide on api date format
                         r['en_route_at'] = CleanDate(r['en_route_at']);
                         r['return_home_at'] = CleanDate(r['return_home_at']);
@@ -146,7 +149,7 @@
             },
             onDeleteRow: function(dt, row, success, error) {
 
-                var id = row[5];  //FIXME: why is this array vs dict with labels?
+                var id = row[7];  //FIXME: why is this array vs dict with labels?
                 
                 //FIXME: Eventual this should allow mult-row select for delete and edit
                 $.ajax({
@@ -235,26 +238,33 @@
         <th>Returned</th>
         <th>Signed in</th>
         <th>Signed out</th>
+        <th>ahc</th>
+        <th>ol</th>
         <th>id</th>
         <th>member</th>
         <th>period</th>
-        <th>ahc</th>
-        <th>ol</th>
       </tr>
       </thead>
       <tbody>
-      {% for participant in period.participant_set.all %}
+      {% for p in period.participant_set.all %}
       <tr>
-        <td>{{ participant.member }}</td>
-        <td>{{ participant.en_route_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ participant.return_home_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ participant.signed_in_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ participant.signed_out_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ participant.id }}</td>
-	    <td>{{ participant.member.id }}</td>
-	    <td>{{ participant.period.id }}</td>
-	    <td>{{ participant.ahc }}</td>
-	    <td>{{ participant.ol }}</td>
+        <td>{{ p.member }}
+          {% if p.ahc %}
+          (AHC)
+          {% endif %}
+          {% if p.ol %}
+          (OL)
+          {% endif %}
+        </td>
+        <td>{{ p.en_route_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ p.return_home_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ p.signed_in_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ p.signed_out_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ p.ahc }}</td>
+	    <td>{{ p.ol }}</td>
+	    <td>{{ p.id }}</td>
+	    <td>{{ p.member.id }}</td>
+	    <td>{{ p.period.id }}</td>
       </tr>
       {% endfor %}
       </tbody>

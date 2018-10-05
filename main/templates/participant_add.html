@@ -34,7 +34,7 @@ language: {
 },
 {% endblock table_options %}
 
-{% block table_buttons %}
+{% block table_buttons_first %}
 {
     text: "Add",
     action: function ( e, dt, node, config ) {
@@ -69,8 +69,7 @@ language: {
         })
     }
 },
-{{ block.super }}
-{% endblock table_buttons %}
+{% endblock table_buttons_first %}
 
 {% block table_functions %}
 const url = new URL(window.location.href);

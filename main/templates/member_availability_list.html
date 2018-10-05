@@ -11,7 +11,7 @@
   </strong>
   <ul class="navbar-nav ml-auto">
     <li class="nav-item ml-auto">
-      <a class="nav-link" href="{% url 'event_add' %}"><i class="fa fa-calendar-plus-o"></i> New busy period</a>
+      <a class="nav-link" href="#"><i class="fa fa-calendar-plus-o"></i> New busy period</a>
     </li>
   </ul>
 {% endblock subheader %}
@@ -24,10 +24,25 @@
   altEditor: true,
   columnDefs: [
   ],
-language: {
+  language: {
       emptyTable: "No busy periods"
 },
+onEditRow: function(dt, row, success, error) {
+    success(row);
+},
 {% endblock table_options %}
+
+{% block table_buttons_first %}
+{
+    text: "Add",
+},
+{
+    extend: "selected", // Bind to Selected row
+    text: '<i class="fa fa-edit"></i> Edit',
+    name: "edit"        // do not change name
+},
+{% endblock table_buttons_first %}
+{% block table_buttons_filter %}{% endblock %}
 
 {% block table_functions %}
 function UpdateSubheaderBasedOnSettings(table) {

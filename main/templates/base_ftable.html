@@ -28,7 +28,9 @@ $(document).ready(function() {
         "info":     false,
         {% block table_options %}{% endblock %}
         buttons: [
-            {% block table_buttons %}
+            {% block table_buttons_first %}{% endblock %}
+
+            {% block table_buttons_filter %}
             {
                 text: labelShowFilter,
                 action: function ( e, dt, node, config ) {
@@ -41,6 +43,8 @@ $(document).ready(function() {
                     }
                 }
             },
+            {% endblock table_buttons_filter %}
+            {% block table_buttons_detail %}
             {
                 text: htmlShowDetail,
                 action: function ( e, dt, node, config ) {
@@ -53,13 +57,15 @@ $(document).ready(function() {
                     }                          
                 }
             },
+            {% endblock table_buttons_detail %}
+            {% block table_buttons_more %}
             {
                 text: '<i class="fa fa-newspaper-o"></i> More',
                 extend: "collection",
                 autoClose: true,
                 buttons: [ "copy", "csv", "excel", "print", "colvis"]
             }
-            {% endblock table_buttons %}
+            {% endblock table_buttons_more %}
         ]
     })
 
