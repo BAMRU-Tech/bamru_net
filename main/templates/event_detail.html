@@ -43,13 +43,13 @@
                         {
                             text: '<i class="fa fa-hourglass-start"></i> Heads Up',
                             action: function ( e, dt, node, config ) {
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
+                                location.href='{% url "message_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}&period_format=invite&page=Heads Up';
                             }
                         },
                         {
                             text: '<i class="fa fa-calendar-check-o"></i> Are you available',
                             action: function ( e, dt, node, config ) {
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=invite';
+                                location.href='{% url "message_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}&period_format=invite&page=Available?';
                             }
                         },
                         {
@@ -76,7 +76,7 @@
                                 if (dt.rows().count() == 0) 
                                     alert('Add members to period before paging them');
                                 else
-                                    location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=test';
+                                    location.href='{% url "message_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}&period_format=test&page=Testing';
                             }
                         }
                     ]
@@ -84,7 +84,7 @@
                 {
                     text: '<i class="fa fa-address-book"></i> Add',
                     action: function ( e, dt, node, config ) {
-                        location.href='{% url "event_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
+                        location.href='{% url "period_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
                     }
                 },
                 {

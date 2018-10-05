@@ -60,9 +60,9 @@ urlpatterns = [
          views.EventPeriodDeleteView.as_view(), name='event_period_delete'),
 
     path('event/participant/add/<int:period>/',
-         views.ParticipantCreateView.as_view(), name='event_participant_add'),
-    path('event/<int:event>/participant/delete/<int:pk>/',
-         views.ParticipantDeleteView.as_view(), name='event_participant_delete'),
+         views.PeriodParticipantCreateView.as_view(), name='period_participant_add'),
+    path('message/participant/add/<int:period>/', #FIXME: Wrong namespace - sort out w/Kevin
+         views.MessageParticipantCreateView.as_view(), name='message_participant_add'),
 
     path('do/', views.DoListView.as_view(), name='do_index'),
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
