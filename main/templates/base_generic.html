@@ -9,25 +9,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     {% block css %}
-      <link rel="stylesheet" href="/static/css/style.css" />
       <link href='/static/favicon_p1.ico' rel='shortcut icon' type='image/vnd.microsoft.icon'/>
       <link href="https://use.fontawesome.com/5fb07bfd2c.css"
             media="all" rel="stylesheet">
       {% bootstrap_css %}
+      <link rel="stylesheet" href="/static/css/style.css" />
     {% endblock css %}
     <title>{% block title %}BAMRU.net{% endblock title %}</title>
   </head>
 
 
-  <body class="container-fluid">
-    {% include 'navbar.html' %}
-    <nav class="navbar navbar-expand-sm text-primary subhead">
-      {% block subheader %}{% endblock subheader %}
-    </nav>
+  <body>
+      <div class="container-fluid">
+        {% include 'navbar.html' %}
+        <nav class="navbar navbar-expand-sm text-primary subhead">
+          {% block subheader %}{% endblock subheader %}
+        </nav>
 
-    {% bootstrap_messages %}
+        {% bootstrap_messages %}
 
-    {% block content %}{% endblock content %}
+        {% block content %}{% endblock content %}
+      </div>
+
+    <footer class="footer">
+        <div class="container text-center">
+            <a href="https://github.com/BAMRU-Tech/bamru_net/issues">general help</a>
+            | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
+        </div>
+    </footer>
 
     {% block js %}
       <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
