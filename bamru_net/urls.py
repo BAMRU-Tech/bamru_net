@@ -71,6 +71,7 @@ urlpatterns = [
     path('', include('message.urls')),
 
     url(r'^api/', include(router.urls)),
+    path(r'api/period_participants/<int:pk>/', views.PeriodParticipantsView.as_view()),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
     path('admin/', admin.site.urls),
