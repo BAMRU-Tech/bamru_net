@@ -26,6 +26,7 @@ router = routers.DefaultRouter()
 router.register(r'events', views.EventViewSet)
 router.register(r'periods', views.PeriodViewSet)
 router.register(r'participants', views.ParticipantViewSet)
+router.register(r'edit_participants', views.EditParticipantViewSet)
 router.register(r'members', views.MemberViewSet)
 router.register(r'member_certs', views.MemberCertViewSet, base_name='member')
 router.register(r'certs', views.CertViewSet)
@@ -44,6 +45,7 @@ urlpatterns = [
     path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='delete_cert'),
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
     path('availability/edit/', views.AvailableEditView.as_view(), name='available_edit'),
+    path('member/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
 
     path('event/proximate', views.EventImmediateView.as_view(), name='event_immediate'),
     path('event/', views.EventAllView.as_view(), name='event_all'),

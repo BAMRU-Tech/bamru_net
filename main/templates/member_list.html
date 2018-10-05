@@ -2,6 +2,14 @@
 
 {% block title %}Team Members{% endblock title %}
 
+{% block subheader %}
+  <strong>
+    <div id="subhdr">
+      Members
+    </div>
+  </strong>
+{% endblock %}
+
 {% block table_options %}
 order: [[ 0, "asc" ]],
 columnDefs: [
@@ -122,12 +130,4 @@ function UpdateSubheaderBasedOnSettings(table) {
   <p>No members are available.</p>
   {% endif %}
 </main>
-{% endblock %}
-
-{% block subheader %}
-  <strong>
-    <div id="subhdr">
-      Members
-    </div>
-  </strong>
 {% endblock %}

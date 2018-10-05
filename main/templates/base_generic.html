@@ -9,10 +9,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     {% block css %}
-      <link rel="stylesheet" href="/static/css/style.css" />
       <link href='/static/favicon_p1.ico' rel='shortcut icon' type='image/vnd.microsoft.icon'/>
-      <link href="https://use.fontawesome.com/5fb07bfd2c.css"
-            media="all" rel="stylesheet">
+      <link rel="stylesheet" href="/static/css/style.css" />
+      <link rel="stylesheet" href="/static/font-awesome-4.7.0/css/font-awesome.min.css" />
       {% bootstrap_css %}
     {% endblock css %}
     <title>{% block title %}BAMRU.net{% endblock title %}</title>
@@ -30,14 +29,12 @@
     {% block content %}{% endblock content %}
 
     {% block js %}
-      <script src="https://use.fontawesome.com/5fb07bfd2c.js"></script>
       <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
       {% bootstrap_javascript %}
     {% endblock js%}
 
     <script>
       // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
-      // using jQuery
       function getCookie(name) {
       var cookieValue = null;
       if (document.cookie && document.cookie !== '') {
@@ -58,6 +55,16 @@
           // these HTTP methods do not require CSRF protection
           return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
       }
+
+      $.ajaxSetup({
+          beforeSend: function(xhr, settings) {
+              var csrftoken = getCookie('csrftoken');
+              if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                  xhr.setRequestHeader("X-CSRFToken", csrftoken);
+              }
+          }
+      });
+
     </script>
   </body>
 </html>

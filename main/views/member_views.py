@@ -329,6 +329,7 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
                               for d in range(self.days)]
         return context
 
+# FIXME: delete after MemberAvail is completed
 class AvailableEditView(LoginRequiredMixin, generic.base.TemplateView):
     template_name = 'available_form.html'
 
@@ -357,3 +358,12 @@ class AvailableEditView(LoginRequiredMixin, generic.base.TemplateView):
                 queryset=qs)
         context['formset'] = formset
         return context
+
+class MemberAvailabilityListView(LoginRequiredMixin, generic.ListView):
+    template_name = 'member_availability_list.html'
+    context_object_name = 'availability_list'
+
+    def get_queryset(self):
+        """Return the availability list."""
+        qs = Unavailable.objects.filter(member=self.request.user)
+        return Unavailable.objects.filter(member=self.request.user)

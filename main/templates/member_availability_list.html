@@ -1,0 +1,59 @@
+{% extends 'base_ftable.html' %}
+
+{% block title %}Member Availability{% endblock title %}
+
+{% block subheader %}
+  {{ block.super }}
+  <strong>
+    <div id="subhdr">
+      Availability
+    </div>
+  </strong>
+  <ul class="navbar-nav ml-auto">
+    <li class="nav-item ml-auto">
+      <a class="nav-link" href="{% url 'event_add' %}"><i class="fa fa-calendar-plus-o"></i> New busy period</a>
+    </li>
+  </ul>
+{% endblock subheader %}
+
+
+{% block table_options %}
+  dom: "Bfrtip",
+  responsive: true,
+  select: "single",
+  altEditor: true,
+  columnDefs: [
+  ],
+language: {
+      emptyTable: "No busy periods"
+},
+{% endblock table_options %}
+
+{% block table_functions %}
+function UpdateSubheaderBasedOnSettings(table) {
+}
+{% endblock table_functions %}
+
+
+{% block content %}
+<main>
+  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+    <thead>
+      <tr>
+        <th>Start</th><th>End</th><th>Comment</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for busy in availability_list %}
+      <tr>
+        <td>{{ busy.start_on|date:"Y-m-d" }}</td>
+        <td>{{ busy.end_on|date:"Y-m-d" }}</td>
+        <td>{{ busy.comment }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+  </table>
+ </div>
+</main>
+{% endblock content %}

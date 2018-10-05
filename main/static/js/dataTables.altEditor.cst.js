@@ -16,7 +16,7 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE. See the license files for details.
  *
- *
+ *  CST: 10/5/18 Added code to allow mulitple tables per page
  */
 (function (factory) {
     if (typeof define === 'function' && define.amd) {
@@ -267,7 +267,7 @@
                 var data = "";
 
                 data += "<form name='altEditor-form' role='form'>";
-
+                data += '<input type="hidden" id="tblId" value="' + dt.table().node().id +'">';
                 for (var j in columnDefs) {
                     // handle hidden fields
                     if (columnDefs[j].type.includes("hidden")) {
@@ -386,13 +386,15 @@
                     rowDataArray[$(this).attr('id')] = $(this).val();
                 });
 
-console.log(rowDataArray); //DEBUG
-
-                that.onEditRow(that,
-                    rowDataArray,
-                    function(data,b,c,d,e){ that._editRowCallback(data,b,c,d,e); },
-                    function(data){ that._errorCallback(data);
-                });
+                var assocTbl = that.s.dt.table().node().id;
+                if (rowDataArray['tblId'] == assocTbl) {
+                    that.onEditRow(that,
+                                   rowDataArray,
+                                   function(data,b,c,d,e){ that._editRowCallback(data,b,c,d,e); },
+                                   function(data){ that._errorCallback(data);
+                                                 }
+                                  );
+                }
             },
 
             /**
@@ -421,6 +423,7 @@ console.log(rowDataArray); //DEBUG
                 var data = "";
 
                 data += "<form name='altEditor-form' role='form'>";
+                data += '<input type="hidden" id="tblId" value="' + dt.table().node().id +'">';
                 for (var j in columnDefs) {
                     if (columnDefs[j].type.includes("hidden")) {
                         data += "<input type='hidden' id='" + columnDefs[j].title + "' value='" + adata.data()[0][columnDefs[j].name] + "'></input>";
@@ -470,17 +473,28 @@ console.log(rowDataArray); //DEBUG
                     selected: true
                 });
 
-                // Getting the IDs and Values of the tablerow
-                for (var i = 0; i < dt.context[0].aoColumns.length; i++) {
-                    //FIXME .id or .idx ? or none? what's the difference?
-                    jsonDataArray[dt.context[0].aoColumns[i].idx] = adata.data()[0][dt.context[0].aoColumns[i].data];
-                }
-                that.onDeleteRow(that,
-                    jsonDataArray,
-                    function(data){ that._deleteRowCallback(data); },
-                    function(data){ that._errorCallback(data);
+                // Complete new row data
+                var rowDataArray = {};
+
+                // Getting the inputs from the edit-modal
+                $('form[name="altEditor-form"] *').filter(':input').each(function (i) {
+                    rowDataArray[$(this).attr('id')] = $(this).val();
                 });
+
                 //FIXME why should we send all the data for a DELETE?
+                var assocTbl = that.s.dt.table().node().id;
+                if (rowDataArray['tblId'] == assocTbl) {
+                    // Getting the IDs and Values of the tablerow
+                    for (var i = 0; i < dt.context[0].aoColumns.length; i++) {
+                        //FIXME .id or .idx ? or none? what's the difference?
+                        jsonDataArray[dt.context[0].aoColumns[i].idx] = adata.data()[0][dt.context[0].aoColumns[i].data];
+                    }
+                    that.onDeleteRow(that,
+                                     jsonDataArray,
+                                     function(data){ that._deleteRowCallback(data); },
+                                     function(data){ that._errorCallback(data);
+                                                   });
+                }
             },
 
             /**
@@ -488,6 +502,7 @@ console.log(rowDataArray); //DEBUG
              *
              * @private
              */
+            //FIXME: need to add multi table check
             _openAddModal: function () {
                 var that = this;
                 var dt = this.s.dt;
@@ -517,6 +532,7 @@ console.log(rowDataArray); //DEBUG
                 // Building add-form
                 var data = "";
                 data += "<form name='altEditor-form' role='form'>";
+                data += '<input type="hidden" id="tblId" value="' + dt.table().node().id +'">';
                 for (var j in columnDefs) {
                     if (columnDefs[j].type.includes("hidden")) {
                         // just do nothing for hidden fields!
@@ -681,26 +697,28 @@ console.log(rowDataArray); //DEBUG
              */
             _editRowCallback: function (response, status, more) {
 
-                    //TODO should honor dt.ajax().dataSrc
+                //TODO should honor dt.ajax().dataSrc
                     
-                    var data = JSON.parse(response);
+                var data;
+                if (typeof response == 'object')
+                    data = response;
+                else
+                    data = JSON.parse(response);
 
-                    $('#altEditor-modal .modal-body .alert').remove();
-
-                    var message = '<div class="alert alert-success" role="alert">' +
-                        '<strong>Success!</strong>' +
-                        '</div>';
-                    $('#altEditor-modal .modal-body').append(message);
-
-                    this.s.dt.row({
-                        selected : true
-                    }).data(data);
-                    this.s.dt.draw();
-
-                    // Disabling submit button
-                    $("div#altEditor-modal").find("button#addRowBtn").prop('disabled', true);
-                    $("div#altEditor-modal").find("button#editRowBtn").prop('disabled', true);
-                    $("div#altEditor-modal").find("button#deleteRowBtn").prop('disabled', true);
+                $('#altEditor-modal .modal-body .alert').remove();
+                
+                var message = '<div class="alert alert-success" role="alert">' +
+                    '<strong>Success!</strong>' +
+                    '</div>';
+                $('#altEditor-modal .modal-body').append(message);
+                
+                this.s.dt.row({ selected : true }).data(data);
+                this.s.dt.draw();
+                
+                // Disabling submit button
+                $("div#altEditor-modal").find("button#addRowBtn").prop('disabled', true);
+                $("div#altEditor-modal").find("button#editRowBtn").prop('disabled', true);
+                $("div#altEditor-modal").find("button#deleteRowBtn").prop('disabled', true);
             },
 
             /**
