@@ -146,31 +146,17 @@ class MemberCertsView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
+class CertEditMixin:
+    model = Cert
     template_name = 'cert_form.html'
 
-    def post(self, *args, **kwargs):
-        if self.kwargs['member'] != self.request.user.id:
-            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
-            raise PermissionDenied
+    def get_cert_type(self):
+        # subclasses must implement
+        raise Exception
 
-        CertForm = self.get_form_class(self.request.POST['type'])
-        if self.kwargs['cert'] == 'new':
-            form = CertForm(self.request.POST)
-        else:
-            existing_cert = Cert.objects.get(id=self.kwargs['cert'])
-            if existing_cert.member.id != self.kwargs['member']:
-                return HttpResponseBadRequest()
-            form = CertForm(self.request.POST, instance=existing_cert)
+    def get_form_class(self):
+        cert_type = self.get_cert_type()
 
-        #FIXME: needs error handling - currently bad dates fail
-        if form.is_valid():
-            cert = form.save(commit=False)
-            cert.member = self.request.user
-            cert.save()
-        return HttpResponseRedirect(reverse('member_certs', args=[cert.member.id]))
-
-    def get_form_class(self, cert_type):
         fields = ['id', 'type', 'expiration', 'description']
         if cert_type == "ham":
             fields += ['link']
@@ -179,7 +165,7 @@ class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
                 # TODO: file upload
                 'comment',
             ]
-        CertForm = modelform_factory(
+        return modelform_factory(
             Cert,
             fields=fields,
             widgets={
@@ -188,29 +174,56 @@ class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
                 'description': widgets.TextInput(),
                 'comment': widgets.TextInput(),
                 'link': widgets.TextInput(),
+                'expiration': widgets.DateInput(attrs={'type': 'date'}),
             },
         )
-        return CertForm
+
+    def get_initial(self):
+        return {'type': self.get_cert_type()}
+
+    def form_valid(self, form):
+        if self.kwargs['member'] != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
+            raise PermissionDenied
+
+        cert = form.save(commit=False)
+
+        if cert.member_id and cert.member_id != self.request.user.id:
+            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
+            raise PermissionDenied
+
+        cert.member = self.request.user
+        cert.save()
+        return HttpResponseRedirect(reverse('member_certs', args=[cert.member.id]))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        new = self.kwargs['cert'] == 'new'
-
-        if new:
-            cert_type = self.request.GET.get('type', 'medical')
-            cert = Cert(type=cert_type)
-        else:
-            cert = Cert.objects.get(id=self.kwargs['cert'])
-            cert_type = cert.type
-
-        CertForm = self.get_form_class(cert_type)
-        form = CertForm(instance=cert)
-
-        context['new'] = new
-        context['cert'] = cert
-        context['form'] = form
         context['member'] = Member.objects.get(id=self.kwargs['member'])
+        return context
+
+
+class CertEditView(LoginRequiredMixin, CertEditMixin, generic.edit.UpdateView):
+    def get_cert_type(self):
+        return self.object.type
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['new'] = False
+        context['cert'] = self.object
+        return context
+
+
+class CertCreateView(LoginRequiredMixin, CertEditMixin, generic.edit.CreateView):
+    def get_cert_type(self):
+        if self.request.method == 'POST':
+            return self.request.POST['type']
+        else:
+            return self.request.GET.get('type', 'medical')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['new'] = True
+        context['cert'] = Cert(type=self.get_cert_type())
         return context
 
 
