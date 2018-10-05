@@ -161,11 +161,11 @@ class EventPeriodDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
         return event.get_absolute_url()
 
 
-class ParticipantCreateView(LoginRequiredMixin, generic.ListView):    
+class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):    
     model = Participant
     fields = ['member', 'ahc', 'ol', 'period']
     context_object_name = 'member_list'
-    template_name = 'participant_add.html'
+    template_name = 'period_participant_add.html'
 
     def get_queryset(self):
         """Return the member list."""
@@ -181,6 +181,31 @@ class ParticipantCreateView(LoginRequiredMixin, generic.ListView):
         }
 
 
+#FIXME: where does this belong
+class MessageParticipantCreateView(LoginRequiredMixin, generic.ListView):    
+    model = Participant
+    fields = ['member', 'ahc', 'ol', 'period']
+    context_object_name = 'member_list'
+    template_name = 'message_participant_add.html'
+
+    def get_queryset(self):
+        """Return the member list."""
+        return Member.objects.order_by('id')
+
+    def get_success_url(self):
+        return self.object.period.event.get_absolute_url()
+
+    def get_initial(self):
+        period = get_object_or_404(Period, pk=self.kwargs.get('period'))
+        return {
+            'period':period,
+        }
+
+
+#FIXME: No longer needed?
+#    path('event/<int:event>/participant/delete/<int:pk>/',
+#         views.ParticipantDeleteView.as_view(), name='event_participant_delete'),
+#
 class ParticipantDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
     model = Participant
     template_name = 'base_delete.html'
