@@ -67,6 +67,12 @@ class DoSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'year', 'quarter', 'week', 'available', 'assigned', 'member_id')
 
         
+class BareParticipantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Participant
+        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+
+
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
     member = MemberSerializer()
     class Meta:
@@ -99,3 +105,25 @@ class EventDetailSerializer(EventListSerializer):
     class Meta(EventListSerializer.Meta):
         model = Event
         fields = EventListSerializer.Meta.fields + ('period_set',)
+
+
+class PeriodParticipantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Participant
+        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+
+
+#FIXME: This is here to get fullname without interfering with ParticipantAdd
+class BaseMemberSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Member
+        fields = ('id', 'full_name',)
+
+
+class EditPeriodParticipantSerializer(serializers.ModelSerializer):
+    member = BaseMemberSerializer()
+    class Meta:
+        model = Participant
+        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+
+

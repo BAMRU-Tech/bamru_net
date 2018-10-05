@@ -38,7 +38,6 @@ language: {
 {
     text: "Add",
     action: function ( e, dt, node, config ) {
-        var csrftoken = getCookie('csrftoken');
         var members = dt.rows( { selected: true } ).data().pluck( 'Name' ).toArray();
         var data = [];
         var regex = /\d+(?:\.\d+)?/;
@@ -50,16 +49,9 @@ language: {
         for (var i = 0; i < members.length; i++) {
             var re = regex.exec(members[i]);
             var member_id = re[0];
-            data.push({ 'period': period_id, 'member':member_id });
+            data.push({ 'period': period_id, 'member': member_id });
         }
         data = JSON.stringify(data);
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                }
-            }
-        });
         $.ajax({
             'type': 'POST',
             'contentType': 'application/json',

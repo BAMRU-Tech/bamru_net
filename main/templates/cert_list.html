@@ -25,7 +25,9 @@ language: {
 {% endblock table_options %}
 
 {% block table_functions %}
+
 const apiUrlMemberRank = "/api/member_certs/?member_rank=";
+
 function AddRows(table, values) {
     // Add row data via AJAX based on rank
     urlData = apiUrlMemberRank+values[0];

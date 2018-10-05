@@ -17,10 +17,22 @@
             info:     false,
             order: [[ 0, "asc" ]],
             columnDefs: [
-                { "orderable": false, "targets": 5 },
                 { responsivePriority: 1, targets: 0 },
                 { responsivePriority: 2, targets: 1 },
-                { responsivePriority: 3, targets: [2, 3]}
+                { responsivePriority: 3, targets: [2, 3]},
+                { visible: false, targets: [5, 6, 7, 8, 9]},
+            ],
+            columns: [
+                { 'data': "name" },
+                { 'data': "en_route_at" },
+                { 'data': "return_home_at" },
+                { 'data': "signed_in_at" },
+                { 'data': "signed_out_at" },
+                { 'data': "id" },
+                { 'data': "member" },
+                { 'data': "period" },
+                { 'data': "ahc" },
+                { 'data': "ol" },
             ],
             buttons: [
                 {
@@ -95,39 +107,61 @@
                     ]
                 }
             ],
-            onDeleteRow: function(dt, rowdata, success, error) {
-                var csrftoken = getCookie('csrftoken');
+            onEditRow: function(dt, row, success, error) {
+                CleanDate = function (d) {
+                    sd = d ? d.substr(0, d.length - 9) : '';
+                    return sd;
+                }
+
+                var data = row;
+
+                // Delete values that won't be set
+                delete data.member;
+                for (d in data) if (data[d] == '') delete data[d];
+
                 //FIXME: Eventual this should allow mult-row select for delete and edit
                 //var members = dt.rows( { selected: true } ).data().pluck( 'Name' ).toArray();
-                var regex = /\d+(?:\.\d+)?/;
-                $.ajaxSetup({
-                    beforeSend: function(xhr, settings) {
-                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                        }
+                var id = data['id'];
+                data = JSON.stringify(data);
+                $.ajax({
+                    'method': 'patch',
+                    'contentType': 'application/json',
+                    'url': '/api/edit_participants/' + id + '/',
+                    'data': data,
+                    success: function (r, s, m) {
+                        r['name'] = r['member']['full_name'];
+                        //FIXME: temporary fix until we decide on api date format
+                        r['en_route_at'] = CleanDate(r['en_route_at']);
+                        r['return_home_at'] = CleanDate(r['return_home_at']);
+                        r['signed_in_at'] = CleanDate(r['signed_in_at']);
+                        r['signed_out_at'] = CleanDate(r['signed_out_at']);
+                        return success(r, s, m);
+                    },
+                    error: function (xhr) {
+                        console.log('member edit failed');
+                        console.log(xhr);
+                        return error;
                     }
-                });
+                })
+            },
+            onDeleteRow: function(dt, row, success, error) {
+
+                var id = row[5];  //FIXME: why is this array vs dict with labels?
+                
+                //FIXME: Eventual this should allow mult-row select for delete and edit
                 $.ajax({
                     'type': 'DELETE',
                     'contentType': 'application/json',
-                    'url': '/api/participants/2',
-                    success: success,
+                    'url': '/api/participants/' + id + '/',
+                    success: function (r, s, m) {
+                        return success(r, s, m);
+                    },
                     error: function (xhr) {
                         console.log('member delete failed');
                         console.log(xhr);
                         return error;
                     }
                 })
-            },
-            onEditRow: function(datatable, rowdata, success, error) {
-                $.ajax({
-                    // a tipycal url would be /{id} with type='POST'
-                    url: url_ws_mock_ok,
-                    type: 'GET',
-                    data: rowdata,
-                    success: success,
-                    error: error
-                });
             },
             language: {
                 emptyTable: "No members added"
@@ -172,6 +206,12 @@
     <p><strong>Description:</strong> {{ event.description }}</p>
     <p><strong>Location:</strong> {{ event.location }}</p>
     <p><strong>Leaders:</strong> {{ event.leaders }}</p>
+    <p>
+      <strong>Start:</strong> {{ event.start }}
+      <strong>End:</strong> {{ event.finish }}
+      <strong>All day:</strong> {{ event.all_day }}
+      <strong>Published:</strong> {{ event.published }}
+    </p>
 
     {% for period in event.period_set.all %}
     <a name="OP{{period.position}}"></a>
@@ -195,21 +235,26 @@
         <th>Returned</th>
         <th>Signed in</th>
         <th>Signed out</th>
-        <th></th>
+        <th>id</th>
+        <th>member</th>
+        <th>period</th>
+        <th>ahc</th>
+        <th>ol</th>
       </tr>
       </thead>
       <tbody>
       {% for participant in period.participant_set.all %}
       <tr>
         <td>{{ participant.member }}</td>
-        <td>{{ participant.en_route_at }}</td>
-	    <td>{{ participant.return_home_at }}</td>
-	    <td>{{ participant.signed_in_at }}</td>
-	    <td>{{ participant.signed_out_at }}</td>
-        <td><a href='{% url "event_participant_delete" event=event.id pk=participant.id %}'>
-        <i class="fa fa-trash"></i>
-          </a>
-        </td>
+        <td>{{ participant.en_route_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ participant.return_home_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ participant.signed_in_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ participant.signed_out_at|date:"Y-m-d\TH:m" }}</td>
+	    <td>{{ participant.id }}</td>
+	    <td>{{ participant.member.id }}</td>
+	    <td>{{ participant.period.id }}</td>
+	    <td>{{ participant.ahc }}</td>
+	    <td>{{ participant.ol }}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -225,4 +270,3 @@
 
 </main> {# /.container #}
 {% endblock %}
-

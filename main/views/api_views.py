@@ -100,7 +100,13 @@ class PeriodViewSet(viewsets.ModelViewSet):
 class ParticipantViewSet(CreateListModelMixin, viewsets.ModelViewSet):
     queryset = Participant.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = BareParticipantSerializer
+    serializer_class = PeriodParticipantSerializer
+
+
+class EditParticipantViewSet(CreateListModelMixin, viewsets.ModelViewSet):
+    queryset = Participant.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = EditPeriodParticipantSerializer
 
 
 class PeriodParticipantsView(views.APIView):
