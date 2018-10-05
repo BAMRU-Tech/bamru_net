@@ -1,5 +1,4 @@
-{% extends 'base_generic.html' %}
-{% load bootstrap4 %}
+{% extends 'base_form.html' %}
 
 {% block title %}{% if new %}Add{% else %}Edit{% endif %} Cert - {{ cert.get_type_display }}{% endblock title %}
 
@@ -21,18 +20,6 @@
 {% endblock subheader %}
 
 {% block content %}
-<main role="main" class="container">
-  <div id="content">
-    <h4>{% if new %}New{% else %}Editing{% endif %} {{ cert.get_type_display }} certificate</h4>
-    <form method="post">
-      {% csrf_token %}
-      {# % bootstrap_form form % #}
-
-      <table>
-        {{ form }}
-      </table>
-      <input type="submit" value="Submit" />
-    </form>
-  </div>
-</main><!-- /.container -->
+<h4>{% if new %}New{% else %}Editing{% endif %} {{ cert.get_type_display }} certificate</h4>
+{{ block.super }}
 {% endblock content %}
