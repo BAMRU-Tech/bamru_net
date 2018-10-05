@@ -1,6 +1,25 @@
 {% extends 'base_generic.html' %}
 {% load bootstrap4 %}
 
+{% block title %}{% if new %}Add{% else %}Edit{% endif %} Cert - {{ cert.get_type_display }}{% endblock title %}
+
+{% block subheader %}
+<strong>
+  <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+  &gt; {{ cert.get_type_display }}
+</strong>
+<div class="collapse navbar-collapse" id="certMenu">
+  <ul class="navbar-nav ml-auto">
+    <li class="nav-item">
+      <a class="nav-link" href='{% url "member_certs" member.id %}'>
+        <i class="fa fa-certificate"></i>
+        Certs
+      </a>
+    </li>
+  </ul>
+</div>
+{% endblock subheader %}
+
 {% block content %}
 <main role="main" class="container">
   <div id="content">
@@ -16,13 +35,4 @@
     </form>
   </div>
 </main><!-- /.container -->
-{% endblock %}
-
-{% block subheader %}
-<div id="subhdr">
-<a href="{% url 'member_index' %}"> Members </a>
-&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
-&gt; <a href="{% url 'member_certs' member.id %}">Certs</a>
-&gt; {% if new %}Add{% else %}Edit{% endif %} cert
-</div>
-{% endblock %}
+{% endblock content %}

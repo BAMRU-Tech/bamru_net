@@ -1,12 +1,11 @@
 {% extends 'base_table.html' %}
 
-{% block title %}Add Cert{% endblock title %}
+{% block title %}Certs - {{member.full_name}} {% endblock title %}
 
 {% block subheader %}
 <div id="subhdr">
   <strong>
-    <a href="{% url 'member_index' %}"> Members </a>
-    &gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+    <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
     &gt; Certs
   </strong>
 </div>
@@ -23,7 +22,7 @@
     </div>
   </li>
 </ul>
-{% endblock %}
+{% endblock subheader %}
 
 {% block content %}
 <main>
@@ -58,5 +57,5 @@
     </tbody>
   </table>
 </main>
-{% endblock %}
+{% endblock content %}
 

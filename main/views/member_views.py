@@ -163,6 +163,7 @@ class CertEditView(LoginRequiredMixin, generic.base.TemplateView):
                 return HttpResponseBadRequest()
             form = CertForm(self.request.POST, instance=existing_cert)
 
+        #FIXME: needs error handling - currently bad dates fail
         if form.is_valid():
             cert = form.save(commit=False)
             cert.member = self.request.user
