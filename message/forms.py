@@ -11,6 +11,9 @@ class MessageCreateForm(forms.ModelForm):
         model = Message
         fields = ['author', 'text', 'format',
                   'period', 'period_format', 'rsvp_template']
+        widgets = {
+            'author': forms.widgets.HiddenInput(),
+        }
 
     def __init__(self, members, *args, **kwargs):
         super(MessageCreateForm, self).__init__(*args, **kwargs)

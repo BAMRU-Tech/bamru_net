@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.dispatch import receiver
-from django.forms.widgets import Select, SelectDateWidget, Widget
+from django.forms.widgets import HiddenInput, Select, SelectDateWidget, Widget
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Message
-    template_name = 'base_form.html'
+    template_name = 'message_compose.html'
 
     def get_success_url(self):
         return self.object.get_absolute_url()
@@ -68,15 +68,36 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
 
             initial['members'] = [m.id for m in members]
 
+            rsvp_template = None
             try:
-                initial['rsvp_template'] = RsvpTemplate.objects.get(
-                    name=template_str).id
+                rsvp_template = RsvpTemplate.objects.get(name=template_str)
+                initial['rsvp_template'] = rsvp_template.id
             except RsvpTemplate.DoesNotExist:
                 logger.error('RsvpTemplate {} not found for: {}'.format(
                     template_str, self.request.body))
 
         kwargs['initial'] = initial
-        return MessageCreateForm(members, **kwargs)
+        form = MessageCreateForm(members, **kwargs)
+        form.fields['text'].widget.attrs['rows'] = 2
+        if period_id:
+            form.fields['format'].widget = HiddenInput()
+            form.fields['period'].widget = HiddenInput()
+            form.fields['period_format'].widget = HiddenInput()
+            form.fields['rsvp_template'].widget = HiddenInput()
+            self.period = period
+            self.rsvp_template = rsvp_template
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.period:
+            context['period'] = self.period
+            context['rsvp_template'] = self.rsvp_template
+            if self.rsvp_template:
+                context['extra_characters'] = len(self.rsvp_template.text) + 1
+            else:
+                context['extra_characters'] = 0
+        return context
 
     def form_valid(self, form):
         message = form.instance
