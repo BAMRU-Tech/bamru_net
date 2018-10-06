@@ -43,7 +43,6 @@ urlpatterns = [
     path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='member_cert_new'),
     path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='member_cert_delete'),
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
-    path('availability/edit/', views.AvailableEditView.as_view(), name='available_edit'),
     path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
 
     path('event/proximate', views.EventImmediateView.as_view(), name='event_immediate'),
