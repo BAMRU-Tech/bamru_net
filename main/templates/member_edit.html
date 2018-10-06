@@ -105,7 +105,7 @@
 {% endblock %}
 
 {% block subheader %}
-<a href="{% url 'member_index' %}">Members</a>
+<a href="{% url 'member_list' %}">Members</a>
 &gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
 &gt; Edit
 {% endblock %}

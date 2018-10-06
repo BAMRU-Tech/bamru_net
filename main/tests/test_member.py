@@ -120,12 +120,12 @@ class CertTestCase(MemberTestCase):
 
     def test_new_cert(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('new_cert', args=[self.user.id]) + '?type=medical')
+        response = self.client.get(reverse('member_cert_new', args=[self.user.id]) + '?type=medical')
         self.assertEqual(response.status_code, 200)
 
         orig_num_certs = Cert.objects.filter(member=self.user).count()
 
-        response = self.client.post(reverse('new_cert', args=[self.user.id]) + '?type=medical', {
+        response = self.client.post(reverse('member_cert_new', args=[self.user.id]) + '?type=medical', {
             'type': 'medical',
             'expiration': '2018-12-31',
             'description': 'WFR',
@@ -138,14 +138,14 @@ class CertTestCase(MemberTestCase):
 
     def test_edit_cert(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('edit_cert', args=[self.user.id, self.cert.id]))
+        response = self.client.get(reverse('member_cert_edit', args=[self.user.id, self.cert.id]))
         self.assertEqual(response.status_code, 200)
 
         orig_num_certs = Cert.objects.filter(member=self.user).count()
 
         new_expiration = timezone.now().date() + timedelta(days=200)
 
-        response = self.client.post(reverse('edit_cert', args=[self.user.id, self.cert.id]), {
+        response = self.client.post(reverse('member_cert_edit', args=[self.user.id, self.cert.id]), {
             'type': 'medical',
             'expiration': new_expiration,
             'description': 'WFR',
@@ -160,12 +160,12 @@ class CertTestCase(MemberTestCase):
 
     def test_delete_cert(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('delete_cert', args=[self.user.id, self.cert.id]))
+        response = self.client.get(reverse('member_cert_delete', args=[self.user.id, self.cert.id]))
         self.assertEqual(response.status_code, 200)
 
         orig_num_certs = Cert.objects.filter(member=self.user).count()
 
-        response = self.client.post(reverse('delete_cert', args=[self.user.id, self.cert.id]))
+        response = self.client.post(reverse('member_cert_delete', args=[self.user.id, self.cert.id]))
         self.assertEqual(response.status_code, 302)
 
         new_num_certs = Cert.objects.filter(member=self.user).count()

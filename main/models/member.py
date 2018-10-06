@@ -396,6 +396,12 @@ class Cert(BasePositionModel):
         return self.description
 
     @property
+    def display(self):
+        for t in self.TYPES:
+            if t[0] == self.type:
+                return t[1]
+
+    @property
     def is_expired(self):
         # We will allow certs expiring today, thus < not <=
         return ((self.expiration is None) or
@@ -408,7 +414,7 @@ class Cert(BasePositionModel):
         if not exp:
             return "white"
         if exp < now:
-            return "pink"
+            return "red"
         if exp < now + timedelta(days=30):
             return "orange"
         if exp < now + timedelta(days=90):

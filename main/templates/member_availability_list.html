@@ -3,59 +3,125 @@
 {% block title %}Member Availability{% endblock title %}
 
 {% block subheader %}
-  {{ block.super }}
-  <strong>
-    <div id="subhdr">
-      Availability
-    </div>
-  </strong>
-  <ul class="navbar-nav ml-auto">
-    <li class="nav-item ml-auto">
-      <a class="nav-link" href="#"><i class="fa fa-calendar-plus-o"></i> New busy period</a>
-    </li>
-  </ul>
+<strong>
+  <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+  &gt; Availability
+</strong>
 {% endblock subheader %}
 
-
 {% block table_options %}
-  dom: "Bfrtip",
-  responsive: true,
-  select: "single",
-  altEditor: true,
-  columnDefs: [
-  ],
-  language: {
-      emptyTable: "No busy periods"
+dom: "Bfrtip",
+responsive: true,
+select: "single",
+altEditor: true,
+columnDefs: [],
+columns: [
+    { data: "start_on" },
+    { data: "end_on" },
+    { data: "comment" },
+    { data: "id", visible: false, type: "readonly" },
+],
+language: {
+    emptyTable: "No busy periods"
 },
+
+onAddRow: function(dt, row, success, error) {
+
+    var data = row;
+
+    data['member'] = $('#memberId').val();
+    data = JSON.stringify(data);
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/availability/',
+        data: data,
+        success: function (r, s, m) {
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability add failed');
+            console.log(xhr);
+            return error;
+        }
+    })
+},
+    
 onEditRow: function(dt, row, success, error) {
-    success(row);
+
+    var data = row;
+
+    var id = data['id'];
+    data = JSON.stringify(data);
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/availability/' + id + '/',
+        data: data,
+        success: function (r, s, m) {
+            var name = r['member']['full_name'];
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability edit failed');
+            console.log(xhr);
+            return error;
+        }
+    })
 },
+onDeleteRow: function(dt, row, success, error) {
+
+    var id = row[3];  //FIXME: why is this array vs a dict with labels?
+                
+    $.ajax({
+        method: 'DELETE',
+        contentType: 'application/json',
+        url: '/api/availability/' + id + '/',
+        success: function (r, s, m) {
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability delete failed');
+            console.log(xhr);
+            return error;
+        }
+    })
+},
+
 {% endblock table_options %}
 
 {% block table_buttons_first %}
 {
-    text: "Add",
+    text: '<i class="fa fa-calendar-times-o"></i> Add',
+    name: "add"        // do not change name
 },
 {
     extend: "selected", // Bind to Selected row
     text: '<i class="fa fa-edit"></i> Edit',
     name: "edit"        // do not change name
 },
+{
+    extend: "selected", // Bind to Selected row
+    autoClose: true,
+    text: '<i class="fa fa-trash"></i> Delete',
+    name: "delete"      // do not change name
+},
+
 {% endblock table_buttons_first %}
 {% block table_buttons_filter %}{% endblock %}
 
 {% block table_functions %}
-function UpdateSubheaderBasedOnSettings(table) {
-}
-{% endblock table_functions %}
 
+function UpdateSubheaderBasedOnSettings(table) {}
+
+{% endblock table_functions %}
 
 {% block content %}
 <main>
-  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
-        <th>Start</th><th>End</th><th>Comment</th>
+        <th>Start</th><th>End</th><th>Comment</th><th>Id</th>
       </tr>
     </thead>
 
@@ -65,10 +131,11 @@ function UpdateSubheaderBasedOnSettings(table) {
         <td>{{ busy.start_on|date:"Y-m-d" }}</td>
         <td>{{ busy.end_on|date:"Y-m-d" }}</td>
         <td>{{ busy.comment }}</td>
+        <td>{{ busy.id }}</td>
       </tr>
       {% endfor %}
-      </tbody>
+    </tbody>
   </table>
- </div>
+  <input type="hidden" id="memberId" value="{{ member.id }}">
 </main>
 {% endblock content %}

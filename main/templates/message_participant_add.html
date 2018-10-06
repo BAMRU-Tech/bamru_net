@@ -48,30 +48,7 @@ language: {
         }
 
         location.href='{% url "message:message_add" %}?period=' + period_id + '&period_format=' + format;
-        return; //FIXME
-
-        for (var i = 0; i < members.length; i++) {
-            var re = regex.exec(members[i]);
-            var member_id = re[0];
-            data.push({ 'period': period_id, 'member': member_id });
         }
-        data = JSON.stringify(data);
-        $.ajax({
-            'type': 'POST',
-            'contentType': 'application/json',
-            'url': '/api/participants/',
-            'data': data,
-            success: function (response) {
-                console.log('Period add ' + response.length + ' members');
-                //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
-                location.href='/event/' + event_id + '#OP' + period_num;
-            },
-            error: function (xhr) {
-                console.log('Period add failed');
-                console.log(xhr);
-            }
-        })
-    }
 },
 {% endblock table_buttons_first %}
 

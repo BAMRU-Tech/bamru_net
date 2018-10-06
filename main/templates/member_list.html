@@ -8,6 +8,14 @@
       Members
     </div>
   </strong>
+  <ul class="navbar-nav ml-auto">
+    <li class="nav-item ml-auto">
+      <a class="nav-link" href="{% url 'member_detail' request.user.id %}">
+        <i class="fa fa-user"></i>
+        Profile
+      </a>
+    </li>
+  </ul>
 {% endblock %}
 
 {% block table_options %}

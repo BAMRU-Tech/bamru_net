@@ -53,10 +53,10 @@ language: {
         }
         data = JSON.stringify(data);
         $.ajax({
-            'type': 'POST',
-            'contentType': 'application/json',
-            'url': '/api/participants/',
-            'data': data,
+            method: 'POST',
+            contentType: 'application/json',
+            url: '/api/participants/',
+            data: data,
             success: function (response) {
                 console.log('Period add ' + response.length + ' members');
                 //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members

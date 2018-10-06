@@ -81,7 +81,7 @@ class DoPlanView(DoAbstractView, generic.base.TemplateView):
 
 
 class DoEditView(DoAbstractView, generic.base.TemplateView):
-    template_name = 'do_form.html'
+    template_name = 'member_do_list.html'
 
     def post(self, *args, **kwargs):
         return self.get(*args, **kwargs)

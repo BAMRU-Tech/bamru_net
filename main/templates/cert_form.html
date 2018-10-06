@@ -10,7 +10,7 @@
 <div class="collapse navbar-collapse" id="certMenu">
   <ul class="navbar-nav ml-auto">
     <li class="nav-item">
-      <a class="nav-link" href='{% url "member_certs" member.id %}'>
+      <a class="nav-link" href='{% url "member_cert_list" member.id %}'>
         <i class="fa fa-certificate"></i>
         Certs
       </a>
@@ -20,6 +20,5 @@
 {% endblock subheader %}
 
 {% block content %}
-<h4>{% if new %}New{% else %}Editing{% endif %} {{ cert.get_type_display }} certificate</h4>
 {{ block.super }}
 {% endblock content %}

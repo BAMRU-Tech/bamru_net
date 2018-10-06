@@ -39,6 +39,14 @@ class UnavailableViewSet(viewsets.ModelViewSet):
     search_fields = ('member__username', )
 
 
+class ApiUnavailableViewSet(viewsets.ModelViewSet):
+    queryset = Unavailable.objects.all()
+    serializer_class = BareUnavailableSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filterset_class = UnavailableFilter
+    search_fields = ('member__username', )
+
+
 class MemberUnavailableViewSet(viewsets.ModelViewSet):
     queryset = Member.members.prefetch_related('unavailable_set')
     serializer_class = MemberUnavailableSerializer

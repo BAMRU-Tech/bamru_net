@@ -26,7 +26,7 @@ from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 
 
-class MemberIndexView(LoginRequiredMixin, generic.ListView):
+class MemberListView(LoginRequiredMixin, generic.ListView):
     template_name = 'member_list.html'
     context_object_name = 'member_list'
 
@@ -41,7 +41,7 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
 
 
 class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
-    template_name = 'member_form.html'
+    template_name = 'member_edit.html'
 
     MemberForm = modelform_factory(Member,
             fields=['first_name', 'last_name', 'ham', 'v9', 'dl'])
@@ -88,7 +88,7 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
             else:
                 args = []
             forms = {}
-            forms['member_form'] = self.MemberForm(*args, prefix='member', instance=member)
+            forms['member_edit'] = self.MemberForm(*args, prefix='member', instance=member)
             forms['phones_form'] = self.PhonesForm(*args, prefix='phones', instance=member)
             forms['emails_form'] = self.EmailsForm(*args, prefix='emails', instance=member)
             forms['addresses_form'] = self.AddressesForm(*args, prefix='addresses', instance=member)
@@ -130,7 +130,7 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
         return context
 
 
-class MemberCertsView(LoginRequiredMixin, generic.ListView):
+class MemberCertListView(LoginRequiredMixin, generic.ListView):
     template_name = 'member_cert_list.html'
     context_object_name = 'cert_list'
 
@@ -194,22 +194,11 @@ class CertEditMixin:
 
         cert.member = self.request.user
         cert.save()
-        return HttpResponseRedirect(reverse('member_certs', args=[cert.member.id]))
+        return HttpResponseRedirect(reverse('member_cert_list', args=[cert.member.id]))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['member'] = Member.objects.get(id=self.kwargs['member'])
-        return context
-
-
-class CertEditView(LoginRequiredMixin, CertEditMixin, generic.edit.UpdateView):
-    def get_cert_type(self):
-        return self.object.type
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['new'] = False
-        context['cert'] = self.object
         return context
 
 
@@ -343,36 +332,6 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
                               for d in range(self.days)]
         return context
 
-# FIXME: delete after MemberAvail is completed
-class AvailableEditView(LoginRequiredMixin, generic.base.TemplateView):
-    template_name = 'available_form.html'
-
-    def post(self, *args, **kwargs):
-        return self.get(*args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        UnavailableFormSet = modelformset_factory(
-            Unavailable,
-            fields=['start_on', 'end_on', 'comment',],
-        )
-
-        qs = Unavailable.objects.filter(member=self.request.user)
-
-        if self.request.method == 'POST':
-            formset = UnavailableFormSet(self.request.POST)
-            if formset.is_valid():
-                instances = formset.save(commit=False)
-                for instance in instances:
-                    instance.member = self.request.user
-                    instance.save()
-        else:
-            formset = UnavailableFormSet(
-                queryset=qs)
-        context['formset'] = formset
-        return context
-
 class MemberAvailabilityListView(LoginRequiredMixin, generic.ListView):
     template_name = 'member_availability_list.html'
     context_object_name = 'availability_list'
@@ -381,3 +340,8 @@ class MemberAvailabilityListView(LoginRequiredMixin, generic.ListView):
         """Return the availability list."""
         qs = Unavailable.objects.filter(member=self.request.user)
         return Unavailable.objects.filter(member=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['member'] = Member.objects.filter(id=self.kwargs['pk']).first()
+        return context

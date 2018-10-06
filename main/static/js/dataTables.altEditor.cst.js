@@ -673,10 +673,14 @@
              */
             _addRowCallback: function (response, status, more) {
                 
-                    //TODO should honor dt.ajax().dataSrc
+                //TODO should honor dt.ajax().dataSrc
                     
-                    var data = JSON.parse(response);
-                    
+                var data;
+                if (typeof response == 'object')
+                    data = response;
+                else
+                    data = JSON.parse(response);
+
                     $('#altEditor-modal .modal-body .alert').remove();
 
                     var message = '<div class="alert alert-success" role="alert">' +

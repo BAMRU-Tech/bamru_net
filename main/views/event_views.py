@@ -200,16 +200,3 @@ class MessageParticipantCreateView(LoginRequiredMixin, generic.ListView):
         return {
             'period':period,
         }
-
-
-#FIXME: No longer needed?
-#    path('event/<int:event>/participant/delete/<int:pk>/',
-#         views.ParticipantDeleteView.as_view(), name='event_participant_delete'),
-#
-class ParticipantDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
-    model = Participant
-    template_name = 'base_delete.html'
-
-    def get_success_url(self):
-        event = get_object_or_404(Event, pk=self.kwargs.get('event'))
-        return event.get_absolute_url()

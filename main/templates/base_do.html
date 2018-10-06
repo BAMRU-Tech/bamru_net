@@ -1,4 +1,4 @@
-{% extends 'base_table.html' %}
+{% extends 'base_table.html' %}o
 
 {% block subheader %}
   <strong>
@@ -6,7 +6,7 @@
   </strong>
   <ul class="navbar-nav ml-auto">
     <li class="nav-item dropdown">
-      <a class="nav-link" href="{% url 'do_index' %}{{ query_this }}">
+      <a class="nav-link" href="{% url 'do_list' %}{{ query_this }}">
         <i class="fa fa-calendar"></i>
         Schedule</a>
     </li>
@@ -16,7 +16,7 @@
         Plan</a>
     </li>
     <li class="nav-item dropdown">
-      <a class="nav-link" href="{% url 'do_form' %}{{ query_this }}">
+      <a class="nav-link" href="{% url 'do_availability_list' %}{{ query_this }}">
         <i class="fa fa-calendar-check-o"></i>
         Availability</a>
     </li>

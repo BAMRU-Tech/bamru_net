@@ -124,10 +124,10 @@
                 var id = data['id'];
                 data = JSON.stringify(data);
                 $.ajax({
-                    'method': 'patch',
-                    'contentType': 'application/json',
-                    'url': '/api/edit_participants/' + id + '/',
-                    'data': data,
+                    method: 'PATCH',
+                    contentType: 'application/json',
+                    url: '/api/edit_participants/' + id + '/',
+                    data: data,
                     success: function (r, s, m) {
                         var name = r['member']['full_name'];
                         if (r['ahc']) name += '(AHC)';
@@ -153,9 +153,9 @@
                 
                 //FIXME: Eventual this should allow mult-row select for delete and edit
                 $.ajax({
-                    'type': 'DELETE',
-                    'contentType': 'application/json',
-                    'url': '/api/participants/' + id + '/',
+                    method: 'DELETE',
+                    contentType: 'application/json',
+                    url: '/api/participants/' + id + '/',
                     success: function (r, s, m) {
                         return success(r, s, m);
                     },
@@ -200,7 +200,7 @@
       </li>
     </ul>
   </div>
-{% endblock %}
+{% endblock subheader %}
 
   
 {% block content %}

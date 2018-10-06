@@ -2,9 +2,9 @@
 
 {% block subheader %}
 <div id="subhdr">
-<a href="{% url 'member_index' %}"> Members </a>
+<a href="{% url 'member_list' %}"> Members </a>
 &gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
-&gt; <a href="{% url 'member_certs' member.id %}">Certs</a>
+&gt; <a href="{% url 'member_cert_list' member.id %}">Certs</a>
 &gt; Delete cert
 </div>
 {% endblock subheader %}

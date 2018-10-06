@@ -41,9 +41,10 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class CertSerializer(serializers.HyperlinkedModelSerializer):
+        
     class Meta:
         model = Cert
-        read_only_fields = ('is_expired',)
+        read_only_fields = ('is_expired', 'color', 'display',)
         fields = ('id', 'url', 'member_id', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
 
 
@@ -114,6 +115,7 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
 
 
 #FIXME: This is here to get fullname without interfering with ParticipantAdd
+# normalize api around objects {members, events, ...}
 class BaseMemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member

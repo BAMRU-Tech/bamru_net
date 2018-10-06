@@ -1,4 +1,4 @@
-{% extends 'base_table.html' %}
+{% extends 'base_ftable.html' %}
 
 {% block title %}Certs - {{member.full_name}} {% endblock title %}
 
@@ -9,20 +9,150 @@
     &gt; Certs
   </strong>
 </div>
-<ul class="navbar-nav ml-auto">
-  <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" id="certDropdown" data-toggle="dropdown">
-      <i class="fa fa-pencil"></i>
-      Add Cert
-    </a>
-    <div class="dropdown-menu dropdown-menu-right">
-      {% for type in cert_types %}
-        <a class="dropdown-item" href="{% url 'new_cert' member.id %}?type={{type.0}}">Add {{type.1}} Cert</a>
-      {% endfor %}
-    </div>
-  </li>
-</ul>
 {% endblock subheader %}
+
+{% block table_options %}
+dom: "Bfrtip",
+responsive: true,
+select: "single",
+altEditor: true,
+columnDefs: [ // FIXME: sort by most expired cert?
+    {
+        targets: [ 0, 3 ],
+        "render": function ( data, type, rowData, meta ) {
+            if (meta['col'] == 0 && rowData['display']) {
+                // Handle type 'cpr' -> 'CPR'
+                data = rowData['display']
+            } else {
+                // Add color for up coming cert expirations
+                var row = $('#dTbl').DataTable().row(meta['row']).node();
+                $('td:eq(3)', row).css('background-color', rowData['color'])
+            }
+            return data;
+        },
+    },
+    { responsivePriority: 0, targets: 0 },
+    { responsivePriority: 2, targets: 1 },
+    { responsivePriority: 3, targets: 2 },
+    { responsivePriority: 1, targets: 3 },
+],
+columns: [
+    { data: "type", type: "readonly" },
+    { data: "description" },
+    { data: "url" },
+    { data: "expiration" },
+    { data: "id", visible: false, type: "readonly" },
+    { data: "is_expired", visible: false, type: "readonly" },
+    { data: "color", visible: false, type: "readonly" },
+],
+language: {
+    emptyTable: "No busy periods"
+},
+
+onAddRow: function(dt, row, success, error) {
+
+    var data = row;
+
+    data['member'] = $('#memberId').val();
+    data = JSON.stringify(data);
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/availability/',
+        data: data,
+        success: function (r, s, m) {
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability add failed');
+            console.log(xhr);
+            return error;
+        }
+    })
+},
+    
+onEditRow: function(dt, row, success, error) {
+
+    var data = row;
+
+    delete data['type'];
+
+    var id = data['id'];
+    data = JSON.stringify(data);
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/certs/' + id + '/',
+        data: data,
+        success: function (r, s, m) {
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('cert edit failed');
+            console.log(xhr);
+            return error;
+        }
+    })
+},
+onDeleteRow: function(dt, row, success, error) {
+
+    var id = row[4];  //FIXME: why is this array vs a dict with labels?
+                
+    $.ajax({
+        method: 'DELETE',
+        contentType: 'application/json',
+        url: '/api/certs/' + id + '/',
+        success: function (r, s, m) {
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('cert delete failed');
+            console.log(xhr);
+            return error;
+        }
+    })
+},
+
+{% endblock table_options %}
+
+{% block table_buttons_first %}
+{
+    text: '<i class="fa fa-certificate"></i> Add',
+    extend: "collection",
+    autoClose: true,
+    buttons: [
+        {% for type in cert_types %}
+        {
+            text: 'Add {{ type.1 }}',
+            action: function () {
+                location.href ="{% url 'member_cert_new' member.id %}?type={{type.0}}";
+            }
+
+        },
+        {% endfor %}
+    ]
+},
+{
+    extend: "selected", // Bind to Selected row
+    text: '<i class="fa fa-edit"></i> Edit',
+    name: "edit"        // do not change name
+},
+{
+    extend: "selected", // Bind to Selected row
+    autoClose: true,
+    text: '<i class="fa fa-trash"></i> Delete',
+    name: "delete"      // do not change name
+},
+
+{% endblock table_buttons_first %}
+{% block table_buttons_filter %}{% endblock %}
+
+{% block table_functions %}
+
+function UpdateSubheaderBasedOnSettings(table) {}
+
+{% endblock table_functions %}
+
 
 {% block content %}
 <main>
@@ -33,8 +163,9 @@
         <th>Description</th>
         <th>Documentation</th>
         <th>Expiration</th>
-        <th>Action</th>
-      </tr>
+        <th>Id</th>
+        <th>Expired</th>
+        <th>Highlight</th>
     </thead>
 
     <tbody>
@@ -47,15 +178,13 @@
             <a href="{{ cert.link }}">{{cert.link}}</a>
           {% endif %}
         </td>
-        <td><span style="background-color: {{cert.color | default:"white" }}">{{ cert.expiration }}</span></td>
-        <td>
-          <a href="{% url 'edit_cert' member.id cert.id %}">edit</a>
-          | <a href="{% url 'delete_cert' member.id cert.id %}">delete</a>
-        </td>
+        <td>{{ cert.expiration|date:"Y-m-d" }}</td>
+        <td>{{ cert.id }}</td>
+        <td>{{ cert.is_expired }}</td>
+        <td>{{ cert.color }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </main>
 {% endblock content %}
-
