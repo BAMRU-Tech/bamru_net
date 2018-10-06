@@ -1,0 +1,34 @@
+{% extends 'base_form.html' %}
+{% load bootstrap4 %}
+
+{% block title %}Compose Message{% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script type="text/javascript">
+$(function(){
+    $('#id_text').after($("<div id='length-message' class='text-muted'>"));
+    $('#id_text').on('input', function(){
+        var length = $('#id_text').val().length + $('#data').data('extra-characters');
+        $("#length-message").text(length + " characters used (single SMS fits 160)");
+    });
+    $('#id_text').triggerHandler('input');
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<main role="main" class="container">
+  <div id="content">
+    {% if period %}
+      <h4>{{period}}{% if rsvp_template %} - {{rsvp_template}}{% endif %}</h4>
+    {% endif %}
+    <form method="post">
+      {% csrf_token %}
+      {% bootstrap_form form %}
+      <input type="submit" value="Send" />
+    </form>
+  </div>
+  <div id='data' class="d-none" data-extra-characters='{{extra_characters}}'></div>
+</main>
+{% endblock content %}
