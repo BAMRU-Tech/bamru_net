@@ -13,15 +13,18 @@
 {% block table_options %}
 order: [[ 0, "asc" ]],
 columnDefs: [
-    { responsivepriority: 8, targets: 1 },
-    { targets: [ 2, 3, 4, 5, 6, 7 ],
-      "render": function ( data, type, rowData, meta ) {
-          // Add color to the busy periods
-          var row = $('#dTbl').DataTable().row(meta['row']).node();
-          if (data && data[0] != '<') // FIXME: for now ignore extra responsive sizing divs
-              $('td:eq('+meta['col']+')', row).css("background-color", "green");
-          return data;
-      },
+    {
+        responsivepriority: 8, targets: 1
+    },
+    {
+        "render": function ( data, type, rowData, meta ) {
+            // Add color to the busy periods
+            var row = $('#dTbl').DataTable().row(meta['row']).node();
+            if (data && data[0] != '<') // *FIXME: for now ignore extra responsive sizing divs
+                $('td:eq('+meta['col']+')', row).css("background-color", "green");
+            return data;
+        },
+        targets: [ 2, 3, 4, 5, 6, 7 ],
     },
 ],
 language: {
@@ -67,12 +70,13 @@ const apiUrlMemberRank = "/api/member_availability/?member_rank=";
 
 function AddRows(table, values) {
     //
-    // Add row data via AJAX values[0]=rank
+    // Add rows based on rank =values[0]
     //
     urlData = apiUrlMemberRank+values[0];
 
     var dd = DateArray(Date(), 5);
     urlData += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];
+    //FIXME: add error handling
     $.getJSON(urlData, null, function( json ) {
         var dd = DateArray(Date(), 5);
         

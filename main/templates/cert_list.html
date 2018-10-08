@@ -29,8 +29,11 @@ language: {
 const apiUrlMemberRank = "/api/member_certs/?member_rank=";
 
 function AddRows(table, values) {
-    // Add row data via AJAX based on rank
+    //
+    // Add rows based on rank =values[0]
+    //
     urlData = apiUrlMemberRank+values[0];
+    //FIXME: add error handling
     $.getJSON(urlData, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
@@ -84,7 +87,7 @@ function UpdateSubheaderBasedOnSettings(table) {
 
 $("#filter-rank").multiSelect({
     // The sense of the multiSelect is inverted: show = deselect, hide = select
-    // FIXME: the list of selected items should be computed from the data
+    // *FIXME: the list of selected items should be computed from the data
     selectableHeader: "<div class='custom-header'>Show</div>",
     selectionHeader: "<div class='custom-header'>Hide</div>",
     afterSelect: function(values){

@@ -44,6 +44,7 @@
         }
         function ajaxAssignment(id, assigned) {
             // TODO indicate in-progress requests, surface errors
+            //FIXME: error handling
             $.ajax({
                 'method': 'patch',
                 'url': '/api/do/'+id+'/',

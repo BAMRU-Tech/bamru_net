@@ -10,19 +10,19 @@
 {% endblock subheader %}
 
 {% block table_options %}
-dom: "Bfrtip",
+dom: 'Bfrtip',
 responsive: true,
-select: "single",
+select: 'single',
 altEditor: true,
 columnDefs: [],
 columns: [
-    { data: "start_on" },
-    { data: "end_on" },
-    { data: "comment" },
-    { data: "id", visible: false, type: "readonly" },
+    { data: 'start_on' },
+    { data: 'end_on' },
+    { data: 'comment' },
+    { data: 'id', visible: false, type: ['readonly', 'hidden'] },
 ],
 language: {
-    emptyTable: "No busy periods"
+    emptyTable: 'No busy periods'
 },
 
 onAddRow: function(dt, row, success, error) {
@@ -31,18 +31,17 @@ onAddRow: function(dt, row, success, error) {
 
     data['member'] = $('#memberId').val();
     data = JSON.stringify(data);
+    //FIXME: error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
         url: '/api/availability/',
         data: data,
-        success: function (r, s, m) {
-            return success(r, s, m);
-        },
+        success: success,
         error: function (xhr) {
             console.log('availability add failed');
             console.log(xhr);
-            return error;
+            return error(xhr);
         }
     })
 },
@@ -53,6 +52,7 @@ onEditRow: function(dt, row, success, error) {
 
     var id = data['id'];
     data = JSON.stringify(data);
+    //FIXME: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
@@ -65,14 +65,15 @@ onEditRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('availability edit failed');
             console.log(xhr);
-            return error;
+            return error(xhr);
         }
     })
 },
 onDeleteRow: function(dt, row, success, error) {
 
-    var id = row[3];  //FIXME: why is this array vs a dict with labels?
+    var id = row[3];  //*FIXME: why is this array vs a dict with labels?
                 
+    //FIXME: error handling
     $.ajax({
         method: 'DELETE',
         contentType: 'application/json',
@@ -83,7 +84,7 @@ onDeleteRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('availability delete failed');
             console.log(xhr);
-            return error;
+            return error(xhr);
         }
     })
 },
@@ -93,18 +94,18 @@ onDeleteRow: function(dt, row, success, error) {
 {% block table_buttons_first %}
 {
     text: '<i class="fa fa-calendar-times-o"></i> Add',
-    name: "add"        // do not change name
+    name: 'add'        // do not change name
 },
 {
-    extend: "selected", // Bind to Selected row
+    extend: 'selected', // Bind to Selected row
     text: '<i class="fa fa-edit"></i> Edit',
-    name: "edit"        // do not change name
+    name: 'edit'        // do not change name
 },
 {
-    extend: "selected", // Bind to Selected row
+    extend: 'selected', // Bind to Selected row
     autoClose: true,
     text: '<i class="fa fa-trash"></i> Delete',
-    name: "delete"      // do not change name
+    name: 'delete'      // do not change name
 },
 
 {% endblock table_buttons_first %}

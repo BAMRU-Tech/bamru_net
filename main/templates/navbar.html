@@ -11,7 +11,7 @@
   <div class="collapse navbar-collapse" id="navTopLevel">
     <ul class="navbar-nav ml-auto">
       <li class="nav-item">
-        <a class="nav-link" href="{% url 'event_all' %}">
+        <a class="nav-link" href="{% url 'event_all' %}?current">
           <i class="fa fa-calendar"></i>
           Events
         </a>
@@ -75,19 +75,19 @@
         </div>
       </li>
       <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle disabled" id="navbarDropdown" data-toggle="dropdown">
+        <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
           <i class="fa fa-bolt"></i> Action
         </a>
         <div class="dropdown-menu">
-          <a class="dropdown-item" href="/zcst/initiate_callout">
+          <a class="dropdown-item disabled" href="#">
             <i class="fa fa-bolt"></i>
             Initiate a callout
           </a>
-          <a class="dropdown-item" href="/zcst/become_do">
+          <a class="dropdown-item disabled" href="#">
             <i class="fa fa-bolt"></i>
             Becoming DO
           </a>
-          <a class="dropdown-item" href="/wip">
+          <a class="dropdown-item disabled" href="#">
             <i class="fa fa-bolt"></i>
             Temporary DO change
           </a>

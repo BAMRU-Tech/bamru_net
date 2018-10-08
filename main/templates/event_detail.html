@@ -4,178 +4,219 @@
 
 {% block js %}
 {{ block.super }}
-
-  <script>
-    $(document).ready( function() {
+<script>
+$(document).ready( function() {
     {% for period in event.period_set.all %}
-        var table{{period.position}} = $("#dTbl{{period.position}}").DataTable( {
-            dom: "Bfrtip",
-            responsive: true,
-            select: "single",
-            altEditor: true,
-            paging:   false,
-            info:     false,
-            order: [[ 0, "asc" ]],
-            columnDefs: [
-                { responsivePriority: 1, targets: 0 },
-                { responsivePriority: 2, targets: 1 },
-                { responsivePriority: 3, targets: [2, 3]},
-                { visible: false, targets: [5, 6, 7, 8, 9]},
+    var table{{period.position}} = $("#dTbl{{period.position}}").DataTable( {
+        dom: "Bfrtip",
+        responsive: true,
+        select: "os",
+        altEditor: true,
+        paging:   false,
+        info:     false,
+        order: [[ 0, "asc" ]],
+        columnDefs: [
+            {
+                orderable: false,
+                className: 'mark-checkbox',
+                targets: 0,
+            },
+            { responsivePriority: 1, targets: [0, 1] },
+            { responsivePriority: 2, targets: 3 },
+            { responsivePriority: 3, targets: [3, 4]},
+            { visible: false, targets: [6, 7, 8, 9, 10]},
+        ],
+        columns: [
+            { 'data': 'check', type: ['readonly', 'hidden' ]},
+            { 'data': 'name' },
+            { 'data': 'en_route_at' },
+            { 'data': 'return_home_at' },
+            { 'data': 'signed_in_at' },
+            { 'data': 'signed_out_at' },
+            { 'data': 'ahc' },
+            { 'data': 'ol' },
+            { 'data': 'id', type: ['readonly', 'hidden'] },
+            { 'data': 'member', type: ['readonly', 'hidden'] },
+            { 'data': 'period', type: ['readonly', 'hidden'] },
             ],
-            columns: [
-                { 'data': "name" },
-                { 'data': "en_route_at" },
-                { 'data': "return_home_at" },
-                { 'data': "signed_in_at" },
-                { 'data': "signed_out_at" },
-                { 'data': "ahc" },
-                { 'data': "ol" },
-                { 'data': "id", type: "readonly" },
-                { 'data': "member", type: "readonly" },
-                { 'data': "period", type: "readonly" },
-            ],
-            buttons: [
-                {
-                    text: '<i class="fa fa-bullhorn"></i> Page',
-                    extend: "collection",
-                    autoClose: true,
-                    buttons: [
-                        {
-                            text: '<i class="fa fa-hourglass-start"></i> Heads Up',
-                            action: function ( e, dt, node, config ) {
-                                location.href='{% url "message_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}&period_format=invite&page=Heads Up';
-                            }
-                        },
-                        {
-                            text: '<i class="fa fa-calendar-check-o"></i> Are you available',
-                            action: function ( e, dt, node, config ) {
-                                location.href='{% url "message_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}&period_format=invite&page=Available?';
-                            }
-                        },
-                        {
-                            text: '<i class="fa fa-clock-o"></i> Have you left',
-                            action: function ( e, dt, node, config ) {
-                                if (dt.rows().count() == 0) 
-                                    alert('Add members to period before paging them');
-                                else
-                                    location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=leave';
-                            }
-                        },
-                        {
-                            text: '<i class="fa fa-clock-o"></i> Are you home',
-                            action: function ( e, dt, node, config ) {
-                                if (dt.rows().count() == 0) 
-                                    alert('Add members to period before paging them');
-                                else
-                                    location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=return';
-                            }
-                        },
-                        {
-                            text: '<i class="fa fa-wrench"></i> Test',
-                            action: function ( e, dt, node, config ) {
-                                if (dt.rows().count() == 0) 
-                                    alert('Add members to period before paging them');
-                                else
-                                    location.href='{% url "message_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}&period_format=test&page=Testing';
-                            }
+        buttons: [
+            {
+                text: '<i class="fa fa-bullhorn"></i> Page',
+                extend: 'collection',
+                autoClose: true,
+                buttons: [
+                    {
+                        text: '<i class="fa fa-hourglass-start"></i> Heads Up',
+                        action: function ( e, dt, node, config ) {
+                            location.href='{% url "message:message_add" %}?period={{ period.id }}&&period_format=invite&page=Heads Up';
                         }
-                    ]
-                },
-                {
-                    text: '<i class="fa fa-address-book"></i> Add',
-                    action: function ( e, dt, node, config ) {
-                        location.href='{% url "period_participant_add" period.id %}?et={{period.event.title}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
-                    }
-                },
-                {
-                    extend: "selected", // Bind to Selected row
-                    text: '<i class="fa fa-edit"></i> Edit',
-                    name: "edit"        // do not change name
-                },
-                {
-                    extend: "selected", // Bind to Selected row
-                    autoClose: true,
-                    text: '<i class="fa fa-trash"></i> Delete',
-                    name: "delete"      // do not change name
-                },
-                {
-                    text: '<i class="fa fa-newspaper-o"></i> More',
-                    extend: "collection",
-                    autoClose: true,
-                    buttons: [
-                        "copy", "csv", "excel", "print", "colvis"
-                    ]
-                }
-            ],
-            onEditRow: function(dt, row, success, error) {
-                CleanDate = function (d) {
-                    sd = d ? d.substr(0, d.length - 9) : '';
-                    return sd;
-                }
-
-                var data = row;
-
-                // Delete values that won't be set
-                delete data.member;
-                for (d in data) if (data[d] == '') delete data[d];
-
-                //FIXME: Eventual this should allow mult-row select for delete and edit
-                //var members = dt.rows( { selected: true } ).data().pluck( 'Name' ).toArray();
-                var id = data['id'];
-                data = JSON.stringify(data);
-                $.ajax({
-                    method: 'PATCH',
-                    contentType: 'application/json',
-                    url: '/api/edit_participants/' + id + '/',
-                    data: data,
-                    success: function (r, s, m) {
-                        var name = r['member']['full_name'];
-                        if (r['ahc']) name += '(AHC)';
-                        if (r['ol']) name += '(OL)';
-                        r['name'] = name;
-                        //FIXME: temporary fix until we decide on api date format
-                        r['en_route_at'] = CleanDate(r['en_route_at']);
-                        r['return_home_at'] = CleanDate(r['return_home_at']);
-                        r['signed_in_at'] = CleanDate(r['signed_in_at']);
-                        r['signed_out_at'] = CleanDate(r['signed_out_at']);
-                        return success(r, s, m);
                     },
-                    error: function (xhr) {
-                        console.log('member edit failed');
-                        console.log(xhr);
-                        return error;
-                    }
-                })
-            },
-            onDeleteRow: function(dt, row, success, error) {
-
-                var id = row[7];  //FIXME: why is this array vs dict with labels?
-                
-                //FIXME: Eventual this should allow mult-row select for delete and edit
-                $.ajax({
-                    method: 'DELETE',
-                    contentType: 'application/json',
-                    url: '/api/participants/' + id + '/',
-                    success: function (r, s, m) {
-                        return success(r, s, m);
+                    {
+                        text: '<i class="fa fa-calendar-check-o"></i> Are you available',
+                        action: function ( e, dt, node, config ) {
+                            location.href='{% url "message:message_add" %}?&period={{ period.id }}&period_format=invite&page=Available?';
+                        }
                     },
-                    error: function (xhr) {
-                        console.log('member delete failed');
-                        console.log(xhr);
-                        return error;
+                    {
+                        text: '<i class="fa fa-clock-o"></i> Have you left',
+                        action: function ( e, dt, node, config ) {
+                            if (dt.rows().count() == 0) 
+                                alert('Add members to period before paging them');
+                            else
+                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=leave&page=Left?';
+                        }
+                    },
+                    {
+                        text: '<i class="fa fa-clock-o"></i> Are you home',
+                        action: function ( e, dt, node, config ) {
+                            if (dt.rows().count() == 0) 
+                                alert('Add members to period before paging them');
+                            else
+                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=return&page=Return?';
+                        }
+                    },
+                    {
+                        text: '<i class="fa fa-wrench"></i> Test',
+                        action: function ( e, dt, node, config ) {
+                            if (dt.rows().count() == 0) 
+                                alert('Add members to period before paging them');
+                            else
+                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=test&page=Testing';
+                        }
                     }
-                })
+                ]
             },
-            language: {
-                emptyTable: "No members added"
+            {
+                extend: "selected", // Bind to Selected row
+                text: '<i class="fa fa-edit"></i> Edit',
+                name: "edit"        // do not change name
             },
+            {
+                extend: "selected", // Bind to Selected row
+                autoClose: true,
+                text: '<i class="fa fa-trash"></i> Delete',
+                action: DeleteParticipants,
+            },
+            {
+                text: '<i class="fa fa-newspaper-o"></i> More',
+                extend: "collection",
+                autoClose: true,
+                buttons: [
+                    "copy", "csv", "excel", "print", "colvis"
+                ]
+            }
+        ],
+        onEditRow: UpdateRow,
+        language: {
+            emptyTable: "No members added"
+        },
     });
+    
+    table{{period.position}}.on( 'select', MarkMember);
+    
     {% endfor %}
 
-    });
+})
 
-  </script>
-{% endblock %}
+function UpdateRow(dt, row, success, error) {
+    CleanDate = function (d) {
+        sd = d ? d.substr(0, d.length - 9) : '';
+        return sd;
+    }
+    
+    var data = row;
+    
+    // Delete values that won't be set
+    delete data.member;
+    for (d in data) if (data[d] == '') delete data[d];
+    
+    var id = data['id'];
+    data = JSON.stringify(data);
+    //FIXME: add error handling
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/edit_participants/' + id + '/',
+        data: data,
+        success: function (r, s, m) {
+            var name = r['member']['full_name'];
+            if (r['ahc']) name += '(AHC)';
+            if (r['ol']) name += '(OL)';
+            r['name'] = name;
+            //FIXME: temporary fix until we decide on api date format
+            r['en_route_at'] = CleanDate(r['en_route_at']);
+            r['return_home_at'] = CleanDate(r['return_home_at']);
+            r['signed_in_at'] = CleanDate(r['signed_in_at']);
+            r['signed_out_at'] = CleanDate(r['signed_out_at']);
+            r['check'] = '';
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('member edit failed');
+            console.log(xhr);
+            return error(xhr);
+        }
+    })
+}
+
+function DeleteParticipants ( e, dt, node, config ) {
+    var members = [];
+    $('td.mark-checkbox.marked').each(function (i, el) {
+        members.push($(el).next().data().id)
+    });
+    console.log(members);
+    
+    if (members.length == 0) {
+        alert('Select members before adding them');
+        return;
+    }
+    
+    ok = confirm('Delete '+members.length+' members?');
+    
+    if (ok) {
+        for (i=0; i<members.length; i++) {
+            //FIXME: error handling
+            $.ajax({
+                method: 'DELETE',
+                contentType: 'application/json',
+                url: '/api/participants/' + members[i] + '/',
+            })
+        }
+        //FIXME: This seems like a bad idea but there is delay getting the updated data
+        setTimeout(function(){
+            location.reload(true);
+        }, 200);
+    }
+}
+
+function MarkMember ( e, dt, type, indices ) {
+        var allMarked = true;
+        var numRows = indices.length;
+        if (numRows > 1) {
+            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+                // For multi select - unmark only when every row is marked
+                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+            })
+        }
+        dt.rows(indices)
+            .every( function ( rowIdx, tableLoop, rowLoop ) {
+                if (numRows > 1) {
+                    if (allMarked)
+                        $(this.node()).children().first().removeClass('marked');
+                    else
+                        $(this.node()).children().first().addClass('marked');
+                } else {
+                    if ($(this.node()).children().first().hasClass('marked')) {
+                        $(this.node()).children().first().removeClass('marked');
+                        this.deselect();
+                    } else
+                        $(this.node()).children().first().addClass('marked');
+                }
+            });
+}
+        
+</script>
+{% endblock js %}
 
 
 {% block subheader %}
@@ -205,6 +246,13 @@
   
 {% block content %}
 <main role="main" class="container">
+
+  <div id="delete_message">
+    <h2>Are You Sure You Want To Delete Participants</h2>
+    <input type="button" value="Delete" id="delete">
+    <input type="button" value="Cancel" id="cancel">
+  </div>
+
   <div id="content">
     <p><strong>Description:</strong> {{ event.description }}</p>
     <p><strong>Location:</strong> {{ event.location }}</p>
@@ -225,6 +273,11 @@
       
       <ul class="nav navbar-nav navbar-right">
         <li class="nav-item">
+          <a  class="nav-link" href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}'><i class="fa fa-address-book"></i> Add</a>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li class="nav-item">
           <a  class="nav-link" href='{% url "event_period_delete" event.id period.id %}'><i class="fa fa-trash"></i> Delete OP</a>
         </li>
       </ul>
@@ -233,6 +286,7 @@
     <table id="dTbl{{period.position}}" class="display table-bordered nowrap table-striped" cellpadding="0" cellspacing="0" style="width:100%">
       <thead>
       <tr>
+        <th></th>
         <th>Name</th>
         <th>Left</th>
         <th>Returned</th>
@@ -248,7 +302,8 @@
       <tbody>
       {% for p in period.participant_set.all %}
       <tr>
-        <td>{{ p.member }}
+        <td></td>
+        <td data-id={{ p.id }}>{{ p.member }}
           {% if p.ahc %}
           (AHC)
           {% endif %}

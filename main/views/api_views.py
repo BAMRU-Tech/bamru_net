@@ -20,7 +20,7 @@ class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    filter_fields = ('member_rank', )
+    filter_fields = ('member_rank', 'is_active', )
     search_fields = ('username',  )
 
 

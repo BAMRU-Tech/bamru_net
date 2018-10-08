@@ -35,15 +35,19 @@ columnDefs: [ // FIXME: sort by most expired cert?
     { responsivePriority: 2, targets: 1 },
     { responsivePriority: 3, targets: 2 },
     { responsivePriority: 1, targets: 3 },
+    {
+        type: ['read-only', 'hidden'],
+        targets: [ 4, 5, 6 ],
+    }
 ],
 columns: [
     { data: "type", type: "readonly" },
     { data: "description" },
     { data: "url" },
     { data: "expiration" },
-    { data: "id", visible: false, type: "readonly" },
-    { data: "is_expired", visible: false, type: "readonly" },
-    { data: "color", visible: false, type: "readonly" },
+    { data: "id" },
+    { data: "is_expired" },
+    { data: "color" },
 ],
 language: {
     emptyTable: "No busy periods"
@@ -55,6 +59,7 @@ onAddRow: function(dt, row, success, error) {
 
     data['member'] = $('#memberId').val();
     data = JSON.stringify(data);
+    //FIXME: error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
@@ -66,7 +71,7 @@ onAddRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('availability add failed');
             console.log(xhr);
-            return error;
+            return error(xhr);
         }
     })
 },
@@ -79,6 +84,7 @@ onEditRow: function(dt, row, success, error) {
 
     var id = data['id'];
     data = JSON.stringify(data);
+    //FIXME: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
@@ -90,14 +96,15 @@ onEditRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('cert edit failed');
             console.log(xhr);
-            return error;
+            return error(xhr);
         }
     })
 },
 onDeleteRow: function(dt, row, success, error) {
 
-    var id = row[4];  //FIXME: why is this array vs a dict with labels?
+    var id = row[4];  //*FIXME: why is this array vs a dict with labels?
                 
+    //FIXME: error handling
     $.ajax({
         method: 'DELETE',
         contentType: 'application/json',
@@ -108,7 +115,7 @@ onDeleteRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('cert delete failed');
             console.log(xhr);
-            return error;
+            return error(xhr);
         }
     })
 },

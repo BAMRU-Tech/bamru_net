@@ -1,13 +1,22 @@
 {% extends 'base_generic.html' %}
 
 {% block css %}
-    {{ block.super }}
+{{ block.super }}
 
-    {# DataTables basics and "more" features #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/ju-1.12.1/jszip-2.5.0/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/b-flash-1.5.2/b-html5-1.5.2/b-print-1.5.2/r-2.2.2/sl-1.2.6/datatables.min.css"/>
+{# DataTables basics and "more" features #}
+{# FIXME check checkbox functionality #}
+{% comment %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.18/css/jquery.dataTables.css"/>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/1.5.4/css/buttons.dataTables.css"/>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.1.4/css/fixedHeader.dataTables.css"/>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.2.2/css/responsive.dataTables.css"/>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.2.6/css/select.dataTables.css"/>
+{% endcomment %}
+ 
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/ju-1.12.1/jszip-2.5.0/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/b-flash-1.5.2/b-html5-1.5.2/b-print-1.5.2/r-2.2.2/sl-1.2.6/datatables.min.css"/> 
 
-    {# Multi-select used with filter #}
-    <link href="/static/css/multi-select.css" media="screen" rel="stylesheet" type="text/css">
+{# Multi-select used with filter #}
+<link href="/static/css/multi-select.css" media="screen" rel="stylesheet" type="text/css">
 
 {% endblock css %}
 
@@ -15,16 +24,29 @@
 {{ block.super }}
 
 {# DataTables basics and "more" features #}
-    <script src="https://cdn.datatables.net/v/ju-1.12.1/jszip-2.5.0/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/b-flash-1.5.2/b-html5-1.5.2/b-print-1.5.2/r-2.2.2/sl-1.2.6/datatables.min.js"></script>
+{# FIXME check checkbox functionality #}
+{% comment %}
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.10.18/js/jquery.dataTables.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.4/js/dataTables.buttons.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.4/js/buttons.colVis.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.4/js/buttons.html5.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.4/js/buttons.print.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.4/js/dataTables.fixedHeader.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.2/js/dataTables.responsive.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/select/1.2.6/js/dataTables.select.js"></script>
+{% endcomment %}
+
+<script src="https://cdn.datatables.net/v/ju-1.12.1/jszip-2.5.0/dt-1.10.18/b-1.5.2/b-colvis-1.5.2/b-flash-1.5.2/b-html5-1.5.2/b-print-1.5.2/r-2.2.2/sl-1.2.6/datatables.min.js"></script>
 
 {# Removed: to use this feature is a 700K load #}
- {# <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script> #}
- {# <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script> #}
+{# <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script> #}
+{# <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script> #}
 
 {# DataTables simple editor #}
-    <script src="/static/js/dataTables.altEditor.cst.js"></script>
+<script src="/static/js/dataTables.altEditor.cst.js"></script>
 
 {# Multi-select used with filter #}
-    <script src="/static/js/jquery.multi-select.js" type="text/javascript"></script>
+<script src="/static/js/jquery.multi-select.js" type="text/javascript"></script>
 
 {% endblock js %}
