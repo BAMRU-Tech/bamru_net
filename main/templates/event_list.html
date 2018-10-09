@@ -131,8 +131,7 @@ const current = url.searchParams.get('current');
 var startBefore = url.searchParams.get('start_before');
 var startAfter = url.searchParams.get('start_after');
 var months = url.searchParams.get('months');
-
-if (!months) months = 1;
+var monthsSpecified = url.searchParams.get('months');
 
 if (current || months) {
     if (!startAfter) {
@@ -140,6 +139,7 @@ if (current || months) {
         startAfter = startAfter.toLocaleDateString();
     }
     if (!startBefore) {
+        if (!months) months = 1;
         startBefore = new Date();
         startBefore.setMonth(startBefore.getMonth() + months);
         startBefore = startBefore.toLocaleDateString();
