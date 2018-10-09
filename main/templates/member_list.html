@@ -3,19 +3,15 @@
 {% block title %}Team Members{% endblock title %}
 
 {% block subheader %}
-  <strong>
-    <div id="subhdr">
-      Members
-    </div>
-  </strong>
-  <ul class="navbar-nav ml-auto">
-    <li class="nav-item ml-auto">
-      <a class="nav-link" href="{% url 'member_detail' request.user.id %}">
-        <i class="fa fa-user"></i>
-        Profile
-      </a>
-    </li>
-  </ul>
+<strong id="subhdr">Members</strong>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item ml-auto">
+    <a class="nav-link" href="{% url 'member_detail' request.user.id %}">
+      <i class="fa fa-user"></i>
+      Profile
+    </a>
+  </li>
+</ul>
 {% endblock subheader %}
 
 

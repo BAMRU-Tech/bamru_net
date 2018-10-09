@@ -2,8 +2,8 @@
 
 {% block subheader %}
 <strong>
-<a href="{% url 'member_detail' member.id %}?returnx=ml">{{member.full_name }} ({{ member.rank }})</a>
-&gt; Edit
+  <a href="{% url 'member_detail' member.id %}?returnx=ml">
+    {{member.full_name }} ({{ member.rank }})</a>&gt; Edit
 </strong>
 {% endblock subheader %}
 

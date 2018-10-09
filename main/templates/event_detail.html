@@ -3,27 +3,22 @@
 {% block title %}Event Detail - {{ event.title }}{% endblock title %}
 
 {% block subheader %}
-  <button class="navbar-toggler navbar-light bg-light" type="button"
-          data-toggle="collapse" data-target="#eventMenu">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-  <strong>
-    <a href='{% url "event_list" %}'> Events </a>
-    > {{ event.title}} ({{ event.type }})
-  </strong>
-  <div class="collapse navbar-collapse" id="eventMenu">
-    <ul class="navbar-nav ml-auto">
-      <li class="nav-item">
-        <a class="nav-link" href='{% url "event_update" event.id %}'>
-          <i class="fa fa-pencil"></i>
-          Edit
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href='{% url "event_delete" event.id %}'><i class="fa fa-trash"></i> Delete</a>
-      </li>
-    </ul>
-  </div>
+<strong>
+  <a href='{% url "event_list" %}'> Events </a>
+  &gt; {{ event.title}} ({{ event.type }})
+</strong>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item">
+    <a class="nav-link" href='{% url "event_update" event.id %}'>
+      <i class="fa fa-pencil"></i>
+      Edit
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href='{% url "event_delete" event.id %}'>
+      <i class="fa fa-trash"></i> Delete</a>
+  </li>
+</ul>
 {% endblock subheader %}
 
   

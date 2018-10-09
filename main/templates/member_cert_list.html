@@ -3,12 +3,10 @@
 {% block title %}Certs - {{member.full_name}} {% endblock title %}
 
 {% block subheader %}
-<div id="subhdr">
-  <strong>
-    <a href="{% url 'member_detail' member.id %}?returnx=mc">{{member.full_name }} ({{ member.rank }})</a>
+<strong id="subhdr">>
+  <a href="{% url 'member_detail' member.id %}?returnx=mc">{{member.full_name }} ({{ member.rank }})</a>
     &gt; Certs
-  </strong>
-</div>
+</strong>
 {% endblock subheader %}
 
 
