@@ -99,7 +99,7 @@ function AddRowsByDate(table, start, end) {
         for (var i=0; i<json.length; i++)
         {
             data = json[i];
-            data['href_title'] = '<a href="/event_detail/'+json[i]['id']+'">'+json[i]['title']+'</a>';
+            data['href_title'] = '<a href="/event/'+json[i]['id']+'/">'+json[i]['title']+'</a>';
             table.row.add(data).invalidate()
         }
         table.draw()  // not sure why this is required here but it is needed (tried to hoist it without success)
