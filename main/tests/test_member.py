@@ -60,12 +60,12 @@ class MemberTestCase(TestCase):
         self.assertEqual(users, [user_fm_ul_ol, user_tm_xo, user_t])
 
     def test_list_not_logged_in(self):
-        response = self.client.get(reverse('member_index'))
+        response = self.client.get(reverse('member_list'))
         self.assertEqual(response.status_code, 302)
         
     def test_list_logged_in(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('member_index'))
+        response = self.client.get(reverse('member_list'))
         self.assertEqual(response.status_code, 200)
         
     def test_detail_not_logged_in(self):
@@ -115,7 +115,7 @@ class CertTestCase(MemberTestCase):
 
     def test_member_cert_list(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('member_certs', args=[self.user.id]))
+        response = self.client.get(reverse('member_cert_list', args=[self.user.id]))
         self.assertEqual(response.status_code, 200)
 
     def test_new_cert(self):
