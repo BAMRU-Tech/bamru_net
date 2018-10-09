@@ -3,9 +3,7 @@
 {% block title %}{% if new %}Add{% else %}Edit{% endif %} Cert - {{ cert.get_type_display }}{% endblock title %}
 
 {% block subheader %}
-<strong>
-  <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
-  &gt; {{ cert.get_type_display }}
+<strong id="subhdr">
 </strong>
 <div class="collapse navbar-collapse" id="certMenu">
   <ul class="navbar-nav ml-auto">
@@ -18,6 +16,30 @@
   </ul>
 </div>
 {% endblock subheader %}
+
+
+{% block js %}
+{{ block.super }}
+<script>
+$(document).ready( function() {
+    const url = new URL(window.location.href);
+    const rx = url.searchParams.get('returnx');
+    const returns = {
+        'ml': '<a href="{% url 'member_list' %}"> Members </a>',
+        'al': '<a href="{% url 'available_list' %}"> Availability </a>',
+        'cl': '<a href="{% url 'cert_list' %}"> Certification </a>',
+        'mc': '<a href="{% url 'member_cert_list' member.id %}"> Certification </a>',
+        'pp': '<a href="{% url 'member_list' %}"> Members </a>',
+        'md': '<a href="{% url 'member_detail' member.id %}"> Members </a>',
+    }
+
+    href = returns[rx];
+
+    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.rank }})";
+});
+</script>
+{% endblock js %}
+
 
 {% block content %}
 {{ block.super }}

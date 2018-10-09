@@ -2,16 +2,13 @@
 
 {% block title %}Member - {{member.username}}{% endblock title %}
 
-
 {% block subheader %}
-  <strong>
-    <a href="{% url 'member_list' %}"> Members </a>
-    > {{member.full_name }} ({{ member.rank }})
+  <strong id='subhdr'>
   </strong>
 
 <ul class="navbar-nav ml-auto">
   <li class="nav-item dropdown">
-    <a href="{% url 'member_edit' member.id %}" class="nav-link">
+    <a href={% url 'member_edit' member.id %} class="nav-link">
       <i class="fa fa-pencil"></i>
       Edit
     </a>
@@ -23,13 +20,44 @@
     </a>
   </li>
   <li class="nav-item dropdown">
+    <a class="nav-link" href="{% url 'member_cert_list'  request.user.id %}">
+      <i class="fa fa-calendar-times-o"></i>
+      Certs
+    </a>
+  </li>
+  <li class="nav-item dropdown">
    <a class="nav-link"  href="{% url 'message:message_inbox' request.user.id%}">
      <i class="fa fa-inbox"></i>
       Inbox
     </a>
   </li>
 </ul>
-{% endblock %}
+{% endblock subheader %}
+
+
+{% block js %}
+{{ block.super }}
+<script>
+$(document).ready( function() {
+    const url = new URL(window.location.href);
+    const rx = url.searchParams.get('returnx');
+    const returns = {
+        'ml': '<a href="{% url 'member_list' %}"> Members </a>',
+        'al': '<a href="{% url 'available_list' %}"> Team Availability </a>',
+        'cl': '<a href="{% url 'cert_list' %}"> Team Certs </a>',
+        'ma': '<a href="{% url 'member_availability_list'  member.id %}"> Availability </a>',
+        'mc': '<a href="{% url 'member_cert_list' member.id %}"> Certification </a>',
+        'pp': '<a href="{% url 'member_list' %}"> Members </a>', //FIXME: needs better return
+        'md': '<a href="{% url 'member_detail' member.id %}"> Members </a>',
+    }
+    //FIXME: do something similar for event_detail -> (event_list, message_list)
+
+    href = returns[rx];
+
+    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.rank }})";
+});
+</script>
+{% endblock js %}
 
 
 {% block content %}

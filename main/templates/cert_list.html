@@ -11,8 +11,9 @@
   </strong>
 {% endblock subheader %}
 
+
 {% block table_options %}
-order: [[ 0, "asc" ]],
+order: [[ 0, 'asc' ]],
 columnDefs: [
     { responsivePriority: 1, targets: 0 },
     { responsivePriority: 4, targets: 1},
@@ -20,13 +21,13 @@ columnDefs: [
     { responsivePriority: 3, targets: 3},
 ],
 language: {
-      emptyTable: "No members selected"
+      emptyTable: 'No members selected'
 },
 {% endblock table_options %}
 
 {% block table_functions %}
 
-const apiUrlMemberRank = "/api/member_certs/?member_rank=";
+const apiUrlMemberRank = '/api/member_certs/?member_rank=';
 
 function AddRows(table, values) {
     //
@@ -40,13 +41,13 @@ function AddRows(table, values) {
         {
             rowData = json[i];
             data = [
-                "<a href=/member/"+rowData["id"]+">"+rowData["full_name"]+"</a>",
-                {"display": rowData["rank"], "@data-sort": rowData["rank_order"]},
+                '<a href="/member/'+rowData['id']+'?returnx=cl">'+rowData['full_name']+'</a>',
+                {'display': rowData['rank'], '@data-sort': rowData['rank_order']},
             ]
-            certs = rowData["certs"];
+            certs = rowData['certs'];
             for (var j=0; j<certs.length; j++)
             {
-                data.push((certs[j] && certs[j].length) ? certs[j][0]["description"] : "");
+                data.push((certs[j] && certs[j].length) ? certs[j][0]['description'] : '');
             }
 
             row = table.row.add(data).node();
@@ -65,7 +66,7 @@ function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            return data[1]["display"] == values[0];
+            return data[1]['display'] == values[0];
         } )
         .remove();
 
@@ -75,21 +76,21 @@ function RemoveRows(table, values) {
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected ranks based on filter
     var showRanks = [];
-    $("#filter-rank option").each(function() {
+    $('#filter-rank option').each(function() {
         if (!this.selected) {
             showRanks.push(this.value);
         }
     });
 
-    $("#subhdr")[0].innerHTML = "<a href=" + {% url 'member_list' %} + ">Members</a> (" +  showRanks.join(", ") + ") > Certifications";
+    $('#subhdr')[0].innerHTML = '<a href=' + {% url 'member_list' %} + '>Members</a> (' +  showRanks.join(', ') + ') > Certifications';
 
 }
 
-$("#filter-rank").multiSelect({
+$('#filter-rank').multiSelect({
     // The sense of the multiSelect is inverted: show = deselect, hide = select
     // *FIXME: the list of selected items should be computed from the data
-    selectableHeader: "<div class='custom-header'>Show</div>",
-    selectionHeader: "<div class='custom-header'>Hide</div>",
+    selectableHeader: '<div class="custom-header">Show</div>',
+    selectionHeader: '<div class="custom-header">Hide</div>',
     afterSelect: function(values){
         RemoveRows(table,values);
         UpdateSubheaderBasedOnSettings(table);
@@ -129,7 +130,7 @@ $("#filter-rank").multiSelect({
     <tbody>
       {% for member in member_list %}
       <tr>
-        <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
+        <td><a href="{% url 'member_detail' member.id %}?returnx=cl">{{ member.full_name }}</a></td>
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
         {% for c in member.certs %}
         <td bgcolor="{{c.cert.color | default:"white" }}">

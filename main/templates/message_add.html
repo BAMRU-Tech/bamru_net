@@ -11,6 +11,7 @@
   </strong>
 {% endblock subheader %}
 
+
 {% block table_options %}
 select: 'os',
 order: [[ 2, 'asc' ]],
@@ -219,7 +220,8 @@ function SendPage ( e, dt, node, config ) {
             error: function (xhr) {
                 console.log('Period add failed');
                 console.log(xhr);
-                error(xhr);
+                alert(xhr.responseText);
+                return false;
             }
         })
 }

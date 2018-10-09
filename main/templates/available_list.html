@@ -10,25 +10,26 @@
   </strong>
 {% endblock subheader %}
 
+
 {% block table_options %}
-order: [[ 0, "asc" ]],
+order: [[ 0, 'asc' ]],
 columnDefs: [
     {
         responsivepriority: 8, targets: 1
     },
     {
-        "render": function ( data, type, rowData, meta ) {
+        'render': function ( data, type, rowData, meta ) {
             // Add color to the busy periods
             var row = $('#dTbl').DataTable().row(meta['row']).node();
             if (data && data[0] != '<') // *FIXME: for now ignore extra responsive sizing divs
-                $('td:eq('+meta['col']+')', row).css("background-color", "green");
+                $('td:eq('+meta['col']+')', row).css('background-color', 'green');
             return data;
         },
         targets: [ 2, 3, 4, 5, 6, 7 ],
     },
 ],
 language: {
-      emptyTable: "No members selected"
+      emptyTable: 'No members selected'
 },
 {% endblock table_options %}
 
@@ -66,7 +67,7 @@ function SetBusy(busy, start, end, comment) {
     return i;
 }
 
-const apiUrlMemberRank = "/api/member_availability/?member_rank=";
+const apiUrlMemberRank = '/api/member_availability/?member_rank=';
 
 function AddRows(table, values) {
     //
@@ -85,8 +86,8 @@ function AddRows(table, values) {
         {
             var row = json[member];
             var data = [
-                "<a href=/member/"+row["id"]+">"+row["full_name"]+"</a>",
-                {"display": row["rank"], "@data-sort": row["rank_order"]},
+                '<a href="/member/'+row['id']+'?returnx=al">'+row['full_name']+'</a>',
+                {'display': row['rank'], '@data-sort': row['rank_order']},
             ];
             var busy = Array(numDays+1).fill('');
             var period = row['busy'];
@@ -111,7 +112,7 @@ function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            return data[1]["display"] == values[0];
+            return data[1]['display'] == values[0];
         } )
         .remove();
 
@@ -121,19 +122,19 @@ function RemoveRows(table, values) {
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected ranks based on filter
     var showRanks = [];
-    $("#filter-rank option").each(function() {
+    $('#filter-rank option').each(function() {
         if (!this.selected) {
             showRanks.push(this.value);
         }
     })
 
-    $("#subhdr")[0].innerHTML = "<a href=" + {% url 'member_list' %} + ">Members</a> (" +  showRanks.join(", ") + ") > Availability";
+    $('#subhdr')[0].innerHTML = '<a href=' + {% url 'member_list' %} + '>Members</a> (' +  showRanks.join(', ') + ') > Availability';
 }
 
-$("#filter-rank").multiSelect({
+$('#filter-rank').multiSelect({
     // The sense of the multiSelect is inverted: show = deselect, hide = select
-    selectableHeader: "<div class='custom-header'>Show</div>",
-    selectionHeader: "<div class='custom-header'>Hide</div>",
+    selectableHeader: '<div class="custom-header">Show</div>',
+    selectionHeader: '<div class="custom-header">Hide</div>',
     afterSelect: function(values){
         RemoveRows(table,values);
         UpdateSubheaderBasedOnSettings(table);
@@ -182,7 +183,7 @@ $("#filter-rank").multiSelect({
     {% for member in member_list %}
       {% if member.isActive %}
       <tr>
-        <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
+        <td><a href="{% url 'member_detail' member.id %}?returnx=al">{{ member.full_name }}</a></td>
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
         {% for day in member.days %}
           {% if day %}

@@ -4,10 +4,11 @@
 
 {% block subheader %}
 <strong>
-  <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+  <a href="{% url 'member_detail' member.id %}?returnx=ma">{{member.full_name }} ({{ member.rank }})</a>
   &gt; Availability
 </strong>
 {% endblock subheader %}
+
 
 {% block table_options %}
 dom: 'Bfrtip',
@@ -41,7 +42,8 @@ onAddRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('availability add failed');
             console.log(xhr);
-            return error(xhr);
+            alert(xhr.responseText);
+            return false;
         }
     })
 },
@@ -65,7 +67,8 @@ onEditRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('availability edit failed');
             console.log(xhr);
-            return error(xhr);
+            alert(xhr.responseText);
+            return false;
         }
     })
 },
@@ -84,7 +87,8 @@ onDeleteRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('availability delete failed');
             console.log(xhr);
-            return error(xhr);
+            alert(xhr.responseText);
+            return false;
         }
     })
 },

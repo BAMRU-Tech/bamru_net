@@ -5,11 +5,12 @@
 {% block subheader %}
 <div id="subhdr">
   <strong>
-    <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
+    <a href="{% url 'member_detail' member.id %}?returnx=mc">{{member.full_name }} ({{ member.rank }})</a>
     &gt; Certs
   </strong>
 </div>
 {% endblock subheader %}
+
 
 {% block table_options %}
 dom: "Bfrtip",
@@ -35,19 +36,15 @@ columnDefs: [ // FIXME: sort by most expired cert?
     { responsivePriority: 2, targets: 1 },
     { responsivePriority: 3, targets: 2 },
     { responsivePriority: 1, targets: 3 },
-    {
-        type: ['read-only', 'hidden'],
-        targets: [ 4, 5, 6 ],
-    }
 ],
 columns: [
     { data: "type", type: "readonly" },
     { data: "description" },
     { data: "url" },
     { data: "expiration" },
-    { data: "id" },
-    { data: "is_expired" },
-    { data: "color" },
+    { data: "id", type: ['read-only', 'hidden'], visible: false },
+    { data: "is_expired", type: ['read-only', 'hidden'], visible: false },
+    { data: "color", type: ['read-only', 'hidden'], visible: false },
 ],
 language: {
     emptyTable: "No busy periods"
@@ -71,7 +68,8 @@ onAddRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('availability add failed');
             console.log(xhr);
-            return error(xhr);
+            alert(xhr.responseText);
+            return false;
         }
     })
 },
@@ -96,7 +94,8 @@ onEditRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('cert edit failed');
             console.log(xhr);
-            return error(xhr);
+            alert(xhr.responseText);
+            return false;
         }
     })
 },
@@ -115,7 +114,8 @@ onDeleteRow: function(dt, row, success, error) {
         error: function (xhr) {
             console.log('cert delete failed');
             console.log(xhr);
-            return error(xhr);
+            alert(xhr.responseText);
+            return false;
         }
     })
 },
@@ -132,7 +132,7 @@ onDeleteRow: function(dt, row, success, error) {
         {
             text: 'Add {{ type.1 }}',
             action: function () {
-                location.href ="{% url 'member_cert_new' member.id %}?type={{type.0}}";
+                location.href ="{% url 'member_cert_new' member.id %}?type={{type.0}}&returnx=mc";
             }
 
         },
@@ -156,7 +156,8 @@ onDeleteRow: function(dt, row, success, error) {
 
 {% block table_functions %}
 
-function UpdateSubheaderBasedOnSettings(table) {}
+function UpdateSubheaderBasedOnSettings(table) {
+}
 
 {% endblock table_functions %}
 
