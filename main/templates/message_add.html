@@ -182,10 +182,8 @@ function SendPage ( e, dt, node, config ) {
             return;
         }
 
-        //FIXME: what's the right way to get the current value of a checkbox
-        // this doesn't seem to work, nor does $('#id_phone').val()
-        viaEmail = $('input[name=email]').attr('checked') == 'checked' ;
-        viaSms = $('input[name=phone]').attr('checked') == 'checked' ;
+        viaEmail = $('input[name=email]').prop('checked') ;
+        viaSms = $('input[name=phone]').prop('checked');
 
         if (viaEmail && viaSms) {
             via = '(email, sms)';
