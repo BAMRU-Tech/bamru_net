@@ -68,13 +68,13 @@ $(document).ready( function() {
                     {
                         text: '<i class="fa fa-hourglass-start"></i> Heads Up',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?period={{ period.id }}&&period_format=invite&page=Heads Up';
+                            location.href='{% url "message:message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=invite&page=Heads Up';
                         }
                     },
                     {
                         text: '<i class="fa fa-calendar-check-o"></i> Are you available',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?&period={{ period.id }}&period_format=invite&page=Available?';
+                            location.href='{% url "message:message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=invite&page=Available?';
                         }
                     },
                     {
@@ -83,7 +83,7 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=leave&page=Left?';
+                                location.href='{% url "message:message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=leave&page=Left?';
                         }
                     },
                     {
@@ -92,7 +92,7 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=return&page=Return?';
+                                location.href='{% url "message:message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=return&page=Return?';
                         }
                     },
                     {
@@ -101,7 +101,7 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=test&page=Testing';
+                                location.href='{% url "message:message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=test&page=Testing';
                         }
                     }
                 ]

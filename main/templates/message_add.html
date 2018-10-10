@@ -10,7 +10,7 @@
 
 {% block table_options %}
 select: 'os',
-order: [[ 2, 'asc' ]],
+order: [[ 3, 'desc' ]],
 paging: false,
 initComplete: function () {
     var tbl = this.api();
@@ -18,11 +18,6 @@ initComplete: function () {
     InitializeRowsBasedOnFormat(tbl);
 },
 columnDefs: [
-    {
-        orderable: false,
-        className: 'mark-checkbox',
-        targets: 0,
-    },
     { responsivePriority: 1, targets: [0, 1] },
     { responsivePriority: 5, targets: 2 },
     { responsivePriority: 2, targets: 3 },
@@ -31,12 +26,19 @@ columnDefs: [
 ],
 //FIXME: look into using filter tag for sort-order
 columns: [
-    { 'data': 'check', width: '5px' }, //FIXME: adjust alignment
-    { 'data': 'name' },
-    { 'data': 'rank' },
-    { 'data': 'roles' },
-    { 'data': 'phone' },
-    { 'data': 'email' }
+    { data: 'check',
+      width: '5px', //FIXME: adjust alignment
+      orderable: false,
+      className: 'mark-checkbox',
+      render: function(data, type, row) {
+          return '<div data-id="'+row.id+'"></div>';
+      },
+    },
+    { data: 'name' },
+    { data: 'rank' },
+    { data: 'roles' },
+    { data: 'display_phone' },
+    { data: 'display_email' }
 ],
 language: {
       emptyTable: 'No participants selected'
@@ -91,8 +93,10 @@ table
 {% block table_functions %}
 
 const url = new URL(window.location.href);
-const period_id = url.searchParams.get('pid');
-const period_format = url.searchParams.get('period_format');
+const eventId = url.searchParams.get('eid');
+const periodPosition = url.searchParams.get('OP');
+const periodId = url.searchParams.get('period');
+const periodFormat = url.searchParams.get('pf');
 const page = url.searchParams.get('page');
 const apiUrlMemberRank = '/api/members/?member_rank=';
 
@@ -104,23 +108,19 @@ function InitializeRowsBasedOnFormat(table) {
         members = JSON.parse($('input[name=members]').val());
         for (var i=0; i<json.length; i++)
         {
-            m = json[i];
-            if (members.includes(m.id)) {
-                data = {
-                    check: '',
-                    name: '<a href="/member/'+m['id']+'" data-id="'+m['id']+'">'+m['full_name']+'</a>',
-                    rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
-                    roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
-                    phone: m['display_phone'],
-                    email: m['display_email']
-                }
+            data = json[i];
+            if (members.includes(data.id)) {
+                data['check'] = '';
+                data['name'] = '<a href="/member/'+data['id']+'">'+data['full_name']+'</a>';
+                data['rank'] = '<td data-order="' + data['rank_order'] + '">' + data['rank'] + '</td>';
+                data['roles'] = '<td data-order="' + data['role_order'] + '">' + data['roles'] + '</td>';
             
                 table.row.add(data).invalidate(); // invalidate needed to force rank and role display
             }
         }
 
         table.draw();
-        if (period_format != 'invite')
+        if (periodFormat != 'invite')
             $('td.mark-checkbox').addClass('marked');
 
     });
@@ -130,21 +130,17 @@ function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    urlData = apiUrlMemberRank+values[0];
+    var url = apiUrlMemberRank+values[0];
     //FIXME: error handling
-    $.getJSON(urlData, null, function( json ) {
+    $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
-            m = json[i];
-            data = {
-                check: '',
-                name: '<a href="/member/'+m['id']+'" data-id="'+m['id']+'">'+m['full_name']+'</a>',
-                rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
-                roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
-                phone: m['display_phone'],
-                email: m['display_email']
-            }
+            data = json[i];
+            data['check'] = '';
+            data['name'] = '<a href="/member/'+data['id']+'">'+data['full_name']+'</a>';
+            data['rank'] = '<td data-order="' + data['rank_order'] + '">' + data['rank'] + '</td>';
+            data['roles'] = '<td data-order="' + data['role_order'] + '">' + data['roles'] + '</td>';
             
             table.row.add(data).invalidate(); // invalidate needed to force rank and role display
         }
@@ -168,65 +164,66 @@ function RemoveRows(table, values) {
 }
 
 function SendPage ( e, dt, node, config ) {
-        var members = [];
-        $('td.mark-checkbox.marked').each(function (i, el) {
-            members.push($($(el).next().html()).data().id)
-        });
-
-        if (members.length == 0) {
-            alert('Select members before paging them');
-            return;
-        }
-
-        viaEmail = $('input[name=email]').prop('checked') ;
-        viaSms = $('input[name=phone]').prop('checked');
-
-        if (viaEmail && viaSms) {
-            via = '(email, sms)';
-        } else if (viaEmail) {
-            via = '(email)';
-        } else if (viaSms) {
-            via = '(sms)';
-        } else {
-            via = '()';
-        }
-
-        confirm('Page via '+via+' '+members.length+' members\nMessage: '+$('#id_text').val());
-        console.log(members);
+    var members = [];
+    $('td.mark-checkbox.marked').each(function (i, el) {
+        members.push($(this.firstChild).data().id)
+    });
+    
+    if (members.length == 0) {
+        alert('Select members before paging them');
         return;
+    }
+    
+    viaEmail = $('input[name=email]').prop('checked') ;
+    viaSms = $('input[name=phone]').prop('checked');
+    
+    if (viaEmail && viaSms) {
+        via = '(email, sms)';
+    } else if (viaEmail) {
+        via = '(email)';
+    } else if (viaSms) {
+        via = '(sms)';
+    } else {
+        via = '()';
+    }
 
-        var data = [];
-        for (var i = 0; i < members.length; i++) {
-            data.push({ 'period': period_id, 'member': members[i] });
+    confirm('Page via '+via+' '+members.length+' members\nMessage: '+$('#id_text').val());
+    console.log(members);
+    $('#id_members').val(JSON.stringify(members));
+    return;
+    
+    var data = [];
+    for (var i = 0; i < members.length; i++) {
+        data.push({ 'period': periodId, 'member': members[i] });
+    }
+    data = JSON.stringify(data);
+    //FIXME: add error handling
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/participants/',
+        data: data,
+        success: function (response) {
+            console.log('Period add ' + response.length + ' members');
+            //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
+            location.href='/event/' + event_id + '#OP' + period_num;
+        },
+        error: function (xhr) {
+            console.log('Period add failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
         }
-        data = JSON.stringify(data);
-        //FIXME: add error handling
-        $.ajax({
-            method: 'POST',
-            contentType: 'application/json',
-            url: '/api/participants/',
-            data: data,
-            success: function (response) {
-                console.log('Period add ' + response.length + ' members');
-                //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
-                location.href='/event/' + event_id + '#OP' + period_num;
-            },
-            error: function (xhr) {
-                console.log('Period add failed');
-                console.log(xhr);
-                alert(xhr.responseText);
-                return false;
-            }
-        })
+    })
 }
 
 function SelectAll ( e, dt, node, config ) {
-        $('td.mark-checkbox').addClass('marked');
+    $('td.mark-checkbox').addClass('marked');
 }
 
 function ClearAll ( e, dt, node, config ) {
-        $('td.mark-checkbox').removeClass('marked');
-        table.rows().deselect();
+    $('td.mark-checkbox').removeClass('marked');
+    table.rows().deselect();
 }
 
 
@@ -239,8 +236,11 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $('#subhdr')[0].innerHTML = ('{{ period }}:'+page+' > Page Participants ('
-                                 + showRanks.join(', ') + ')'); //FIXME: Add link to event
+    {% comment %}
+    $('#subhdr')[0].innerHTML = ('<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
+                                 '{{ period }}</a>:'+ page +' > Page Participants ('
+                                 + showRanks.join(', ') + ')');
+    {% endcomment %}
     document.title = '{{ period }} Page';
 
 }

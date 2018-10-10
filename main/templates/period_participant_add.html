@@ -11,13 +11,8 @@
 
 {% block table_options %}
 select: 'os',
-order: [[ 2, 'asc' ]],
+order: [[ 3, 'desc' ]],
 columnDefs: [
-    {
-        orderable: false,
-        className: 'mark-checkbox',
-        targets: 0,
-    },
     { responsivePriority: 1, targets: [0, 1] },
     { responsivePriority: 5, targets: 2 },
     { responsivePriority: 2, targets: 3 },
@@ -25,12 +20,16 @@ columnDefs: [
     { responsivePriority: 4, targets: 5},
 ],
 columns: [
-    { 'data': 'check', width: '5px' }, //FIXME: adjust alignment
-    { 'data': 'name' },
-    { 'data': 'rank' },
-    { 'data': 'roles' },
-    { 'data': 'phone' },
-    { 'data': 'email' }
+    { data: 'check',
+      width: '5px', //FIXME: adjust alignment
+      orderable: false,
+      className: 'mark-checkbox',
+    },
+    { data: 'name' },
+    { data: 'rank' },
+    { data: 'roles' },
+    { data: 'phone' },
+    { data: 'email' }
 ],
 language: {
       emptyTable: 'No participants selected'
@@ -42,8 +41,8 @@ language: {
     text: '<i class="fa fa-address-book"></i> Add',
     action: function ( e, dt, node, config ) {
         var members = [];
-        $('td.mark-checkbox.marked').each(function (i, el) {
-            members.push($($(el).next().html()).data().id)
+        $.each( $('td.mark-checkbox.marked'),  function (i, el) {
+            members.push($(this.firstChild).data().id)
         });
         console.log(members);
 
@@ -156,7 +155,7 @@ function AddRows(table, values) {
             m = json[i];
             data = {
                 check: '',
-                name: '<a href="/member/'+m['id']+'" data-id="'+m['id']+'?returnx=pp">'+m['full_name']+'</a>',
+                name: '<a href="/member/'+m['id']+'?returnx=pp">'+m['full_name']+'</a>',
                 rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
                 roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
                 phone: m['display_phone'],
@@ -245,8 +244,8 @@ $('#filter-rank').multiSelect({
       {% spaceless %}
       {% if member.isActive %}
       <tr>
-        <td></td>
-        <td><a href="{% url 'member_detail' member.id %}?returnx=pp" data-id="{{ member.id }}">{{ member.full_name }}</a></td>
+        <td><div data-id={{ member.id }}></div></td>
+        <td><a href="{% url 'member_detail' member.id %}?returnx=pp">{{ member.full_name }}</a></td>
         <td data-order="{{ member.rank_order }}"> {{ member.rank }}</td>
         <td data-order="{{ member.role_order }}"> {{ member.roles }}</td>
         <td> {{ member.display_phone }}</td>
