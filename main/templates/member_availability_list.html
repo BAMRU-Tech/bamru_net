@@ -126,10 +126,10 @@ function DeleteBusyPeriods ( e, dt, node, config ) {
         return;
     }
 
-    ok = confirm('Delete '+periods.length+' periods?');
+    var ok = confirm('Delete '+periods.length+' periods?');
 
     if (ok) {
-        for (i=0; i<periods.length; i++) {
+        for (var i=0; i<periods.length; i++) {
             //FIXME: error handling
             $.ajax({
                 method: 'DELETE',

@@ -157,10 +157,10 @@ function DeleteCerts ( e, dt, node, config ) {
         return;
     }
 
-    ok = confirm('Delete '+certs.length+' certs?');
+    var ok = confirm('Delete '+certs.length+' certs?');
 
     if (ok) {
-        for (i=0; i<certs.length; i++) {
+        for (var i=0; i<certs.length; i++) {
             //FIXME: error handling
             $.ajax({
                 method: 'DELETE',

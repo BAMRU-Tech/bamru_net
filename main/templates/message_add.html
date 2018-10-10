@@ -105,10 +105,10 @@ function InitializeRowsBasedOnFormat(table) {
     var url = apiUrlMemberRank;
     $.getJSON(url, null, function( json ) {
         
-        members = JSON.parse($('input[name=members]').val());
+        var members = JSON.parse($('input[name=members]').val());
         for (var i=0; i<json.length; i++)
         {
-            data = json[i];
+            var data = json[i];
             if (members.includes(data.id)) {
                 data['check'] = '';
                 data['name'] = '<a href="/member/'+data['id']+'">'+data['full_name']+'</a>';
@@ -178,8 +178,9 @@ function SendPage ( e, dt, node, config ) {
         return;
     }
     
-    viaEmail = $('input[name=email]').prop('checked') ;
-    viaSms = $('input[name=phone]').prop('checked');
+    var viaEmail = $('input[name=email]').prop('checked') ;
+    var viaSms = $('input[name=phone]').prop('checked');
+    var via = '';
     
     if (viaEmail && viaSms) {
         via = '(email, sms)';
@@ -194,6 +195,8 @@ function SendPage ( e, dt, node, config ) {
     confirm('Page via '+via+' '+members.length+' members\nMessage: '+$('#id_text').val());
     console.log(members);
     $('#id_members').val(JSON.stringify(members));
+    $('form').submit();
+    $('#form').click();
     return;
     
     var data = [];
@@ -279,7 +282,7 @@ $('#id_text').triggerHandler('input');
     <form method="post">
       {% csrf_token %}
       {% bootstrap_form form %}
-{#FIXME: tie it back together      <input type="submit" value="Send" /> #}
+      <input type="submit" id="submit" value="Send" />
     </form>
   </div>
 

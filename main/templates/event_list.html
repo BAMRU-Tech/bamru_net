@@ -74,26 +74,27 @@ function AddRowsByDate(table, start, end) {
     //
     //FIXME: needs date range validation
     const apiUrlEvent = '/api/events/';
-
+    var url;
+    
     if (start && end)
-        urlData = apiUrlEvent+'?start_after='+start+'&start_before='+end;
+        url = apiUrlEvent+'?start_after='+start+'&start_before='+end;
     else if (start)
-        urlData = apiUrlEvent+'?start_after='+start;
+        url = apiUrlEvent+'?start_after='+start;
     else if (end)
-        urlData = apiUrlEvent+'?start_before='+end;
+        url = apiUrlEvent+'?start_before='+end;
     else
-        urlData = apiUrlEvent;
+        url = apiUrlEvent;
 
     table.clear();
 
     const titleLength = 40;
     //FIXME: add error handling
-    $.getJSON(urlData, null, function( json ) {
+    $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
-            data = json[i];
-            title = data['title'];
+            var data = json[i];
+            var title = data['title'];
             if (title.length > titleLength) 
                 title = title.substring(0, titleLength - 3) + '...';
             data['href_title'] = '<a href="/event/' + data['id'] + '/">' + title + '</a>';

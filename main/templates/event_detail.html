@@ -25,6 +25,7 @@
 {% block js %}
 {{ block.super }}
 <script>
+'use strict'
 $(document).ready( function() {
     {% for period in event.period_set.all %}
     var table{{period.position}} = $("#dTbl{{period.position}}").DataTable( {
@@ -139,8 +140,8 @@ $(document).ready( function() {
 })
 
 function UpdateRow(dt, row, success, error) {
-    CleanDate = function (d) {
-        sd = d ? d.substr(0, d.length - 9) : '';
+    const CleanDate = function (d) {
+        var sd = d ? d.substr(0, d.length - 9) : '';
         return sd;
     }
     
@@ -148,7 +149,7 @@ function UpdateRow(dt, row, success, error) {
     
     // Delete values that won't be set
     delete data.member;
-    for (d in data) if (data[d] == '') delete data[d];
+    for (var d in data) if (data[d] == '') delete data[d];
     
     var id = data['id'];
     data = JSON.stringify(data);
@@ -192,10 +193,10 @@ function DeleteParticipants ( e, dt, node, config ) {
         return;
     }
     
-    ok = confirm('Delete '+members.length+' members?');
+    var ok = confirm('Delete '+members.length+' members?');
     
     if (ok) {
-        for (i=0; i<members.length; i++) {
+        for (var i=0; i<members.length; i++) {
             //FIXME: error handling
             $.ajax({
                 method: 'DELETE',

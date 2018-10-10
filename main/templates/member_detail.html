@@ -4,6 +4,7 @@
 
 {% block subheader %}
 <strong id='subhdr'></strong>
+{% if member.id == request.user.id %}
 <ul class="navbar-nav ml-auto">
   <li class="nav-item dropdown">
     <a href={% url 'member_edit' member.id %} class="nav-link">
@@ -30,6 +31,7 @@
     </a>
   </li>
 </ul>
+{% endif %}
 {% endblock subheader %}
 
 

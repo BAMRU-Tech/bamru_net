@@ -113,7 +113,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     template_name = 'base_form.html'
 
 
-class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
+class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Event
     fields = ['title', 'description', 'type',
               'location', 'leaders',
