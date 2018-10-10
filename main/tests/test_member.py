@@ -136,42 +136,6 @@ class CertTestCase(MemberTestCase):
         new_num_certs = Cert.objects.filter(member=self.user).count()
         self.assertEqual(orig_num_certs + 1, new_num_certs)
 
-    def test_edit_cert(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('member_cert_edit', args=[self.user.id, self.cert.id]))
-        self.assertEqual(response.status_code, 200)
-
-        orig_num_certs = Cert.objects.filter(member=self.user).count()
-
-        new_expiration = timezone.now().date() + timedelta(days=200)
-
-        response = self.client.post(reverse('member_cert_edit', args=[self.user.id, self.cert.id]), {
-            'type': 'medical',
-            'expiration': new_expiration,
-            'description': 'WFR',
-            'comment': '',
-        })
-        self.assertEqual(response.status_code, 302)
-
-        new_num_certs = Cert.objects.filter(member=self.user).count()
-        self.assertEqual(orig_num_certs, new_num_certs)
-
-        self.assertEqual(Cert.objects.get(id=self.cert.id).expiration, new_expiration)
-
-    def test_delete_cert(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('member_cert_delete', args=[self.user.id, self.cert.id]))
-        self.assertEqual(response.status_code, 200)
-
-        orig_num_certs = Cert.objects.filter(member=self.user).count()
-
-        response = self.client.post(reverse('member_cert_delete', args=[self.user.id, self.cert.id]))
-        self.assertEqual(response.status_code, 302)
-
-        new_num_certs = Cert.objects.filter(member=self.user).count()
-        self.assertEqual(orig_num_certs - 1, new_num_certs)
-
-
 class UnavailableTestCase(MemberTestCase):
     def setUp(self):
         super().setUp()
@@ -200,9 +164,4 @@ class UnavailableTestCase(MemberTestCase):
     def test_available_list(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse('available_list'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_available_edit(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('available_edit'))
         self.assertEqual(response.status_code, 200)
