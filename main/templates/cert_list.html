@@ -54,7 +54,9 @@ function AddRows(table, values) {
             }
             //; // invalidate needed to force rank and role display
         }
-        table.draw();  // not sure why this is required here but it is needed (was later in execution path)
+        
+        // not sure why this is required here but it is needed (tried to hoist it without success)
+        table.draw().columns.adjust().responsive.recalc();
     });
 }
 

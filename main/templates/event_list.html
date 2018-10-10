@@ -20,12 +20,7 @@
 {% block table_options %}
 order: [[ 4, "asc" ]],
 columnDefs: [
-    { width: "35%", targets: 0 },
-    { width: "30%", targets: 1 },
-    { width: "5%", targets: 2 },
-    { width: "15%", targets: 3 },
-    { width: "15%", targets: 3 },
-    { type: "string", targets: 3 },
+    { type: "string", targets: 3 }, //FIXME: still needed
     { responsivePriority: 0, targets: 0 },
     { responsivePriority: 1, targets: 4 },
     { responsivePriority: 2, targets: 1 },
@@ -90,16 +85,23 @@ function AddRowsByDate(table, start, end) {
         urlData = apiUrlEvent;
 
     table.clear();
+
+    const titleLength = 40;
     //FIXME: add error handling
     $.getJSON(urlData, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
             data = json[i];
-            data['href_title'] = '<a href="/event/'+json[i]['id']+'/">'+json[i]['title']+'</a>';
+            title = data['title'];
+            if (title.length > titleLength) 
+                title = title.substring(0, titleLength - 3) + '...';
+            data['href_title'] = '<a href="/event/' + data['id'] + '/">' + title + '</a>';
             table.row.add(data).invalidate()
         }
-        table.draw()  // not sure why this is required here but it is needed (tried to hoist it without success)
+
+        // not sure why this is required here but it is needed (tried to hoist it without success)
+        table.draw().columns.adjust().responsive.recalc();
     })
 }
 
@@ -115,9 +117,10 @@ function UpdateSubheaderBasedOnSettings(table) {
             filterTypes.push(eventType);
         }
     });
-    {# hack to shorten display on sm devices #}
+
+    // hack to shorten display on sm devices
     $("#subhdr")[0].innerHTML = ("Events (" + filterTypes.join(", ") + ")").replace("operation", "ops");
-    table.draw();
+
 }
 {% endblock table_functions %}
 
