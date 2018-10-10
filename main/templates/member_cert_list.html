@@ -11,41 +11,50 @@
 
 
 {% block table_options %}
-dom: "Bfrtip",
+dom: 'Bfrtip',
 responsive: true,
-select: "single",
+select: 'os',
 altEditor: true,
+order: [[ 4, 'desc']],
 columnDefs: [ // FIXME: sort by most expired cert?
     {
-        targets: [ 0, 3 ],
-        "render": function ( data, type, rowData, meta ) {
+        targets: [ 1, 4 ],
+        'render': function ( data, type, rowData, meta ) {
             if (meta['col'] == 0 && rowData['display']) {
                 // Handle type 'cpr' -> 'CPR'
                 data = rowData['display']
             } else {
                 // Add color for up coming cert expirations
                 var row = $('#dTbl').DataTable().row(meta['row']).node();
-                $('td:eq(3)', row).css('background-color', rowData['color'])
+                $('td:eq(4)', row).css('background-color', rowData['color'])
             }
             return data;
         },
     },
-    { responsivePriority: 0, targets: 0 },
-    { responsivePriority: 2, targets: 1 },
-    { responsivePriority: 3, targets: 2 },
-    { responsivePriority: 1, targets: 3 },
+    { responsivePriority: 0, targets: 1 },
+    { responsivePriority: 2, targets: 2 },
+    { responsivePriority: 3, targets: 3 },
+    { responsivePriority: 1, targets: 4 },
 ],
 columns: [
-    { data: "type", type: "readonly" },
-    { data: "description" },
-    { data: "url" },
-    { data: "expiration" },
-    { data: "id", type: ['read-only', 'hidden'], visible: false },
-    { data: "is_expired", type: ['read-only', 'hidden'], visible: false },
-    { data: "color", type: ['read-only', 'hidden'], visible: false },
+    { data: 'mark',
+      orderable: false,
+      className: 'mark-checkbox',
+      type: ['readonly', 'hidden'],
+      render: function(data, type, row) {
+          return '<div data-id="'+row.id+'"></div>';
+      },
+    },
+    { data: 'type', type: 'readonly' },
+    { data: 'description' },
+    { data: 'url' },
+    { data: 'expiration' },
+    { data: 'id', type: ['read-only', 'hidden'], visible: false },
+    { data: 'is_expired', type: ['read-only', 'hidden'], visible: false },
+    { data: 'color', type: ['read-only', 'hidden'], visible: false },
 ],
 language: {
-    emptyTable: "No busy periods"
+    emptyTable: 'No busy periods'
 },
 
 onAddRow: function(dt, row, success, error) {
@@ -71,7 +80,7 @@ onAddRow: function(dt, row, success, error) {
         }
     })
 },
-    
+
 onEditRow: function(dt, row, success, error) {
 
     var data = row;
@@ -97,40 +106,20 @@ onEditRow: function(dt, row, success, error) {
         }
     })
 },
-onDeleteRow: function(dt, row, success, error) {
-
-    var id = row[4];  //*FIXME: why is this array vs a dict with labels?
-                
-    //FIXME: error handling
-    $.ajax({
-        method: 'DELETE',
-        contentType: 'application/json',
-        url: '/api/certs/' + id + '/',
-        success: function (r, s, m) {
-            return success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('cert delete failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
 
 {% endblock table_options %}
 
 {% block table_buttons_first %}
 {
     text: '<i class="fa fa-certificate"></i> Add',
-    extend: "collection",
+    extend: 'collection',
     autoClose: true,
     buttons: [
         {% for type in cert_types %}
         {
             text: 'Add {{ type.1 }}',
             action: function () {
-                location.href ="{% url 'member_cert_new' member.id %}?type={{type.0}}&returnx=mc";
+                location.href ='{% url "member_cert_new" member.id %}?type={{type.0}}&returnx=mc';
             }
 
         },
@@ -138,26 +127,92 @@ onDeleteRow: function(dt, row, success, error) {
     ]
 },
 {
-    extend: "selected", // Bind to Selected row
+    extend: 'selected', // Bind to Selected row
     text: '<i class="fa fa-edit"></i> Edit',
-    name: "edit"        // do not change name
+    name: 'edit'        // do not change name
 },
 {
-    extend: "selected", // Bind to Selected row
+    extend: 'selected', // Bind to Selected row
     autoClose: true,
     text: '<i class="fa fa-trash"></i> Delete',
-    name: "delete"      // do not change name
+    action: DeleteCerts,
 },
 
 {% endblock table_buttons_first %}
+
+{# remove filter button #}
 {% block table_buttons_filter %}{% endblock %}
 
 {% block table_functions %}
 
-function UpdateSubheaderBasedOnSettings(table) {
+function DeleteCerts ( e, dt, node, config ) {
+    var certs = [];
+    $.each($('td.mark-checkbox.marked'), function (i, el) {
+        certs.push($(this.firstChild).data().id)
+    });
+    console.log(certs);
+
+    if (certs.length == 0) {
+        alert('Select certs before deleting them');
+        return;
+    }
+
+    ok = confirm('Delete '+certs.length+' certs?');
+
+    if (ok) {
+        for (i=0; i<certs.length; i++) {
+            //FIXME: error handling
+            $.ajax({
+                method: 'DELETE',
+                contentType: 'application/json',
+                url: '/api/certs/' + certs[i] + '/',
+                error: function (msg) {
+                    console.log('availability delete failed: '+msg);
+                    alert(msg);
+                    return false;
+                },
+            })
+        }
+        //FIXME: This seems like a bad idea but there is delay getting the updated data
+        setTimeout(function(){
+            location.reload(true);
+        }, 200);
+    }
 }
 
+function MarkRow ( e, dt, type, indices ) {
+        var allMarked = true;
+        var numRows = indices.length;
+        if (numRows > 1) {
+            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+                // For multi select - unmark only when every row is marked
+                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+            })
+        }
+        dt.rows(indices)
+            .every( function ( rowIdx, tableLoop, rowLoop ) {
+                if (numRows > 1) {
+                    if (allMarked)
+                        $(this.node()).children().first().removeClass('marked');
+                    else
+                        $(this.node()).children().first().addClass('marked');
+                } else {
+                    if ($(this.node()).children().first().hasClass('marked')) {
+                        $(this.node()).children().first().removeClass('marked');
+                        this.deselect();
+                    } else
+                        $(this.node()).children().first().addClass('marked');
+                }
+            });
+}
+
+function UpdateSubheaderBasedOnSettings(table) {}
+
 {% endblock table_functions %}
+
+{% block ready_functions %}
+    table.on( 'select', MarkRow);
+{% endblock ready_functions %}
 
 
 {% block content %}
@@ -165,6 +220,7 @@ function UpdateSubheaderBasedOnSettings(table) {
   <table id="dTbl" class="display table-bordered wrap" style="width:100%">
     <thead>
       <tr>
+        <th></th>
         <th>Type</th>
         <th>Description</th>
         <th>Documentation</th>
@@ -177,6 +233,7 @@ function UpdateSubheaderBasedOnSettings(table) {
     <tbody>
       {% for cert in cert_list %}
       <tr>
+        <td></td>
         <td>{{ cert.get_type_display }}</td>
         <td>{{ cert.description }}</td>
         <td>

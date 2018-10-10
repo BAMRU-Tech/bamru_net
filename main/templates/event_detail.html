@@ -132,7 +132,7 @@ $(document).ready( function() {
         },
     });
     
-    table{{period.position}}.on( 'select', MarkMember);
+    table{{period.position}}.on( 'select', MarkRow);
     
     {% endfor %}
 
@@ -210,7 +210,7 @@ function DeleteParticipants ( e, dt, node, config ) {
     }
 }
 
-function MarkMember ( e, dt, type, indices ) {
+function MarkRow ( e, dt, type, indices ) {
         var allMarked = true;
         var numRows = indices.length;
         if (numRows > 1) {
@@ -235,7 +235,7 @@ function MarkMember ( e, dt, type, indices ) {
                 }
             });
 }
-        
+
 </script>
 {% endblock js %}
 
