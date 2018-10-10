@@ -68,7 +68,7 @@
             <i class="fa fa-calendar"></i>
             Quarterly DO schedule
           </a>
-          <a class="dropdown-item" href="{% url 'message:message_list' %}">
+          <a class="dropdown-item" href="{% url 'message_list' %}">
             <i class="fa fa-list"></i>
             Message log
           </a>
@@ -107,7 +107,7 @@
             <i class="fa fa-user"></i>
             Profile
           </a>
-          <a class="dropdown-item" href="{% url 'message:message_inbox' request.user.id%}">
+          <a class="dropdown-item" href="{% url 'message_inbox' request.user.id%}">
             <i class="fa fa-inbox"></i>
             Inbox (n)
           </a>

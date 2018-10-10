@@ -42,7 +42,7 @@
     <tbody>
       {% for message in message_list %}
       <tr>
-        <td><a href="{% url 'message:message_detail' message.id %}">{{ message.text }}</a></td>
+        <td><a href="{% url 'message_detail' message.id %}">{{ message.text }}</a></td>
         <td>{{ message.author }}</td>
         <td data-sort="{{ event.created_order }}">{{ message.created_at }}</td>
         <td>{{ message.format }}</td>

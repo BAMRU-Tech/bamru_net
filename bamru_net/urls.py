@@ -60,6 +60,7 @@ urlpatterns = [
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
     path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
 
+    path('cert/', views.CertListView.as_view(), name='cert_list'),
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
     path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='member_cert_new'),
     path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='member_cert_delete'),
@@ -68,7 +69,10 @@ urlpatterns = [
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
     path('do/edit/', views.DoEditView.as_view(), name='do_availability_list'),
 
-    path('cert/', views.CertListView.as_view(), name='cert_list'),
+    path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
+    path('message/', views.MessageListView.as_view(), name='message_list'),
+    path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(), name='message_inbox'),
+    path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
 
     path('', include('message.urls')),
 

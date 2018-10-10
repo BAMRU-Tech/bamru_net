@@ -19,10 +19,10 @@ from twilio.twiml.messaging_response import MessagingResponse
 
 from main.models import Member, Participant, Period
 
-from .forms import MessageCreateForm
-from .models import (Distribution, InboundSms, Message, OutboundEmail,
+from message.forms import MessageCreateForm
+from message.models import (Distribution, InboundSms, Message, OutboundEmail,
                      OutboundSms, RsvpTemplate)
-from .tasks import message_send
+from message.tasks import message_send
 
 logger = logging.getLogger(__name__)
 
