@@ -1,5 +1,12 @@
 {% extends 'base_generic.html' %}
 
+{% block subheader %}
+<strong>
+  <a href="{% url 'member_detail' member.id %}?returnx=ml">{{member.full_name }} ({{ member.rank }})</a>
+  &gt; Edit
+</strong>
+{% endblock subheader %}
+
 {% block content %}
 <main role="main" class="container">
 <form method="post">
@@ -102,10 +109,4 @@
   <!-- there's a newer version available, but https://github.com/RubaXa/Sortable/issues/1052 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.4.2/Sortable.min.js" integrity="sha256-3jMcJ+64WZszWMWQ9rF5uS3m/9JgLypNpjtYs4wc3j8=" crossorigin="anonymous"></script>
   <script src="/static/js/dynamic_formset.js" type="text/javascript"></script>
-{% endblock %}
-
-{% block subheader %}
-<a href="{% url 'member_index' %}">Members</a>
-&gt; <a href="{% url 'member_detail' member.id %}">{{member.full_name }} ({{ member.rank }})</a>
-&gt; Edit
 {% endblock %}

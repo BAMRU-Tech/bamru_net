@@ -46,3 +46,11 @@ body {
     line-height: 40px; /* Vertically center the text there */
     /*background-color: #f5f5f5;*/
 }
+
+td.mark-checkbox.marked::after {
+    content: "✔";
+    margin-top: -11px;
+    margin-left: -4px;
+    text-align: center;
+    text-shadow: rgb(176, 190, 217) 1px 1px, rgb(176, 190, 217) -1px -1px, rgb(176, 190, 217) 1px -1px, rgb(176, 190, 217) -1px 1px;
+}

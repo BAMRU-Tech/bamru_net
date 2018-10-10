@@ -1,17 +1,22 @@
 {% extends 'base_ftable.html' %}
+{% load bootstrap4 %}
 
-{% block title %}
-      Participant Add
-{% endblock title %}
+{% block title %}New Compose Message{% endblock %}
 
 {% block subheader %}
-<strong id="subhdr">Event Add Participant</strong>
+<strong id="subhdr">Event Page</strong>
 {% endblock subheader %}
 
 
 {% block table_options %}
 select: 'os',
 order: [[ 2, 'asc' ]],
+paging: false,
+initComplete: function () {
+    var tbl = this.api();
+
+    InitializeRowsBasedOnFormat(tbl);
+},
 columnDefs: [
     {
         orderable: false,
@@ -24,6 +29,7 @@ columnDefs: [
     { responsivePriority: 3, targets: 4},
     { responsivePriority: 4, targets: 5},
 ],
+//FIXME: look into using filter tag for sort-order
 columns: [
     { 'data': 'check', width: '5px' }, //FIXME: adjust alignment
     { 'data': 'name' },
@@ -39,56 +45,16 @@ language: {
 
 {% block table_buttons_first %}
 {
-    text: '<i class="fa fa-address-book"></i> Add',
-    action: function ( e, dt, node, config ) {
-        var members = [];
-        $('td.mark-checkbox.marked').each(function (i, el) {
-            members.push($($(el).next().html()).data().id)
-        });
-        console.log(members);
-
-        if (members.length == 0) {
-            alert('Select members before adding them');
-            return;
-        }
-
-        var data = [];
-        for (var i = 0; i < members.length; i++) {
-            data.push({ 'period': period_id, 'member': members[i] });
-        }
-        data = JSON.stringify(data);
-        //FIXME: error handling
-        $.ajax({
-            method: 'POST',
-            contentType: 'application/json',
-            url: '/api/participants/',
-            data: data,
-            success: function (response) {
-                console.log('Period add ' + response.length + ' members');
-                //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
-                location.href='/event/' + event_id + '#OP' + period_num;
-            },
-            error: function (xhr) {
-                console.log('Period add failed');
-                console.log(xhr);
-                alert(xhr.responseText);
-                return false;
-            }
-        })
-    }
+    text: '<i class="fa fa-address-book"></i> Send Page',
+    action: SendPage,
 },
 {
     text: 'Select All',
-    action: function ( e, dt, node, config ) {
-        $('td.mark-checkbox').addClass('marked');
-    }
+    action: SelectAll,
 },
 {
     text: 'Clear All',
-    action: function ( e, dt, node, config ) {
-        $('td.mark-checkbox').removeClass('marked');
-        table.rows().deselect();
-    }
+    action: ClearAll,
 },
 {% endblock table_buttons_first %}
 
@@ -125,30 +91,47 @@ table
 {% block table_functions %}
 
 const url = new URL(window.location.href);
-const event_name = url.searchParams.get('et');
-const event_id = url.searchParams.get('eid');
-const period_num = url.searchParams.get('pn');
 const period_id = url.searchParams.get('pid');
+const period_format = url.searchParams.get('period_format');
+const page = url.searchParams.get('page');
 const apiUrlMemberRank = '/api/members/?member_rank=';
 
-$('#check-all').click( function ()
-                       {
-                           $(table.rows().nodes()).find('input').attr('checked', this.checked);
-                           return;
-                           var col0 =table.column(0).nodes();
-                           col0.shift; // remove check-all
-                           this.checked = !this.checked;
-                           $(col0).find('input').attr('checked', this.checked);
-                           console.log('clicked');
-                       }
-                     )
+function InitializeRowsBasedOnFormat(table) {
+    //FIXME: this is very slow, need better api
+    var url = apiUrlMemberRank;
+    $.getJSON(url, null, function( json ) {
+        
+        members = JSON.parse($('input[name=members]').val());
+        for (var i=0; i<json.length; i++)
+        {
+            m = json[i];
+            if (members.includes(m.id)) {
+                data = {
+                    check: '',
+                    name: '<a href="/member/'+m['id']+'" data-id="'+m['id']+'">'+m['full_name']+'</a>',
+                    rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
+                    roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
+                    phone: m['display_phone'],
+                    email: m['display_email']
+                }
+            
+                table.row.add(data).invalidate(); // invalidate needed to force rank and role display
+            }
+        }
+
+        table.draw();
+        if (period_format != 'invite')
+            $('td.mark-checkbox').addClass('marked');
+
+    });
+}
 
 function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
     urlData = apiUrlMemberRank+values[0];
-    //FIXME: add error handling
+    //FIXME: error handling
     $.getJSON(urlData, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
@@ -156,7 +139,7 @@ function AddRows(table, values) {
             m = json[i];
             data = {
                 check: '',
-                name: '<a href="/member/'+m['id']+'" data-id="'+m['id']+'?returnx=pp">'+m['full_name']+'</a>',
+                name: '<a href="/member/'+m['id']+'" data-id="'+m['id']+'">'+m['full_name']+'</a>',
                 rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
                 roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
                 phone: m['display_phone'],
@@ -184,6 +167,69 @@ function RemoveRows(table, values) {
     table.draw();
 }
 
+function SendPage ( e, dt, node, config ) {
+        var members = [];
+        $('td.mark-checkbox.marked').each(function (i, el) {
+            members.push($($(el).next().html()).data().id)
+        });
+
+        if (members.length == 0) {
+            alert('Select members before paging them');
+            return;
+        }
+
+        viaEmail = $('input[name=email]').prop('checked') ;
+        viaSms = $('input[name=phone]').prop('checked');
+
+        if (viaEmail && viaSms) {
+            via = '(email, sms)';
+        } else if (viaEmail) {
+            via = '(email)';
+        } else if (viaSms) {
+            via = '(sms)';
+        } else {
+            via = '()';
+        }
+
+        confirm('Page via '+via+' '+members.length+' members\nMessage: '+$('#id_text').val());
+        console.log(members);
+        return;
+
+        var data = [];
+        for (var i = 0; i < members.length; i++) {
+            data.push({ 'period': period_id, 'member': members[i] });
+        }
+        data = JSON.stringify(data);
+        //FIXME: add error handling
+        $.ajax({
+            method: 'POST',
+            contentType: 'application/json',
+            url: '/api/participants/',
+            data: data,
+            success: function (response) {
+                console.log('Period add ' + response.length + ' members');
+                //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
+                location.href='/event/' + event_id + '#OP' + period_num;
+            },
+            error: function (xhr) {
+                console.log('Period add failed');
+                console.log(xhr);
+                alert(xhr.responseText);
+                return false;
+            }
+        })
+}
+
+function SelectAll ( e, dt, node, config ) {
+        $('td.mark-checkbox').addClass('marked');
+}
+
+function ClearAll ( e, dt, node, config ) {
+        $('td.mark-checkbox').removeClass('marked');
+        table.rows().deselect();
+}
+
+
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected ranks based on filter
     var showRanks = [];
@@ -193,8 +239,9 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $('#subhdr')[0].innerHTML = (event_name + ' > Add Participants (' + showRanks.join(', ') + ')'); //FIXME: Add link to event
-    document.title = 'Participant Add - ' + event_name;
+    $('#subhdr')[0].innerHTML = ('{{ period }}:'+page+' > Page Participants ('
+                                 + showRanks.join(', ') + ')'); //FIXME: Add link to event
+    document.title = '{{ period }} Page';
 
 }
 
@@ -211,11 +258,26 @@ $('#filter-rank').multiSelect({
         UpdateSubheaderBasedOnSettings(table);
     }
 })
+
+$('#id_text').after($("<div id='length-message' class='text-muted'>"));
+$('#id_text').on('input', function(){
+    var length = $('#id_text').val().length + $('#data').data('extra-characters');
+    //FIXME: mark in red when char count exceeds 160
+    $("#length-message").text(length + " characters used (single SMS fits 160)");
+});
+$('#id_text').triggerHandler('input');
+
 {% endblock table_functions %}
 
 {% block content %}
-
-<main>
+<main role="main" class="container">
+  <div id="content">
+    <form method="post">
+      {% csrf_token %}
+      {% bootstrap_form form %}
+{#FIXME: tie it back together      <input type="submit" value="Send" /> #}
+    </form>
+  </div>
 
   <div id="show-filter" style="display: none">
     <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
@@ -232,6 +294,7 @@ $('#filter-rank').multiSelect({
       <option value="GN" selected >Guest No-contact</option>
     </select>
   </div>
+
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
@@ -240,22 +303,8 @@ $('#filter-rank').multiSelect({
       </tr>
     </thead>
 
-    <tbody>
-      {% for member in member_list %}
-      {% spaceless %}
-      {% if member.isActive %}
-      <tr>
-        <td></td>
-        <td><a href="{% url 'member_detail' member.id %}?returnx=pp" data-id="{{ member.id }}">{{ member.full_name }}</a></td>
-        <td data-order="{{ member.rank_order }}"> {{ member.rank }}</td>
-        <td data-order="{{ member.role_order }}"> {{ member.roles }}</td>
-        <td> {{ member.display_phone }}</td>
-        <td> {{ member.display_email }}</td>
-      </tr>
-      {% endif %}
-      {% endspaceless %}
-      {% endfor %}
-    </tbody>
+    <tbody></tbody>
   </table>
+  <div id='data' class="d-none" data-extra-characters='{{extra_characters}}'></div>
 </main>
 {% endblock content%}

@@ -20,7 +20,7 @@ class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    filter_fields = ('member_rank', )
+    filter_fields = ('member_rank', 'is_active', )
     search_fields = ('username',  )
 
 
@@ -34,6 +34,14 @@ class UnavailableFilter(filters.FilterSet):
 class UnavailableViewSet(viewsets.ModelViewSet):
     queryset = Unavailable.objects.all()
     serializer_class = UnavailableSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    filterset_class = UnavailableFilter
+    search_fields = ('member__username', )
+
+
+class ApiUnavailableViewSet(viewsets.ModelViewSet):
+    queryset = Unavailable.objects.all()
+    serializer_class = BareUnavailableSerializer
     permission_classes = (permissions.IsAuthenticated,)
     filterset_class = UnavailableFilter
     search_fields = ('member__username', )

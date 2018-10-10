@@ -44,6 +44,7 @@
         }
         function ajaxAssignment(id, assigned) {
             // TODO indicate in-progress requests, surface errors
+            //FIXME: error handling
             $.ajax({
                 'method': 'patch',
                 'url': '/api/do/'+id+'/',
@@ -120,7 +121,7 @@
 
 {% block content %}
 <main>
-  <table id="dTbl" class="display table-bordered compact" nowrap style="width:100%">
+  <table id="dTbl" class="display table-bordered compact nowrap" style="width:100%">
     <thead>
       <tr>
         <th>Name</th>

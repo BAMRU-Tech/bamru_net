@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ReportIndexView(generic.base.TemplateView):
+class ReportListView(generic.base.TemplateView):
     template_name = 'reports/index.html'
 
 

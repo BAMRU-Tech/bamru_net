@@ -3,65 +3,74 @@
 {% block title %}Team Members{% endblock title %}
 
 {% block subheader %}
-  <strong>
-    <div id="subhdr">
-      Members
-    </div>
-  </strong>
-{% endblock %}
+<strong id="subhdr">Members</strong>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item ml-auto">
+    <a class="nav-link" href="{% url 'member_detail' request.user.id %}">
+      <i class="fa fa-user"></i>
+      Profile
+    </a>
+  </li>
+</ul>
+{% endblock subheader %}
+
 
 {% block table_options %}
-order: [[ 0, "asc" ]],
+order: [[ 0, 'asc' ]],
 columnDefs: [
     { responsivePriority: 1, targets: 0 },
     { responsivePriority: 2, targets: 3 },
     { responsivePriority: 3, targets: 4}
 ],
 language: {
-      emptyTable: "No members selected"
+      emptyTable: 'No members selected'
 },
 {% endblock table_options %}
 
 {% block table_functions %}
-const apiUrlMemberRank = "/api/members/?member_rank=";
+const apiUrlMemberRank = '/api/members/?member_rank=';
 
 function AddRows(table, values) {
-    // Add row data via AJAX based on rank
+    //
+    // Add rows based rank
+    //
     urlData = apiUrlMemberRank+values[0];
+    //FIXME: add error handling
     $.getJSON(urlData, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
             data = [
-                "<a href=/member/"+json[i]["id"]+">"+json[i]["full_name"]+"</a>",
-                {"display": json[i]["rank"], "@data-sort": json[i]["rank_order"]},
-                {"display": json[i]["roles"], "@data-sort": json[i]["role_order"]},
-                json[i]["display_phone"],
-                json[i]["display_email"]
+                '<a href="/member/'+json[i]['id']+'?returnx=ml">'+json[i]['full_name']+'</a>',
+                {'display': json[i]['rank'], '@data-sort': json[i]['rank_order']},
+                {'display': json[i]['roles'], '@data-sort': json[i]['role_order']},
+                json[i]['display_phone'],
+                json[i]['display_email']
             ]
             
             table.row.add(data).invalidate() // invalidate needed to force rank and role display
         }
-        table.draw()  // not sure why this is required here but it is needed (tried to hoist it without success)
+        table.draw()  // not sure why this is required here but it is needed, tried to hoist it without success
     })
 }
+
 
 function RemoveRows(table, values)
 {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            return data[1]["display"] == values[0];
+            return data[1]['display'] == values[0];
         } )
         .remove();
 
     table.draw()
 }
 
-$("#filter-rank").multiSelect({
+$('#filter-rank').multiSelect({
     // The sense of the multiSelect is inverted: show = deselect, hide = select
-    selectableHeader: "<div class='custom-header'>Show</div>",
-    selectionHeader: "<div class='custom-header'>Hide</div>",
+    selectableHeader: '<div class="custom-header">Show</div>',
+    selectionHeader: '<div class="custom-header">Hide</div>',
     afterSelect: function(values){
         RemoveRows(table,values);
         UpdateSubheaderBasedOnSettings(table);
@@ -75,13 +84,13 @@ $("#filter-rank").multiSelect({
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected ranks based on filter
     var showRanks = [];
-    $("#filter-rank option").each(function() {
+    $('#filter-rank option').each(function() {
         if (!this.selected) {
             showRanks.push(this.value);
         }
     })
 
-    $("#subhdr")[0].innerHTML = "Members (" + showRanks.join(", ") + ")";
+    $('#subhdr')[0].innerHTML = 'Members (' + showRanks.join(', ') + ')';
 }
 
 {% endblock table_functions %}
@@ -91,24 +100,23 @@ function UpdateSubheaderBasedOnSettings(table) {
 <main>
   <div id="show-filter" style="display: none">
     <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
-      <option value='TM'>Technical Member</option>
-      <option value='FM'>Field Member</option>
-      <option value='T'>Trainee</option>
-      <option value='R' selected >Reserve</option>
-      <option value='S' selected >Support</option>
-      <option value='A' selected >Associate</option>
-      <option value='G' selected >Guest</option>
-      <option value='MA' selected >Member Alum</option>
-      <option value='GA' selected >Guest Alum</option>
-      <option value='MN' selected >Member No-contact</option>
-      <option value='GN' selected >Guest No-contact</option>
+      <option value="TM">Technical Member</option>
+      <option value="FM">Field Member</option>
+      <option value="T">Trainee</option>
+      <option value="R" selected>Reserve</option>
+      <option value="S" selected>Support</option>
+      <option value="A" selected>Associate</option>
+      <option value="G" selected>Guest</option>
+      <option value="MA" selected>Member Alum</option>
+      <option value="GA" selected>Guest Alum</option>
+      <option value="MN" selected>Member No-contact</option>
+      <option value="GN" selected>Guest No-contact</option>
     </select>
   </div>
-  {% if member_list %}
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
-        <th>Name</th><th>Rank</th><th>Role</th><th>Phone</th><th>eMail</th>
+        <th>Name</th><th>Rank</th><th>Roles</th><th>Phone</th><th>eMail</th>
       </tr>
     </thead>
 
@@ -116,9 +124,9 @@ function UpdateSubheaderBasedOnSettings(table) {
       {% for member in member_list %}
       {% if member.isActive %}
       <tr>
-        <td><a href="{% url 'member_detail' member.id %}">{{ member.full_name }}</a></td>
+        <td><a href="{% url 'member_detail' member.id %}?returnx=ml">{{ member.full_name }}</a></td>
         <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
-        <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td> <!--  -->
+        <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td>
         <td> {{ member.display_phone }}</td>
         <td> {{ member.display_email }}</td>
       </tr>
@@ -126,8 +134,5 @@ function UpdateSubheaderBasedOnSettings(table) {
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <p>No members are available.</p>
-  {% endif %}
 </main>
 {% endblock %}

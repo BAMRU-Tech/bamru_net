@@ -2,11 +2,6 @@
 
 {# Filtered table template #}
 
-{% block css %}
-    {{ block.super }}
-
-{% endblock css %}
-
 {% block js %}
 {{ block.super }}
 
@@ -40,6 +35,9 @@ $(document).ready(function() {
                     } else {
                         $("#show-filter").css({"display":"none"})
                         node[0].innerHTML = labelShowFilter;
+                        if (AddRowsByDate)
+                            AddRowsByDate(table, $('#start').val(), $('#end').val())
+                                          
                     }
                 }
             },

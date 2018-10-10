@@ -3,22 +3,22 @@
 {% block title %}Events{% endblock title %}
 
 {% block subheader %}
-  {{ block.super }}
-  <strong>
-    <div id="subhdr">
-      Events
-    </div>
-  </strong>
-  <ul class="navbar-nav ml-auto">
-    <li class="nav-item ml-auto">
-      <a class="nav-link" href="{% url 'event_add' %}"><i class="fa fa-calendar-plus-o"></i> Create new event</a>
-    </li>
-  </ul>
+<strong id="subhdr">Events</strong>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item ml-auto">
+    <a class="nav-link" href="{% url 'event_list' %}">
+      <i class="fa fa-calendar--o"></i> All events</a>
+  </li>
+  <li class="nav-item ml-auto">
+    <a class="nav-link" href="{% url 'event_add' %}">
+      <i class="fa fa-calendar-plus-o"></i> Create new event</a>
+  </li>
+</ul>
 {% endblock subheader %}
 
 
 {% block table_options %}
-order: [[ 4, "desc" ]],
+order: [[ 4, "asc" ]],
 columnDefs: [
     { width: "35%", targets: 0 },
     { width: "30%", targets: 1 },
@@ -31,6 +31,17 @@ columnDefs: [
     { responsivePriority: 2, targets: 1 },
     { responsivePriority: 3, targets: 3 }
 ],
+columns: [
+    { data: 'href_title',
+      render: function(data, type, row) {
+          return data;
+      }
+    },
+    { data: 'display_location'},
+    { data: 'type'},
+    { data: 'leaders'},
+    { data: 'display_start'},
+],
 language: {
       emptyTable: "No events selected"
 },
@@ -38,7 +49,7 @@ language: {
 
 {% block table_functions %}
 var filterTypes = [];
-var filterTypesCap = []; /*FIXME: Bug allows event type to be Capitalized when stored in the DB */
+var filterTypesCap = []; //FIXME: Bug allows event type to be Capitalized when stored in the DB
 
 /* Custom filtering function */
 $.fn.dataTable.ext.search.push(
@@ -61,6 +72,38 @@ $("#filter-type").multiSelect({
     }
 });
 
+
+function AddRowsByDate(table, start, end) {
+    //
+    // Add rows based on date range
+    //
+    //FIXME: needs date range validation
+    const apiUrlEvent = '/api/events/';
+
+    if (start && end)
+        urlData = apiUrlEvent+'?start_after='+start+'&start_before='+end;
+    else if (start)
+        urlData = apiUrlEvent+'?start_after='+start;
+    else if (end)
+        urlData = apiUrlEvent+'?start_before='+end;
+    else
+        urlData = apiUrlEvent;
+
+    table.clear();
+    //FIXME: add error handling
+    $.getJSON(urlData, null, function( json ) {
+        
+        for (var i=0; i<json.length; i++)
+        {
+            data = json[i];
+            data['href_title'] = '<a href="/event/'+json[i]['id']+'/">'+json[i]['title']+'</a>';
+            table.row.add(data).invalidate()
+        }
+        table.draw()  // not sure why this is required here but it is needed (tried to hoist it without success)
+    })
+}
+
+
 function UpdateSubheaderBasedOnSettings(table) {
     filterTypes = [];
     filterTypesCap = [];
@@ -78,6 +121,37 @@ function UpdateSubheaderBasedOnSettings(table) {
 }
 {% endblock table_functions %}
 
+
+{% block ready_functions %}
+const url = new URL(window.location.href);
+const current = url.searchParams.get('current');
+var startBefore = url.searchParams.get('start_before');
+var startAfter = url.searchParams.get('start_after');
+var months = url.searchParams.get('months');
+var monthsSpecified = url.searchParams.get('months');
+
+if (current || months) {
+    if (!startAfter) {
+        startAfter = new Date();
+        startAfter = startAfter.toLocaleDateString();
+    }
+    if (!startBefore) {
+        if (!months) months = 1;
+        startBefore = new Date();
+        startBefore.setMonth(startBefore.getMonth() + months);
+        startBefore = startBefore.toLocaleDateString();
+    }
+}
+
+if (startBefore || startAfter) {
+    if (startAfter) $('#start').val(startAfter);
+    if (startBefore) $('#end').val(startBefore);
+}
+
+AddRowsByDate(table, startAfter, startBefore);
+
+{% endblock ready_functions %}
+
     
 {% block content %}
 <main>
@@ -88,8 +162,13 @@ function UpdateSubheaderBasedOnSettings(table) {
       <option value='training'>Training</option>
       <option value='community'>Community</option>
     </select>
+    <label for="start">Start after</label>
+    <input type="date" id="start"></input>
+    <label for="end">End before</label>
+    <input type="date" id="end"></input>
   </div>
-  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+    
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
         <th>Title</th><th>Location</th><th>Type</th><th>Leaders</th><th>Start</th>
@@ -97,16 +176,7 @@ function UpdateSubheaderBasedOnSettings(table) {
     </thead>
 
     <tbody>
-      {% for event in event_list %}
-      <tr>
-        <td><a href="{% url 'event_detail' event.id %}">{{ event.display_title }}</a></td>
-        <td>{{ event.display_location }}</td>
-        <td>{{ event.type }}</td>
-        <td>{{ event.leaders }}</td>
-        <td data-sort="{{ event.start_order }}">{{ event.display_start }}</td>
-      </tr>
-      {% endfor %}
-      </tbody>
+    </tbody>
   </table>
  </div>
 </main>

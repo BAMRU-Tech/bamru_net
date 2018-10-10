@@ -30,30 +30,19 @@ router.register(r'edit_participants', views.EditParticipantViewSet)
 router.register(r'members', views.MemberViewSet)
 router.register(r'member_certs', views.MemberCertViewSet, base_name='member')
 router.register(r'certs', views.CertViewSet)
-router.register(r'availability', views.UnavailableViewSet)
+router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
 
 urlpatterns = [
     path('', views.IndexView.as_view()),
-    path('member/', views.MemberIndexView.as_view(), name='member_index'),
-    path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
-    path('member/<int:pk>/edit', views.MemberEditView.as_view(), name='member_edit'),
-    path('member/<int:pk>/certs/', views.MemberCertsView.as_view(), name='member_certs'),
-    path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='new_cert'),
-    path('member/<int:member>/certs/<int:pk>', views.CertEditView.as_view(), name='edit_cert'),
-    path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='delete_cert'),
-    path('availability/', views.AvailableListView.as_view(), name='available_list'),
-    path('availability/edit/', views.AvailableEditView.as_view(), name='available_edit'),
-    path('member/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
 
     path('event/proximate', views.EventImmediateView.as_view(), name='event_immediate'),
-    path('event/', views.EventAllView.as_view(), name='event_all'),
+    path('event/', views.EventAllView.as_view(), name='event_list'),
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
     path('event/add', views.EventCreateView.as_view(), name='event_add'),
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),
     path('event/<int:pk>/delete/', views.EventDeleteView.as_view(), name='event_delete'),
-
     path('event/<int:pk>/period/add/',
          views.EventPeriodAddView.as_view(), name='event_period_add'),
     path('event/<int:event>/period/delete/<int:pk>/',
@@ -61,12 +50,23 @@ urlpatterns = [
 
     path('event/participant/add/<int:period>/',
          views.PeriodParticipantCreateView.as_view(), name='period_participant_add'),
-    path('message/participant/add/<int:period>/', #FIXME: Wrong namespace - sort out w/Kevin
+    path('message/participant/add/<int:period>/', #FIXME: Wrong namespace (views/event) - sort out w/Kevin
          views.MessageParticipantCreateView.as_view(), name='message_participant_add'),
 
-    path('do/', views.DoListView.as_view(), name='do_index'),
+    path('member/', views.MemberListView.as_view(), name='member_list'),
+    path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
+    path('member/<int:pk>/edit', views.MemberEditView.as_view(), name='member_edit'),
+
+    path('availability/', views.AvailableListView.as_view(), name='available_list'),
+    path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
+
+    path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
+    path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='member_cert_new'),
+    path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='member_cert_delete'),
+
+    path('do/', views.DoListView.as_view(), name='do_list'),
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
-    path('do/edit/', views.DoEditView.as_view(), name='do_form'),
+    path('do/edit/', views.DoEditView.as_view(), name='do_availability_list'),
 
     path('cert/', views.CertListView.as_view(), name='cert_list'),
 
@@ -81,7 +81,7 @@ urlpatterns = [
     url(r'^accounts/login/$', auth_views.login, name='login'),
     url(r'^accounts/logout/$', auth_views.logout, {'next_page': '/'}, name='logout'),
 
-    path('reports/', views.ReportIndexView.as_view(), name='reports_index'),
+    path('reports/', views.ReportListView.as_view(), name='reports_list'),
     path('reports/roster/BAMRU-roster.csv', views.ReportRosterCsvView.as_view()),
     path('reports/roster/BAMRU-roster.vcf', views.ReportRosterVcfView.as_view()),
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),

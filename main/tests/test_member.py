@@ -60,12 +60,12 @@ class MemberTestCase(TestCase):
         self.assertEqual(users, [user_fm_ul_ol, user_tm_xo, user_t])
 
     def test_list_not_logged_in(self):
-        response = self.client.get(reverse('member_index'))
+        response = self.client.get(reverse('member_list'))
         self.assertEqual(response.status_code, 302)
         
     def test_list_logged_in(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('member_index'))
+        response = self.client.get(reverse('member_list'))
         self.assertEqual(response.status_code, 200)
         
     def test_detail_not_logged_in(self):
@@ -115,17 +115,17 @@ class CertTestCase(MemberTestCase):
 
     def test_member_cert_list(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('member_certs', args=[self.user.id]))
+        response = self.client.get(reverse('member_cert_list', args=[self.user.id]))
         self.assertEqual(response.status_code, 200)
 
     def test_new_cert(self):
         self.client.force_login(self.user)
-        response = self.client.get(reverse('new_cert', args=[self.user.id]) + '?type=medical')
+        response = self.client.get(reverse('member_cert_new', args=[self.user.id]) + '?type=medical')
         self.assertEqual(response.status_code, 200)
 
         orig_num_certs = Cert.objects.filter(member=self.user).count()
 
-        response = self.client.post(reverse('new_cert', args=[self.user.id]) + '?type=medical', {
+        response = self.client.post(reverse('member_cert_new', args=[self.user.id]) + '?type=medical', {
             'type': 'medical',
             'expiration': '2018-12-31',
             'description': 'WFR',
@@ -135,42 +135,6 @@ class CertTestCase(MemberTestCase):
 
         new_num_certs = Cert.objects.filter(member=self.user).count()
         self.assertEqual(orig_num_certs + 1, new_num_certs)
-
-    def test_edit_cert(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('edit_cert', args=[self.user.id, self.cert.id]))
-        self.assertEqual(response.status_code, 200)
-
-        orig_num_certs = Cert.objects.filter(member=self.user).count()
-
-        new_expiration = timezone.now().date() + timedelta(days=200)
-
-        response = self.client.post(reverse('edit_cert', args=[self.user.id, self.cert.id]), {
-            'type': 'medical',
-            'expiration': new_expiration,
-            'description': 'WFR',
-            'comment': '',
-        })
-        self.assertEqual(response.status_code, 302)
-
-        new_num_certs = Cert.objects.filter(member=self.user).count()
-        self.assertEqual(orig_num_certs, new_num_certs)
-
-        self.assertEqual(Cert.objects.get(id=self.cert.id).expiration, new_expiration)
-
-    def test_delete_cert(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('delete_cert', args=[self.user.id, self.cert.id]))
-        self.assertEqual(response.status_code, 200)
-
-        orig_num_certs = Cert.objects.filter(member=self.user).count()
-
-        response = self.client.post(reverse('delete_cert', args=[self.user.id, self.cert.id]))
-        self.assertEqual(response.status_code, 302)
-
-        new_num_certs = Cert.objects.filter(member=self.user).count()
-        self.assertEqual(orig_num_certs - 1, new_num_certs)
-
 
 class UnavailableTestCase(MemberTestCase):
     def setUp(self):
@@ -200,9 +164,4 @@ class UnavailableTestCase(MemberTestCase):
     def test_available_list(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse('available_list'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_available_edit(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('available_edit'))
         self.assertEqual(response.status_code, 200)

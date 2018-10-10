@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Message
-    template_name = 'message_compose.html'
+    template_name = 'message_add.html'
 
     def get_success_url(self):
         return self.object.get_absolute_url()
@@ -84,6 +84,7 @@ class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
             form.fields['period'].widget = HiddenInput()
             form.fields['period_format'].widget = HiddenInput()
             form.fields['rsvp_template'].widget = HiddenInput()
+            form.fields['members'].widget = HiddenInput()
             self.period = period
             self.rsvp_template = rsvp_template
         return form
