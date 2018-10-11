@@ -44,12 +44,13 @@ language: {
         $.each( $('td.mark-checkbox.marked'),  function (i, el) {
             members.push($(this.firstChild).data().id)
         });
-        console.log(members);
 
         if (members.length == 0) {
             alert('Select members before adding them');
             return;
         }
+
+        console.log(members);
 
         var data = [];
         for (var i = 0; i < members.length; i++) {
@@ -130,31 +131,19 @@ const period_num = url.searchParams.get('pn');
 const period_id = url.searchParams.get('pid');
 const apiUrlMemberRank = '/api/members/?member_rank=';
 
-$('#check-all').click( function ()
-                       {
-                           $(table.rows().nodes()).find('input').attr('checked', this.checked);
-                           return;
-                           var col0 =table.column(0).nodes();
-                           col0.shift; // remove check-all
-                           this.checked = !this.checked;
-                           $(col0).find('input').attr('checked', this.checked);
-                           console.log('clicked');
-                       }
-                     )
-
 function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    urlData = apiUrlMemberRank+values[0];
+    var url = apiUrlMemberRank+values[0];
     //FIXME: add error handling
-    $.getJSON(urlData, null, function( json ) {
+    $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
-            m = json[i];
-            data = {
-                check: '',
+            var m = json[i];
+            var data = { //FIXME: Consider using render
+                check: '<td><div data-id="' + m['id'] + '"></div></td>',
                 name: '<a href="/member/'+m['id']+'?returnx=pp">'+m['full_name']+'</a>',
                 rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
                 roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
@@ -174,7 +163,7 @@ function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            rank = data['rank']
+            var rank = data['rank']
             // Handle both cases: 'FM' and <td ...>FM</td>
             if (rank[0] == '<')
                 rank = data['rank'].match('.*>(.*)<')[1]

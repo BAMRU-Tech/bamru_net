@@ -29,28 +29,28 @@ function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    urlData = apiUrlMemberRank+values[0];
+    var url = apiUrlMemberRank+values[0];
     //FIXME: add error handling
-    $.getJSON(urlData, null, function( json ) {
+    $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
-            rowData = json[i];
-            data = [
+            var rowData = json[i];
+            var data = [
                 '<a href="/member/'+rowData['id']+'?returnx=cl">'+rowData['full_name']+'</a>',
                 {'display': rowData['rank'], '@data-sort': rowData['rank_order']},
             ]
-            certs = rowData['certs'];
+            var certs = rowData['certs'];
             for (var j=0; j<certs.length; j++)
             {
                 data.push((certs[j] && certs[j].length) ? certs[j][0]['description'] : '');
             }
 
-            row = table.row.add(data).node();
+            var row = table.row.add(data).node();
             for (var j=0; j<certs.length; j++)
             {
                 if (certs[j].length)
-                    cc = ($('td:eq('+ (j+2) +')', row).css('background-color', certs[j][0]['color']));
+                    ($('td:eq('+ (j+2) +')', row).css('background-color', certs[j][0]['color']));
             }
             //; // invalidate needed to force rank and role display
         }

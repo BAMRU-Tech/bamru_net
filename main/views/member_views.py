@@ -345,3 +345,9 @@ class MemberAvailabilityListView(LoginRequiredMixin, generic.ListView):
         context = super().get_context_data(**kwargs)
         context['member'] = Member.objects.filter(id=self.kwargs['pk']).first()
         return context
+
+
+class DoMemberListView(LoginRequiredMixin, generic.DetailView):
+    model = Member
+    template_name = 'member_do_availability_list.html'
+    

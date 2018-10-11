@@ -138,7 +138,7 @@ function AddRows(table, values) {
         
         for (var i=0; i<json.length; i++)
         {
-            data = json[i];
+            var data = json[i];
             data['check'] = '';
             data['name'] = '<a href="/member/'+data['id']+'">'+data['full_name']+'</a>';
             data['rank'] = '<td data-order="' + data['rank_order'] + '">' + data['rank'] + '</td>';
@@ -156,8 +156,8 @@ function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            rank = data['rank']
-            // Handle both cases: 'FM' and <td ...>FM</td>
+            var rank = data['rank']
+            //FIXME: Handle both cases: 'FM' and <td ...>FM</td>
             if (rank[0] == '<')
                 rank = data['rank'].match('.*>(.*)<')[1]
             return rank == values[0];
