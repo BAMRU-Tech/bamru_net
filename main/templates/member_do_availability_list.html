@@ -1,11 +1,11 @@
 {% extends 'base_ftable.html' %}
 
-{% block title %}Member Availability{% endblock title %}
+{% block title %}Availability{% endblock title %}
 
 {% block subheader %}
 <strong>
   <a href="{% url 'member_detail' member.id %}?returnx=ma">{{member.full_name }} ({{ member.rank }})</a>
-  &gt; Availability
+  &gt; DO Availability
 </strong>
 {% endblock subheader %}
 
@@ -26,8 +26,8 @@ columns: [
           return '<div data-id="'+row.id+'"></div>';
       },
     },
-    { data: 'start_on' },
-    { data: 'end_on' },
+    { data: 'week', type: 'number' },
+    { data: 'available' },
     { data: 'comment' },
     { data: 'id',
       visible: false,
@@ -35,39 +35,13 @@ columns: [
     },
 ],
 language: {
-    emptyTable: 'No busy periods'
+    emptyTable: 'No DO periods'
 },
-
-onAddRow: function(dt, row, success, error) {
-
-    var data = row;
-
-    data['member'] = $('#memberId').val();
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'POST',
-        contentType: 'application/json',
-        url: '/api/availability/',
-        data: data,
-        success: function (r, s, m) {
-            r['mark'] = '';
-            success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('availability add failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
-
 onEditRow: function(dt, row, success, error) {
 
     var data = row;
 
-    var id = data['id'];
+    var id = data['id']; //XX
     data = JSON.stringify(data);
     //FIXME: error handling
     $.ajax({
@@ -92,18 +66,9 @@ onEditRow: function(dt, row, success, error) {
 
 {% block table_buttons_first %}
 {
-    text: '<i class="fa fa-calendar-times-o"></i> Add',
-    name: 'add'        // do not change name
-},
-{
     extend: 'selected', // Bind to Selected row
     text: '<i class="fa fa-edit"></i> Edit',
     name: 'edit'        // do not change name
-},
-{
-    autoClose: true,
-    text: '<i class="fa fa-trash"></i> Delete',
-    action: DeleteBusyPeriods,
 },
 
 {% endblock table_buttons_first %}
@@ -113,39 +78,32 @@ onEditRow: function(dt, row, success, error) {
 
 {% block table_functions %}
 
-function DeleteBusyPeriods ( e, dt, node, config ) {
-    var periods = [];
-    $.each($('td.mark-checkbox.marked'), function (i, el) {
-        periods.push($(this.firstChild).data().id)
-    });
-    console.log(periods);
+function InitialData() {
+    //
+    // Add rows based on date range
+    //
+    const apiUrlDoAvailEvent = '/api/do/?member={{ request.user.id }}&year=2018&quarter=3';
+    var url = apiUrlDoAvailEvent;
+    
+    table.clear();
 
-    if (periods.length == 0) {
-        alert('Select periods before deleting them');
-        return;
-    }
-
-    var ok = confirm('Delete '+periods.length+' periods?');
-
-    if (ok) {
-        for (var i=0; i<periods.length; i++) {
-            //FIXME: error handling
-            $.ajax({
-                method: 'DELETE',
-                contentType: 'application/json',
-                url: '/api/availability/' + periods[i] + '/',
-                error: function (msg) {
-                    console.log('availability delete failed: '+msg);
-                    alert(msg);
-                    return false;
-                },
-            })
+    const titleLength = 40;
+    //FIXME: add error handling
+    $.getJSON(url, null, function( json ) {
+        
+        for (var i=0; i<json.length; i++)
+        {
+            var data = json[i];
+//            var title = data['title'];
+  //          if (title.length > titleLength) 
+    //            title = title.substring(0, titleLength - 3) + '...';
+            //      data['href_title'] = '<a href="/event/' + data['id'] + '/">' + title + '</a>';
+            data['comment'] = (data['comment']) ? data['comment'] : '';  //FIXME: comment isn't returned
+            table.row.add(data).invalidate()
         }
-        //FIXME: This seems like a bad idea but there is delay getting the updated data
-        setTimeout(function(){
-            location.reload(true);
-        }, 200);
-    }
+    })
+    table.draw().columns.adjust().responsive.recalc();
+
 }
 
 function MarkRow ( e, dt, type, indices ) {
@@ -179,35 +137,26 @@ function UpdateSubheaderBasedOnSettings(table) {}
 {% endblock table_functions %}
 
 {% block ready_functions %}
-    table.on( 'select', MarkRow);
+table.on( 'select', MarkRow);
+InitialData();
 {% endblock ready_functions %}
 
 
 {% block content %}
+<h4>Work in progress</h4>
 <main>
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
-        <th></th>
-        <th>Start</th>
-        <th>End</th>
-        <th>Comment</th>
-        <th>Id</th>
+        <th></th><th>Week</th><th>Available</th><th>Comment</th><th>Id</th>
       </tr>
     </thead>
 
     <tbody>
-      {% for busy in availability_list %}
       <tr>
-        <td></td>
-        <td>{{ busy.start_on|date:"Y-m-d" }}</td>
-        <td>{{ busy.end_on|date:"Y-m-d" }}</td>
-        <td>{{ busy.comment }}</td>
-        <td>{{ busy.id }}</td>
+        <td></td><td>Week</td><td>Available</td><td>Comment</td><td>Id</td>
       </tr>
-      {% endfor %}
     </tbody>
   </table>
-  <input type="hidden" id="memberId" value="{{ member.id }}">
 </main>
 {% endblock content %}

@@ -1,22 +1,23 @@
-{% extends "base_table.html" %}
+{% extends 'base_table.html' %}
 
 {% block title %}Event Detail - {{ event.title }}{% endblock title %}
 
 {% block subheader %}
 <strong>
   <a href='{% url "event_list" %}'> Events </a>
-  &gt; {{ event.title}} ({{ event.type }})
+  &gt; {{ event.title }} ({{ event.type }})
 </strong>
 <ul class="navbar-nav ml-auto">
   <li class="nav-item">
-    <a class="nav-link" href='{% url "event_update" event.id %}'>
+    <a class="nav-link" href="{% url 'event_update' event.id %}">
       <i class="fa fa-pencil"></i>
       Edit
     </a>
   </li>
   <li class="nav-item">
-    <a class="nav-link" href='{% url "event_delete" event.id %}'>
-      <i class="fa fa-trash"></i> Delete</a>
+    <button class="btn btn-link" onclick="DeleteEvent({{ event.id }}, '{{ event.title }}')" %}'>
+      <i class="fa fa-trash"></i> Delete
+    </button>
   </li>
 </ul>
 {% endblock subheader %}
@@ -25,16 +26,17 @@
 {% block js %}
 {{ block.super }}
 <script>
+'use strict'
 $(document).ready( function() {
     {% for period in event.period_set.all %}
-    var table{{period.position}} = $("#dTbl{{period.position}}").DataTable( {
-        dom: "Bfrtip",
+    var table{{period.position}} = $('#dTbl{{period.position}}').DataTable( {
+        dom: 'Bfrtip',
         responsive: true,
-        select: "os",
+        select: 'os',
         altEditor: true,
         paging:   false,
         info:     false,
-        order: [[ 0, "asc" ]],
+        order: [[ 0, 'asc' ]],
         columnDefs: [
             {
                 orderable: false,
@@ -68,13 +70,13 @@ $(document).ready( function() {
                     {
                         text: '<i class="fa fa-hourglass-start"></i> Heads Up',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?period={{ period.id }}&&period_format=invite&page=Heads Up';
+                            location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=invite&page=Heads Up';
                         }
                     },
                     {
                         text: '<i class="fa fa-calendar-check-o"></i> Are you available',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message:message_add" %}?&period={{ period.id }}&period_format=invite&page=Available?';
+                            location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=invite&page=Available?';
                         }
                     },
                     {
@@ -83,7 +85,7 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=leave&page=Left?';
+                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=leave&page=Left?';
                         }
                     },
                     {
@@ -92,7 +94,7 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=return&page=Return?';
+                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=return&page=Return?';
                         }
                     },
                     {
@@ -101,34 +103,33 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message:message_add" %}?period={{ period.id }}&period_format=test&page=Testing';
+                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=test&page=Testing';
                         }
                     }
                 ]
             },
             {
-                extend: "selected", // Bind to Selected row
+                extend: 'selected', // Bind to Selected row
                 text: '<i class="fa fa-edit"></i> Edit',
-                name: "edit"        // do not change name
+                name: 'edit'        // do not change name
             },
             {
-                extend: "selected", // Bind to Selected row
                 autoClose: true,
                 text: '<i class="fa fa-trash"></i> Delete',
                 action: DeleteParticipants,
             },
             {
                 text: '<i class="fa fa-newspaper-o"></i> More',
-                extend: "collection",
+                extend: 'collection',
                 autoClose: true,
                 buttons: [
-                    "copy", "csv", "excel", "print", "colvis"
+                    'copy', 'csv', 'excel', 'print', 'colvis'
                 ]
             }
         ],
         onEditRow: UpdateRow,
         language: {
-            emptyTable: "No members added"
+            emptyTable: 'No members added'
         },
     });
     
@@ -139,8 +140,8 @@ $(document).ready( function() {
 })
 
 function UpdateRow(dt, row, success, error) {
-    CleanDate = function (d) {
-        sd = d ? d.substr(0, d.length - 9) : '';
+    const CleanDate = function (d) {
+        var sd = d ? d.substr(0, d.length - 9) : '';
         return sd;
     }
     
@@ -148,7 +149,7 @@ function UpdateRow(dt, row, success, error) {
     
     // Delete values that won't be set
     delete data.member;
-    for (d in data) if (data[d] == '') delete data[d];
+    for (var d in data) if (data[d] == '') delete data[d];
     
     var id = data['id'];
     data = JSON.stringify(data);
@@ -180,6 +181,40 @@ function UpdateRow(dt, row, success, error) {
     })
 }
 
+function DeleteEvent ( event, title ) {
+    const periods = {{ event.period_set.all|length }};
+    if (periods.length > 1) {
+        alert('Events with operational periods cannot be deleted');
+        return;
+    }
+    var ok = confirm('Delete event?\n'+title);
+    if (ok) {
+        //FIXME: error handling
+        $.ajax({
+            method: 'DELETE',
+            contentType: 'application/json',
+            url: '/api/events/' + event + '/',
+        })
+        location.href = '/event/?current';
+    }
+}
+
+function DeleteOP ( period, position ) {
+    var ok = confirm('Delete Operational Period (OP' + position + ')?');
+    if (ok) {
+        //FIXME: error handling
+        $.ajax({
+            method: 'DELETE',
+            contentType: 'application/json',
+            url: '/api/periods/' + period + '/',
+        })
+        //FIXME: This seems like a bad idea but there is delay getting the updated data
+        setTimeout(function(){
+            location.href='/event/' + {{ event.id }};
+        }, 200);
+    }
+}
+
 function DeleteParticipants ( e, dt, node, config ) {
     var members = [];
     $('td.mark-checkbox.marked').each(function (i, el) {
@@ -192,10 +227,10 @@ function DeleteParticipants ( e, dt, node, config ) {
         return;
     }
     
-    ok = confirm('Delete '+members.length+' members?');
+    var ok = confirm('Delete '+members.length+' members?');
     
     if (ok) {
-        for (i=0; i<members.length; i++) {
+        for (var i=0; i<members.length; i++) {
             //FIXME: error handling
             $.ajax({
                 method: 'DELETE',
@@ -262,12 +297,14 @@ function MarkRow ( e, dt, type, indices ) {
       
       <ul class="nav navbar-nav navbar-right">
         <li class="nav-item">
-          <a  class="nav-link" href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}'><i class="fa fa-address-book"></i> Add</a>
+          <a  class="nav-link btn-link" href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}'><i class="fa fa-address-book"></i> Add</a>
         </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li class="nav-item">
-          <a  class="nav-link" href='{% url "event_period_delete" event.id period.id %}'><i class="fa fa-trash"></i> Delete OP</a>
+          <button class="btn nav-link btn-link" onclick="DeleteOP({{ period.id }}, {{ period.position }})" %}'>
+            <i class="fa fa-trash"></i> Delete OP
+          </button>
         </li>
       </ul>
     </nav>

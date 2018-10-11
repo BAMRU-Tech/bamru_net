@@ -11,7 +11,7 @@
   <div class="collapse navbar-collapse" id="navTopLevel">
     <ul class="navbar-nav ml-auto">
       <li class="nav-item">
-        <a class="nav-link" href="{% url 'event_list' %}?current=true">
+        <a class="nav-link" href="{% url 'event_list' %}?current">
           <i class="fa fa-calendar"></i>
           Events
         </a>
@@ -68,7 +68,7 @@
             <i class="fa fa-calendar"></i>
             Quarterly DO schedule
           </a>
-          <a class="dropdown-item" href="{% url 'message:message_list' %}">
+          <a class="dropdown-item" href="{% url 'message_list' %}">
             <i class="fa fa-list"></i>
             Message log
           </a>
@@ -91,7 +91,7 @@
             <i class="fa fa-bolt"></i>
             Temporary DO change
           </a>
-          <a class="dropdown-item" href="/admin">
+          <a class="dropdown-item" href="/admin" target="_blank">
             <i class="fa fa-edit"></i>
             Perform admin tasks
           </a>
@@ -107,7 +107,7 @@
             <i class="fa fa-user"></i>
             Profile
           </a>
-          <a class="dropdown-item" href="{% url 'message:message_inbox' request.user.id%}">
+          <a class="dropdown-item" href="{% url 'message_inbox' request.user.id%}">
             <i class="fa fa-inbox"></i>
             Inbox (n)
           </a>
@@ -115,7 +115,8 @@
             <i class="fa fa-calendar-times-o"></i>
             Availability
           </a>
-          <a class="dropdown-item" href="{% url 'do_availability_list' %}{{ query_this }}">
+{#          <a class="dropdown-item" href="{% url 'do_availability_list' %}{{ query_this }}">#}
+          <a class="dropdown-item" href="{% url 'do_availability_list' request.user.id %}">
             <i class="fa fa-calendar-check-o"></i>
             DO availability
           </a>

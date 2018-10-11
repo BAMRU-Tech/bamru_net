@@ -42,11 +42,8 @@ urlpatterns = [
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
     path('event/add', views.EventCreateView.as_view(), name='event_add'),
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),
-    path('event/<int:pk>/delete/', views.EventDeleteView.as_view(), name='event_delete'),
     path('event/<int:pk>/period/add/',
          views.EventPeriodAddView.as_view(), name='event_period_add'),
-    path('event/<int:event>/period/delete/<int:pk>/',
-         views.EventPeriodDeleteView.as_view(), name='event_period_delete'),
 
     path('event/participant/add/<int:period>/',
          views.PeriodParticipantCreateView.as_view(), name='period_participant_add'),
@@ -60,15 +57,20 @@ urlpatterns = [
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
     path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
 
+    path('cert/', views.CertListView.as_view(), name='cert_list'),
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
     path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='member_cert_new'),
     path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='member_cert_delete'),
 
     path('do/', views.DoListView.as_view(), name='do_list'),
+    path('do/<int:pk>/', views.DoMemberListView.as_view(), name='do_availability_list'),
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
-    path('do/edit/', views.DoEditView.as_view(), name='do_availability_list'),
+    path('do/avail/', views.DoMemberListView.as_view(), name='do_availability_list'),
 
-    path('cert/', views.CertListView.as_view(), name='cert_list'),
+    path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
+    path('message/', views.MessageListView.as_view(), name='message_list'),
+    path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(), name='message_inbox'),
+    path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
 
     path('', include('message.urls')),
 

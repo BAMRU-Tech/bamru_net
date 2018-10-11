@@ -68,7 +68,7 @@ class Message(BaseModel):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('message:message_detail', [str(self.id)])
+        return ('main:message_detail', [str(self.id)])
 
     @property
     def expanded_text(self):

@@ -42,11 +42,11 @@ function DateArray(start_date, days) {
     const mn = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
 
     var result = [];
-    for (i = 0; i < days; i++) {
+    for (var i = 0; i < days; i++) {
         var date = new Date(start_date);
         date.setDate(date.getDate() + i);
-        ds = date.toDateString().replace(/.{3} (.{3}) (\d{2}) (\d{4})/, '$3-$1-$2');
-        month = ds.substr(5, 3);
+        var ds = date.toDateString().replace(/.{3} (.{3}) (\d{2}) (\d{4})/, '$3-$1-$2');
+        var month = ds.substr(5, 3);
         ds = ds.replace(month, mn[m.indexOf(month)]);
         result.push(ds);
     }
@@ -59,7 +59,7 @@ function SetBusy(busy, start, end, comment) {
     //FIXME: make 'comment' a modal popup or tool tip or both
     if (start < 0) start = 0;
     if (end <= 0) end = numDays;
-    for (i = start; i < end; i++) busy[i] = comment;
+    for (var i = start; i < end; i++) busy[i] = comment;
     return i;
 }
 
@@ -69,12 +69,12 @@ function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    urlData = apiUrlMemberRank+values[0];
+    var url = apiUrlMemberRank+values[0];
 
     var dd = DateArray(Date(), 5);
-    urlData += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];
+    url += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];
     //FIXME: add error handling
-    $.getJSON(urlData, null, function( json ) {
+    $.getJSON(url, null, function( json ) {
         var dd = DateArray(Date(), 5);
         
         // Foreach member mark busy period within date range
@@ -87,7 +87,7 @@ function AddRows(table, values) {
             ];
             var busy = Array(numDays+1).fill('');
             var period = row['busy'];
-            for (p = 0; p < period.length; p++) {
+            for (var p = 0; p < period.length; p++) {
                 var start_on = dd.indexOf(period[p]['start_on']);
                 var end_on = dd.indexOf(period[p]['end_on']) + 1;
                 var comment = period[p]['comment'];
@@ -100,7 +100,9 @@ function AddRows(table, values) {
 
             table.row.add(data).invalidate(); // invalidate needed to force rank and role display
         }
-        table.draw();  // not sure why this is required here but it is needed (was later in execution path)
+
+        // not sure why this is required here but it is needed (tried to hoist it without success)
+        table.draw().columns.adjust().responsive.recalc();
     })
 }
 

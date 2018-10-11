@@ -113,7 +113,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     template_name = 'base_form.html'
 
 
-class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
+class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Event
     fields = ['title', 'description', 'type',
               'location', 'leaders',
@@ -138,27 +138,12 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView): # In WIP
         return form
 
 
-class EventDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
-    model = Event
-    template_name = 'base_delete.html'
-    success_url = reverse_lazy('event_all')
-
-
 class EventPeriodAddView(LoginRequiredMixin, generic.base.RedirectView):
     pattern_name = 'event_detail'
     def get_redirect_url(self, *args, **kwargs):
         e = get_object_or_404(Event, pk=kwargs.get('pk'))
         e.add_period()
         return super().get_redirect_url(*args, **kwargs)
-
-
-class EventPeriodDeleteView(LoginRequiredMixin, generic.edit.DeleteView):
-    model = Period
-    template_name = 'base_delete.html'
-
-    def get_success_url(self):
-        event = get_object_or_404(Event, pk=self.kwargs.get('event'))
-        return event.get_absolute_url()
 
 
 class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):    

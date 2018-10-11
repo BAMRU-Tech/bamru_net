@@ -156,5 +156,5 @@ class DoViewSet(viewsets.ModelViewSet):
     queryset = DoAvailable.objects.all()
     serializer_class = DoSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    filter_fields = ('year', 'quarter', 'week', 'available', 'assigned')
+    filter_fields = ('year', 'quarter', 'week', 'available', 'assigned', 'comment', 'member', )
     search_fields = ('member__username',)

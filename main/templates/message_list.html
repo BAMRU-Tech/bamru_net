@@ -1,0 +1,77 @@
+{% extends 'base_ftable.html' %}
+
+{% block title %}Messages{% endblock title %}
+
+{% block subheader %}
+  <strong id="subhdr">Message Log</strong>
+  <ul class="navbar-nav ml-auto">
+    <li class="nav-item ml-auto">
+      <a class="nav-link" href="{% url 'event_add' %}"><i class="fa fa-calendar-plus-o"></i> Create new event</a>
+    </li>
+  </ul>
+{% endblock subheader %}
+
+{% block table_options %}
+order: [[ 0, 'asc' ]],
+columnDefs: [
+    { responsivePriority: 1, targets: 0 },
+    { responsivePriority: 2, targets: 2 },
+    { responsivePriority: 3, targets: 1}
+],
+columns: [
+    {data: 'text',},
+    {data: 'author'},
+    {data: 'sent_at'},
+    {data: 'type'},
+    {data: 'period_type'},
+    {data: 'event'},
+],
+language: {
+      emptyTable: 'No messages'
+},
+{% endblock table_options %}
+
+{# remove filter button #}
+{% block table_buttons_filter %}{% endblock %}
+
+{% block table_functions %}
+  function UpdateSubheaderBasedOnSettings(table) {}
+{% endblock table_functions %}
+
+
+{% block content %}
+<main>
+  {% if message_list %}
+  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+    <thead>
+      <tr>
+        <th>Text</th><th>From</th><th>Sent at</th><th>Type</th><th>Period Type</th><th>Event</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for message in message_list %}
+      <tr>
+        <td><a href="{% url 'message_detail' message.id %}">{{ message.text|truncatechars:50 }}</a></td>
+        <td>{{ message.author }}</td>
+        <td data-sort="{{ event.created_order }}">{{ message.created_at|date:"Y-m-d\TH:m" }}</td>
+        <td>{{ message.format }}</td>
+        <td>{{ message.period_format }}</td>
+        <td>
+          {% if message.period %}
+          <a href="{% url 'event_detail' message.period.event.pk %}">{{ message.period.event|truncatechars:10 }}</a>
+          {% else %}
+          {{ message.period.event|truncatechars:10 }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+  </table>
+  {% else %}
+  <p>No messages are available.</p>
+  {% endif %}
+ </div>
+</main>
+{% endblock content %}
+

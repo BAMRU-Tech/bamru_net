@@ -20,12 +20,7 @@
 {% block table_options %}
 order: [[ 4, "asc" ]],
 columnDefs: [
-    { width: "35%", targets: 0 },
-    { width: "30%", targets: 1 },
-    { width: "5%", targets: 2 },
-    { width: "15%", targets: 3 },
-    { width: "15%", targets: 3 },
-    { type: "string", targets: 3 },
+    { type: "string", targets: 3 }, //FIXME: still needed
     { responsivePriority: 0, targets: 0 },
     { responsivePriority: 1, targets: 4 },
     { responsivePriority: 2, targets: 1 },
@@ -79,27 +74,35 @@ function AddRowsByDate(table, start, end) {
     //
     //FIXME: needs date range validation
     const apiUrlEvent = '/api/events/';
-
+    var url;
+    
     if (start && end)
-        urlData = apiUrlEvent+'?start_after='+start+'&start_before='+end;
+        url = apiUrlEvent+'?start_after='+start+'&start_before='+end;
     else if (start)
-        urlData = apiUrlEvent+'?start_after='+start;
+        url = apiUrlEvent+'?start_after='+start;
     else if (end)
-        urlData = apiUrlEvent+'?start_before='+end;
+        url = apiUrlEvent+'?start_before='+end;
     else
-        urlData = apiUrlEvent;
+        url = apiUrlEvent;
 
     table.clear();
+
+    const titleLength = 40;
     //FIXME: add error handling
-    $.getJSON(urlData, null, function( json ) {
+    $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
-            data = json[i];
-            data['href_title'] = '<a href="/event/'+json[i]['id']+'/">'+json[i]['title']+'</a>';
+            var data = json[i];
+            var title = data['title'];
+            if (title.length > titleLength) 
+                title = title.substring(0, titleLength - 3) + '...';
+            data['href_title'] = '<a href="/event/' + data['id'] + '/">' + title + '</a>';
             table.row.add(data).invalidate()
         }
-        table.draw()  // not sure why this is required here but it is needed (tried to hoist it without success)
+
+        // not sure why this is required here but it is needed (tried to hoist it without success)
+        table.draw().columns.adjust().responsive.recalc();
     })
 }
 
@@ -115,9 +118,10 @@ function UpdateSubheaderBasedOnSettings(table) {
             filterTypes.push(eventType);
         }
     });
-    {# hack to shorten display on sm devices #}
+
+    // hack to shorten display on sm devices
     $("#subhdr")[0].innerHTML = ("Events (" + filterTypes.join(", ") + ")").replace("operation", "ops");
-    table.draw();
+
 }
 {% endblock table_functions %}
 
@@ -130,7 +134,7 @@ var startAfter = url.searchParams.get('start_after');
 var months = url.searchParams.get('months');
 var monthsSpecified = url.searchParams.get('months');
 
-if (current || months) {
+if (current == '' || months) {
     if (!startAfter) {
         startAfter = new Date();
         startAfter = startAfter.toLocaleDateString();

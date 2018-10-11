@@ -11,13 +11,8 @@
 
 {% block table_options %}
 select: 'os',
-order: [[ 2, 'asc' ]],
+order: [[ 3, 'desc' ]],
 columnDefs: [
-    {
-        orderable: false,
-        className: 'mark-checkbox',
-        targets: 0,
-    },
     { responsivePriority: 1, targets: [0, 1] },
     { responsivePriority: 5, targets: 2 },
     { responsivePriority: 2, targets: 3 },
@@ -25,12 +20,16 @@ columnDefs: [
     { responsivePriority: 4, targets: 5},
 ],
 columns: [
-    { 'data': 'check', width: '5px' }, //FIXME: adjust alignment
-    { 'data': 'name' },
-    { 'data': 'rank' },
-    { 'data': 'roles' },
-    { 'data': 'phone' },
-    { 'data': 'email' }
+    { data: 'check',
+      width: '5px', //FIXME: adjust alignment
+      orderable: false,
+      className: 'mark-checkbox',
+    },
+    { data: 'name' },
+    { data: 'rank' },
+    { data: 'roles' },
+    { data: 'phone' },
+    { data: 'email' }
 ],
 language: {
       emptyTable: 'No participants selected'
@@ -42,15 +41,16 @@ language: {
     text: '<i class="fa fa-address-book"></i> Add',
     action: function ( e, dt, node, config ) {
         var members = [];
-        $('td.mark-checkbox.marked').each(function (i, el) {
-            members.push($($(el).next().html()).data().id)
+        $.each( $('td.mark-checkbox.marked'),  function (i, el) {
+            members.push($(this.firstChild).data().id)
         });
-        console.log(members);
 
         if (members.length == 0) {
             alert('Select members before adding them');
             return;
         }
+
+        console.log(members);
 
         var data = [];
         for (var i = 0; i < members.length; i++) {
@@ -131,32 +131,20 @@ const period_num = url.searchParams.get('pn');
 const period_id = url.searchParams.get('pid');
 const apiUrlMemberRank = '/api/members/?member_rank=';
 
-$('#check-all').click( function ()
-                       {
-                           $(table.rows().nodes()).find('input').attr('checked', this.checked);
-                           return;
-                           var col0 =table.column(0).nodes();
-                           col0.shift; // remove check-all
-                           this.checked = !this.checked;
-                           $(col0).find('input').attr('checked', this.checked);
-                           console.log('clicked');
-                       }
-                     )
-
 function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    urlData = apiUrlMemberRank+values[0];
+    var url = apiUrlMemberRank+values[0];
     //FIXME: add error handling
-    $.getJSON(urlData, null, function( json ) {
+    $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
-            m = json[i];
-            data = {
-                check: '',
-                name: '<a href="/member/'+m['id']+'" data-id="'+m['id']+'?returnx=pp">'+m['full_name']+'</a>',
+            var m = json[i];
+            var data = { //FIXME: Consider using render
+                check: '<td><div data-id="' + m['id'] + '"></div></td>',
+                name: '<a href="/member/'+m['id']+'?returnx=pp">'+m['full_name']+'</a>',
                 rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
                 roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
                 phone: m['display_phone'],
@@ -165,7 +153,9 @@ function AddRows(table, values) {
             
             table.row.add(data).invalidate(); // invalidate needed to force rank and role display
         }
-        table.draw();  // not sure why this is required here but it is needed (was later in execution path)
+
+        // not sure why this is required here but it is needed (tried to hoist it without success)
+        table.draw().columns.adjust().responsive.recalc();
     });
 }
 
@@ -173,7 +163,7 @@ function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            rank = data['rank']
+            var rank = data['rank']
             // Handle both cases: 'FM' and <td ...>FM</td>
             if (rank[0] == '<')
                 rank = data['rank'].match('.*>(.*)<')[1]
@@ -245,8 +235,8 @@ $('#filter-rank').multiSelect({
       {% spaceless %}
       {% if member.isActive %}
       <tr>
-        <td></td>
-        <td><a href="{% url 'member_detail' member.id %}?returnx=pp" data-id="{{ member.id }}">{{ member.full_name }}</a></td>
+        <td><div data-id={{ member.id }}></div></td>
+        <td><a href="{% url 'member_detail' member.id %}?returnx=pp">{{ member.full_name }}</a></td>
         <td data-order="{{ member.rank_order }}"> {{ member.rank }}</td>
         <td data-order="{{ member.role_order }}"> {{ member.roles }}</td>
         <td> {{ member.display_phone }}</td>
