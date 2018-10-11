@@ -194,10 +194,11 @@ function SendPage ( e, dt, node, config ) {
 
     confirm('Page via '+via+' '+members.length+' members\nMessage: '+$('#id_text').val());
     console.log(members);
+    return;
+
     $('#id_members').val(JSON.stringify(members));
     $('form').submit();
     $('#form').click();
-    return;
     
     var data = [];
     for (var i = 0; i < members.length; i++) {
@@ -282,7 +283,6 @@ $('#id_text').triggerHandler('input');
     <form method="post">
       {% csrf_token %}
       {% bootstrap_form form %}
-      <input type="submit" id="submit" value="Send" />
     </form>
   </div>
 
@@ -291,14 +291,11 @@ $('#id_text').triggerHandler('input');
       <option value="TM">Technical Member</option>
       <option value="FM">Field Member</option>
       <option value="T">Trainee</option>
-      <option value="R" selected >Reserve</option>
-      <option value="S" selected >Support</option>
-      <option value="A" selected >Associate</option>
+      <option value="R">Reserve</option>
+      <option value="S">Support</option>
+      <option value="A">Associate</option>
       <option value="G" selected >Guest</option>
       <option value="MA" selected >Member Alum</option>
-      <option value="GA" selected >Guest Alum</option>
-      <option value="MN" selected >Member No-contact</option>
-      <option value="GN" selected >Guest No-contact</option>
     </select>
   </div>
 
