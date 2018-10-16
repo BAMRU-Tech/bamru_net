@@ -1,6 +1,11 @@
 from .models import Cert, DoAvailable, Event, Member, Participant, Period, Unavailable
+from message.models import Distribution, Message, RsvpTemplate
+from message.tasks import message_send
 from rest_framework import serializers
 from collections import defaultdict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
@@ -129,3 +134,43 @@ class EditPeriodParticipantSerializer(serializers.ModelSerializer):
         fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
 
 
+class DistributionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Distribution
+        read_only_fields = ('message',)
+        fields = ('id', 'message', 'member', 'email', 'phone',)
+
+# This version currently requires a period. Future uses can change this.
+class MessageSerializer(serializers.ModelSerializer):
+    distribution_set = DistributionSerializer(many=True, required=False)
+    rsvp_template = serializers.CharField()
+    class Meta:
+        model = Message
+        read_only_fields = ('author',)
+        fields = ('id', 'author', 'text', 'format', 'period', 'period_format', 'rsvp_template', 'distribution_set')
+
+    def create(self, validated_data):
+        logger.debug('MessageSerializer.create' + str(validated_data))
+        ds_data = validated_data.pop('distribution_set')
+        author = self.context['request'].user
+
+        template_str = validated_data.pop('rsvp_template')
+        rsvp_template = None
+        try:
+            rsvp_template = RsvpTemplate.objects.get(name=template_str)
+        except RsvpTemplate.DoesNotExist:
+            logger.error('RsvpTemplate {} not found'.format(template_str))
+
+        message = Message.objects.create(
+            author=author,
+            rsvp_template=rsvp_template,
+            **validated_data)
+        for distribution_data in ds_data:
+            d = message.distribution_set.create(**distribution_data)
+            logger.info(d)
+        logger.info('Calling message.queue {}'.format(message.pk))
+        message.queue()
+        logger.info('Calling message_send {}'.format(message.pk))
+        message_send.delay(message.pk)
+        logger.debug('MessageSerializer.create done')
+        return message

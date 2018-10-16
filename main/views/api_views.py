@@ -1,5 +1,6 @@
 from main.models import *
 from main.serializers import *
+from message.models import *
 
 from django import forms
 from rest_framework import generics, mixins, parsers, permissions, response, views, viewsets
@@ -158,3 +159,9 @@ class DoViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     filter_fields = ('year', 'quarter', 'week', 'available', 'assigned', 'comment', 'member', )
     search_fields = ('member__username',)
+
+
+class MessageViewSet(viewsets.ModelViewSet):
+    queryset = Message.objects.all()
+    serializer_class = MessageSerializer
+    permission_classes = (permissions.IsAuthenticated,)
