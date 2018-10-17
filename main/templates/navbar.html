@@ -115,7 +115,6 @@
             <i class="fa fa-calendar-times-o"></i>
             Availability
           </a>
-{#          <a class="dropdown-item" href="{% url 'do_availability_list' %}{{ query_this }}">#}
           <a class="dropdown-item" href="{% url 'do_availability_list' request.user.id %}">
             <i class="fa fa-calendar-check-o"></i>
             DO availability
