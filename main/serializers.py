@@ -2,6 +2,8 @@ from .models import Cert, DoAvailable, Event, Member, Participant, Period, Unava
 from rest_framework import serializers
 from collections import defaultdict
 
+import logging
+logger = logging.getLogger(__name__)
 
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -80,12 +82,6 @@ class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
         model = Participant
         fields = ('id', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
 
-        
-class BareParticipantSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Participant
-        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
-
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     participant_set = ParticipantSerializer(many=True, read_only=True)
@@ -112,6 +108,14 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
         fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+
+    def create(self, validated_data):
+        """Custom method to filter to avoid duplicates"""
+        try:
+            return Participant.objects.get(period=validated_data.get('period'),
+                                           member=validated_data.get('member'))
+        except Participant.DoesNotExist:
+            return Participant.objects.create(**validated_data)
 
 
 #FIXME: This is here to get fullname without interfering with ParticipantAdd
