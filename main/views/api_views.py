@@ -118,41 +118,6 @@ class EditParticipantViewSet(CreateListModelMixin, viewsets.ModelViewSet):
     serializer_class = EditPeriodParticipantSerializer
 
 
-class PeriodParticipantsView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def get(self, request, pk, format=None):
-        period_qs = Period.objects.filter(id=pk)
-        if not period_qs:
-            return response.Response({'error': 'Period not found: {}'.format(self.args['pk'])}, code=400)
-        period = period_qs.first()
-
-        participant_qs = Participant.objects.filter(period=period)
-        content = BareParticipantSerializer(participant_qs, many=True).data
-        return response.Response(content)
-
-    def post(self, request, pk, format=None):
-        period_qs = Period.objects.filter(id=pk)
-        if not period_qs:
-            return response.Response({'error': 'Period not found: {}'.format(self.args['pk'])}, code=400)
-        period = period_qs.first()
-
-        member_ids = request.data
-        member_qs = Member.objects.filter(id__in=member_ids)
-        members_by_id = {}
-        for m in member_qs:
-            members_by_id[m.id] = m
-        for m in member_ids:
-            if m not in members_by_id:
-                return response.Response({'error': 'Member not found: {}'.format(self.args['pk'])}, code=400)
-        for m in member_ids:
-            Participant.objects.get_or_create(period=period, member=members_by_id[m])
-
-        participant_qs = Participant.objects.filter(period=period)
-        content = BareParticipantSerializer(participant_qs, many=True).data
-        return response.Response(content)
-
-
 class DoViewSet(viewsets.ModelViewSet):
     queryset = DoAvailable.objects.all()
     serializer_class = DoSerializer
