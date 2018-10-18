@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 
 import os
 import raven
+from distutils.util import strtobool
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
@@ -28,7 +29,7 @@ STATICFILES_DIRS = (
 SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ['DJANGO_DEBUG']
+DEBUG = strtobool(os.environ['DJANGO_DEBUG'])
 
 ALLOWED_HOSTS = os.environ['DJANGO_ALLOWED_HOST'].split(',') + ['localhost', ]
 
@@ -154,7 +155,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT')
 
 # Raven config for Sentry.io logging
-if os.environ.get('USE_RAVEN'):
+if strtobool(os.environ.get('USE_RAVEN', 'False')):
     RAVEN_CONFIG = {
         'dsn': os.environ['RAVEN_DSN'],
         # If you are using git, you can also automatically configure the
