@@ -33,6 +33,7 @@ router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
+router.register(r'message', views.MessageViewSet)
 
 urlpatterns = [
     path('', views.IndexView.as_view()),
