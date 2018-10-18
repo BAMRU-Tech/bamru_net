@@ -96,7 +96,7 @@ const url = new URL(window.location.href);
 const eventId = url.searchParams.get('eid');
 const periodPosition = url.searchParams.get('OP');
 const periodId = url.searchParams.get('period');
-const periodFormat = url.searchParams.get('pf');
+const periodFormat = url.searchParams.get('period_format');
 const page = url.searchParams.get('page');
 const apiUrlMemberRank = '/api/members/?member_rank=';
 
@@ -191,33 +191,38 @@ function SendPage ( e, dt, node, config ) {
     } else {
         via = '()';
     }
-
-    confirm('Page via '+via+' '+members.length+' members\nMessage: '+$('#id_text').val());
+    var text = $('#id_text').val();
+    confirm('Page via '+via+' '+members.length+' members\nMessage: '+text);
     console.log(members);
-    return;
-
-    $('#id_members').val(JSON.stringify(members));
-    $('form').submit();
-    $('#form').click();
     
-    var data = [];
+    var data = {};
+    data['text'] = text;
+    data['format'] = 'page';
+    data['period'] = periodId;
+    data['period_format'] = periodFormat;
+    data['rsvp_template'] = page;
+    data['distribution_set'] = [];
     for (var i = 0; i < members.length; i++) {
-        data.push({ 'period': periodId, 'member': members[i] });
+        data['distribution_set'].push({
+          'member': members[i],
+          'email': viaEmail,
+          'phone': viaSms,
+        });
     }
     data = JSON.stringify(data);
     //FIXME: add error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
-        url: '/api/participants/',
+        url: '/api/message/',
         data: data,
         success: function (response) {
-            console.log('Period add ' + response.length + ' members');
-            //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
-            location.href='/event/' + event_id + '#OP' + period_num;
+            console.log(response);
+            var message_id = response.id;
+            location.href='/message/' + message_id + '/';
         },
         error: function (xhr) {
-            console.log('Period add failed');
+            console.log('Message add failed');
             console.log(xhr);
             alert(xhr.responseText);
             return false;

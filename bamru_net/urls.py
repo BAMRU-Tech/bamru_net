@@ -33,6 +33,7 @@ router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
+router.register(r'message', views.MessageViewSet)
 
 urlpatterns = [
     path('', views.IndexView.as_view()),
@@ -65,7 +66,6 @@ urlpatterns = [
     path('do/', views.DoListView.as_view(), name='do_list'),
     path('do/<int:pk>/', views.DoMemberListView.as_view(), name='do_availability_list'),
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
-    path('do/avail/', views.DoMemberListView.as_view(), name='do_availability_list'),
 
     path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
     path('message/', views.MessageListView.as_view(), name='message_list'),
@@ -75,7 +75,6 @@ urlpatterns = [
     path('', include('message.urls')),
 
     url(r'^api/', include(router.urls)),
-    path(r'api/period_participants/<int:pk>/', views.PeriodParticipantsView.as_view()),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
     path('admin/', admin.site.urls),
