@@ -66,7 +66,6 @@ urlpatterns = [
     path('do/', views.DoListView.as_view(), name='do_list'),
     path('do/<int:pk>/', views.DoMemberListView.as_view(), name='do_availability_list'),
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
-    path('do/avail/', views.DoMemberListView.as_view(), name='do_availability_list'),
 
     path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
     path('message/', views.MessageListView.as_view(), name='message_list'),

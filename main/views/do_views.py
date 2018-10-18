@@ -127,16 +127,3 @@ class DoEditView(DoAbstractView, generic.base.TemplateView):
                 initial=initial)
         context['formset'] = formset
         return context
-
-
-class xDoMemberListView(DoAbstractView, generic.ListView):
-    template_name = 'member_do_availability_list.html'
-    context_object_name = 'do_list'
-
-    def get_queryset(self):
-        super().get_params()
-        qs = DoAvailable.objects.filter(year=self.year,
-                                        quarter=self.quarter,
-                                        assigned=True)
-        return qs.select_related('member').order_by('week')
-    
