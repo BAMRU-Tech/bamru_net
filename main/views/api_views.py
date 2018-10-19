@@ -8,6 +8,9 @@ from rest_framework.decorators import action
 from django_filters import rest_framework as filters
 
 
+class BaseViewSet(viewsets.ModelViewSet):
+    permission_classes = (permissions.IsAuthenticated,)
+
 # From https://stackoverflow.com/a/40253309
 class CreateListModelMixin(object):
     def get_serializer(self, *args, **kwargs):
@@ -17,10 +20,9 @@ class CreateListModelMixin(object):
         return super(CreateListModelMixin, self).get_serializer(*args, **kwargs)
 
 
-class MemberViewSet(viewsets.ModelViewSet):
+class MemberViewSet(BaseViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
-    permission_classes = (permissions.IsAuthenticated,)
     filter_fields = ('member_rank', 'is_active', )
     search_fields = ('username',  )
 
@@ -32,26 +34,23 @@ class UnavailableFilter(filters.FilterSet):
         fields = ('member__member_rank', 'start_on', )
 
 
-class UnavailableViewSet(viewsets.ModelViewSet):
+class UnavailableViewSet(BaseViewSet):
     queryset = Unavailable.objects.all()
     serializer_class = UnavailableSerializer
-    permission_classes = (permissions.IsAuthenticated,)
     filterset_class = UnavailableFilter
     search_fields = ('member__username', )
 
 
-class ApiUnavailableViewSet(viewsets.ModelViewSet):
+class ApiUnavailableViewSet(BaseViewSet):
     queryset = Unavailable.objects.all()
     serializer_class = BareUnavailableSerializer
-    permission_classes = (permissions.IsAuthenticated,)
     filterset_class = UnavailableFilter
     search_fields = ('member__username', )
 
 
-class MemberUnavailableViewSet(viewsets.ModelViewSet):
+class MemberUnavailableViewSet(BaseViewSet):
     queryset = Member.members.prefetch_related('unavailable_set')
     serializer_class = MemberUnavailableSerializer
-    permission_classes = (permissions.IsAuthenticated,)
     filter_fields = ('member_rank', )
     search_fields = ('username',  )
 
@@ -66,18 +65,16 @@ class MemberUnavailableViewSet(viewsets.ModelViewSet):
         return super().get_serializer(*args, unavailable_filter_kwargs=filter_kwargs, **kwargs)
 
 
-class CertViewSet(viewsets.ModelViewSet):
+class CertViewSet(BaseViewSet):
     queryset = Cert.objects.all()
     serializer_class = CertSerializer
-    permission_classes = (permissions.IsAuthenticated,)
     filter_fields = ('member__member_rank', 'type', )
     search_fields = ('member__username',  )
 
 
-class MemberCertViewSet(viewsets.ModelViewSet):
+class MemberCertViewSet(BaseViewSet):
     queryset = Member.members.prefetch_related('cert_set')
     serializer_class = MemberCertSerializer
-    permission_classes = (permissions.IsAuthenticated,)
     filter_fields = ('member_rank', )
     search_fields = ('username',  )
 
@@ -89,9 +86,8 @@ class EventFilter(filters.FilterSet):
         fields = ('type', 'start', )
 
 
-class EventViewSet(viewsets.ModelViewSet):
+class EventViewSet(BaseViewSet):
     queryset = Event.objects.all().order_by('-start')
-    permission_classes = (permissions.IsAuthenticated,)
     filterset_class = EventFilter
     search_fields = ('title', 'description', 'location', )
     def get_serializer_class(self):
@@ -100,33 +96,40 @@ class EventViewSet(viewsets.ModelViewSet):
         return EventDetailSerializer
 
 
-class PeriodViewSet(viewsets.ModelViewSet):
+class PeriodViewSet(BaseViewSet):
     queryset = Period.objects.all()
-    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PeriodSerializer
 
 
-class ParticipantViewSet(CreateListModelMixin, viewsets.ModelViewSet):
+class ParticipantViewSet(CreateListModelMixin, BaseViewSet):
     queryset = Participant.objects.all()
-    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PeriodParticipantSerializer
 
 
-class EditParticipantViewSet(CreateListModelMixin, viewsets.ModelViewSet):
+class EditParticipantViewSet(CreateListModelMixin, BaseViewSet):
     queryset = Participant.objects.all()
-    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = EditPeriodParticipantSerializer
 
 
-class DoViewSet(viewsets.ModelViewSet):
+class DoViewSet(BaseViewSet):
     queryset = DoAvailable.objects.all()
     serializer_class = DoSerializer
-    permission_classes = (permissions.IsAuthenticated,)
     filter_fields = ('year', 'quarter', 'week', 'available', 'assigned', 'comment', 'member', )
     search_fields = ('member__username',)
 
 
-class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+class MessageFilter(filters.FilterSet):
+    created_at = filters.DateFromToRangeFilter()
+    class Meta:
+        model = Message
+        fields = ('created_at', )
+
+
+class MessageViewSet(BaseViewSet):
+    queryset = Message.objects.all().filter(id__lt=4500)
+    filterset_class = MessageFilter
+    search_fields = ('author__username',)
+    def get_serializer_class(self):
+        if getattr(self, 'action', None) == 'list':
+            return MessageListSerializer
+        return MessageDetailSerializer
