@@ -404,7 +404,7 @@ class Cert(BasePositionModel):
     @property
     def is_expired(self):
         # We will allow certs expiring today, thus < not <=
-        return ((self.expiration is None) or
+        return ((self.expiration is not None) and
                 (self.expiration < timezone.now().date()))
 
     @property
