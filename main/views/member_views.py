@@ -88,7 +88,7 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
             else:
                 args = []
             forms = {}
-            forms['member_edit'] = self.MemberForm(*args, prefix='member', instance=member)
+            forms['member_form'] = self.MemberForm(*args, prefix='member', instance=member)
             forms['phones_form'] = self.PhonesForm(*args, prefix='phones', instance=member)
             forms['emails_form'] = self.EmailsForm(*args, prefix='emails', instance=member)
             forms['addresses_form'] = self.AddressesForm(*args, prefix='addresses', instance=member)
@@ -114,8 +114,12 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
         member = Member.objects.get(id=self.kwargs['pk'])
 
         forms = self.get_forms(member)
-        if not all([f.is_valid() for f in forms.values()]):
-            return self.get(*args, **kwargs)
+        for f in forms.values():
+            if not f.is_valid():
+                logger.info(
+                    'MemberEditView {} had invalid form data: {}'.format(
+                        repr(f), str(f)))
+                return self.get(*args, **kwargs)
         for f in forms.values():
             f.save()
 
