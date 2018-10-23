@@ -10,7 +10,7 @@
 
 const labelShowFilter = '<i class="fa fa-filter"></i> Filter';
 const labelHideFilter = '<i class="fa fa-minus-square-o"></i> Hide Filter';
-const textShowDetail = " Expand Detail";
+const textShowDetail = ' Expand Detail';
 const htmlShowDetail = '<i class="fa fa-plus-square-o"></i>' + textShowDetail;
 const labelHideDetail = '<i class="fa fa-minus-square-o"></i> Hide Detail';
 
@@ -18,23 +18,23 @@ var table;
 $(document).ready(function() {
     // Initialize datatable with responsive behavior and datatable buttons
     table = $('#dTbl').DataTable( {
-        dom: "Bfrtip",
-        "responsive": true,
-        "paging":   false,
-        "info":     false,
+        dom: 'Bfrtip',
+        responsive: true,
+        paging:   false,
+        info:     false,
         {% block table_options %}{% endblock %}
         buttons: [
             {% block table_buttons_first %}{% endblock %}
 
-            {% block table_buttons_filter %}
+            {% block filter_button %}
             {
                 text: labelShowFilter,
                 action: function ( e, dt, node, config ) {
-                    if($("#show-filter").css("display") == "none") {
-                        $("#show-filter").css({"display":"block"})
+                    if($('#show-filter').css('display') == 'none') {
+                        $('#show-filter').css({'display':'block'})
                         node[0].innerHTML = labelHideFilter;
                     } else {
-                        $("#show-filter").css({"display":"none"})
+                        $('#show-filter').css({'display':'none'})
                         node[0].innerHTML = labelShowFilter;
                         if (typeof AddRowsByDate != 'undefined')  //FIXME: hack, needs to be replaced
                             AddRowsByDate(table, $('#start').val(), $('#end').val())
@@ -42,8 +42,8 @@ $(document).ready(function() {
                     }
                 }
             },
-            {% endblock table_buttons_filter %}
-            {% block table_buttons_detail %}
+            {% endblock filter_button %}
+            {% block detail_button %}
             {
                 text: htmlShowDetail,
                 action: function ( e, dt, node, config ) {
@@ -56,15 +56,15 @@ $(document).ready(function() {
                     }                          
                 }
             },
-            {% endblock table_buttons_detail %}
-            {% block table_buttons_more %}
+            {% endblock detail_button %}
+            {% block more_button %}
             {
                 text: '<i class="fa fa-newspaper-o"></i> More',
-                extend: "collection",
+                extend: 'collection',
                 autoClose: true,
-                buttons: [ "copy", "csv", "excel", "print", "colvis"]
+                buttons: [ 'copy', 'csv', 'excel', 'print', 'colvis']
             }
-            {% endblock table_buttons_more %}
+            {% endblock more_button %}
         ]
     })
 
