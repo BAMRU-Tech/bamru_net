@@ -17,28 +17,49 @@
 {% endblock subheader %}
 
 
+{% block content %}
+<main>
+  <div id="show-filter" style="display: none">
+    <select id="filter-type" multiple="multiple" selectableHeader="Display type">
+      <option value='meeting'>Meeting</option>
+      <option value='operation'>Operation</option>
+      <option value='training'>Training</option>
+      <option value='community'>Community</option>
+    </select>
+    <label for="start">Start after</label>
+    <input type="date" id="start"></input>
+    <label for="end">End before</label>
+    <input type="date" id="end"></input>
+  </div>
+    
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%"></table>
+ </div>
+</main>
+{% endblock content %}
+
+
 {% block table_options %}
-order: [[ 4, "asc" ]],
+order: [[ 4, 'asc' ]],
 columnDefs: [
-    { type: "string", targets: 3 }, //FIXME: still needed
+    { type: 'string', targets: 3 }, //FIXME: still needed
     { responsivePriority: 0, targets: 0 },
     { responsivePriority: 1, targets: 4 },
     { responsivePriority: 2, targets: 1 },
     { responsivePriority: 3, targets: 3 }
 ],
 columns: [
-    { data: 'href_title',
+    { data: 'href_title', title: 'Title',
       render: function(data, type, row) {
           return data;
       }
     },
-    { data: 'display_location'},
-    { data: 'type'},
-    { data: 'leaders'},
-    { data: 'display_start'},
+    { data: 'display_location', title: 'Location' },
+    { data: 'type', title: 'Location' },
+    { data: 'leaders', title: 'Leaders' },
+    { data: 'display_start', title: 'Start' },
 ],
 language: {
-      emptyTable: "No events selected"
+      emptyTable: 'No events selected'
 },
 {% endblock table_options %}
 
@@ -56,14 +77,16 @@ $.fn.dataTable.ext.search.push(
     }
 );
 
-$("#filter-type").multiSelect({
-    selectableHeader: "<div class='custom-header'>Show</div>",
-    selectionHeader: "<div class='custom-header'>Hide</div>",
+$('#filter-type').multiSelect({
+    selectableHeader: '<div class="custom-header">Show</div>',
+    selectionHeader: '<div class="custom-header">Hide</div>',
     afterSelect: function(values){
         UpdateSubheaderBasedOnSettings(table);
+        table.draw();
     },
     afterDeselect: function(values){
         UpdateSubheaderBasedOnSettings(table);
+        table.draw();
     }
 });
 
@@ -111,7 +134,7 @@ function UpdateSubheaderBasedOnSettings(table) {
     filterTypes = [];
     filterTypesCap = [];
 
-    $("#filter-type option").each(function() {
+    $('#filter-type option').each(function() {
         if (!this.selected) {
             var eventType = this.value;
             filterTypesCap.push(eventType.charAt(0).toUpperCase() + eventType.substr(1));
@@ -120,7 +143,7 @@ function UpdateSubheaderBasedOnSettings(table) {
     });
 
     // hack to shorten display on sm devices
-    $("#subhdr")[0].innerHTML = ("Events (" + filterTypes.join(", ") + ")").replace("operation", "ops");
+    $('#subhdr')[0].innerHTML = ('Events (' + filterTypes.join(', ') + ')').replace('operation', 'ops');
 
 }
 {% endblock table_functions %}
@@ -155,33 +178,3 @@ if (startBefore || startAfter) {
 AddRowsByDate(table, startAfter, startBefore);
 
 {% endblock ready_functions %}
-
-    
-{% block content %}
-<main>
-  <div id="show-filter" style="display: none">
-    <select id="filter-type" multiple="multiple" selectableHeader="Display type">
-      <option value='meeting'>Meeting</option>
-      <option value='operation'>Operation</option>
-      <option value='training'>Training</option>
-      <option value='community'>Community</option>
-    </select>
-    <label for="start">Start after</label>
-    <input type="date" id="start"></input>
-    <label for="end">End before</label>
-    <input type="date" id="end"></input>
-  </div>
-    
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th>Title</th><th>Location</th><th>Type</th><th>Leaders</th><th>Start</th>
-      </tr>
-    </thead>
-
-    <tbody>
-    </tbody>
-  </table>
- </div>
-</main>
-{% endblock content %}
