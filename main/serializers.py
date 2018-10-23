@@ -144,14 +144,21 @@ class DistributionSerializer(serializers.ModelSerializer):
         read_only_fields = ('message',)
         fields = ('id', 'message', 'member', 'email', 'phone',)
 
+
 # This version currently requires a period. Future uses can change this.
-class MessageSerializer(serializers.ModelSerializer):
-    distribution_set = DistributionSerializer(many=True, required=False)
+class MessageListSerializer(serializers.ModelSerializer):
     rsvp_template = serializers.CharField()
     class Meta:
         model = Message
-        read_only_fields = ('author',)
-        fields = ('id', 'author', 'text', 'format', 'period', 'period_format', 'rsvp_template', 'distribution_set')
+        read_only_fields = ('author', 'created_at',)
+        fields = ('id', 'author', 'text', 'format', 'period', 'period_format', 'rsvp_template', 'created_at',)
+
+
+class MessageDetailSerializer(MessageListSerializer):
+    distribution_set = DistributionSerializer(many=True, required=False)
+    class Meta(MessageListSerializer.Meta):
+        model = Message
+        fields = MessageListSerializer.Meta.fields + ('distribution_set',)
 
     def create(self, validated_data):
         logger.debug('MessageSerializer.create' + str(validated_data))
