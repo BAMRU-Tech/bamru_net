@@ -1,32 +1,114 @@
 {% extends 'base_ftable.html' %}
 
+{# --- Page definition --- #}
+
 {% block title %}Team Availability{% endblock title %}
 
 {% block subheader %}
 <strong id="subhdr">Members</strong>
 {% endblock subheader %}
 
+{% block content %}
+<main role="main">
+  <div id="show-filter" style="display: none">
+    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+      <option value='TM'>Technical Member</option>
+      <option value='FM'>Field Member</option>
+      <option value='T'>Trainee</option>
+      <option value='R'>Reserve</option>
+      <option value='S'>Support</option>
+      <option value='A'>Associate</option>
+      <option value='G' selected >Guest</option>
+      <option value='MA' selected >Member Alum</option>
+    </select>
+  </div>
+  <div id="tooltip"></div>
+  <table id="dTbl" class="display table-bordered compact" style="width:100%">
+    <thead>
+      <tr>
+        <th>Name</th><th>Rank</th><th>Rank order</th>
+        {% for h in headers %}
+        <th>
+          <div class="d-none d-lg-block">{{h}}</div>
+          <div class="d-none d-md-block d-lg-none">{{h|date:"M d"}}</div>
+          <div class="d-block d-md-none">{{h|date:"m d"}}</div>
+        </th>
+        {% endfor %}
+        <th>Return</th>
+      </tr>
+    </thead>
+    
+    <tbody>
+      {% for member in member_list %}
+      {% if member.isActive %}
+      <tr>
+        <td>
+          <a href="{% url 'member_detail' member.id %}?returnx=al">{{ member.full_name }}</a>
+        </td>
+        <td>{{ member.rank }}</td>
+        <td>{{ member.rank_order }}</td>
+        {% for day in member.days %}
+        {% if day %}
+        <td style="background-color:green" title="{{day}}" style="overflow: hidden">
+          <div class="d-none d-lg-block">{{day}}</div>
+          <div class="d-none d-md-block d-lg-none">{{day|truncatechars:10}}</div>
+          <div class="d-none d-sm-block d-md-none">{{day|truncatechars:5}}</div>
+          <div class="d-block d-sm-none">*</div>
+        </td>
+        {% else %}
+        <td></td>
+        {% endif %}
+        {% endfor %}
+        <td{% if member.end_date %} style="background-color:green"{% endif %}>
+          <div class="d-none d-md-block">{{member.end_date|date:"m/d/y"}}</div>
+          <div class="d-block d-md-none">{{member.end_date|date:"m-d"}}</div>
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
 
 {% block table_options %}
-order: [[ 0, 'asc' ]],
+order: [[ 1, 'desc' ]],
+
 columnDefs: [
+    { responsivePriority: 1, targets: 0 },
+    { responsivePriority: 2, targets: [ 3, 4, 5, 6, 7, 8] },
+    { responsivePriority: 10, targets: 1},
     {
-        responsivepriority: 8, targets: 1
-    },
-    {
-        'render': function ( data, type, rowData, meta ) {
-            // Add color to the busy periods
-            var row = $('#dTbl').DataTable().row(meta['row']).node();
-            if (data && data[0] != '<') // *FIXME: for now ignore extra responsive sizing divs
-                $('td:eq('+meta['col']+')', row).css('background-color', 'green');
+        render: function ( data, type, row, meta ) {
+            if (type == 'display') {
+                // Add color to the busy periods
+                var row = $('#dTbl').DataTable().row(meta.row).node();
+                if (data && data[0] != '<')
+                    $('td:eq(' + (meta.col - 1) + ')', row).css('background-color', 'green');
+            }
             return data;
         },
-        targets: [ 2, 3, 4, 5, 6, 7 ],
+        targets: [ 3, 4, 5, 6, 7, 8 ],
+
     },
+    {
+        render: function(data, type, row, meta) {
+            if (type == 'sort') {
+                // order: asc and role_order doesn't work
+                return 99 - row[2]; //FX?
+            } else
+                return data;
+        }, targets: 1,
+    },
+      
+    { visible: false, targets: 2 },
 ],
-language: {
-      emptyTable: 'No members selected'
-},
+
+language: { emptyTable: 'No members selected' },
+
 {% endblock table_options %}
 
 
@@ -78,30 +160,37 @@ function AddRows(table, values) {
         var dd = DateArray(Date(), 5);
         
         // Foreach member mark busy period within date range
-        for (var member=0; member<json.length; member++)
+        for (var m = 0; m < json.length; m++)
         {
-            var row = json[member];
+            var row = json[m];
             var data = [
-                '<a href="/member/'+row['id']+'?returnx=al">'+row['full_name']+'</a>',
-                {'display': row['rank'], '@data-sort': row['rank_order']},
+                '<a href="/member/' + row.id+'?returnx=al">' + row.full_name + '</a>',
+                row.rank, row.rank_order
             ];
-            var busy = Array(numDays+1).fill('');
-            var period = row['busy'];
+            var busy = Array(numDays + 1).fill('');
+            var period = row.busy;
             for (var p = 0; p < period.length; p++) {
-                var start_on = dd.indexOf(period[p]['start_on']);
-                var end_on = dd.indexOf(period[p]['end_on']) + 1;
-                var comment = period[p]['comment'];
+                var start_on = dd.indexOf(period[p].start_on);
+                var end_on = dd.indexOf(period[p].end_on) + 1;
+                var comment = period[p].comment;
+                if (comment) {
+                    //FIXME: It would be nice to use different display sizes
+                    //Decide on appropriate constants
+                    if (comment.length > 10) comment = comment.slice(0, 10);
+                } else
+                    // API doesn't match member_view code
+                    comment = 'BUSY';
                 SetBusy(busy, start_on, end_on, comment);
                 if (end_on <= 0)
-                    busy[numDays] = period[p]['end_on'];
+                    busy[numDays] = period[p].end_on;
             }
 
             data = data.concat(busy);
 
-            table.row.add(data).invalidate(); // invalidate needed to force rank and role display
+            table.row.add(data);
         }
 
-        // not sure why this is required here but it is needed (tried to hoist it without success)
+        // redraw table after async call
         table.draw().columns.adjust().responsive.recalc();
     })
 }
@@ -110,7 +199,7 @@ function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            return data[1]['display'] == values[0];
+            return data[1] == values[0];
         } )
         .remove();
 
@@ -143,63 +232,3 @@ $('#filter-rank').multiSelect({
     }
 })
 {% endblock table_functions %}
-
-{% block content %}
-<main>
-  <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
-      <option value='TM'>Technical Member</option>
-      <option value='FM'>Field Member</option>
-      <option value='T'>Trainee</option>
-      <option value='R'>Reserve</option>
-      <option value='S'>Support</option>
-      <option value='A'>Associate</option>
-      <option value='G' selected >Guest</option>
-      <option value='MA' selected >Member Alum</option>
-    </select>
-  </div>
-  <div id="tooltip"></div>
-  <table id="dTbl" class="display table-bordered compact" style="width:100%">
-    <thead>
-      <tr>
-        <th>Name</th><th>Rank</th>
-        {% for h in headers %}
-        <th>
-          <div class="d-none d-lg-block">{{h}}</div>
-          <div class="d-none d-md-block d-lg-none">{{h|date:"M d"}}</div>
-          <div class="d-block d-md-none">{{h|date:"m d"}}</div>
-        </th>
-        {% endfor %}
-        <th>Return</th>
-      </tr>
-    </thead>
-
-    <tbody>
-    {% for member in member_list %}
-      {% if member.isActive %}
-      <tr>
-        <td><a href="{% url 'member_detail' member.id %}?returnx=al">{{ member.full_name }}</a></td>
-        <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
-        {% for day in member.days %}
-          {% if day %}
-            <td style="background-color:green" title="{{day}}" style="overflow: hidden">
-              <div class="d-none d-lg-block">{{day}}</div>
-              <div class="d-none d-md-block d-lg-none">{{day|truncatechars:10}}</div>
-              <div class="d-none d-sm-block d-md-none">{{day|truncatechars:5}}</div>
-              <div class="d-block d-sm-none">*</div>
-            </td>
-          {% else %}
-            <td></td>
-          {% endif %}
-        {% endfor %}
-        <td{% if member.end_date %} style="background-color:green"{% endif %}>
-          <div class="d-none d-md-block">{{member.end_date|date:"Y-m-d"}}</div>
-          <div class="d-block d-md-none">{{member.end_date|date:"m-d"}}</div>
-        </td>
-      </tr>
-      {% endif %}
-    {% endfor %}
-    </tbody>
-  </table>
-</main>
-{% endblock content %}

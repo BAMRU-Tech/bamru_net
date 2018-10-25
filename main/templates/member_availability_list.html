@@ -14,7 +14,7 @@
 {% endblock subheader %}
 
 {% block content %}
-<main>
+<main role="main">
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <tbody>
       {% for busy in availability_list %}
@@ -36,86 +36,55 @@
 {# --- Table definition --- #}
 
 {% block table_options %}
-dom: 'Bfrtip',
-responsive: true,
 select: 'os',
 altEditor: true,
+
 order: [[ 1, 'desc']],
-columnDefs: [
-    { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 2, targets: [2, 3, 4, 5, 6, 7] },
-    { responsivePriority: 10, targets: 1},
-],
+
 columns: [
-    { data: 'mark',
+    { data: 'mark', width: '10px', responsivePriority: 1,
       orderable: false,
       className: 'mark-checkbox',
       type: ['readonly', 'hidden'],
-      render: function(data, type, row) {
+      render: function(data, type, row, meta) {
           return '<div data-id="'+row.id+'"></div>';
       },
     },
-    { data: 'start_on', title: 'Start' },
-    { data: 'end_on', title: 'End },
-    { data: 'comment', title: 'Comment },
-    { data: 'id', title: 'Id,
+    { data: 'start_on', title: 'Start', width: '10%', responsivePriority: 2,
+      type: 'date',
+      render: function(data, type, row, meta) {
+          if (type == 'display') {
+              var date = new Date(data+'T00:00');
+              return date.toLocaleDateString();
+          } else if (type == 'sort')
+              return data;
+          else
+              return data;
+      },
+    },
+    { data: 'end_on', title: 'End', width: '10%', responsivePriority: 2,
+      type: 'date',
+      render: function(data, type, row, meta) {
+          if (type == 'display') {
+              var date = new Date(data+'T00:00');
+              return date.toLocaleDateString();
+          } else if (type == 'sort')
+              return data;
+          else
+              return data;
+      },
+    },
+    { data: 'comment', title: 'Comment', responsivePriority: 3, },
+    { data: 'id', title: 'Id',
       visible: false,
       type: ['readonly', 'hidden']
     },
 ],
-language: {
-    emptyTable: 'No busy periods'
-},
 
-onAddRow: function(dt, row, success, error) {
+language: { emptyTable: 'No busy periods' },
 
-    var data = row;
-
-    data['member'] = $('#memberId').val();
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'POST',
-        contentType: 'application/json',
-        url: '/api/availability/',
-        data: data,
-        success: function (r, s, m) {
-            r['mark'] = '';
-            success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('availability add failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
-
-onEditRow: function(dt, row, success, error) {
-
-    var data = row;
-
-    var id = data['id'];
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'PATCH',
-        contentType: 'application/json',
-        url: '/api/availability/' + id + '/',
-        data: data,
-        success: function (r, s, m) {
-            var name = r['member']['full_name'];
-            return success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('availability edit failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
+onAddRow: AddBusy,
+onEditRow: UpdateRow,
 
 {% endblock table_options %}
 
@@ -142,6 +111,56 @@ onEditRow: function(dt, row, success, error) {
 
 {% block table_functions %}
 
+function AddBusy (dt, row, success, error) {
+    var data = row;
+
+    data.member = $('#memberId').val();
+    data = JSON.stringify(data);
+    //FIXME: error handling
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/availability/',
+        data: data,
+        success: function (r, s, m) {
+            r.mark = '';
+            success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability add failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
+
+function UpdateRow (dt, row, success, error) {
+    var data = row;
+
+    var id = data.id;
+    data = JSON.stringify(data);
+    //FIXME: error handling
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/availability/' + id + '/',
+        data: data,
+        success: function (r, s, m) {
+            var name = r.member.full_name; //FIXME
+            // Clear marks
+            $('td.marked').removeClass('marked');
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
+
 function DeleteBusyPeriods ( e, dt, node, config ) {
     var periods = [];
     $.each($('td.mark-checkbox.marked'), function (i, el) {
@@ -163,6 +182,9 @@ function DeleteBusyPeriods ( e, dt, node, config ) {
                 method: 'DELETE',
                 contentType: 'application/json',
                 url: '/api/availability/' + periods[i] + '/',
+                success: function () {
+                    location.reload(true);
+                },
                 error: function (msg) {
                     console.log('availability delete failed: '+msg);
                     alert(msg);
@@ -170,40 +192,36 @@ function DeleteBusyPeriods ( e, dt, node, config ) {
                 },
             })
         }
-        //FIXME: This seems like a bad idea but there is delay getting the updated data
-        setTimeout(function(){
-            location.reload(true);
-        }, 200);
     }
 }
 
 function MarkRow ( e, dt, type, indices ) {
-        var allMarked = true;
-        var numRows = indices.length;
-        if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-                // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-            })
-        }
-        dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
-                if (numRows > 1) {
-                    if (allMarked)
-                        $(this.node()).children().first().removeClass('marked');
-                    else
-                        $(this.node()).children().first().addClass('marked');
-                } else {
-                    if ($(this.node()).children().first().hasClass('marked')) {
-                        $(this.node()).children().first().removeClass('marked');
-                        this.deselect();
-                    } else
-                        $(this.node()).children().first().addClass('marked');
-                }
-            });
+    var allMarked = true;
+    var numRows = indices.length;
+    if (numRows > 1) {
+        dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+            // For multi select - unmark only when every row is marked
+            allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+        })
+    }
+    dt.rows(indices)
+        .every( function ( rowIdx, tableLoop, rowLoop ) {
+            if (numRows > 1) {
+                if (allMarked)
+                    $(this.node()).children().first().removeClass('marked');
+                else
+                    $(this.node()).children().first().addClass('marked');
+            } else {
+                if ($(this.node()).children().first().hasClass('marked')) {
+                    $(this.node()).children().first().removeClass('marked');
+                    this.deselect();
+                } else
+                    $(this.node()).children().first().addClass('marked');
+            }
+        });
 }
 
-function UpdateSubheaderBasedOnSettings(table) {}
+function UpdateSubheaderBasedOnSettings (table) {}
 
 {% endblock table_functions %}
 

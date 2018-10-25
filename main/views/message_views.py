@@ -27,94 +27,63 @@ from message.tasks import message_send
 logger = logging.getLogger(__name__)
 
 
-class MessageCreateView(LoginRequiredMixin, generic.edit.CreateView):
+class MessageCreateView(LoginRequiredMixin, generic.ListView):
     model = Message
     template_name = 'message_add.html'
+    context_object_name = 'member_list'
 
-    def get_success_url(self):
-        return self.object.get_absolute_url()
+    #def get_success_url(self): FIXME
+    #    return self.object.get_absolute_url()
 
-    def get_form(self, form_class=None):
-        """Return an instance of the form to be used in this view."""
-        kwargs = self.get_form_kwargs()
-        initial = kwargs['initial']
+    def get_queryset(self):
+        """Return context with members to page."""
+        initial = {}
         initial['author'] = self.request.user.pk
         members = None
         period_id = self.request.GET.get('period')
         period_format = self.request.GET.get('period_format')
+        page = self.request.GET.get('page')
         if period_id:
             try:
                 period = Period.objects.get(pk=period_id)
             except Period.DoesNotExist:
-                logger.error('Period not found for: ' + self.request.body)
+                logger.error('Period not found for: ' + period_id)
                 raise Http404(
                     'Period {} specified, but does not exist'.format(period_id))
             initial['format'] = 'page'
-            initial['period'] = period_id
+            initial['period_id'] = period_id
             initial['period_format'] = period_format
             initial['text'] = str(period)
 
             if period_format == 'invite':
                 members = Member.active.exclude(
                     participant__period=period_id)
-                template_str = 'Available?'
             else:
                 if period_format == 'leave':
-                    template_str = 'Left?'
                     members = period.members_for_left_page()
-                else:
-                    template_str = 'Returned?'
+                elif period_format == 'return':
                     members = period.members_for_returned_page()
-
-            initial['members'] = [m.id for m in members]
+                elif period_format == 'test':
+                    members = self.request.user.pk
+                else:
+                    logger.error('Period format {} not found for: {}'.format(
+                    period_format, self.request.body))
 
             rsvp_template = None
             try:
-                rsvp_template = RsvpTemplate.objects.get(name=template_str)
-                initial['rsvp_template'] = rsvp_template.id
+                rsvp_template = RsvpTemplate.objects.get(name=page)
+                initial['rsvp_template'] = rsvp_template
             except RsvpTemplate.DoesNotExist:
-                logger.error('RsvpTemplate {} not found for: {}'.format(
-                    template_str, self.request.body))
+                logger.error('RsvpTemplate {} not found for period: {}'.format(
+                    page, period_id))
 
-        kwargs['initial'] = initial
-        form = MessageCreateForm(members, **kwargs)
-        form.fields['text'].widget.attrs['rows'] = 2
-        if period_id:
-            form.fields['format'].widget = HiddenInput()
-            form.fields['period'].widget = HiddenInput()
-            form.fields['period_format'].widget = HiddenInput()
-            form.fields['rsvp_template'].widget = HiddenInput()
-            form.fields['members'].widget = HiddenInput()
-            self.period = period
-            self.rsvp_template = rsvp_template
-        return form
+            self.initial = initial  # Is there a better way to get info into the template?
+            return members
 
     def get_context_data(self, **kwargs):
+        '''Add additional useful information.'''
         context = super().get_context_data(**kwargs)
-        if self.period:
-            context['period'] = self.period
-            context['rsvp_template'] = self.rsvp_template
-            if self.rsvp_template:
-                context['extra_characters'] = len(self.rsvp_template.text) + 1
-            else:
-                context['extra_characters'] = 0
-        return context
-
-    def form_valid(self, form):
-        message = form.instance
-        message.save()
-        if self.request.POST.get('period'):
-            period = get_object_or_404(
-                Period, pk=self.request.POST.get('period'))
-            for m in form.cleaned_data['members']:
-                message.distribution_set.create(
-                    member_id=m,
-                    email=form.cleaned_data['email'],
-                    phone=form.cleaned_data['phone'])
-        logger.info('Calling message_send {}'.format(message.pk))
-        message.queue()
-        message_send.delay(message.pk)
-        return super().form_valid(form)
+        return {**context, **self.initial}
 
 
 class MessageDetailView(LoginRequiredMixin, generic.DetailView):

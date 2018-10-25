@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
+from django.forms import widgets
 from main.models import Member, Event, Participant, Period
 
 from django.forms.widgets import Select, Widget, SelectDateWidget
@@ -126,8 +127,8 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
     def get_form(self):
         '''add date picker in forms'''
         form = super(EventCreateView, self).get_form()
-        form.fields['start'].widget = SelectDateWidget()
-        form.fields['finish'].widget = SelectDateWidget()
+        form.fields['start'].widget = widgets.DateInput(attrs={'type': 'date'})
+        form.fields['finish'].widget = widgets.DateInput(attrs={'type': 'date'})
 
         # Mark required fields
         form.fields['title'].label = "Title*"

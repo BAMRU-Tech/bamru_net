@@ -2,55 +2,10 @@
 
 {% block title %}DO Schedule - Q{{ quarter }}{% endblock title %}
 
-{% block do_title %}
-Duty Officers
-{% endblock %}
-
-{% block js %}
-  {{ block.super }}
-  <script>
-    $(document).ready(function() {
-      $('#dTbl').DataTable( {
-          dom: "Bfrtip",
-          responsive: true,
-          paging:   false,
-          info:     false,
-          order: [[ 0, "asc" ]],
-          columnDefs: [
-              { width: "10%", targets: 0 },
-              { width: "20%", targets: 1 },
-              { width: "20%", targets: 2 },
-              { width: "40%", targets: 3 },
-              { type: "string", targets: 3 },
-              { responsivePriority: 0, targets: 3 },
-              { responsivePriority: 1, targets: 0 },
-              { responsivePriority: 2, targets: 1 },
-              { responsivePriority: 3, targets: 2 }
-          ],
-          buttons: [
-              {
-                  text: '<i class="fa fa-caret-square-o-left"></i> Prev',
-                  action: function ( e, dt, node, config ) {
-                      location.href="{{ request.path }}{{ query_prev }}";
-                  }
-              },
-              {
-                  text: '<i class="fa fa-caret-square-o-right"></i> Next',
-                  action: function ( e, dt, node, config ) {
-                      location.href="{{ request.path }}{{ query_next }}";
-                  },
-              }
-          ],
-          language: {
-              emptyTable: "No duty officer assignments"
-          },
-      });
-    });
-  </script>
-{% endblock %}
+{% block do_title %}Duty Officers{% endblock %}
 
 {% block content %}
-<main>
+<main role="main">
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <thead>
       <tr>
@@ -62,8 +17,8 @@ Duty Officers
       {% for do in do_list %}
       <tr>
         <td>{{ do.week }}</td>
-        <td>{{ do.start }}</td>
-        <td>{{ do.end }}</td>
+    <td>{{ do.start|date:'m/d/y' }}</td>
+        <td>{{ do.end|date:'m/d/y' }}</td>
         <td>{{ do.member }}</td>
       </tr>
       {% endfor %}
@@ -71,4 +26,46 @@ Duty Officers
   </table>
  </div>
 </main>
-{% endblock %}
+{% endblock content %}
+
+{% block js %}
+{{ block.super }}
+    <script>
+    $(document).ready(function() {
+        $('#dTbl').DataTable( {
+            dom: "Bfrtip",
+            responsive: true,
+            paging:   false,
+            info:     false,
+            order: [[ 0, "asc" ]],
+            columnDefs: [
+                { width: "10%", targets: 0 },
+                { width: "10%", targets: 1 },
+                { width: "10%", targets: 2 },
+                { type: "string", targets: 3 },
+                { responsivePriority: 0, targets: 3 },
+                { responsivePriority: 1, targets: 0 },
+                { responsivePriority: 2, targets: 1 },
+                { responsivePriority: 3, targets: 2 },
+                { type: 'date', targets: [1, 2] },
+                { className: "dt-center", targets: 0 },
+            ],
+            buttons: [
+                {
+                    text: '<i class="fa fa-caret-square-o-left"></i> Prev',
+                    action: function ( e, dt, node, config ) {
+                        location.href="{{ request.path }}{{ query_prev|safe }}";
+                    }
+                },
+                {
+                    text: '<i class="fa fa-caret-square-o-right"></i> Next',
+                    action: function ( e, dt, node, config ) {
+                        location.href="{{ request.path }}{{ query_next|safe }}";
+                    },
+                }
+            ],
+            language: { emptyTable: "No duty officer assignments" },
+        });
+    });
+</script>
+{% endblock js %}

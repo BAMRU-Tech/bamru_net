@@ -40,7 +40,8 @@
 <script>
 $(document).ready( function() {
     const url = new URL(window.location.href);
-    const rx = url.searchParams.get('returnx');
+    var rx = url.searchParams.get('returnx');
+
     const returns = {
         'ml': '<a href="{% url 'member_list' %}"> Members </a>',
         'al': '<a href="{% url 'available_list' %}"> Team Availability </a>',
@@ -52,7 +53,8 @@ $(document).ready( function() {
     }
     //FIXME: do something similar for event_detail -> (event_list, message_list)
 
-    href = returns[rx];
+    rx = rx ? rx : 'ml';
+    href = returns[ rx ];
 
     $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.rank }})";
 });
@@ -65,6 +67,12 @@ $(document).ready( function() {
   {% if member.is_current_do %}
     <p style="color:red">CURRENT DO until</p>
   {% endif %}
+  <strong>Email addresses:</strong>
+  <ul>
+    {% for em in member.email_set.all %}
+    <li>{{ em.address }} ({{ em.type }}{% if em.pagable %}, pageable{% endif %})</li>
+    {% endfor %}
+  </ul>
   <strong>Phone numbers:</strong>
   <ul>
     {% for ph in member.phone_set.all %}

@@ -1,5 +1,6 @@
 {% extends 'base_ftable.html' %}
-{% load bootstrap4 %}
+
+{# --- Page definition --- #}
 
 {% block title %}New Compose Message{% endblock %}
 
@@ -7,170 +8,167 @@
 <strong id="subhdr">Event Page</strong>
 {% endblock subheader %}
 
+{% block content %}
+<main role="main" class="container">
+  <input type="hidden" name="author" value="{{author}}" id="id_author" />
+  <div class="form-group">
+    <label for="id_text">Message:</label>
+    <textarea name="text" cols="40" rows="2" class="form-control"
+              placeholder="Enter message for {{text}}"
+              title="" required id="id_text"
+              >{{text}}: {{rsvp_template.text}}</textarea>
+  </div>
+  <input type="hidden" name="format" value="{{format}}" id="id_format" />
+  <input type="hidden" name="period" value="{{period_id}}" id="id_period" />
+  <input type="hidden" name="period_format" value="{{period_format}}" id="id_period_format" />
+  <input type="hidden" name="rsvp_template" value="{{rsvp_template.id}}" id="id_rsvp_template" />
+  <div class="form-group">
+    <div class="form-check">
+      <input type="checkbox" name="email" class="form-check-input" id="id_email" checked />
+      <label class="form-check-label" for="id_email">Email</label>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="form-check">
+      <input type="checkbox" name="sms" class="form-check-input" id="id_sms" />
+      <label class="form-check-label" for="id_sms">Sms</label>
+    </div>
+  </div>
+
+  <div id="show-filter" style="display: none">
+    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+      <option value="TM">Technical Member</option>
+      <option value="FM">Field Member</option>
+      <option value="T">Trainee</option>
+      <option value="R">Reserve</option>
+      <option value="S">Support</option>
+      <option value="A">Associate</option>
+      <option value="G" selected >Guest</option>
+      <option value="MA" selected >Member Alum</option>
+    </select>
+  </div>
+
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+    <tbody>
+      {% if member_list.count %}
+      {% for member in member_list %}
+      {% if member.isActive %}
+      <tr>
+        <td data-id={{ member.id }}></td>
+        <td>
+          <a href="{% url 'member_detail' member.id %}?returnx=ml">{{ member.full_name }}</a>
+        </td>
+        <td>{{ member.rank }}</td>
+        <td>{{ member.rank_order }}</td>
+        <td>{{ member.roles }}</td>
+        <td>{{ member.role_order }}</td>
+        <td> {{ member.display_phone }}</td>
+        <td> {{ member.display_email }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+</main>
+{% endblock content%}
+
+
+{# --- Table definition --- #}
 
 {% block table_options %}
 select: 'os',
-order: [[ 3, 'desc' ]],
-paging: false,
-initComplete: function () {
-    var tbl = this.api();
 
-    InitializeRowsBasedOnFormat(tbl);
-},
-columnDefs: [
-    { responsivePriority: 1, targets: [0, 1] },
-    { responsivePriority: 5, targets: 2 },
-    { responsivePriority: 2, targets: 3 },
-    { responsivePriority: 3, targets: 4},
-    { responsivePriority: 4, targets: 5},
-],
-//FIXME: look into using filter tag for sort-order
+order: [[ 1, 'asc' ]],
+
 columns: [
-    { data: 'check',
-      width: '5px', //FIXME: adjust alignment
+    { data: 'mark', responsivePriority: 1,
+      width: '10px',
       orderable: false,
       className: 'mark-checkbox',
-      render: function(data, type, row) {
-          return '<div data-id="'+row.id+'"></div>';
-      },
     },
-    { data: 'name' },
-    { data: 'rank' },
-    { data: 'roles' },
-    { data: 'display_phone' },
-    { data: 'display_email' }
+    //FIXME: Add render and check on use of id
+    { data: 'name', title: 'Name', responsivePriority: 1, },
+    { data: 'rank', title: 'Rank', responsivePriority: 5,
+      render: function(data, type, row, meta) {
+          if (type == 'sort')
+              return row.rank_order;
+          else
+              return data;
+      }
+    },
+    { data: 'rank_order', visible: false, },
+    { data: 'roles', title: 'Roles', responsivePriority: 4,
+      render: function(data, type, row, meta) {
+           if (type == 'sort') {
+               return 99 - row.role_order; //FX?
+           } else
+              return data;
+      }
+    },
+    { data: 'role_order', visible: false, },
+    { data: 'display_phone', title: 'Phone', responsivePriority: 2, },
+    { data: 'display_email', title: 'Email', responsivePriority: 3, }
 ],
-language: {
-      emptyTable: 'No participants selected'
-},
+
+language: { emptyTable: 'No participants selected' },
+
 {% endblock table_options %}
 
 {% block table_buttons_first %}
-{
-    text: '<i class="fa fa-address-book"></i> Send Page',
-    action: SendPage,
-},
-{
-    text: 'Select All',
-    action: SelectAll,
-},
-{
-    text: 'Clear All',
-    action: ClearAll,
-},
+
+{ text: '<i class="fa fa-address-book"></i> Send Page', action: SendPage, },
+{ text: 'Select All', action: SelectAll, },
+{ text: 'Clear All', action: ClearAll, },
+
 {% endblock table_buttons_first %}
 
 {% block ready_functions %}
-table
-    .on( 'select', function ( e, dt, type, indices ) {
-        var allMarked = true;
-        var numRows = indices.length;
+
+table.on( 'select', function ( e, dt, type, indices ) {
+    var allMarked = true;
+    var numRows = indices.length;
+    if (numRows > 1) {
+        dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+            // For multi select - unmark only when every row is marked
+            allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+        })
+    }
+    dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
         if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-                // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-            })
+            if (allMarked)
+                $(this.node()).children().first().removeClass('marked');
+            else
+                $(this.node()).children().first().addClass('marked');
+        } else {
+            if ($(this.node()).children().first().hasClass('marked')) {
+                $(this.node()).children().first().removeClass('marked');
+                this.deselect();
+            } else
+                $(this.node()).children().first().addClass('marked');
         }
-        dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
-                if (numRows > 1) {
-                    if (allMarked)
-                        $(this.node()).children().first().removeClass('marked');
-                    else
-                        $(this.node()).children().first().addClass('marked');
-                } else {
-                    if ($(this.node()).children().first().hasClass('marked')) {
-                        $(this.node()).children().first().removeClass('marked');
-                        this.deselect();
-                    } else
-                        $(this.node()).children().first().addClass('marked');
-                }
-            });
     });
+});
 
 {% endblock ready_functions %}
 
 {% block table_functions %}
 
+{# Define constants based on input params #}
 const url = new URL(window.location.href);
 const eventId = url.searchParams.get('eid');
 const periodPosition = url.searchParams.get('OP');
 const periodId = url.searchParams.get('period');
 const periodFormat = url.searchParams.get('period_format');
 const page = url.searchParams.get('page');
+
 const apiUrlMemberRank = '/api/members/?member_rank=';
-
-function InitializeRowsBasedOnFormat(table) {
-    //FIXME: this is very slow, need better api
-    var url = apiUrlMemberRank;
-    $.getJSON(url, null, function( json ) {
-        
-        var members = JSON.parse($('input[name=members]').val());
-        for (var i=0; i<json.length; i++)
-        {
-            var data = json[i];
-            if (members.includes(data.id)) {
-                data['check'] = '';
-                data['name'] = '<a href="/member/'+data['id']+'">'+data['full_name']+'</a>';
-                data['rank'] = '<td data-order="' + data['rank_order'] + '">' + data['rank'] + '</td>';
-                data['roles'] = '<td data-order="' + data['role_order'] + '">' + data['roles'] + '</td>';
-            
-                table.row.add(data).invalidate(); // invalidate needed to force rank and role display
-            }
-        }
-
-        // not sure why this is required here but it is needed (tried to hoist it without success)
-        table.draw().columns.adjust().responsive.recalc();
-
-        if (periodFormat != 'invite')//FIXME
-            $('td.mark-checkbox').addClass('marked');
-
-    });
-}
-
-function AddRows(table, values) {
-    //
-    // Add rows based on rank =values[0]
-    //
-    var url = apiUrlMemberRank+values[0];
-    //FIXME: error handling
-    $.getJSON(url, null, function( json ) {
-        
-        for (var i=0; i<json.length; i++)
-        {
-            var data = json[i];
-            data['check'] = '';
-            data['name'] = '<a href="/member/'+data['id']+'">'+data['full_name']+'</a>';
-            data['rank'] = '<td data-order="' + data['rank_order'] + '">' + data['rank'] + '</td>';
-            data['roles'] = '<td data-order="' + data['role_order'] + '">' + data['roles'] + '</td>';
-            
-            table.row.add(data).invalidate(); // invalidate needed to force rank and role display
-        }
-        
-        // not sure why this is required here but it is needed (tried to hoist it without success)
-        table.draw().columns.adjust().responsive.recalc();
-    });
-}
-
-function RemoveRows(table, values) {
-    // Remove rows based on rank
-    table.rows(
-        function ( idx, data, node ) {
-            var rank = data['rank']
-            //FIXME: Handle both cases: 'FM' and <td ...>FM</td>
-            if (rank[0] == '<')
-                rank = data['rank'].match('.*>(.*)<')[1]
-            return rank == values[0];
-        } )
-        .remove();
-
-    table.draw();
-}
+var showRanks = [];
 
 function SendPage ( e, dt, node, config ) {
     var members = [];
     $('td.mark-checkbox.marked').each(function (i, el) {
-        members.push($(this.firstChild).data().id)
+        members.push($(this).data('id'))
     });
     
     if (members.length == 0) {
@@ -179,7 +177,7 @@ function SendPage ( e, dt, node, config ) {
     }
     
     var viaEmail = $('input[name=email]').prop('checked') ;
-    var viaSms = $('input[name=phone]').prop('checked');
+    var viaSms = $('input[name=sms]').prop('checked');
     var via = '';
     
     if (viaEmail && viaSms) {
@@ -192,18 +190,19 @@ function SendPage ( e, dt, node, config ) {
         via = '()';
     }
     var text = $('#id_text').val();
-    confirm('Page via '+via+' '+members.length+' members\nMessage: '+text);
+    var ok = confirm('Page via '+via+' '+members.length+' members\nMessage: '+text);
+    if (!ok) return false;
     console.log(members);
     
     var data = {};
-    data['text'] = text;
-    data['format'] = 'page';
-    data['period'] = periodId;
-    data['period_format'] = periodFormat;
-    data['rsvp_template'] = page;
-    data['distribution_set'] = [];
+    data.text = text;
+    data.format = 'page';
+    data.period = periodId;
+    data.period_format = periodFormat;
+    data.rsvp_template = page;
+    data.distribution_set = [];
     for (var i = 0; i < members.length; i++) {
-        data['distribution_set'].push({
+        data.distribution_set.push({
           'member': members[i],
           'email': viaEmail,
           'phone': viaSms,
@@ -239,81 +238,57 @@ function ClearAll ( e, dt, node, config ) {
     table.rows().deselect();
 }
 
-
-function UpdateSubheaderBasedOnSettings(table) {
+function UpdateSubheaderBasedOnSettings (table) {
     // Extract currently selected ranks based on filter
-    var showRanks = [];
+    showRanks = [];
     $('#filter-rank option').each(function() {
         if (!this.selected) {
             showRanks.push(this.value);
         }
     });
 
-    {% comment %}
-    $('#subhdr')[0].innerHTML = ('<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
-                                 '{{ period }}</a>:'+ page +' > Page Participants ('
-                                 + showRanks.join(', ') + ')');
-    {% endcomment %}
-    document.title = '{{ period }} Page';
+    $('#subhdr')[0].innerHTML =
+        ('<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
+         '{{ text }}</a>:'+ page +' > Page Participants (' +
+         showRanks.join(', ') + ')');
+    document.title = '{{ text }} Page';
+    table.draw();
 
 }
+
+$.fn.dataTable.ext.search.push(
+    function( settings, data, dataIndex ) {
+        var node = $('#dTbl').DataTable().row(dataIndex).node();
+        if ( showRanks.includes(data[2]) ) {
+            if (periodFormat != 'invite') //*FIXME: this really isn't the right place
+                $(node).children().first().addClass('marked');
+            return true;
+        }
+
+        // Clear the selection
+        $(node).children().first().removeClass('marked');
+        return false;
+    }
+);
 
 $('#filter-rank').multiSelect({
     // The sense of the multiSelect is inverted: show = deselect, hide = select
     selectableHeader: '<div class="custom-header">Show</div>',
     selectionHeader: '<div class="custom-header">Hide</div>',
     afterSelect: function(values){
-        RemoveRows(table,values);
         UpdateSubheaderBasedOnSettings(table);
     },
     afterDeselect: function(values){
-        AddRows(table,values);
         UpdateSubheaderBasedOnSettings(table);
     }
 })
 
 $('#id_text').after($("<div id='length-message' class='text-muted'>"));
 $('#id_text').on('input', function(){
-    var length = $('#id_text').val().length + $('#data').data('extra-characters');
+    var length = $('#id_text').val().length;
     //FIXME: mark in red when char count exceeds 160
     $("#length-message").text(length + " characters used (single SMS fits 160)");
 });
 $('#id_text').triggerHandler('input');
 
 {% endblock table_functions %}
-
-{% block content %}
-<main role="main" class="container">
-  <div id="content">
-    <form method="post">
-      {% csrf_token %}
-      {% bootstrap_form form %}
-    </form>
-  </div>
-
-  <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
-      <option value="TM">Technical Member</option>
-      <option value="FM">Field Member</option>
-      <option value="T">Trainee</option>
-      <option value="R">Reserve</option>
-      <option value="S">Support</option>
-      <option value="A">Associate</option>
-      <option value="G" selected >Guest</option>
-      <option value="MA" selected >Member Alum</option>
-    </select>
-  </div>
-
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Name</th><th>Rank</th><th>Roles</th><th>Phone</th><th>eMail</th>
-      </tr>
-    </thead>
-
-    <tbody></tbody>
-  </table>
-  <div id='data' class="d-none" data-extra-characters='{{extra_characters}}'></div>
-</main>
-{% endblock content%}

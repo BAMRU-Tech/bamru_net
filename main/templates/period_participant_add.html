@@ -1,45 +1,125 @@
 {% extends 'base_ftable.html' %}
 
-{% block title %}
-      Participant Add
-{% endblock title %}
+{# --- Page definition --- #}
+
+{% block title %}Participant Add{% endblock %}
 
 {% block subheader %}
 <strong id="subhdr">Event Add Participant</strong>
 {% endblock subheader %}
 
+{% block content %}
+<main role="main">
+  <div id="show-filter" style="display: none">
+    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+      <option value="TM">Technical Member</option>
+      <option value="FM">Field Member</option>
+      <option value="T">Trainee</option>
+      <option value="R">Reserve</option>
+      <option value="S">Support</option>
+      <option value="A">Associate</option>
+      <option value="G" selected >Guest</option>
+      <option value="MA" selected >Member Alum</option>
+    </select>
+  </div>
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+    <tbody>
+      {% for member in member_list %}
+      {% spaceless %}
+      {% if member.isActive %}
+      <tr>
+        <td></td>
+        <td>{{ member.full_name }}</td>
+        <td>{{ member.id }}</td>
+        <td>{{ member.rank }}</td>
+        <td>{{ member.rank_order }}</td>
+        <td>{{ member.roles }}</td>
+        <td>{{ member.role_order }}</td>
+        <td>{{ member.display_phone }}</td>
+        <td>{{ member.display_email }}</td>
+      </tr>
+      {% endif %}
+      {% endspaceless %}
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock content%}
+
+
+{# --- Table definition --- #}
 
 {% block table_options %}
 select: 'os',
-order: [[ 3, 'desc' ]],
-columnDefs: [
-    { responsivePriority: 1, targets: [0, 1] },
-    { responsivePriority: 5, targets: 2 },
-    { responsivePriority: 2, targets: 3 },
-    { responsivePriority: 3, targets: 4},
-    { responsivePriority: 4, targets: 5},
-],
+
+order: [[ 5, 'desc' ]],
+
 columns: [
-    { data: 'check',
-      width: '5px', //FIXME: adjust alignment
+    { data: 'mark', width: '10px', responsivePriority: 1,
+      width: '10px',
       orderable: false,
       className: 'mark-checkbox',
+      render: function(data, type, row, meta) {
+          if (type == 'display')
+              return '<div data-id="' + row.id + '"></div>';
+          else
+              return data;
+      }
     },
-    { data: 'name' },
-    { data: 'rank' },
-    { data: 'roles' },
-    { data: 'phone' },
-    { data: 'email' }
+    { data: 'full_name', title: 'Name', responsivePriority: 1,
+      render: function(data, type, row, meta) {
+          if (type == 'display')
+              return '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
+          else
+              return data;
+      }
+    },
+    { data: 'id', visible: false, },
+    { data: 'rank', title: 'Rank', responsivePriority: 2,
+      render: function(data, type, row, meta) {
+          if (type == 'sort')
+              return row.rank_order;
+          else
+              return data;
+      }
+    },
+    { data: 'rank_order', visible: false, },
+    { data: 'roles', title: 'Roles', responsivePriority: 1,
+      render: function(data, type, row, meta) {
+           if (type == 'sort') {
+               return 99 - row.role_order; //FX?
+           } else
+              return data;
+      }
+    },
+    { data: 'role_order', visible: false, },
+    { data: 'display_phone', title: 'Phone', responsivePriority: 3, },
+    { data: 'display_email', title: 'Email', responsivePriority: 4, },
 ],
-language: {
-      emptyTable: 'No participants selected'
-},
+
+language: { emptyTable: 'No participants selected' },
+
 {% endblock table_options %}
 
 {% block table_buttons_first %}
-{
-    text: '<i class="fa fa-address-book"></i> Add',
-    action: function ( e, dt, node, config ) {
+
+{ text: '<i class="fa fa-address-book"></i> Add', action: AddParticipant, },
+{ text: 'Select All', action: SelectAll, },
+{ text: 'Clear All', action: ClearAll, },
+
+{% endblock table_buttons_first %}
+
+{% block table_functions %}
+
+const url = new URL(window.location.href);
+const event_name = url.searchParams.get('et');
+const event_id = url.searchParams.get('eid');
+const period_num = url.searchParams.get('pn');
+const period_id = url.searchParams.get('pid');
+
+const apiUrlMemberRank = '/api/members/?member_rank=';
+
+function AddParticipant ( e, dt, node, config ) {
         var members = [];
         $.each( $('td.mark-checkbox.marked'),  function (i, el) {
             members.push($(this.firstChild).data().id)
@@ -65,7 +145,6 @@ language: {
             data: data,
             success: function (response) {
                 console.log('Period add ' + response.length + ' members');
-                //var count = dt.rows( { selected: true } ).count(); //FIXME: add message on return page with number of added members
                 location.href='/event/' + event_id + '#OP' + period_num;
             },
             error: function (xhr) {
@@ -75,61 +154,16 @@ language: {
                 return false;
             }
         })
-    }
-},
-{
-    text: 'Select All',
-    action: function ( e, dt, node, config ) {
-        $('td.mark-checkbox').addClass('marked');
-    }
-},
-{
-    text: 'Clear All',
-    action: function ( e, dt, node, config ) {
-        $('td.mark-checkbox').removeClass('marked');
-        table.rows().deselect();
-    }
-},
-{% endblock table_buttons_first %}
+}
 
-{% block ready_functions %}
-table
-    .on( 'select', function ( e, dt, type, indices ) {
-        var allMarked = true;
-        var numRows = indices.length;
-        if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-                // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-            })
-        }
-        dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
-                if (numRows > 1) {
-                    if (allMarked)
-                        $(this.node()).children().first().removeClass('marked');
-                    else
-                        $(this.node()).children().first().addClass('marked');
-                } else {
-                    if ($(this.node()).children().first().hasClass('marked')) {
-                        $(this.node()).children().first().removeClass('marked');
-                        this.deselect();
-                    } else
-                        $(this.node()).children().first().addClass('marked');
-                }
-            });
-    });
+function SelectAll ( e, dt, node, config ) {
+    $('td.mark-checkbox').addClass('marked');
+}
 
-{% endblock ready_functions %}
-
-{% block table_functions %}
-
-const url = new URL(window.location.href);
-const event_name = url.searchParams.get('et');
-const event_id = url.searchParams.get('eid');
-const period_num = url.searchParams.get('pn');
-const period_id = url.searchParams.get('pid');
-const apiUrlMemberRank = '/api/members/?member_rank=';
+function ClearAll ( e, dt, node, config ) {
+    $('td.mark-checkbox').removeClass('marked');
+    table.rows().deselect();
+}
 
 function AddRows(table, values) {
     //
@@ -141,21 +175,12 @@ function AddRows(table, values) {
         
         for (var i=0; i<json.length; i++)
         {
-            var m = json[i];
-            var data = { //FIXME: Consider using render
-                check: '<td><div data-id="' + m['id'] + '"></div></td>',
-                name: '<a href="/member/'+m['id']+'?returnx=pp">'+m['full_name']+'</a>',
-                rank: '<td "data-order"=' + m['rank_order'] + '>' + m['rank'] + '</td>',
-                roles: '<td "data-order"=' + m['role_order'] + '>' + m['roles'] + '</td>',
-                phone: m['display_phone'],
-                email: m['display_email']
-            }
-            
-            table.row.add(data).invalidate(); // invalidate needed to force rank and role display
+            var data = json[i];
+            table.row.add(data);
         }
 
-        // not sure why this is required here but it is needed (tried to hoist it without success)
-        table.draw().columns.adjust().responsive.recalc();
+        // redraw table after async call
+        table.draw();
     });
 }
 
@@ -163,10 +188,10 @@ function RemoveRows(table, values) {
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            var rank = data['rank']
+            var rank = data.rank
             // Handle both cases: 'FM' and <td ...>FM</td>
             if (rank[0] == '<')
-                rank = data['rank'].match('.*>(.*)<')[1]
+                rank = data.rank.match('.*>(.*)<')[1]
             return rank == values[0];
         } )
         .remove();
@@ -183,7 +208,9 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $('#subhdr')[0].innerHTML = (event_name + ' > Add Participants (' + showRanks.join(', ') + ')'); //FIXME: Add link to event
+    //FIXME: Add link to event
+    $('#subhdr')[0].innerHTML = (event_name + ' > Add Participants (' +
+                                 showRanks.join(', ') + ')');
     document.title = 'Participant Add - ' + event_name;
 
 }
@@ -203,46 +230,31 @@ $('#filter-rank').multiSelect({
 })
 {% endblock table_functions %}
 
-{% block content %}
+{% block ready_functions %}
+table.on( 'select', function ( e, dt, type, indices ) {
+    var allMarked = true;
+    var numRows = indices.length;
+    if (numRows > 1) {
+        dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+            // For multi select - unmark only when every row is marked
+            allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+        })
+    }
+    dt.rows(indices)
+        .every( function ( rowIdx, tableLoop, rowLoop ) {
+            if (numRows > 1) {
+                if (allMarked)
+                    $(this.node()).children().first().removeClass('marked');
+                else
+                    $(this.node()).children().first().addClass('marked');
+            } else {
+                if ($(this.node()).children().first().hasClass('marked')) {
+                    $(this.node()).children().first().removeClass('marked');
+                    this.deselect();
+                } else
+                    $(this.node()).children().first().addClass('marked');
+            }
+        });
+});
 
-<main>
-
-  <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
-      <option value="TM">Technical Member</option>
-      <option value="FM">Field Member</option>
-      <option value="T">Trainee</option>
-      <option value="R">Reserve</option>
-      <option value="S">Support</option>
-      <option value="A">Associate</option>
-      <option value="G" selected >Guest</option>
-      <option value="MA" selected >Member Alum</option>
-    </select>
-  </div>
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Name</th><th>Rank</th><th>Roles</th><th>Phone</th><th>eMail</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {% for member in member_list %}
-      {% spaceless %}
-      {% if member.isActive %}
-      <tr>
-        <td><div data-id={{ member.id }}></div></td>
-        <td><a href="{% url 'member_detail' member.id %}?returnx=pp">{{ member.full_name }}</a></td>
-        <td data-order="{{ member.rank_order }}"> {{ member.rank }}</td>
-        <td data-order="{{ member.role_order }}"> {{ member.roles }}</td>
-        <td> {{ member.display_phone }}</td>
-        <td> {{ member.display_email }}</td>
-      </tr>
-      {% endif %}
-      {% endspaceless %}
-      {% endfor %}
-    </tbody>
-  </table>
-</main>
-{% endblock content%}
+{% endblock ready_functions %}

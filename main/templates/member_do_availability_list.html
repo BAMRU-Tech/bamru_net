@@ -15,7 +15,7 @@
 
 {% block content %}
 <h4>Work in progress</h4>
-<main>
+<main role="main">
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%"></table>
 </main>
 {% endblock content %}
@@ -31,16 +31,20 @@ altEditor: true,
 order: [[ 1, 'asc']],
 
 columns: [
-    { data: 'mark',
+    { data: 'mark', width: '10px',
       orderable: false,
       className: 'mark-checkbox',
       type: ['readonly', 'hidden'],
-      render: function(data, type, row) {
+      render: function(data, type, row, meta) {
           return '<div data-id="'+row.id+'"></div>';
       },
     },
-    { data: 'week', type: 'number', title: 'Week' },
-    { data: 'available', title: 'Available', responsivePriority: 0 },
+    { data: 'week', title: 'Week', width: '10%',
+      type: 'number', className: "dt-center",
+    },
+    { data: 'available', title: 'Available', width: '10%', responsivePriority: 1,
+      className: "dt-center",
+    },
     { data: 'comment', title: 'Comment' },
     { data: 'id', title: 'ID',
       visible: false,
@@ -50,7 +54,7 @@ columns: [
 
 language: { emptyTable: 'No DO periods' },
 
-onEditRow: EditRow,
+onEditRow: UpdateRow,
 
 {% endblock table_options %}
 
@@ -68,6 +72,7 @@ onEditRow: EditRow,
 
 
 {% block table_functions %}
+
 function InitialData() {
     //
     // Add rows based on date range
@@ -84,18 +89,14 @@ function InitialData() {
         for (var i=0; i<json.length; i++)
         {
             var data = json[i];
-//            var title = data['title'];
-  //          if (title.length > titleLength) 
-    //            title = title.substring(0, titleLength - 3) + '...';
-            //      data['href_title'] = '<a href="/event/' + data['id'] + '/">' + title + '</a>';
-            data['comment'] = (data['comment']) ? data['comment'] : '';  //FIXME: comment isn't returned
-            table.row.add(data).invalidate()
+            // comment isn't sent if empty
+            data.comment = (data.comment) ? data.comment : '';
+            table.row.add(data);
         }
         table.draw().columns.adjust().responsive.recalc();
     })
 
 }
-
 
 function MarkRow ( e, dt, type, indices ) {
         var allMarked = true;
@@ -123,12 +124,11 @@ function MarkRow ( e, dt, type, indices ) {
             });
 }
 
-
-function EditRow (dt, row, success, error) {
+function UpdateRow (dt, row, success, error) {
 
     var data = row;
 
-    var id = data['id']; //XX
+    var id = data.id;
     data = JSON.stringify(data);
     //FIXME: error handling
     $.ajax({
@@ -137,7 +137,9 @@ function EditRow (dt, row, success, error) {
         url: '/api/availability/' + id + '/',
         data: data,
         success: function (r, s, m) {
-            var name = r['member']['full_name'];
+            var name = r.member.full_name;  //FIXME
+            // Clear marks
+            $('td.marked').removeClass('marked');
             return success(r, s, m);
         },
         error: function (xhr) {

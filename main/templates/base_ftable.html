@@ -36,7 +36,8 @@ $(document).ready(function() {
                     } else {
                         $('#show-filter').css({'display':'none'})
                         node[0].innerHTML = labelShowFilter;
-                        if (typeof AddRowsByDate != 'undefined')  //FIXME: hack, needs to be replaced
+                        //FIXME: hack, checking for fn def, needs to be replaced
+                        if (typeof AddRowsByDate != 'undefined')
                             AddRowsByDate(table, $('#start').val(), $('#end').val())
                                           
                     }
@@ -48,10 +49,18 @@ $(document).ready(function() {
                 text: htmlShowDetail,
                 action: function ( e, dt, node, config ) {
                     if (node[0].innerText == textShowDetail) {
-                        dt.rows(':not(.parent)').nodes().to$().find('td:first-child').trigger('click');
+                        var mc = dt.cells('.marked').nodes();
+                        dt.rows(':not(.parent)').nodes()
+                            .to$().find('td:first-child').trigger('click')
+                            .removeClass('marked');
+                        $(mc).addClass('marked');
                         node[0].innerHTML = labelHideDetail;
                     } else {
-                        dt.rows('.parent').nodes().to$().find('td:first-child').trigger('click');
+                        var mc = dt.cells('.marked').nodes();
+                        dt.rows('.parent').nodes()
+                            .to$().find('td:first-child').trigger('click')
+                            .removeClass('marked');
+                        $(mc).addClass('marked');
                         node[0].innerHTML = htmlShowDetail;
                     }                          
                 }
@@ -65,11 +74,28 @@ $(document).ready(function() {
                 buttons: [ 'copy', 'csv', 'excel', 'print', 'colvis']
             }
             {% endblock more_button %}
-        ]
+        ],
+
+        initComplete: function (settings) {
+            var table = new $.fn.dataTable.Api( settings );
+            DisplayExpandDetail(null, table, []);
+        },
+
     })
 
     UpdateSubheaderBasedOnSettings(table);
 
+    table.on( 'responsive-resize', DisplayExpandDetail );
+
+    function DisplayExpandDetail ( e, table, columns ) {
+        //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
+        if (table.row(0).count()
+            && getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')
+
+            $("button.dt-button:contains(' Expand Detail')").show();
+        else
+            $("button.dt-button:contains(' Expand Detail')").hide();
+    }
     {% block ready_functions %}{% endblock %}
 
 });
