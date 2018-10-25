@@ -1,5 +1,7 @@
 {% extends 'base_ftable.html' %}
 
+{# --- Page definition --- #}
+
 {% block title %}Events{% endblock title %}
 
 {% block subheader %}
@@ -17,38 +19,51 @@
 {% endblock subheader %}
 
 
+{% block content %}
+<main role="main">
+  <div id="show-filter" style="display: none">
+    <select id="filter-type" multiple="multiple" selectableHeader="Display type">
+      <option value='meeting'>Meeting</option>
+      <option value='operation'>Operation</option>
+      <option value='training'>Training</option>
+      <option value='community'>Community</option>
+    </select>
+    <label for="start">Start after</label>
+    <input type="date" id="start"></input>
+    <label for="end">End before</label>
+    <input type="date" id="end"></input>
+  </div>
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%"></table>
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
+
 {% block table_options %}
-order: [[ 4, "asc" ]],
-columnDefs: [
-    { type: "string", targets: 3 }, //FIXME: still needed
-    { responsivePriority: 0, targets: 0 },
-    { responsivePriority: 1, targets: 4 },
-    { responsivePriority: 2, targets: 1 },
-    { responsivePriority: 3, targets: 3 }
-],
+
+order: [[ 4, 'asc' ]],
+
 columns: [
-    { data: 'href_title',
-      render: function(data, type, row) {
-          return data;
-      }
-    },
-    { data: 'display_location'},
-    { data: 'type'},
-    { data: 'leaders'},
-    { data: 'display_start'},
+    { data: 'href_title', title: 'Title', responsivePriority: 1, },
+    { data: 'display_location', title: 'Location', responsivePriority: 3, },
+    { data: 'type', title: 'Type', responsivePriority: 4, },
+    { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
+    { data: 'display_start', title: 'Start', type: 'date', responsivePriority: 2, },
 ],
-language: {
-      emptyTable: "No events selected"
-},
+
+language: { emptyTable: 'No events selected' },
+
 {% endblock table_options %}
 
 {% block table_functions %}
 var filterTypes = [];
-var filterTypesCap = []; //FIXME: Bug allows event type to be Capitalized when stored in the DB
+var filterTypesCap = [];
 
-/* Custom filtering function */
+// Custom filtering function
 $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
+        //FIXME: Bug allows event type to be Capitalized when stored in DB
         if ( filterTypes.includes(data[2]) || filterTypesCap.includes(data[2]) ) {
             return true;
         }
@@ -56,14 +71,16 @@ $.fn.dataTable.ext.search.push(
     }
 );
 
-$("#filter-type").multiSelect({
-    selectableHeader: "<div class='custom-header'>Show</div>",
-    selectionHeader: "<div class='custom-header'>Hide</div>",
+$('#filter-type').multiSelect({
+    selectableHeader: '<div class="custom-header">Show</div>',
+    selectionHeader: '<div class="custom-header">Hide</div>',
     afterSelect: function(values){
         UpdateSubheaderBasedOnSettings(table);
+        table.draw();
     },
     afterDeselect: function(values){
         UpdateSubheaderBasedOnSettings(table);
+        table.draw();
     }
 });
 
@@ -91,17 +108,17 @@ function AddRowsByDate(table, start, end) {
     //FIXME: add error handling
     $.getJSON(url, null, function( json ) {
         
-        for (var i=0; i<json.length; i++)
+        for (var i = 0; i < json.length; i++)
         {
             var data = json[i];
-            var title = data['title'];
+            var title = data.title;
             if (title.length > titleLength) 
                 title = title.substring(0, titleLength - 3) + '...';
-            data['href_title'] = '<a href="/event/' + data['id'] + '/">' + title + '</a>';
+            data.href_title = '<a href="/event/' + data.id + '/">' + title + '</a>';
             table.row.add(data).invalidate()
         }
 
-        // not sure why this is required here but it is needed (tried to hoist it without success)
+        // redraw table after async call
         table.draw().columns.adjust().responsive.recalc();
     })
 }
@@ -111,7 +128,7 @@ function UpdateSubheaderBasedOnSettings(table) {
     filterTypes = [];
     filterTypesCap = [];
 
-    $("#filter-type option").each(function() {
+    $('#filter-type option').each(function() {
         if (!this.selected) {
             var eventType = this.value;
             filterTypesCap.push(eventType.charAt(0).toUpperCase() + eventType.substr(1));
@@ -120,7 +137,7 @@ function UpdateSubheaderBasedOnSettings(table) {
     });
 
     // hack to shorten display on sm devices
-    $("#subhdr")[0].innerHTML = ("Events (" + filterTypes.join(", ") + ")").replace("operation", "ops");
+    $('#subhdr')[0].innerHTML = ('Events (' + filterTypes.join(', ') + ')').replace('operation', 'ops');
 
 }
 {% endblock table_functions %}
@@ -155,33 +172,3 @@ if (startBefore || startAfter) {
 AddRowsByDate(table, startAfter, startBefore);
 
 {% endblock ready_functions %}
-
-    
-{% block content %}
-<main>
-  <div id="show-filter" style="display: none">
-    <select id="filter-type" multiple="multiple" selectableHeader="Display type">
-      <option value='meeting'>Meeting</option>
-      <option value='operation'>Operation</option>
-      <option value='training'>Training</option>
-      <option value='community'>Community</option>
-    </select>
-    <label for="start">Start after</label>
-    <input type="date" id="start"></input>
-    <label for="end">End before</label>
-    <input type="date" id="end"></input>
-  </div>
-    
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th>Title</th><th>Location</th><th>Type</th><th>Leaders</th><th>Start</th>
-      </tr>
-    </thead>
-
-    <tbody>
-    </tbody>
-  </table>
- </div>
-</main>
-{% endblock content %}

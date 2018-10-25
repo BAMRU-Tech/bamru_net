@@ -16,7 +16,11 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE. See the license files for details.
  *
- *  CST: 10/5/18 Added code to allow mulitple tables per page
+ *  CST: 10/5/18  Allow mulitple tables per page
+ *  CST: 10/25/18 Added input type date
+ *                Cleared selection after edit
+ *                Changed option comparison to == for boolean (rather than includes())
+ *                Changed button 'edit' to 'update'
  */
 (function (factory) {
     if (typeof define === 'function' && define.amd) {
@@ -322,13 +326,25 @@
                                 + adata.data()[0][columnDefs[j].name] + "'>";
                         }
 
+                        // Adding date-fields
+                        if (columnDefs[j].type.includes("date")) {
+                            data += "<input type='date'  id='"
+                                + columnDefs[j].name
+                                + "' name='"
+                                + columnDefs[j].title
+                                + "' placeholder='"
+                                + columnDefs[j].title
+                                + "' style='overflow:hidden'  class='form-control  form-control-sm' value='"
+                                + adata.data()[0][columnDefs[j].name] + "'>";
+                        }
+
                         // Adding select-fields
                         if (columnDefs[j].type.includes("select")) {
                             var options = "";
                             for (var i = 0; i < columnDefs[j].options.length; i++) {
                                 // Assigning the selected value of the <selected> option
-                                if (adata.data()[0][columnDefs[j].name]
-                                    .includes(columnDefs[j].options[i])) {
+                                if (adata.data()[0][columnDefs[j].name] ==
+                                    columnDefs[j].options[i]) {
                                     options += "<option value='"
                                         + columnDefs[j].options[i] + "'selected>"
                                         + columnDefs[j].options[i] + "</option>";
@@ -350,7 +366,7 @@
 
                 $('#altEditor-modal').on('show.bs.modal', function () {
                     var btns = '<button type="button" data-content="remove" class="btn btn-default" data-dismiss="modal">Close</button>' +
-                        '<button type="button" data-content="remove" class="btn btn-primary" id="editRowBtn">Edit</button>';
+                        '<button type="button" data-content="remove" class="btn btn-primary" id="editRowBtn">Update</button>';
                     $('#altEditor-modal').find('.modal-title').html('Edit Record');
                     $('#altEditor-modal').find('.modal-body').html(data);
                     $('#altEditor-modal').find('.modal-footer').html(btns);
@@ -584,6 +600,18 @@
                                 + "' style='overflow:hidden'  class='form-control  form-control-sm' value=''>";
                         }
 
+                        // Adding date-fields
+                        if (columnDefs[j].type.includes("date")) {
+                            data += "<input type='date'  id='"
+                                + columnDefs[j].name
+                                + "' name='"
+                                + columnDefs[j].title
+                                + "' placeholder='"
+                                + columnDefs[j].title
+                                + "' style='overflow:hidden'  class='form-control  form-control-sm' value=''>";
+                        }
+
+
                         // Adding select-fields
                         if (columnDefs[j].type.includes("select")) {
                             var options = "";
@@ -717,6 +745,7 @@
                 $('#altEditor-modal .modal-body').append(message);
                 
                 this.s.dt.row({ selected : true }).data(data);
+                this.s.dt.row({ selected : true }).deselect();
                 this.s.dt.draw();
                 
                 // Disabling submit button

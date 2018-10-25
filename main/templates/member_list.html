@@ -1,5 +1,7 @@
 {% extends 'base_ftable.html' %}
 
+{# --- Page definition --- #}
+
 {% block title %}Team Members{% endblock title %}
 
 {% block subheader %}
@@ -14,17 +16,88 @@
 </ul>
 {% endblock subheader %}
 
+{% block content %}
+<main role="main">
+  <div id="show-filter" style="display: none">
+    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+      <option value="TM">Technical Member</option>
+      <option value="FM">Field Member</option>
+      <option value="T">Trainee</option>
+      <option value="R">Reserve</option>
+      <option value="S">Support</option>
+      <option value="A">Associate</option>
+      <option value="G" selected >Guest</option>
+      <option value="MA" selected >Member Alum</option>
+    </select>
+  </div>
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+    <tbody>
+      {% for member in member_list %}
+      {% if member.isActive %}
+      <tr>
+        <td>{{ member.full_name }}</td>
+        <td>{{ member.id }}</td>
+        <td>{{ member.rank }}</td>
+        <td>{{ member.rank_order }}</td>
+        <td>{{ member.roles }}</td>
+        <td>{{ member.role_order }}</td>
+        <td>{{ member.display_phone }}</td>
+        <td>{{ member.display_email }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
 
 {% block table_options %}
-order: [[ 0, 'asc' ]],
+order: [[ 4, 'desc' ]],
+
 columnDefs: [
     { responsivePriority: 1, targets: 0 },
     { responsivePriority: 2, targets: 3 },
     { responsivePriority: 3, targets: 4}
 ],
-language: {
-      emptyTable: 'No members selected'
-},
+
+columns: [
+    { data: 'full_name', title: 'Name', responsivePriority: 1,
+      render: function(data, type, row, meta) {
+          if (type == 'display')
+              return '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
+          else
+              return data;
+      }
+    },
+    { data: 'id', visible: false, },
+    { data: 'rank', title: 'Rank', responsivePriority: 2,
+      render: function(data, type, row, meta) {
+          if (type == 'sort')
+              return row.rank_order;
+          else
+              return data;
+      }
+    },
+    { data: 'rank_order', visible: false, },
+    { data: 'roles', title: 'Roles', responsivePriority: 1,
+      render: function(data, type, row, meta) {
+           if (type == 'sort') {
+               // order: asc and role_order doesn't work
+               return 99 - row.role_order; //FX?
+           } else
+              return data;
+      }
+    },
+    { data: 'role_order', visible: false, },
+    { data: 'display_phone', title: 'Phone', },
+    { data: 'display_email', title: 'eMail', },
+],
+
+language: { emptyTable: 'No members selected' },
+
 {% endblock table_options %}
 
 {% block table_functions %}
@@ -38,20 +111,13 @@ function AddRows(table, values) {
     //FIXME: add error handling
     $.getJSON(url, null, function( json ) {
         
-        for (var i=0; i<json.length; i++)
+        for (var i = 0; i < json.length; i++)
         {
-            var data = [
-                '<a href="/member/'+json[i]['id']+'?returnx=ml">'+json[i]['full_name']+'</a>',
-                {'display': json[i]['rank'], '@data-sort': json[i]['rank_order']},
-                {'display': json[i]['roles'], '@data-sort': json[i]['role_order']},
-                json[i]['display_phone'],
-                json[i]['display_email']
-            ]
-            
-            table.row.add(data).invalidate() // invalidate needed to force rank and role display
+            var data = json[i];
+            table.row.add(data);
         }
         
-        // not sure why this is required here but it is needed (tried to hoist it without success)
+        // redraw table after async call
         table.draw().columns.adjust().responsive.recalc();
     })
 }
@@ -62,7 +128,7 @@ function RemoveRows(table, values)
     // Remove rows based on rank
     table.rows(
         function ( idx, data, node ) {
-            return data[1]['display'] == values[0];
+            return data.rank == values[0];
         } )
         .remove();
 
@@ -96,42 +162,3 @@ function UpdateSubheaderBasedOnSettings(table) {
 }
 
 {% endblock table_functions %}
-
-
-{% block content %}
-<main>
-  <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
-      <option value="TM">Technical Member</option>
-      <option value="FM">Field Member</option>
-      <option value="T">Trainee</option>
-      <option value="R">Reserve</option>
-      <option value="S">Support</option>
-      <option value="A">Associate</option>
-      <option value="G" selected >Guest</option>
-      <option value="MA" selected >Member Alum</option>
-    </select>
-  </div>
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th>Name</th><th>Rank</th><th>Roles</th><th>Phone</th><th>eMail</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {% for member in member_list %}
-      {% if member.isActive %}
-      <tr>
-        <td><a href="{% url 'member_detail' member.id %}?returnx=ml">{{ member.full_name }}</a></td>
-        <td data-sort="{{ member.rank_order }}"> {{ member.rank }}</td>
-        <td data-sort="{{ member.role_order }}"> {{ member.roles }}</td>
-        <td> {{ member.display_phone }}</td>
-        <td> {{ member.display_email }}</td>
-      </tr>
-      {% endif %}
-      {% endfor %}
-    </tbody>
-  </table>
-</main>
-{% endblock %}

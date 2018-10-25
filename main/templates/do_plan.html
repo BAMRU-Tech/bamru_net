@@ -1,89 +1,137 @@
 {% extends 'base_do.html' %}
 
-{% block title %}DO Planning{% endblock title %}
+{% block title %}DO Planning{% endblock %}
 {% block do_title %}DO Availability Planning{% endblock %}
 
-{% block js %}
-  {{ block.super }}
-  <script>
-    $(document).ready(function() {
-        $('#dTbl').DataTable( {
-            dom: "Bfrtip",
-            responsive: true,
-            paging:   false,
-            info:     false,
-            order: [[ 0, "asc" ]],
-            columnDefs: [],
-            buttons: [
-                {
-                    text: '<i class="fa fa-caret-square-o-left"></i> Prev',
-                    action: function ( e, dt, node, config ) {
-                        location.href="{{ request.path }}{{ query_prev }}";
-                    }
-                },
-                {
-                    text: '<i class="fa fa-caret-square-o-right"></i> Next',
-                    action: function ( e, dt, node, config ) {
-                        location.href="{{ request.path }}{{ query_next }}";
-                    },
-                }
-            ],
-            language: {
-                emptyTable: "No DO availability entries are available"
-            },
-        });
 
-        function updateMemberUnassigned($tr) {
-            var assigned = false;
-            $tr.children('.assignment-cell').each(function(){
-                if ($(this).hasClass('assigned')) {
-                    assigned = true;
+{% block content %}
+<main role="main">
+  <table id="dTbl" class="display table-bordered compact nowrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>Name</th>
+        {% for w in week_info %}
+        <th data-week="{{w.week}}" class="{% if not w.assigned %}unassigned-week{% endif %}">
+          Wk {{ w.week }}
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for m, x in members %}
+      <tr>
+        <td class="{% if not x.assigned %}unassigned-member{% endif %}">{{ m }}</td>
+        {% for w in x.weeks %}
+        {% if w %}
+        <td data-id="{{w.id}}"
+            data-week="{{w.week}}" title="{{ w.comment }}"
+            class="assignment-cell {% if not w.assigned %}un{% endif %}assigned">
+          {% if w.available %}A{% else %}-{% endif %}
+          {% if w.comment %}*{% endif %}
+          <span class="assignment"></span>
+          <button class="add-assignment">+</button>
+          <button class="rm-assignment">-</button>
+        </td>
+        {% else %}
+        <td></td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
+
+{% block js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    $('#dTbl').DataTable( {
+        dom: "Bfrtip",
+        responsive: true,
+        paging: false,
+        info: false,
+        order: [[ 0, "asc" ]],
+        buttons: [
+            {
+                text: '<i class="fa fa-caret-square-o-left"></i> Prev',
+                action: function ( e, dt, node, config ) {
+                    location.href="{{ request.path }}{{ query_prev }}";
                 }
-            });
-            $tr.children().first().toggleClass('unassigned-member', !assigned);
-        }
-        function ajaxAssignment(id, assigned) {
-            // TODO indicate in-progress requests, surface errors
-            //FIXME: error handling
-            $.ajax({
-                'method': 'patch',
-                'url': '/api/do/'+id+'/',
-                'data': {'assigned': assigned},
-            });
-        }
-        function unassign($td) {
-            ajaxAssignment($td.data('id'), false);
-            $('th[data-week='+$td.data('week')+']').addClass('unassigned-week');
-            $td.removeClass('assigned');
-            $td.addClass('unassigned');
-            updateMemberUnassigned($td.parent());
-        }
-        function assign($td) {
-            // Unassign anyone else with this week.
-            $('td[data-week='+$td.data('week')+']').each(function(){
-                if ($(this).hasClass('assigned')) {
-                    unassign($(this));
-                }
-            });
-            ajaxAssignment($td.data('id'), true);
-            $('th[data-week='+$td.data('week')+']').removeClass('unassigned-week');
-            $td.removeClass('unassigned');
-            $td.addClass('assigned');
-            updateMemberUnassigned($td.parent());
-        }
-        $(document).on('click', '.add-assignment', function(e) {
-            e.preventDefault();
-            assign($(this).parent());
-            return false;
-        });
-        $(document).on('click', '.rm-assignment', function(e) {
-            e.preventDefault();
-            unassign($(this).parent());
-            return false;
-        });
+            },
+            {
+                text: '<i class="fa fa-caret-square-o-right"></i> Next',
+                action: function ( e, dt, node, config ) {
+                    location.href="{{ request.path }}{{ query_next }}";
+                },
+            }
+        ],
+
+        language: { emptyTable: "No DO availability entries are available" },
     });
-  </script>
-{% endblock %}
+
+    function updateMemberUnassigned($tr) {
+        var assigned = false;
+        $tr.children('.assignment-cell').each(function(){
+            if ($(this).hasClass('assigned')) {
+                assigned = true;
+            }
+        });
+        $tr.children().first().toggleClass('unassigned-member', !assigned);
+    }
+
+    function ajaxAssignment(id, assigned) {
+        // TODO indicate in-progress requests, surface errors
+        //FIXME: error handling
+        $.ajax({
+            'method': 'patch',
+            'url': '/api/do/'+id+'/',
+            'data': {'assigned': assigned},
+        });
+    }
+
+    function unassign($td) {
+        ajaxAssignment($td.data('id'), false);
+        $('th[data-week='+$td.data('week')+']').addClass('unassigned-week');
+        $td.removeClass('assigned');
+        $td.addClass('unassigned');
+        updateMemberUnassigned($td.parent());
+    }
+
+    function assign($td) {
+        // Unassign anyone else with this week.
+        $('td[data-week='+$td.data('week')+']').each(function(){
+            if ($(this).hasClass('assigned')) {
+                unassign($(this));
+            }
+        });
+        ajaxAssignment($td.data('id'), true);
+        $('th[data-week='+$td.data('week')+']').removeClass('unassigned-week');
+        $td.removeClass('unassigned');
+        $td.addClass('assigned');
+        updateMemberUnassigned($td.parent());
+    }
+
+    $(document).on('click', '.add-assignment', function(e) {
+        e.preventDefault();
+        assign($(this).parent());
+        return false;
+    });
+
+    $(document).on('click', '.rm-assignment', function(e) {
+        e.preventDefault();
+        unassign($(this).parent());
+        return false;
+    });
+});
+</script>
+
+{% endblock js %}
 
 {% block css %}
 {{ block.super }}
@@ -117,41 +165,4 @@
     display: initial;
 }
 </style>
-{% endblock %}
-
-{% block content %}
-<main>
-  <table id="dTbl" class="display table-bordered compact nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th>Name</th>
-        {% for w in week_info %}
-        <th data-week="{{w.week}}" class="{% if not w.assigned %}unassigned-week{% endif %}">Wk {{ w.week }}</th>
-        {% endfor %}
-      </tr>
-    </thead>
-
-    <tbody>
-      {% for m, x in members %}
-      <tr>
-        <td class="{% if not x.assigned %}unassigned-member{% endif %}">{{ m }}</td>
-        {% for w in x.weeks %}
-        {% if w %}
-        <td data-id="{{w.id}}" data-week="{{w.week}}" title="{{ w.comment }}" class="assignment-cell {% if not w.assigned %}un{% endif %}assigned">
-          {% if w.available %}A{% else %}-{% endif %}
-          {% if w.comment %}*{% endif %}
-          <span class="assignment"></span>
-          <button class="add-assignment">+</button>
-          <button class="rm-assignment">-</button>
-        </td>
-        {% else %}
-          <td></td>
-        {% endif %}
-        {% endfor %}
-      </tr>
-      {% endfor %}
-      </tbody>
-  </table>
- </div>
-</main>
-{% endblock %}
+{% endblock css %}

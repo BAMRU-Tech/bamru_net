@@ -1,57 +1,32 @@
 {% extends 'base_ftable.html' %}
 
-{% block title %}Message Detail - {{ message.period }}{% endblock title %}
+{# --- Page definition --- #}
+
+{% block title %}Message Detail{% endblock %}
 
 {% block subheader %}
-  <strong id="subhdr">Message Detail</strong>
+<strong>Message Detail{% if message.period %} - {{ message.period }}{% endif %}</strong>
 {% endblock subheader %}
 
-{% block table_options %}
-order: [[ 0, 'asc' ]],
-columnDefs: [
-    { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 2, targets: 2 },
-    { responsivePriority: 3, targets: 1}
-],
-columns: [
-    {data: 'name'},
-    {data: 'sms_status'},
-    {data: 'email_status'},
-    {data: 'RSVP'},
-],
-language: {
-      emptyTable: 'No messages'
-},
-{% endblock table_options %}
-
-{# remove filter button #}
-{% block table_buttons_filter %}{% endblock %}
-
-{% block table_functions %}
-  function UpdateSubheaderBasedOnSettings(table) {}
-{% endblock table_functions %}
-
 {% block content %}
-Message:
-<p>from {{ message.author }}</p>
-<p>{{ message.text }}</p>
-<p>Period: <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a></p>
-<p>Period format: {{ message.period_format }}</p>
-
+<p></p>
+<p><strong>From: </strong> {{ message.author }}</p>
+<p><strong>Message: </strong>{{ message.text }}</p>
+{% if message.period %}
+<p><strong>Operation period: </strong>
+  <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a></p>
+{% endif %}
+{% if message.period_format %}
+<p><strong>Period format: </strong>{{ message.period_format }}</p>
+{% endif %}
+<p></p>
 
 <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>SMS status</th>
-      <th>Email status</th>
-      <th>RSVP</th>
-    </tr>
-  </thead>
-{% for d in message.distribution_set.all %}
   <tbody>
+    {% for d in message.distribution_set.all %}
     <tr>
       <td>{{ d.member }}</td>
+      <td>{{ d.rsvp_display }}</td>
       <td>
         {% for m in d.outboundsms_set.all %}
         {{ m.display|linebreaks }}
@@ -62,10 +37,34 @@ Message:
         {{ m.display|linebreaks }}
         {% endfor %}
       </td>
-      <td>{{ d.rsvp_display }}</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
 {% endblock content%}
+
+
+{# --- Table definition --- #}
+
+{% block table_options %}
+
+order: [[ 0, 'asc' ]],
+
+columns: [
+    { data: 'name', title: 'Name', responsivePriority: 1, },
+    { data: 'RSVP', title: 'RSVP', responsivePriority: 2, },
+    { data: 'sms_status', title: 'Sms status', responsivePriority: 3, },
+    { data: 'email_status', title: 'Email status', responsivePriority: 4, },
+],
+
+language: { emptyTable: 'No messages' },
+
+{% endblock table_options %}
+
+{# remove filter button #}
+{% block filter_button %}{% endblock %}
+
+{% block table_functions %}
+  function UpdateSubheaderBasedOnSettings(table) {}
+{% endblock table_functions %}

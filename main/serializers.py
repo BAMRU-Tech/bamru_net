@@ -13,15 +13,17 @@ logger = logging.getLogger(__name__)
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
-        read_only_fields = ('full_name', 'rank', 'rank_order', 'roles', 'role_order', 'display_email', 'display_phone', 'short_name',)
-        fields = ('id', 'url', 'first_name', 'last_name', 'username', 'dl', 'ham', 'v9',  'is_active', 'is_staff', 'is_current_do', 'is_superuser', 'last_login',) + read_only_fields
+        read_only_fields = ('full_name', 'rank', 'rank_order', 'roles', 'role_order',
+                            'display_email', 'display_phone', 'short_name',)
+        fields = ('id', 'username', 'dl', 'ham', 'v9', 'is_staff', 'is_current_do',
+                  'is_superuser', 'last_login',) + read_only_fields
 
 
 class UnavailableSerializer(serializers.HyperlinkedModelSerializer):
     member = MemberSerializer()
     class Meta:
         model = Unavailable
-        fields = ('id', 'url', 'member', 'start_on', 'end_on', 'comment', )
+        fields = ('id', 'member', 'start_on', 'end_on', 'comment', )
 
 
 class BareUnavailableSerializer(serializers.ModelSerializer):
@@ -44,7 +46,7 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
         read_only_fields = ('full_name', 'rank', 'rank_order')
-        fields = ('id', 'url', 'busy') + read_only_fields
+        fields = ('id', 'busy') + read_only_fields
 
 
 class CertSerializer(serializers.HyperlinkedModelSerializer):
@@ -52,7 +54,7 @@ class CertSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Cert
         read_only_fields = ('is_expired', 'color', 'display',)
-        fields = ('id', 'url', 'member_id', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
+        fields = ('id', 'member_id', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
 
 
 class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
@@ -66,7 +68,7 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
         read_only_fields = ('full_name', 'rank', 'rank_order')
-        fields = ('id', 'url', 'certs') + read_only_fields
+        fields = ('id', 'certs') + read_only_fields
 
 
 class DoSerializer(serializers.HyperlinkedModelSerializer):
@@ -99,7 +101,7 @@ class EventListSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Event
         read_only_fields = ('display_title', 'display_location', 'display_start',)
-        fields = ('id', 'url', 'title', 'type', 'leaders', 'description', 'location', 'start', 'finish',) + read_only_fields
+        fields = ('id', 'title', 'type', 'leaders', 'description', 'location', 'start', 'finish',) + read_only_fields
 
 
 class EventDetailSerializer(EventListSerializer):

@@ -1,111 +1,109 @@
 {% extends 'base_ftable.html' %}
 
+{# --- Page definition --- #}
+
 {% block title %}Certs - {{member.full_name}} {% endblock title %}
 
 {% block subheader %}
-<strong id="subhdr">>
-  <a href="{% url 'member_detail' member.id %}?returnx=mc">{{member.full_name }} ({{ member.rank }})</a>
+<strong id="subhdr">
+    <a href="{% url 'member_detail' member.id %}?returnx=mc">
+    {{member.full_name }} ({{ member.rank }})</a>
     &gt; Certs
 </strong>
 {% endblock subheader %}
 
+{% block content %}
+<main role="main">
+  <table id="dTbl" class="display table-bordered wrap" style="width:100%">
+    <tbody>
+      {% for cert in cert_list %}
+      <tr>
+        <td></td>
+        <td>{{ cert.get_type_display }}</td>
+        <td>{{ cert.description }}</td>
+        <td>
+          {% if cert.link %}
+            <a href="{{ cert.link }}">{{cert.link}}</a>
+          {% endif %}
+        </td>
+        <td>{{ cert.comment }}</td>
+        <td>{{ cert.expiration|date:"Y-m-d" }}</td>
+        <td>{{ cert.id }}</td>
+        <td>{{ cert.is_expired }}</td>
+        <td>{{ cert.color }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
 
 {% block table_options %}
-dom: 'Bfrtip',
-responsive: true,
 select: 'os',
 altEditor: true,
-order: [[ 4, 'desc']],
-columnDefs: [ // FIXME: sort by most expired cert?
+
+order: [[ 5, 'desc']],
+
+columnDefs: [ //FIXME: sort by most expired cert?
     {
         targets: [ 1, 4 ],
-        'render': function ( data, type, rowData, meta ) {
-            if (meta['col'] == 0 && rowData['display']) {
+        render: function ( data, type, row, meta ) {
+            if (meta.col == 0 && row.display) {
                 // Handle type 'cpr' -> 'CPR'
-                data = rowData['display']
+                data = row.display
             } else {
                 // Add color for up coming cert expirations
-                var row = $('#dTbl').DataTable().row(meta['row']).node();
-                $('td:eq(4)', row).css('background-color', rowData['color'])
+                var rnode = $('#dTbl').DataTable().row(meta.row).node();
+                $('td:eq(4)', rnode).css('background-color', row.color)
             }
             return data;
         },
     },
-    { responsivePriority: 0, targets: 1 },
-    { responsivePriority: 2, targets: 2 },
-    { responsivePriority: 3, targets: 3 },
-    { responsivePriority: 1, targets: 4 },
 ],
+
+//*FIXME: Should the comment col be displayed?
 columns: [
-    { data: 'mark',
+    { data: 'mark', width: '10px', responsivePriority: 1,
       orderable: false,
       className: 'mark-checkbox',
       type: ['readonly', 'hidden'],
-      render: function(data, type, row) {
-          return '<div data-id="'+row.id+'"></div>';
+      render: function(data, type, row, meta) {
+          return '<div data-id="' + row.id + '"></div>';
       },
     },
-    { data: 'type', type: 'readonly' },
-    { data: 'description' },
-    { data: 'url' },
-    { data: 'expiration' },
-    { data: 'id', type: ['read-only', 'hidden'], visible: false },
-    { data: 'is_expired', type: ['read-only', 'hidden'], visible: false },
-    { data: 'color', type: ['read-only', 'hidden'], visible: false },
+    { data: 'type', type: 'readonly', title: 'Type', responsivePriority: 1, },
+    { data: 'description', title: 'Description', responsivePriority: 3, },
+    { data: 'link', title: 'Documentation', responsivePriority: 4,
+      render: function(data, type, row, meta) {
+          if (type == 'display' && data == '') 
+              return row.comment;
+          else
+              return data
+      }
+    },
+    { data: 'comment', title: 'Comment', visible: false, },
+    { data: 'expiration', title: 'Expiration', responsivePriority: 2,
+      type: 'date', 
+      render: function(data, type, row, meta) {
+          if (type == 'display' && data != '') {
+                  var date = new Date(data+'T00:00');
+                  return date.toLocaleDateString();
+          } else
+              return data;
+      },
+    },
+    { data: 'id', type: ['read-only', 'hidden'], visible: false, title: 'Id', },
+    { data: 'is_expired', type: ['read-only', 'hidden'], visible: false, title: 'Expired', },
+    { data: 'color', type: ['read-only', 'hidden'], visible: false, title: 'HiLite', },
 ],
-language: {
-    emptyTable: 'No busy periods'
-},
 
-onAddRow: function(dt, row, success, error) {
+language: { emptyTable: 'No busy periods' },
 
-    var data = row;
-
-    data['member'] = $('#memberId').val();
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'POST',
-        contentType: 'application/json',
-        url: '/api/availability/',
-        data: data,
-        success: function (r, s, m) {
-            return success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('availability add failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
-
-onEditRow: function(dt, row, success, error) {
-
-    var data = row;
-
-    delete data['type'];
-
-    var id = data['id'];
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'PATCH',
-        contentType: 'application/json',
-        url: '/api/certs/' + id + '/',
-        data: data,
-        success: function (r, s, m) {
-            return success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('cert edit failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
+onAddRow: AddCert,
+onEditRow: UpdateRow,
 
 {% endblock table_options %}
 
@@ -140,9 +138,60 @@ onEditRow: function(dt, row, success, error) {
 {% endblock table_buttons_first %}
 
 {# remove filter button #}
-{% block table_buttons_filter %}{% endblock %}
+{% block filter_button %}{% endblock %}
 
 {% block table_functions %}
+
+//FIXME: Currently using cert_form
+function AddCert (dt, row, success, error) {
+    var data = row;
+
+    data.member = $('#memberId').val();
+    data = JSON.stringify(data);
+    //FIXME: error handling
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/availability/',
+        data: data,
+        success: function (r, s, m) {
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability add failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
+
+function UpdateRow (dt, row, success, error) {
+    var data = row;
+
+    delete data.type;
+
+    var id = data.id;
+    data = JSON.stringify(data);
+    //FIXME: error handling
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/certs/' + id + '/',
+        data: data,
+        success: function (r, s, m) {
+            // Clear marks
+            $('td.marked').removeClass('marked');
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('cert edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
 
 function DeleteCerts ( e, dt, node, config ) {
     var certs = [];
@@ -165,44 +214,43 @@ function DeleteCerts ( e, dt, node, config ) {
                 method: 'DELETE',
                 contentType: 'application/json',
                 url: '/api/certs/' + certs[i] + '/',
+                success: function () {
+                    location.reload(true);
+                },
                 error: function (msg) {
-                    console.log('availability delete failed: '+msg);
+                    console.log('cert delete failed: '+msg);
                     alert(msg);
                     return false;
                 },
             })
         }
-        //FIXME: This seems like a bad idea but there is delay getting the updated data
-        setTimeout(function(){
-            location.reload(true);
-        }, 200);
     }
 }
 
 function MarkRow ( e, dt, type, indices ) {
-        var allMarked = true;
-        var numRows = indices.length;
-        if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-                // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-            })
-        }
-        dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
-                if (numRows > 1) {
-                    if (allMarked)
-                        $(this.node()).children().first().removeClass('marked');
-                    else
-                        $(this.node()).children().first().addClass('marked');
-                } else {
-                    if ($(this.node()).children().first().hasClass('marked')) {
-                        $(this.node()).children().first().removeClass('marked');
-                        this.deselect();
-                    } else
-                        $(this.node()).children().first().addClass('marked');
-                }
-            });
+    var allMarked = true;
+    var numRows = indices.length;
+    if (numRows > 1) {
+        dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+            // For multi select - unmark only when every row is marked
+            allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+        })
+    }
+    dt.rows(indices)
+        .every( function ( rowIdx, tableLoop, rowLoop ) {
+            if (numRows > 1) {
+                if (allMarked)
+                    $(this.node()).children().first().removeClass('marked');
+                else
+                    $(this.node()).children().first().addClass('marked');
+            } else {
+                if ($(this.node()).children().first().hasClass('marked')) {
+                    $(this.node()).children().first().removeClass('marked');
+                    this.deselect();
+                } else
+                    $(this.node()).children().first().addClass('marked');
+            }
+        });
 }
 
 function UpdateSubheaderBasedOnSettings(table) {}
@@ -212,41 +260,3 @@ function UpdateSubheaderBasedOnSettings(table) {}
 {% block ready_functions %}
     table.on( 'select', MarkRow);
 {% endblock ready_functions %}
-
-
-{% block content %}
-<main>
-  <table id="dTbl" class="display table-bordered wrap" style="width:100%">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Documentation</th>
-        <th>Expiration</th>
-        <th>Id</th>
-        <th>Expired</th>
-        <th>Highlight</th>
-    </thead>
-
-    <tbody>
-      {% for cert in cert_list %}
-      <tr>
-        <td></td>
-        <td>{{ cert.get_type_display }}</td>
-        <td>{{ cert.description }}</td>
-        <td>
-          {% if cert.link %}
-            <a href="{{ cert.link }}">{{cert.link}}</a>
-          {% endif %}
-        </td>
-        <td>{{ cert.expiration|date:"Y-m-d" }}</td>
-        <td>{{ cert.id }}</td>
-        <td>{{ cert.is_expired }}</td>
-        <td>{{ cert.color }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</main>
-{% endblock content %}

@@ -1,66 +1,60 @@
 {% extends 'base_ftable.html' %}
 
+{# --- Page definition --- #}
+
 {% block title %}Availability{% endblock title %}
 
 {% block subheader %}
 <strong>
-  <a href="{% url 'member_detail' member.id %}?returnx=ma">{{member.full_name }} ({{ member.rank }})</a>
+  <a href="{% url 'member_detail' member.id %}?returnx=ma">
+    {{member.full_name }} ({{ member.rank }})
+  </a>
   &gt; DO Availability
 </strong>
 {% endblock subheader %}
 
+{% block content %}
+<h4>Work in progress</h4>
+<main role="main">
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%"></table>
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
 
 {% block table_options %}
-dom: 'Bfrtip',
-responsive: true,
+
 select: 'os',
 altEditor: true,
-order: [[ 1, 'desc']],
-columnDefs: [],
+
+order: [[ 1, 'asc']],
+
 columns: [
-    { data: 'mark',
+    { data: 'mark', width: '10px',
       orderable: false,
       className: 'mark-checkbox',
       type: ['readonly', 'hidden'],
-      render: function(data, type, row) {
+      render: function(data, type, row, meta) {
           return '<div data-id="'+row.id+'"></div>';
       },
     },
-    { data: 'week', type: 'number' },
-    { data: 'available' },
-    { data: 'comment' },
-    { data: 'id',
+    { data: 'week', title: 'Week', width: '10%',
+      type: 'number', className: "dt-center",
+    },
+    { data: 'available', title: 'Available', width: '10%', responsivePriority: 1,
+      className: "dt-center",
+    },
+    { data: 'comment', title: 'Comment' },
+    { data: 'id', title: 'ID',
       visible: false,
       type: ['readonly', 'hidden']
     },
 ],
-language: {
-    emptyTable: 'No DO periods'
-},
-onEditRow: function(dt, row, success, error) {
 
-    var data = row;
+language: { emptyTable: 'No DO periods' },
 
-    var id = data['id']; //XX
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'PATCH',
-        contentType: 'application/json',
-        url: '/api/availability/' + id + '/',
-        data: data,
-        success: function (r, s, m) {
-            var name = r['member']['full_name'];
-            return success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('availability edit failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
+onEditRow: UpdateRow,
 
 {% endblock table_options %}
 
@@ -74,7 +68,8 @@ onEditRow: function(dt, row, success, error) {
 {% endblock table_buttons_first %}
 
 {# remove filter button #}
-{% block table_buttons_filter %}{% endblock %}
+{% block filter_button %}{% endblock %}
+
 
 {% block table_functions %}
 
@@ -94,15 +89,12 @@ function InitialData() {
         for (var i=0; i<json.length; i++)
         {
             var data = json[i];
-//            var title = data['title'];
-  //          if (title.length > titleLength) 
-    //            title = title.substring(0, titleLength - 3) + '...';
-            //      data['href_title'] = '<a href="/event/' + data['id'] + '/">' + title + '</a>';
-            data['comment'] = (data['comment']) ? data['comment'] : '';  //FIXME: comment isn't returned
-            table.row.add(data).invalidate()
+            // comment isn't sent if empty
+            data.comment = (data.comment) ? data.comment : '';
+            table.row.add(data);
         }
+        table.draw().columns.adjust().responsive.recalc();
     })
-    table.draw().columns.adjust().responsive.recalc();
 
 }
 
@@ -132,9 +124,38 @@ function MarkRow ( e, dt, type, indices ) {
             });
 }
 
+function UpdateRow (dt, row, success, error) {
+
+    var data = row;
+
+    var id = data.id;
+    data = JSON.stringify(data);
+    //FIXME: error handling
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/availability/' + id + '/',
+        data: data,
+        success: function (r, s, m) {
+            var name = r.member.full_name;  //FIXME
+            // Clear marks
+            $('td.marked').removeClass('marked');
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
+
+
 function UpdateSubheaderBasedOnSettings(table) {}
 
 {% endblock table_functions %}
+
 
 {% block ready_functions %}
 table.on( 'select', MarkRow);
@@ -142,21 +163,3 @@ InitialData();
 {% endblock ready_functions %}
 
 
-{% block content %}
-<h4>Work in progress</h4>
-<main>
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th></th><th>Week</th><th>Available</th><th>Comment</th><th>Id</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      <tr>
-        <td></td><td>Week</td><td>Available</td><td>Comment</td><td>Id</td>
-      </tr>
-    </tbody>
-  </table>
-</main>
-{% endblock content %}

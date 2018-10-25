@@ -1,92 +1,90 @@
 {% extends 'base_ftable.html' %}
 
+{# --- Page definition --- #}
+
 {% block title %}Member Availability{% endblock title %}
 
 {% block subheader %}
 <strong>
-  <a href="{% url 'member_detail' member.id %}?returnx=ma">{{member.full_name }} ({{ member.rank }})</a>
+  <a href="{% url 'member_detail' member.id %}?returnx=ma">
+    {{member.full_name }} ({{ member.rank }})
+  </a>
   &gt; Busy periods
 </strong>
 {% endblock subheader %}
 
+{% block content %}
+<main role="main">
+  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+    <tbody>
+      {% for busy in availability_list %}
+      <tr>
+        <td></td>
+        <td>{{ busy.start_on|date:"Y-m-d" }}</td>
+        <td>{{ busy.end_on|date:"Y-m-d" }}</td>
+        <td>{{ busy.comment }}</td>
+        <td>{{ busy.id }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <input type="hidden" id="memberId" value="{{ member.id }}">
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
 
 {% block table_options %}
-dom: 'Bfrtip',
-responsive: true,
 select: 'os',
 altEditor: true,
+
 order: [[ 1, 'desc']],
-columnDefs: [],
+
 columns: [
-    { data: 'mark',
+    { data: 'mark', width: '10px', responsivePriority: 1,
       orderable: false,
       className: 'mark-checkbox',
       type: ['readonly', 'hidden'],
-      render: function(data, type, row) {
+      render: function(data, type, row, meta) {
           return '<div data-id="'+row.id+'"></div>';
       },
     },
-    { data: 'start_on' },
-    { data: 'end_on' },
-    { data: 'comment' },
-    { data: 'id',
+    { data: 'start_on', title: 'Start', width: '10%', responsivePriority: 2,
+      type: 'date',
+      render: function(data, type, row, meta) {
+          if (type == 'display') {
+              var date = new Date(data+'T00:00');
+              return date.toLocaleDateString();
+          } else if (type == 'sort')
+              return data;
+          else
+              return data;
+      },
+    },
+    { data: 'end_on', title: 'End', width: '10%', responsivePriority: 2,
+      type: 'date',
+      render: function(data, type, row, meta) {
+          if (type == 'display') {
+              var date = new Date(data+'T00:00');
+              return date.toLocaleDateString();
+          } else if (type == 'sort')
+              return data;
+          else
+              return data;
+      },
+    },
+    { data: 'comment', title: 'Comment', responsivePriority: 3, },
+    { data: 'id', title: 'Id',
       visible: false,
       type: ['readonly', 'hidden']
     },
 ],
-language: {
-    emptyTable: 'No busy periods'
-},
 
-onAddRow: function(dt, row, success, error) {
+language: { emptyTable: 'No busy periods' },
 
-    var data = row;
-
-    data['member'] = $('#memberId').val();
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'POST',
-        contentType: 'application/json',
-        url: '/api/availability/',
-        data: data,
-        success: function (r, s, m) {
-            r['mark'] = '';
-            success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('availability add failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
-
-onEditRow: function(dt, row, success, error) {
-
-    var data = row;
-
-    var id = data['id'];
-    data = JSON.stringify(data);
-    //FIXME: error handling
-    $.ajax({
-        method: 'PATCH',
-        contentType: 'application/json',
-        url: '/api/availability/' + id + '/',
-        data: data,
-        success: function (r, s, m) {
-            var name = r['member']['full_name'];
-            return success(r, s, m);
-        },
-        error: function (xhr) {
-            console.log('availability edit failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
-},
+onAddRow: AddBusy,
+onEditRow: UpdateRow,
 
 {% endblock table_options %}
 
@@ -109,9 +107,59 @@ onEditRow: function(dt, row, success, error) {
 {% endblock table_buttons_first %}
 
 {# remove filter button #}
-{% block table_buttons_filter %}{% endblock %}
+{% block filter_button %}{% endblock %}
 
 {% block table_functions %}
+
+function AddBusy (dt, row, success, error) {
+    var data = row;
+
+    data.member = $('#memberId').val();
+    data = JSON.stringify(data);
+    //FIXME: error handling
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/availability/',
+        data: data,
+        success: function (r, s, m) {
+            r.mark = '';
+            success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability add failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
+
+function UpdateRow (dt, row, success, error) {
+    var data = row;
+
+    var id = data.id;
+    data = JSON.stringify(data);
+    //FIXME: error handling
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/availability/' + id + '/',
+        data: data,
+        success: function (r, s, m) {
+            var name = r.member.full_name; //FIXME
+            // Clear marks
+            $('td.marked').removeClass('marked');
+            return success(r, s, m);
+        },
+        error: function (xhr) {
+            console.log('availability edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
 
 function DeleteBusyPeriods ( e, dt, node, config ) {
     var periods = [];
@@ -134,6 +182,9 @@ function DeleteBusyPeriods ( e, dt, node, config ) {
                 method: 'DELETE',
                 contentType: 'application/json',
                 url: '/api/availability/' + periods[i] + '/',
+                success: function () {
+                    location.reload(true);
+                },
                 error: function (msg) {
                     console.log('availability delete failed: '+msg);
                     alert(msg);
@@ -141,73 +192,39 @@ function DeleteBusyPeriods ( e, dt, node, config ) {
                 },
             })
         }
-        //FIXME: This seems like a bad idea but there is delay getting the updated data
-        setTimeout(function(){
-            location.reload(true);
-        }, 200);
     }
 }
 
 function MarkRow ( e, dt, type, indices ) {
-        var allMarked = true;
-        var numRows = indices.length;
-        if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-                // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-            })
-        }
-        dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
-                if (numRows > 1) {
-                    if (allMarked)
-                        $(this.node()).children().first().removeClass('marked');
-                    else
-                        $(this.node()).children().first().addClass('marked');
-                } else {
-                    if ($(this.node()).children().first().hasClass('marked')) {
-                        $(this.node()).children().first().removeClass('marked');
-                        this.deselect();
-                    } else
-                        $(this.node()).children().first().addClass('marked');
-                }
-            });
+    var allMarked = true;
+    var numRows = indices.length;
+    if (numRows > 1) {
+        dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+            // For multi select - unmark only when every row is marked
+            allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+        })
+    }
+    dt.rows(indices)
+        .every( function ( rowIdx, tableLoop, rowLoop ) {
+            if (numRows > 1) {
+                if (allMarked)
+                    $(this.node()).children().first().removeClass('marked');
+                else
+                    $(this.node()).children().first().addClass('marked');
+            } else {
+                if ($(this.node()).children().first().hasClass('marked')) {
+                    $(this.node()).children().first().removeClass('marked');
+                    this.deselect();
+                } else
+                    $(this.node()).children().first().addClass('marked');
+            }
+        });
 }
 
-function UpdateSubheaderBasedOnSettings(table) {}
+function UpdateSubheaderBasedOnSettings (table) {}
 
 {% endblock table_functions %}
 
 {% block ready_functions %}
     table.on( 'select', MarkRow);
 {% endblock ready_functions %}
-
-
-{% block content %}
-<main>
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Start</th>
-        <th>End</th>
-        <th>Comment</th>
-        <th>Id</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {% for busy in availability_list %}
-      <tr>
-        <td></td>
-        <td>{{ busy.start_on|date:"Y-m-d" }}</td>
-        <td>{{ busy.end_on|date:"Y-m-d" }}</td>
-        <td>{{ busy.comment }}</td>
-        <td>{{ busy.id }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <input type="hidden" id="memberId" value="{{ member.id }}">
-</main>
-{% endblock content %}

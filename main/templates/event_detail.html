@@ -1,5 +1,7 @@
 {% extends 'base_table.html' %}
 
+{# --- Page definition --- #}
+
 {% block title %}Event Detail - {{ event.title }}{% endblock title %}
 
 {% block subheader %}
@@ -22,7 +24,81 @@
 </ul>
 {% endblock subheader %}
 
+{% block content %}
+<main role="main" class="container">
+  <div id="content">
+    <p><strong>Description:</strong> {{ event.description }}</p>
+    <p><strong>Location:</strong> {{ event.location }}</p>
+    <p><strong>Leaders:</strong> {{ event.leaders }}</p>
+    <p>
+      <strong>Start:</strong> {{ event.start }}
+      <strong>End:</strong> {{ event.finish }}
+    </p>
+    <p>
+      <strong>All day:</strong> {{ event.all_day }}
+      <strong>Published:</strong> {{ event.published }}
+    </p>
+
+    {% for period in event.period_set.all %}
+    <a name="OP{{period.position}}"></a>
+    <nav class="navbar navbar-expand-md navbar-light bg-light">
+      <button class="btn navbar-btn" onclick='$("#dTbl{{period.position}}_wrapper").toggle();'>
+        <i class="fa fa-area-chart"></i> OP {{period.position}}
+      </button>
+      
+      <ul class="nav navbar-nav navbar-right">
+        <li class="nav-item">
+          <a  class="nav-link btn-link" href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}'><i class="fa fa-address-book"></i> Add</a>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li class="nav-item">
+          <button class="btn nav-link btn-link" onclick="DeleteOP({{ period.id }}, {{ period.position }})" %}'>
+            <i class="fa fa-trash"></i> Delete OP
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <table id="dTbl{{period.position}}" class="display table-bordered nowrap table-striped" cellpadding="0" cellspacing="0" style="width:100%">
+      <tbody>
+      {% for p in period.participant_set.all %}
+      <tr>
+        <td></td>
+        <td data-id={{ p.id }}>{{ p.member }}
+          {% if p.ahc %}(AHC){% endif %}
+          {% if p.ol %}(OL){% endif %}
+        </td>
+        {# FIXME: need time UI #}
+        <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
+	    <td>{{ p.return_home_at|date:"Y-m-d" }}</td>
+	    <td>{{ p.signed_in_at|date:"Y-m-d" }}</td>
+	    <td>{{ p.signed_out_at|date:"Y-m-d" }}</td>
+	    <td>{{ p.ahc }}</td>
+	    <td>{{ p.ol }}</td>
+	    <td>{{ p.id }}</td>
+	    <td>{{ p.member.id }}</td>
+	    <td>{{ p.period.id }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+  </div>
+
+  <nav class="navbar navbar-expand-md navbar-light bg-light">
+    <button class="btn navbar-btn"
+            onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
+      <i class="fa fa-area-chart"></i> OP Next
+    </button>
+  </nav>
+
+</main>
+{% endblock content %}
+
   
+{# --- Table definition --- #}
+
 {% block js %}
 {{ block.super }}
 <script>
@@ -36,31 +112,28 @@ $(document).ready( function() {
         altEditor: true,
         paging:   false,
         info:     false,
-        order: [[ 0, 'asc' ]],
+        order: [[ 1, 'asc' ]],
+
         columnDefs: [
-            {
-                orderable: false,
-                className: 'mark-checkbox',
-                targets: 0,
-            },
-            { responsivePriority: 1, targets: [0, 1] },
-            { responsivePriority: 2, targets: 3 },
-            { responsivePriority: 3, targets: [3, 4]},
             { visible: false, targets: [6, 7, 8, 9, 10]},
         ],
+
         columns: [
-            { 'data': 'check', type: ['readonly', 'hidden' ]},
-            { 'data': 'name' },
-            { 'data': 'en_route_at' },
-            { 'data': 'return_home_at' },
-            { 'data': 'signed_in_at' },
-            { 'data': 'signed_out_at' },
-            { 'data': 'ahc' },
-            { 'data': 'ol' },
+            { 'data': 'mark', width: '10px', responsivePriority: 1,
+              orderable: false, type: ['readonly', 'hidden' ],
+            },
+            { 'data': 'name', title: 'Name', responsivePriority: 1, type: 'readonly', },
+            { 'data': 'en_route_at', title: 'Left', responsivePriority: 2, type: 'date', },
+            { 'data': 'return_home_at', title: 'Returned', responsivePriority: 2, type: 'date', },
+            { 'data': 'signed_in_at', title: 'Signed in', responsivePriority: 3, type: 'date', },
+            { 'data': 'signed_out_at', title: 'Signed out', responsivePriority: 3, type: 'date', },
+            { 'data': 'ahc', title: 'Ahc', type: 'select', options: [false, true], },
+            { 'data': 'ol', title: 'Ol', type: 'select', options: [false, true], },
             { 'data': 'id', type: ['readonly', 'hidden'] },
             { 'data': 'member', type: ['readonly', 'hidden'] },
             { 'data': 'period', type: ['readonly', 'hidden'] },
-            ],
+        ],
+
         buttons: [
             {
                 text: '<i class="fa fa-bullhorn"></i> Page',
@@ -127,10 +200,10 @@ $(document).ready( function() {
                 ]
             }
         ],
+
         onEditRow: UpdateRow,
-        language: {
-            emptyTable: 'No members added'
-        },
+
+        language: { emptyTable: 'No members added' },
     });
     
     table{{period.position}}.on( 'select', MarkRow);
@@ -140,36 +213,55 @@ $(document).ready( function() {
 })
 
 function UpdateRow(dt, row, success, error) {
-    const CleanDate = function (d) {
-        var sd = d ? d.substr(0, d.length - 9) : '';
-        return sd;
-    }
-    
     var data = row;
+    
+    //FIXME: temporary fix until we decide on api date format and time UI
+    const AddTime = function (d) {
+        // Add time
+        return d ? d + 'T00:00' : '';
+    }
+    data.en_route_at = AddTime(data.en_route_at);
+    data.return_home_at = AddTime(data.return_home_at);
+    data.signed_in_at = AddTime(data.signed_in_at);
+    data.signed_out_at = AddTime(data.signed_out_at);
     
     // Delete values that won't be set
     delete data.member;
+    delete data.mark;
+    //FIXME: backend needs to accept '' string and delete data
     for (var d in data) if (data[d] == '') delete data[d];
     
-    var id = data['id'];
+    var detail = data.id;
     data = JSON.stringify(data);
     //FIXME: add error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
-        url: '/api/edit_participants/' + id + '/',
+        url: '/api/edit_participants/' + detail + '/',
         data: data,
         success: function (r, s, m) {
-            var name = r['member']['full_name'];
-            if (r['ahc']) name += '(AHC)';
-            if (r['ol']) name += '(OL)';
-            r['name'] = name;
+            var name = r.member.full_name;
+            //FIXME: wrong place to do this, use render
+            if (r.ahc) name += '(AHC)';
+            if (r.ol) name += '(OL)';
+            r.name = name;
+
             //FIXME: temporary fix until we decide on api date format
-            r['en_route_at'] = CleanDate(r['en_route_at']);
-            r['return_home_at'] = CleanDate(r['return_home_at']);
-            r['signed_in_at'] = CleanDate(r['signed_in_at']);
-            r['signed_out_at'] = CleanDate(r['signed_out_at']);
-            r['check'] = '';
+            const CleanDate = function (d) {
+                // Strip time for now
+                return d ? d.substr(0, 10) : '';
+            }
+    
+            r.en_route_at = CleanDate(r.en_route_at);
+            r.return_home_at = CleanDate(r.return_home_at);
+            r.signed_in_at = CleanDate(r.signed_in_at);
+            r.signed_out_at = CleanDate(r.signed_out_at);
+
+            // Add extra ephemeral row
+            r.mark = ''
+
+            // Clear marks
+            $('td.marked').removeClass('marked');
             return success(r, s, m);
         },
         error: function (xhr) {
@@ -195,11 +287,13 @@ function DeleteEvent ( event, title ) {
             contentType: 'application/json',
             url: '/api/events/' + event + '/',
         })
+        //FIXME: does this work with async call
         location.href = '/event/?current';
     }
 }
 
 function DeleteOP ( period, position ) {
+    // Should Delete require an empty OP or at least a reconfirmation
     var ok = confirm('Delete Operational Period (OP' + position + ')?');
     if (ok) {
         //FIXME: error handling
@@ -207,17 +301,21 @@ function DeleteOP ( period, position ) {
             method: 'DELETE',
             contentType: 'application/json',
             url: '/api/periods/' + period + '/',
+            success: function () {
+                location.href='/event/' + {{ event.id }};
+            },
+            error: function (msg) {
+                console.log('Operational period delete failed: '+msg);
+                alert(msg);
+                return false;
+            },
         })
-        //FIXME: This seems like a bad idea but there is delay getting the updated data
-        setTimeout(function(){
-            location.href='/event/' + {{ event.id }};
-        }, 200);
     }
 }
 
 function DeleteParticipants ( e, dt, node, config ) {
     var members = [];
-    $('td.mark-checkbox.marked').each(function (i, el) {
+    $('td.marked').each(function (i, el) {
         members.push($(el).next().data().id)
     });
     console.log(members);
@@ -236,12 +334,16 @@ function DeleteParticipants ( e, dt, node, config ) {
                 method: 'DELETE',
                 contentType: 'application/json',
                 url: '/api/participants/' + members[i] + '/',
+                success: function () {
+                    location.reload(true);
+                },
+                error: function (msg) {
+                    console.log('Participant delete failed: '+msg);
+                    alert(msg);
+                    return false;
+                },
             })
         }
-        //FIXME: This seems like a bad idea but there is delay getting the updated data
-        setTimeout(function(){
-            location.reload(true);
-        }, 200);
     }
 }
 
@@ -273,91 +375,3 @@ function MarkRow ( e, dt, type, indices ) {
 
 </script>
 {% endblock js %}
-
-
-{% block content %}
-<main role="main" class="container">
-  <div id="content">
-    <p><strong>Description:</strong> {{ event.description }}</p>
-    <p><strong>Location:</strong> {{ event.location }}</p>
-    <p><strong>Leaders:</strong> {{ event.leaders }}</p>
-    <p>
-      <strong>Start:</strong> {{ event.start }}
-      <strong>End:</strong> {{ event.finish }}
-      <strong>All day:</strong> {{ event.all_day }}
-      <strong>Published:</strong> {{ event.published }}
-    </p>
-
-    {% for period in event.period_set.all %}
-    <a name="OP{{period.position}}"></a>
-    <nav class="navbar navbar-expand-md navbar-light bg-light">
-      <button class="btn navbar-btn" onclick='$("#dTbl{{period.position}}_wrapper").toggle();'>
-        <i class="fa fa-area-chart"></i> OP {{period.position}}
-      </button>
-      
-      <ul class="nav navbar-nav navbar-right">
-        <li class="nav-item">
-          <a  class="nav-link btn-link" href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}'><i class="fa fa-address-book"></i> Add</a>
-        </li>
-      </ul>
-      <ul class="nav navbar-nav navbar-right">
-        <li class="nav-item">
-          <button class="btn nav-link btn-link" onclick="DeleteOP({{ period.id }}, {{ period.position }})" %}'>
-            <i class="fa fa-trash"></i> Delete OP
-          </button>
-        </li>
-      </ul>
-    </nav>
-
-    <table id="dTbl{{period.position}}" class="display table-bordered nowrap table-striped" cellpadding="0" cellspacing="0" style="width:100%">
-      <thead>
-      <tr>
-        <th></th>
-        <th>Name</th>
-        <th>Left</th>
-        <th>Returned</th>
-        <th>Signed in</th>
-        <th>Signed out</th>
-        <th>ahc</th>
-        <th>ol</th>
-        <th>id</th>
-        <th>member</th>
-        <th>period</th>
-      </tr>
-      </thead>
-      <tbody>
-      {% for p in period.participant_set.all %}
-      <tr>
-        <td></td>
-        <td data-id={{ p.id }}>{{ p.member }}
-          {% if p.ahc %}
-          (AHC)
-          {% endif %}
-          {% if p.ol %}
-          (OL)
-          {% endif %}
-        </td>
-        <td>{{ p.en_route_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ p.return_home_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ p.signed_in_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ p.signed_out_at|date:"Y-m-d\TH:m" }}</td>
-	    <td>{{ p.ahc }}</td>
-	    <td>{{ p.ol }}</td>
-	    <td>{{ p.id }}</td>
-	    <td>{{ p.member.id }}</td>
-	    <td>{{ p.period.id }}</td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% endfor %}
-  </div>
-
-  <nav class="navbar navbar-expand-md navbar-light bg-light">
-    <button class="btn navbar-btn" onclick="var n={{event.period_set.all.count}}+2; location.href='{% url "event_period_add" event.id %}#OP'+n">
-      <i class="fa fa-area-chart"></i> OP Next
-    </button>
-  </nav>
-
-</main> {# /.container #}
-{% endblock %}
