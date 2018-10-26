@@ -49,7 +49,7 @@
         <td>{{ member.rank_order }}</td>
         {% for day in member.days %}
         {% if day %}
-        <td style="background-color:green" title="{{day}}" style="overflow: hidden">
+        <td style="background-color:orange" title="{{day}}" style="overflow: hidden">
           <div class="d-none d-lg-block">{{day}}</div>
           <div class="d-none d-md-block d-lg-none">{{day|truncatechars:10}}</div>
           <div class="d-none d-sm-block d-md-none">{{day|truncatechars:5}}</div>
@@ -59,7 +59,7 @@
         <td></td>
         {% endif %}
         {% endfor %}
-        <td{% if member.end_date %} style="background-color:green"{% endif %}>
+        <td{% if member.end_date %} style="background-color:orange"{% endif %}>
           <div class="d-none d-md-block">{{member.end_date|date:"m/d/y"}}</div>
           <div class="d-block d-md-none">{{member.end_date|date:"m-d"}}</div>
         </td>
@@ -87,7 +87,7 @@ columnDefs: [
                 // Add color to the busy periods
                 var row = $('#dTbl').DataTable().row(meta.row).node();
                 if (data && data[0] != '<')
-                    $('td:eq(' + (meta.col - 1) + ')', row).css('background-color', 'green');
+                    $('td:eq(' + (meta.col - 1) + ')', row).css('background-color', 'orange');
             }
             return data;
         },
