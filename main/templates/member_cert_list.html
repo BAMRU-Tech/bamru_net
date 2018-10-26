@@ -140,7 +140,7 @@ onEditRow: UpdateRow,
 {# remove filter button #}
 {% block filter_button %}{% endblock %}
 
-{% block table_functions %}
+{% block functions %}
 
 //FIXME: Currently using cert_form
 function AddCert (dt, row, success, error) {
@@ -255,7 +255,7 @@ function MarkRow ( e, dt, type, indices ) {
 
 function UpdateSubheaderBasedOnSettings(table) {}
 
-{% endblock table_functions %}
+{% endblock functions %}
 
 {% block ready_functions %}
     table.on( 'select', MarkRow);

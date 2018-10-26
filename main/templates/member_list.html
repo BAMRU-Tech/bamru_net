@@ -26,14 +26,15 @@
       <option value="R">Reserve</option>
       <option value="S">Support</option>
       <option value="A">Associate</option>
-      <option value="G" selected >Guest</option>
-      <option value="MA" selected >Member Alum</option>
+      <option value="G" >Guest</option>
+      <option value="MA">Member Alum</option>
     </select>
   </div>
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <tbody>
       {% for member in member_list %}
       {% if member.isActive %}
+      {% spaceless %}
       <tr>
         <td>{{ member.full_name }}</td>
         <td>{{ member.id }}</td>
@@ -44,6 +45,7 @@
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
       </tr>
+      {% endspaceless %}
       {% endif %}
       {% endfor %}
     </tbody>
@@ -100,7 +102,38 @@ language: { emptyTable: 'No members selected' },
 
 {% endblock table_options %}
 
-{% block table_functions %}
+{% block initComplete %}
+{
+    //find members and set selection
+    window.ranks = [];
+    table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        ranks[this.data().rank] = true;
+    });
+    ranks = Object.keys(ranks);
+    $('#filter-rank > option').each( function ( i ) {
+        if (ranks.includes(this.value))
+            this.removeAttribute('selected');
+        else
+            this.setAttribute('selected', '');
+    });
+
+    $('#filter-rank').multiSelect({
+        // The sense of the multiSelect is inverted: show = deselect, hide = select
+        selectableHeader: '<div class="custom-header">Show</div>',
+        selectionHeader: '<div class="custom-header">Hide</div>',
+        afterSelect: function(values){
+            RemoveRows(table,values);
+            UpdateSubheaderBasedOnSettings(table);
+        },
+        afterDeselect: function(values){
+            AddRows(table,values);
+            UpdateSubheaderBasedOnSettings(table);
+        }
+    })
+}
+{% endblock initComplete %}
+
+{% block functions %}
 const apiUrlMemberRank = '/api/members/?member_rank=';
 
 function AddRows(table, values) {
@@ -135,20 +168,6 @@ function RemoveRows(table, values)
     table.draw()
 }
 
-$('#filter-rank').multiSelect({
-    // The sense of the multiSelect is inverted: show = deselect, hide = select
-    selectableHeader: '<div class="custom-header">Show</div>',
-    selectionHeader: '<div class="custom-header">Hide</div>',
-    afterSelect: function(values){
-        RemoveRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    },
-    afterDeselect: function(values){
-        AddRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    }
-})
-
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected ranks based on filter
     var showRanks = [];
@@ -161,4 +180,4 @@ function UpdateSubheaderBasedOnSettings(table) {
     $('#subhdr')[0].innerHTML = 'Members (' + showRanks.join(', ') + ')';
 }
 
-{% endblock table_functions %}
+{% endblock functions %}

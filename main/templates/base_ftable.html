@@ -79,6 +79,9 @@ $(document).ready(function() {
         initComplete: function (settings) {
             var table = new $.fn.dataTable.Api( settings );
             DisplayExpandDetail(null, table, []);
+
+            {% block initComplete %}{% endblock %}
+
         },
 
     })
@@ -100,7 +103,7 @@ $(document).ready(function() {
 
 });
 
-{% block table_functions %}{% endblock %}
+{% block functions %}{% endblock %}
 
 </script>
 

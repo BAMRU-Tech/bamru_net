@@ -56,7 +56,7 @@ language: { emptyTable: 'No events selected' },
 
 {% endblock table_options %}
 
-{% block table_functions %}
+{% block functions %}
 var filterTypes = [];
 var filterTypesCap = [];
 
@@ -140,7 +140,7 @@ function UpdateSubheaderBasedOnSettings(table) {
     $('#subhdr')[0].innerHTML = ('Events (' + filterTypes.join(', ') + ')').replace('operation', 'ops');
 
 }
-{% endblock table_functions %}
+{% endblock functions %}
 
 
 {% block ready_functions %}
