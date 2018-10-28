@@ -5,7 +5,8 @@
 {% block title %}New Compose Message{% endblock %}
 
 {% block subheader %}
-<strong id="subhdr">Event Page</strong>
+<strong class="d-md-none" id="subhdr-sm">Event Page</strong>
+<strong class="d-none d-md-block" id="subhdr">Event Page</strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -253,11 +254,14 @@ function UpdateSubheaderBasedOnSettings (table) {
         }
     });
 
-    $('#subhdr')[0].innerHTML =
-        ('<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
-         '{{ text }}</a>:'+ page +' > Page Participants (' +
-         showRanks.join(', ') + ')');
+    var sh = '<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
+        '{{ text }}</a>:' + page;
+
+    $('#subhdr-sm')[0].innerHTML = sh;
+    $('#subhdr')[0].innerHTML = sh + ' > Page Participants (' + showRanks.join(', ') + ')';
+ 
     document.title = '{{ text }} Page';
+
     table.draw();
 
 }

@@ -5,7 +5,8 @@
 {% block title %}Team Certifications{% endblock %}
 
 {% block subheader %}
-<strong id="subhdr">Members</strong>
+<strong class="d-md-none" id="subhdr-sm">Members</strong>
+<strong class="d-none d-md-block" id="subhdr">Members</strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -178,9 +179,12 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $('#subhdr')[0].innerHTML =
-        '<a href=' + {% url 'member_list' %} +
+    var shsm = '<a href=' + {% url 'member_list' %} + '>Members</a> > Certifications';
+    var sh = '<a href=' + {% url 'member_list' %} +
         '>Members</a> (' +  showRanks.join(', ') + ') > Certifications';
+
+    $('#subhdr-sm')[0].innerHTML = shsm;
+    $('#subhdr')[0].innerHTML = sh;
 }
 
 {% endblock functions %}

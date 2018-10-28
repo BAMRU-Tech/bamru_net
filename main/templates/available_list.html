@@ -5,7 +5,8 @@
 {% block title %}Team Availability{% endblock title %}
 
 {% block subheader %}
-<strong id="subhdr">Members</strong>
+<strong class="d-md-none" id="subhdr-sm">Members</strong>
+<strong class="d-none d-md-block" id="subhdr">Members</strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -247,7 +248,12 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     })
 
-    $('#subhdr')[0].innerHTML = '<a href=' + {% url 'member_list' %} + '>Members</a> (' +  showRanks.join(', ') + ') > Availability';
+    var shsm = '<a href=' + {% url 'member_list' %} + '>Member</a> > Availability';
+    var sh = '<a href=' + {% url 'member_list' %} + '>Members</a> ('
+        + showRanks.join(', ') + ') > Availability';
+
+    $('#subhdr-sm')[0].innerHTML = shsm;
+    $('#subhdr')[0].innerHTML = sh;
 }
 
 {% endblock functions %}
