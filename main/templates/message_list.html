@@ -5,7 +5,7 @@
 {% block title %}Messages{% endblock title %}
 
 {% block subheader %}
-  <strong id="subhdr">Message Log</strong>
+  <strong>Message Log</strong>
   <ul class="navbar-nav ml-auto">
     <li class="nav-item ml-auto">
       <a class="nav-link" href="{% url 'event_add' %}">
@@ -65,6 +65,6 @@ language: { emptyTable: 'No messages' },
 {# remove filter button #}
 {% block filter_button %}{% endblock %}
 
-{% block table_functions %}
+{% block functions %}
   function UpdateSubheaderBasedOnSettings(table) {}
-{% endblock table_functions %}
+{% endblock functions %}

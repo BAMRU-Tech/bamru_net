@@ -5,7 +5,8 @@
 {% block title %}Team Members{% endblock title %}
 
 {% block subheader %}
-<strong id="subhdr">Members</strong>
+<strong class="d-md-none" >Members</strong>
+<strong class="d-none d-md-block" id="subhdr">Members</strong>
 <ul class="navbar-nav ml-auto">
   <li class="nav-item ml-auto">
     <a class="nav-link" href="{% url 'member_detail' request.user.id %}?returnx=ml">
@@ -26,14 +27,14 @@
       <option value="R">Reserve</option>
       <option value="S">Support</option>
       <option value="A">Associate</option>
-      <option value="G" selected >Guest</option>
-      <option value="MA" selected >Member Alum</option>
+      <option value="G" >Guest</option>
+      <option value="MA">Member Alum</option>
     </select>
   </div>
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <tbody>
       {% for member in member_list %}
-      {% if member.isActive %}
+      {% spaceless %}
       <tr>
         <td>{{ member.full_name }}</td>
         <td>{{ member.id }}</td>
@@ -44,7 +45,7 @@
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
       </tr>
-      {% endif %}
+      {% endspaceless %}
       {% endfor %}
     </tbody>
   </table>
@@ -100,7 +101,11 @@ language: { emptyTable: 'No members selected' },
 
 {% endblock table_options %}
 
-{% block table_functions %}
+{% block initComplete %}
+SetMemberFilter (table, true);
+{% endblock initComplete %}
+
+{% block functions %}
 const apiUrlMemberRank = '/api/members/?member_rank=';
 
 function AddRows(table, values) {
@@ -135,20 +140,6 @@ function RemoveRows(table, values)
     table.draw()
 }
 
-$('#filter-rank').multiSelect({
-    // The sense of the multiSelect is inverted: show = deselect, hide = select
-    selectableHeader: '<div class="custom-header">Show</div>',
-    selectionHeader: '<div class="custom-header">Hide</div>',
-    afterSelect: function(values){
-        RemoveRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    },
-    afterDeselect: function(values){
-        AddRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    }
-})
-
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected ranks based on filter
     var showRanks = [];
@@ -161,4 +152,4 @@ function UpdateSubheaderBasedOnSettings(table) {
     $('#subhdr')[0].innerHTML = 'Members (' + showRanks.join(', ') + ')';
 }
 
-{% endblock table_functions %}
+{% endblock functions %}

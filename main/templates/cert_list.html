@@ -5,7 +5,8 @@
 {% block title %}Team Certifications{% endblock %}
 
 {% block subheader %}
-<strong id="subhdr">Members</strong>
+<strong class="d-md-none" id="subhdr-sm">Members</strong>
+<strong class="d-none d-md-block" id="subhdr">Members</strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -18,8 +19,8 @@
       <option value='R'>Reserve</option>
       <option value='S'>Support</option>
       <option value='A'>Associate</option>
-      <option value='G' selected >Guest</option>
-      <option value='MA' selected >Member Alum</option>
+      <option value='G'>Guest</option>
+      <option value='MA'>Member Alum</option>
     </select>
   </div>
   <table id="dTbl" class="display table-bordered wrap" style="width:100%">
@@ -97,7 +98,11 @@ language: { emptyTable: 'No members selected' },
 
 {% endblock table_options %}
 
-{% block table_functions %}
+{% block initComplete %}
+SetMemberFilter (table, true);
+{% endblock initComplete %}
+
+{% block functions %}
 
 function RenderColor (data, type, row, meta) {
           if (type == 'display' && data) {
@@ -174,23 +179,12 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    $('#subhdr')[0].innerHTML =
-        '<a href=' + {% url 'member_list' %} +
+    var shsm = '<a href=' + {% url 'member_list' %} + '>Members</a> > Certifications';
+    var sh = '<a href=' + {% url 'member_list' %} +
         '>Members</a> (' +  showRanks.join(', ') + ') > Certifications';
+
+    $('#subhdr-sm')[0].innerHTML = shsm;
+    $('#subhdr')[0].innerHTML = sh;
 }
 
-$('#filter-rank').multiSelect({
-    // The sense of the multiSelect is inverted: show = deselect, hide = select
-    // *FIXME: the list of selected items should be computed from the data
-    selectableHeader: '<div class="custom-header">Show</div>',
-    selectionHeader: '<div class="custom-header">Hide</div>',
-    afterSelect: function(values){
-        RemoveRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    },
-    afterDeselect: function(values){
-        AddRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    }
-})
-{% endblock table_functions %}
+{% endblock functions %}

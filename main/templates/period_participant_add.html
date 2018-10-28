@@ -5,7 +5,8 @@
 {% block title %}Participant Add{% endblock %}
 
 {% block subheader %}
-<strong id="subhdr">Event Add Participant</strong>
+<strong class="d-md-none" >Events Add Participant</strong>
+<strong class="d-none d-md-block" id="subhdr">Events Add Participant</strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -18,15 +19,14 @@
       <option value="R">Reserve</option>
       <option value="S">Support</option>
       <option value="A">Associate</option>
-      <option value="G" selected >Guest</option>
-      <option value="MA" selected >Member Alum</option>
+      <option value="G">Guest</option>
+      <option value="MA">Member Alum</option>
     </select>
   </div>
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <tbody>
       {% for member in member_list %}
       {% spaceless %}
-      {% if member.isActive %}
       <tr>
         <td></td>
         <td>{{ member.full_name }}</td>
@@ -38,7 +38,6 @@
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
       </tr>
-      {% endif %}
       {% endspaceless %}
       {% endfor %}
     </tbody>
@@ -109,7 +108,11 @@ language: { emptyTable: 'No participants selected' },
 
 {% endblock table_buttons_first %}
 
-{% block table_functions %}
+{% block initComplete %}
+SetMemberFilter (table, true);
+{% endblock initComplete %}
+
+{% block functions %}
 
 const url = new URL(window.location.href);
 const event_name = url.searchParams.get('et');
@@ -176,6 +179,7 @@ function AddRows(table, values) {
         for (var i=0; i<json.length; i++)
         {
             var data = json[i];
+            data.mark = '';
             table.row.add(data);
         }
 
@@ -215,20 +219,7 @@ function UpdateSubheaderBasedOnSettings(table) {
 
 }
 
-$('#filter-rank').multiSelect({
-    // The sense of the multiSelect is inverted: show = deselect, hide = select
-    selectableHeader: '<div class="custom-header">Show</div>',
-    selectionHeader: '<div class="custom-header">Hide</div>',
-    afterSelect: function(values){
-        RemoveRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    },
-    afterDeselect: function(values){
-        AddRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    }
-})
-{% endblock table_functions %}
+{% endblock functions %}
 
 {% block ready_functions %}
 table.on( 'select', function ( e, dt, type, indices ) {

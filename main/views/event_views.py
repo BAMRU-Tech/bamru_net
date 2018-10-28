@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
@@ -155,7 +156,13 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.order_by('id')
+        return Member.objects.filter(
+            Q(member_rank='TM') |
+            Q(member_rank='FM') |
+            Q(member_rank='T') |
+            Q(member_rank='R') |
+            Q(member_rank='S') |
+            Q(member_rank='A')).order_by('id')
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()
@@ -176,7 +183,13 @@ class MessageParticipantCreateView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.order_by('id')
+        return Member.objects.filter(
+            Q(member_rank='TM') |
+            Q(member_rank='FM') |
+            Q(member_rank='T') |
+            Q(member_rank='R') |
+            Q(member_rank='S') |
+            Q(member_rank='A')).order_by('id')
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()

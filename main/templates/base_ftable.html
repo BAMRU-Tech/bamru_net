@@ -16,6 +16,9 @@ const labelHideDetail = '<i class="fa fa-minus-square-o"></i> Hide Detail';
 
 var table;
 $(document).ready(function() {
+    // Bootstrap for IOS?  //FX
+    $('.dropdown-toggle').dropdown();
+
     // Initialize datatable with responsive behavior and datatable buttons
     table = $('#dTbl').DataTable( {
         dom: 'Bfrtip',
@@ -78,16 +81,19 @@ $(document).ready(function() {
 
         initComplete: function (settings) {
             var table = new $.fn.dataTable.Api( settings );
-            DisplayExpandDetail(null, table, []);
+            DisplayExpandDetailButton(null, table, []);
+
+            {% block initComplete %}{% endblock %}
+
         },
 
     })
 
     UpdateSubheaderBasedOnSettings(table);
 
-    table.on( 'responsive-resize', DisplayExpandDetail );
+    table.on( 'responsive-resize', DisplayExpandDetailButton );
 
-    function DisplayExpandDetail ( e, table, columns ) {
+    function DisplayExpandDetailButton ( e, table, columns ) {
         //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
         if (table.row(0).count()
             && getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')
@@ -100,7 +106,98 @@ $(document).ready(function() {
 
 });
 
-{% block table_functions %}{% endblock %}
+// Used by pp_add, msg_add, mem_add and cert_lst
+function SetMemberFilter (table, alterRows = false) {
+    //find displayable members and set selected on filter-rank
+    window.ranks = [];
+    table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        ranks[this.data().rank] = true;
+    });
+    ranks = Object.keys(ranks);
+    $('#filter-rank > option').each( function ( i ) {
+        if (ranks.includes(this.value))
+            this.removeAttribute('selected');
+        else
+            this.setAttribute('selected', '');
+    });
+
+    $('#filter-rank').multiSelect({
+        // The sense of the multiSelect is inverted: show = deselect, hide = select
+        selectableHeader: '<div class="custom-header">Show</div>',
+        selectionHeader: '<div class="custom-header">Hide</div>',
+        afterSelect: function(values){
+            if (alterRows) RemoveRows(table,values);
+            UpdateSubheaderBasedOnSettings(table);
+        },
+        afterDeselect: function(values){
+            if (alterRows) AddRows(table,values);
+            UpdateSubheaderBasedOnSettings(table);
+        }
+    })
+}
+
+//Used by mem_cert_lst, mem_avail_lst, mem_do_avail_lst
+function MarkRow ( e, dt, type, indices ) {
+        var allMarked = true;
+        var numRows = indices.length;
+        if (numRows > 1) {
+            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+                // For multi select - unmark only when every row is marked
+                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+            })
+        }
+        dt.rows(indices)
+            .every( function ( rowIdx, tableLoop, rowLoop ) {
+                if (numRows > 1) {
+                    if (allMarked)
+                        $(this.node()).children().first().removeClass('marked');
+                    else
+                        $(this.node()).children().first().addClass('marked');
+                } else {
+                    if ($(this.node()).children().first().hasClass('marked')) {
+                        $(this.node()).children().first().removeClass('marked');
+                        this.deselect();
+                    } else
+                        $(this.node()).children().first().addClass('marked');
+                }
+            });
+}
+
+//Used by mem_cert_lst and mem_avail_lst
+function DeleteRow ( e, dt, node, config, type, api ) {
+    var rows = [];
+    $.each($('td.mark-checkbox.marked'), function (i, el) {
+        rows.push($(this.firstChild).data().id)
+    });
+
+    if (rows.length == 0) {
+        alert('Select ' + type + ' before deleting them');
+        return;
+    }
+
+    var ok = confirm('Delete ' + rows.length + ' ' + type + '?');
+
+    if (ok) {
+        for (var i=0; i<rows.length; i++) {
+            //FIXME: error handling
+            $.ajax({
+                method: 'DELETE',
+                contentType: 'application/json',
+                url: '/api/' + api + '/' + rows[i] + '/',
+                success: function () {
+                    location.reload(true);
+                },
+                error: function (msg) {
+                    console.log(type + ' delete failed: ' + msg);
+                    alert(msg);
+                    return false;
+                },
+            })
+        }
+    }
+}
+
+{% block functions %}{% endblock %}
 
 </script>
 

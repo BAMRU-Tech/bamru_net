@@ -5,7 +5,8 @@
 {% block title %}Team Availability{% endblock title %}
 
 {% block subheader %}
-<strong id="subhdr">Members</strong>
+<strong class="d-md-none" id="subhdr-sm">Members</strong>
+<strong class="d-none d-md-block" id="subhdr">Members</strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -18,8 +19,8 @@
       <option value='R'>Reserve</option>
       <option value='S'>Support</option>
       <option value='A'>Associate</option>
-      <option value='G' selected >Guest</option>
-      <option value='MA' selected >Member Alum</option>
+      <option value='G'>Guest</option>
+      <option value='MA'>Member Alum</option>
     </select>
   </div>
   <div id="tooltip"></div>
@@ -111,8 +112,40 @@ language: { emptyTable: 'No members selected' },
 
 {% endblock table_options %}
 
+{% block initComplete %}
+//SetMemberFilter (table, true);
+{
+    //FX: Slightly different
+    //find members and set selection
+    window.ranks = [];
+    table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        ranks[this.data()[1]] = true; //FX
+    });
+    ranks = Object.keys(ranks);
+    $('#filter-rank > option').each( function ( i ) {
+        if (ranks.includes(this.value))
+            this.removeAttribute('selected');
+        else
+            this.setAttribute('selected', '');
+    });
 
-{% block table_functions %}
+    $('#filter-rank').multiSelect({
+        // The sense of the multiSelect is inverted: show = deselect, hide = select
+        selectableHeader: '<div class="custom-header">Show</div>',
+        selectionHeader: '<div class="custom-header">Hide</div>',
+        afterSelect: function(values){
+            RemoveRows(table,values);
+            UpdateSubheaderBasedOnSettings(table);
+        },
+        afterDeselect: function(values){
+            AddRows(table,values);
+            UpdateSubheaderBasedOnSettings(table);
+        }
+    })
+}
+{% endblock initComplete %}
+
+{% block functions %}
 
 // Seems a little crazy that js doesn't offer better date support
 // But not worth loading another 20-30K
@@ -215,20 +248,12 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     })
 
-    $('#subhdr')[0].innerHTML = '<a href=' + {% url 'member_list' %} + '>Members</a> (' +  showRanks.join(', ') + ') > Availability';
+    var shsm = '<a href=' + {% url 'member_list' %} + '>Member</a> > Availability';
+    var sh = '<a href=' + {% url 'member_list' %} + '>Members</a> ('
+        + showRanks.join(', ') + ') > Availability';
+
+    $('#subhdr-sm')[0].innerHTML = shsm;
+    $('#subhdr')[0].innerHTML = sh;
 }
 
-$('#filter-rank').multiSelect({
-    // The sense of the multiSelect is inverted: show = deselect, hide = select
-    selectableHeader: '<div class="custom-header">Show</div>',
-    selectionHeader: '<div class="custom-header">Hide</div>',
-    afterSelect: function(values){
-        RemoveRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    },
-    afterDeselect: function(values){
-        AddRows(table,values);
-        UpdateSubheaderBasedOnSettings(table);
-    }
-})
-{% endblock table_functions %}
+{% endblock functions %}

@@ -5,7 +5,7 @@
 {% block title %}Certs - {{member.full_name}} {% endblock title %}
 
 {% block subheader %}
-<strong id="subhdr">
+<strong>
     <a href="{% url 'member_detail' member.id %}?returnx=mc">
     {{member.full_name }} ({{ member.rank }})</a>
     &gt; Certs
@@ -23,7 +23,7 @@
         <td>{{ cert.description }}</td>
         <td>
           {% if cert.link %}
-            <a href="{{ cert.link }}">{{cert.link}}</a>
+            <a href="{{ cert.link }}" target="_blank">{{cert.link}}</a>
           {% endif %}
         </td>
         <td>{{ cert.comment }}</td>
@@ -103,7 +103,11 @@ columns: [
 language: { emptyTable: 'No busy periods' },
 
 onAddRow: AddCert,
-onEditRow: UpdateRow,
+onEditRow: function (dt, row, success, error) {
+    var url = 'any http';
+    var emsg = 'any err';
+    return UpdateRow (dt, row, success, error, url, emsg);
+},
 
 {% endblock table_options %}
 
@@ -132,7 +136,9 @@ onEditRow: UpdateRow,
 {
     autoClose: true,
     text: '<i class="fa fa-trash"></i> Delete',
-    action: DeleteCerts,
+    action: function ( e, dt, node, config ) {
+        DeleteRow ( e, dt, node, config, 'certs', 'certs' )
+    },
 },
 
 {% endblock table_buttons_first %}
@@ -140,7 +146,7 @@ onEditRow: UpdateRow,
 {# remove filter button #}
 {% block filter_button %}{% endblock %}
 
-{% block table_functions %}
+{% block functions %}
 
 //FIXME: Currently using cert_form
 function AddCert (dt, row, success, error) {
@@ -166,7 +172,7 @@ function AddCert (dt, row, success, error) {
     })
 }
 
-function UpdateRow (dt, row, success, error) {
+function UpdateRow (dt, row, success, error, url, emsg) {
     var data = row;
 
     delete data.type;
@@ -193,69 +199,9 @@ function UpdateRow (dt, row, success, error) {
     })
 }
 
-function DeleteCerts ( e, dt, node, config ) {
-    var certs = [];
-    $.each($('td.mark-checkbox.marked'), function (i, el) {
-        certs.push($(this.firstChild).data().id)
-    });
-    console.log(certs);
-
-    if (certs.length == 0) {
-        alert('Select certs before deleting them');
-        return;
-    }
-
-    var ok = confirm('Delete '+certs.length+' certs?');
-
-    if (ok) {
-        for (var i=0; i<certs.length; i++) {
-            //FIXME: error handling
-            $.ajax({
-                method: 'DELETE',
-                contentType: 'application/json',
-                url: '/api/certs/' + certs[i] + '/',
-                success: function () {
-                    location.reload(true);
-                },
-                error: function (msg) {
-                    console.log('cert delete failed: '+msg);
-                    alert(msg);
-                    return false;
-                },
-            })
-        }
-    }
-}
-
-function MarkRow ( e, dt, type, indices ) {
-    var allMarked = true;
-    var numRows = indices.length;
-    if (numRows > 1) {
-        dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-            // For multi select - unmark only when every row is marked
-            allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-        })
-    }
-    dt.rows(indices)
-        .every( function ( rowIdx, tableLoop, rowLoop ) {
-            if (numRows > 1) {
-                if (allMarked)
-                    $(this.node()).children().first().removeClass('marked');
-                else
-                    $(this.node()).children().first().addClass('marked');
-            } else {
-                if ($(this.node()).children().first().hasClass('marked')) {
-                    $(this.node()).children().first().removeClass('marked');
-                    this.deselect();
-                } else
-                    $(this.node()).children().first().addClass('marked');
-            }
-        });
-}
-
 function UpdateSubheaderBasedOnSettings(table) {}
 
-{% endblock table_functions %}
+{% endblock functions %}
 
 {% block ready_functions %}
     table.on( 'select', MarkRow);

@@ -5,7 +5,8 @@
 {% block title %}New Compose Message{% endblock %}
 
 {% block subheader %}
-<strong id="subhdr">Event Page</strong>
+<strong class="d-md-none" id="subhdr-sm">Event Page</strong>
+<strong class="d-none d-md-block" id="subhdr">Event Page</strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -43,8 +44,8 @@
       <option value="R">Reserve</option>
       <option value="S">Support</option>
       <option value="A">Associate</option>
-      <option value="G" selected >Guest</option>
-      <option value="MA" selected >Member Alum</option>
+      <option value="G">Guest</option>
+      <option value="MA">Member Alum</option>
     </select>
   </div>
 
@@ -52,7 +53,7 @@
     <tbody>
       {% if member_list.count %}
       {% for member in member_list %}
-      {% if member.isActive %}
+      {% spaceless %}
       <tr>
         <td data-id={{ member.id }}></td>
         <td>
@@ -62,10 +63,10 @@
         <td>{{ member.rank_order }}</td>
         <td>{{ member.roles }}</td>
         <td>{{ member.role_order }}</td>
-        <td> {{ member.display_phone }}</td>
-        <td> {{ member.display_email }}</td>
+        <td>{{ member.display_phone }}</td>
+        <td>{{ member.display_email }}</td>
       </tr>
-      {% endif %}
+      {% endspaceless %}
       {% endfor %}
       {% endif %}
     </tbody>
@@ -123,6 +124,10 @@ language: { emptyTable: 'No participants selected' },
 
 {% endblock table_buttons_first %}
 
+{% block initComplete %}
+SetMemberFilter (table, false);
+{% endblock initComplete %}
+
 {% block ready_functions %}
 
 table.on( 'select', function ( e, dt, type, indices ) {
@@ -152,7 +157,9 @@ table.on( 'select', function ( e, dt, type, indices ) {
 
 {% endblock ready_functions %}
 
-{% block table_functions %}
+
+
+{% block functions %}
 
 {# Define constants based on input params #}
 const url = new URL(window.location.href);
@@ -247,11 +254,14 @@ function UpdateSubheaderBasedOnSettings (table) {
         }
     });
 
-    $('#subhdr')[0].innerHTML =
-        ('<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
-         '{{ text }}</a>:'+ page +' > Page Participants (' +
-         showRanks.join(', ') + ')');
+    var sh = '<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
+        '{{ text }}</a>:' + page;
+
+    $('#subhdr-sm')[0].innerHTML = sh;
+    $('#subhdr')[0].innerHTML = sh + ' > Page Participants (' + showRanks.join(', ') + ')';
+ 
     document.title = '{{ text }} Page';
+
     table.draw();
 
 }
@@ -271,18 +281,6 @@ $.fn.dataTable.ext.search.push(
     }
 );
 
-$('#filter-rank').multiSelect({
-    // The sense of the multiSelect is inverted: show = deselect, hide = select
-    selectableHeader: '<div class="custom-header">Show</div>',
-    selectionHeader: '<div class="custom-header">Hide</div>',
-    afterSelect: function(values){
-        UpdateSubheaderBasedOnSettings(table);
-    },
-    afterDeselect: function(values){
-        UpdateSubheaderBasedOnSettings(table);
-    }
-})
-
 $('#id_text').after($("<div id='length-message' class='text-muted'>"));
 $('#id_text').on('input', function(){
     var length = $('#id_text').val().length;
@@ -291,4 +289,4 @@ $('#id_text').on('input', function(){
 });
 $('#id_text').triggerHandler('input');
 
-{% endblock table_functions %}
+{% endblock functions %}
