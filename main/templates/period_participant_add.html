@@ -26,7 +26,6 @@
     <tbody>
       {% for member in member_list %}
       {% spaceless %}
-      {% if member.isActive %}
       <tr>
         <td></td>
         <td>{{ member.full_name }}</td>
@@ -38,7 +37,6 @@
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
       </tr>
-      {% endif %}
       {% endspaceless %}
       {% endfor %}
     </tbody>

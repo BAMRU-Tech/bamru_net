@@ -33,7 +33,6 @@
   <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
     <tbody>
       {% for member in member_list %}
-      {% if member.isActive %}
       {% spaceless %}
       <tr>
         <td>{{ member.full_name }}</td>
@@ -46,7 +45,6 @@
         <td>{{ member.display_email }}</td>
       </tr>
       {% endspaceless %}
-      {% endif %}
       {% endfor %}
     </tbody>
   </table>

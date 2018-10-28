@@ -52,7 +52,7 @@
     <tbody>
       {% if member_list.count %}
       {% for member in member_list %}
-      {% if member.isActive %}
+      {% spaceless %}
       <tr>
         <td data-id={{ member.id }}></td>
         <td>
@@ -65,7 +65,7 @@
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
       </tr>
-      {% endif %}
+      {% endspaceless %}
       {% endfor %}
       {% endif %}
     </tbody>

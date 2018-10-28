@@ -6,6 +6,7 @@ from django.db.models import Prefetch
 from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
@@ -32,7 +33,13 @@ class MemberListView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.order_by('id')
+        return Member.objects.filter(
+            Q(member_rank='TM') |
+            Q(member_rank='FM') |
+            Q(member_rank='T') |
+            Q(member_rank='R') |
+            Q(member_rank='S') |
+            Q(member_rank='A')).order_by('id')
 
 
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
