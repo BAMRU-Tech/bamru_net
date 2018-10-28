@@ -53,7 +53,9 @@
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li class="nav-item">
-          <button class="btn nav-link btn-link" onclick="DeleteOP({{ period.id }}, {{ period.position }})" %}'>
+          <button class="btn nav-link btn-link"
+                  onclick="DeleteOP('#dTbl{{period.position}}',
+                  {{ period.id }}, {{ period.position }})" %}'>
             <i class="fa fa-trash"></i> Delete OP
           </button>
         </li>
@@ -292,9 +294,15 @@ function DeleteEvent ( event, title ) {
     }
 }
 
-function DeleteOP ( period, position ) {
-    // Should Delete require an empty OP or at least a reconfirmation
+function DeleteOP (tblName, period, position ) {
+
     var ok = confirm('Delete Operational Period (OP' + position + ')?');
+
+    // Should Delete require an empty OP or at least a reconfirmation
+    var cnt = $(tblName).DataTable().rows().count();
+    if (cnt != 0 )
+        ok = confirm('Are you sure?  This period has participants!');
+
     if (ok) {
         //FIXME: error handling
         $.ajax({
