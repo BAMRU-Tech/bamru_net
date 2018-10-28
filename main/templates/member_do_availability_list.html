@@ -95,33 +95,6 @@ function InitialData() {
         }
         table.draw().columns.adjust().responsive.recalc();
     })
-
-}
-
-function MarkRow ( e, dt, type, indices ) {
-        var allMarked = true;
-        var numRows = indices.length;
-        if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-                // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-            })
-        }
-        dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
-                if (numRows > 1) {
-                    if (allMarked)
-                        $(this.node()).children().first().removeClass('marked');
-                    else
-                        $(this.node()).children().first().addClass('marked');
-                } else {
-                    if ($(this.node()).children().first().hasClass('marked')) {
-                        $(this.node()).children().first().removeClass('marked');
-                        this.deselect();
-                    } else
-                        $(this.node()).children().first().addClass('marked');
-                }
-            });
 }
 
 function UpdateRow (dt, row, success, error) {

@@ -112,8 +112,9 @@ language: { emptyTable: 'No members selected' },
 {% endblock table_options %}
 
 {% block initComplete %}
+//SetMemberFilter (table, true);
 {
-    //FX: SLightly different
+    //FX: Slightly different
     //find members and set selection
     window.ranks = [];
     table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {

@@ -124,33 +124,7 @@ language: { emptyTable: 'No participants selected' },
 {% endblock table_buttons_first %}
 
 {% block initComplete %}
-{
-    //find members and set selection
-    window.ranks = [];
-    table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-        ranks[this.data().rank] = true;
-    });
-    ranks = Object.keys(ranks);
-    $('#filter-rank > option').each( function ( i ) {
-        if (ranks.includes(this.value))
-            this.removeAttribute('selected');
-        else
-            this.setAttribute('selected', '');
-    });
-
-    //FX: Slightly different
-    $('#filter-rank').multiSelect({
-        // The sense of the multiSelect is inverted: show = deselect, hide = select
-        selectableHeader: '<div class="custom-header">Show</div>',
-        selectionHeader: '<div class="custom-header">Hide</div>',
-        afterSelect: function(values){
-            UpdateSubheaderBasedOnSettings(table); //FX
-        },
-        afterDeselect: function(values){
-            UpdateSubheaderBasedOnSettings(table); //FX
-        }
-    })
-}
+SetMemberFilter (table, false);
 {% endblock initComplete %}
 
 {% block ready_functions %}

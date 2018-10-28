@@ -201,7 +201,7 @@ $(document).ready( function() {
             }
         ],
 
-        onEditRow: UpdateRow,
+        onEditRow: UpdateEventRow,
 
         language: { emptyTable: 'No members added' },
     });
@@ -212,7 +212,7 @@ $(document).ready( function() {
 
 })
 
-function UpdateRow(dt, row, success, error) {
+function UpdateEventRow(dt, row, success, error) {
     var data = row;
     
     //FIXME: temporary fix until we decide on api date format and time UI
@@ -347,6 +347,7 @@ function DeleteParticipants ( e, dt, node, config ) {
     }
 }
 
+//FX: Hoist after event_detail rewritten
 function MarkRow ( e, dt, type, indices ) {
         var allMarked = true;
         var numRows = indices.length;
