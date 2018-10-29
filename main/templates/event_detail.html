@@ -31,8 +31,8 @@
     <p><strong>Location:</strong> {{ event.location }}</p>
     <p><strong>Leaders:</strong> {{ event.leaders }}</p>
     <p>
-      <strong>Start:</strong> {{ event.start }}
-      <strong>End:</strong> {{ event.finish }}
+      <strong>Start:</strong> {{ event.start|date:'M j, Y Hi' }}
+      <strong>End:</strong> {{ event.finish|date:'M j, Y Hi' }}
     </p>
     <p>
       <strong>All day:</strong> {{ event.all_day }}
@@ -71,11 +71,30 @@
           {% if p.ahc %}(AHC){% endif %}
           {% if p.ol %}(OL){% endif %}
         </td>
-        {# FIXME: need time UI #}
         <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
+        <td>
+          {% if p.en_route_at|date:"H:i" != '00:00' %}
+          {{ p.en_route_at|date:"H:i" }}
+          {% endif %}
+        </td>
 	    <td>{{ p.return_home_at|date:"Y-m-d" }}</td>
+	    <td>
+          {% if p.return_home_at|date:"H:i" != '00:00' %}
+          {{ p.return_home_at|date:"H:i" }}
+          {% endif %}
+        </td>
 	    <td>{{ p.signed_in_at|date:"Y-m-d" }}</td>
+	    <td>
+          {% if p.signed_in_at|date:"H:i" != '00:00' %}
+          {{ p.signed_in_at|date:"H:i" }}
+        {% endif %}
+        </td>
 	    <td>{{ p.signed_out_at|date:"Y-m-d" }}</td>
+	    <td>
+          {% if p.signed_out_at|date:"H:i" != '00:00' %}
+          {{ p.signed_out_at|date:"H:i" }}
+        {% endif %}
+        </td>
 	    <td>{{ p.ahc }}</td>
 	    <td>{{ p.ol }}</td>
 	    <td>{{ p.id }}</td>
@@ -117,7 +136,7 @@ $(document).ready( function() {
         order: [[ 1, 'asc' ]],
 
         columnDefs: [
-            { visible: false, targets: [6, 7, 8, 9, 10]},
+            { visible: false, targets: [3, 5, 7, 9, 10, 11, 12, 13, 14]},
         ],
 
         columns: [
@@ -125,10 +144,31 @@ $(document).ready( function() {
               orderable: false, type: ['readonly', 'hidden' ],
             },
             { 'data': 'name', title: 'Name', responsivePriority: 1, type: 'readonly', },
-            { 'data': 'en_route_at', title: 'Left', responsivePriority: 2, type: 'date', },
-            { 'data': 'return_home_at', title: 'Returned', responsivePriority: 2, type: 'date', },
-            { 'data': 'signed_in_at', title: 'Signed in', responsivePriority: 3, type: 'date', },
-            { 'data': 'signed_out_at', title: 'Signed out', responsivePriority: 3, type: 'date', },
+
+            { 'data': 'en_route_date', title: 'Left', responsivePriority: 2,
+              type: 'date',
+              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'en_route_time') },
+            },
+            { 'data': 'en_route_time', title: 'at', type: 'time', },
+
+            { 'data': 'return_home_date', title: 'Returned', responsivePriority: 2,
+              type: 'date',
+              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'return_home_time') },
+            },
+            { 'data': 'return_home_time', title: 'at', type: 'time', },
+
+            { 'data': 'signed_in_date', title: 'Signed in', responsivePriority: 3,
+              type: 'date',
+              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'signed_in_time') },
+            },
+            { 'data': 'signed_in_time', title: 'at', type: 'time', },
+
+            { 'data': 'signed_out_date', title: 'Signed out', responsivePriority: 3,
+              type: 'date',
+              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'signed_out_time') },
+            },
+            { 'data': 'signed_out_time', title: 'at', type: 'time', },
+
             { 'data': 'ahc', title: 'Ahc', type: 'select', options: [false, true], },
             { 'data': 'ol', title: 'Ol', type: 'select', options: [false, true], },
             { 'data': 'id', type: ['readonly', 'hidden'] },
@@ -145,7 +185,11 @@ $(document).ready( function() {
                     {
                         text: '<i class="fa fa-hourglass-start"></i> Heads Up',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=invite&page=Heads Up';
+                            location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&period_format=invite' +
+                                '&page=Heads Up';
                         }
                     },
                     {
@@ -214,57 +258,92 @@ $(document).ready( function() {
 
 })
 
-function UpdateEventRow(dt, row, success, error) {
-    var data = row;
+function RenderDate(data, type, row, meta, time) {
+    // Display Date and time
+    //FIXME: add sort
+    var d = data;
     
-    //FIXME: temporary fix until we decide on api date format and time UI
-    const AddTime = function (d) {
-        // Add time
-        return d ? d + 'T00:00' : '';
+    if ( data && type == 'display' ) {
+        d =  d.substr(5, 2) + '/' + d.substr(8, 2) + '/' + d.substr(0, 4); // mm-dd-yyyy
+
+        var t = row[time]
+        if (t && t != '00:00')
+            d = d + ' ' + t;
     }
-    data.en_route_at = AddTime(data.en_route_at);
-    data.return_home_at = AddTime(data.return_home_at);
-    data.signed_in_at = AddTime(data.signed_in_at);
-    data.signed_out_at = AddTime(data.signed_out_at);
+
+    return d;
+}
+
+function UpdateEventRow(dt, row, success, error) {
     
-    // Delete values that won't be set
-    delete data.member;
-    delete data.mark;
-    //FIXME: backend needs to accept '' string and delete data
-    for (var d in data) if (data[d] == '') delete data[d];
+    function CombineDateTime (ref) {
+        // Combine date and time
+        var d = row[ref + '_date'];
+        var t = row[ref + '_time'];
+        var ft = null;
+
+        if (d && t)
+            ft = d + 'T' + t;
+        else if (d)
+            ft = d + 'T00:00' ;
+        else
+            ;
+        
+        data[ref + '_at'] = ft;
+    }
+
+    var data = {};
+
+    CombineDateTime('en_route');
+    CombineDateTime('return_home');
+    CombineDateTime('signed_in');
+    CombineDateTime('signed_out');
+
+    data.id = row.id;
+    data.ahc = row.ahc;
+    data.ol = row.ol;
     
-    var detail = data.id;
+    var pid = data.id;
     data = JSON.stringify(data);
     //FIXME: add error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
-        url: '/api/edit_participants/' + detail + '/',
+        url: '/api/edit_participants/' + pid + '/',
         data: data,
-        success: function (r, s, m) {
-            var name = r.member.full_name;
-            //FIXME: wrong place to do this, use render
-            if (r.ahc) name += '(AHC)';
-            if (r.ol) name += '(OL)';
-            r.name = name;
+        success: function (data, s, m) {
+            function UncombineDateTime (ref) {
+                // Separate date and time
+                var d = '';
+                var t = '';
+                var ft =  data[ref + '_at'];
+                if (ft) {
+                    d = ft.substr(0, 10);
+                    t = ft.substr(11, 5);
+                    if (t == '00:00') t = '';
+                }
 
-            //FIXME: temporary fix until we decide on api date format
-            const CleanDate = function (d) {
-                // Strip time for now
-                return d ? d.substr(0, 10) : '';
+                data[ref + '_date'] = d;
+                data[ref + '_time'] = t;
             }
-    
-            r.en_route_at = CleanDate(r.en_route_at);
-            r.return_home_at = CleanDate(r.return_home_at);
-            r.signed_in_at = CleanDate(r.signed_in_at);
-            r.signed_out_at = CleanDate(r.signed_out_at);
 
-            // Add extra ephemeral row
-            r.mark = ''
+            UncombineDateTime('en_route');
+            UncombineDateTime('return_home');
+            UncombineDateTime('signed_in');
+            UncombineDateTime('signed_out');
+
+            var name = data.member.full_name;
+            //FIXME: wrong place to do this, use render
+            if (data.ahc) name += '(AHC)';
+            if (data.ol) name += '(OL)';
+            data.name = name;
+
+            // Add ephemeral row
+            data.mark = ''
 
             // Clear marks
             $('td.marked').removeClass('marked');
-            return success(r, s, m);
+            return success(data, s, m);
         },
         error: function (xhr) {
             console.log('member edit failed');

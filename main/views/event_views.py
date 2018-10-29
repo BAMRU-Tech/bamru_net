@@ -117,19 +117,11 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
     model = Event
-    fields = ['title', 'description', 'type',
-              'location', 'leaders',
-              'start', 'finish',
-              'all_day', 'published',
-              ]
-
+    form_class = EventForm
     template_name = 'event_create.html'
 
     def get_form(self):
-        '''add date picker in forms'''
         form = super(EventCreateView, self).get_form()
-        form.fields['start'].widget = widgets.DateInput(attrs={'type': 'date'})
-        form.fields['finish'].widget = widgets.DateInput(attrs={'type': 'date'})
 
         # Mark required fields
         form.fields['title'].label = "Title*"
