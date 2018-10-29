@@ -64,7 +64,6 @@ columnDefs: [ //FIXME: sort by most expired cert?
     },
 ],
 
-//*FIXME: Should the comment col be displayed?
 columns: [
     { data: 'mark', width: '10px', responsivePriority: 1,
       orderable: false,
@@ -154,7 +153,7 @@ function AddCert (dt, row, success, error) {
 
     data.member = $('#memberId').val();
     data = JSON.stringify(data);
-    //FIXME: error handling
+    //FX: error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
@@ -177,15 +176,17 @@ function UpdateRow (dt, row, success, error, url, emsg) {
 
     delete data.type;
 
-    var id = data.id;
+    if (!data.expiration) data.expiration = null;
+    var cid = data.id;
     data = JSON.stringify(data);
-    //FIXME: error handling
+    //FX: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
-        url: '/api/certs/' + id + '/',
+        url: '/api/certs/' + cid + '/',
         data: data,
         success: function (r, s, m) {
+            if (!r.expiration) r.expiration = '';
             // Clear marks
             $('td.marked').removeClass('marked');
             return success(r, s, m);

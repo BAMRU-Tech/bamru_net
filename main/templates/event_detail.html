@@ -5,15 +5,17 @@
 {% block title %}Event Detail - {{ event.title }}{% endblock title %}
 
 {% block subheader %}
-<strong>
-  <a href='{% url "event_list" %}'> Events </a>
-  &gt; {{ event.title }} ({{ event.type }})
+<strong class="d-md-none">
+  <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }}
+</strong>
+<strong class="d-none d-md-block">
+  <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }} ({{ event.type }})
 </strong>
 <ul class="navbar-nav ml-auto">
+  {# FIXME: <a> if left justified <button. seems centered #}
   <li class="nav-item">
     <a class="nav-link" href="{% url 'event_update' event.id %}">
-      <i class="fa fa-pencil"></i>
-      Edit
+      <i class="fa fa-pencil"></i> Edit
     </a>
   </li>
   <li class="nav-item">

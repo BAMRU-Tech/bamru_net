@@ -707,6 +707,9 @@
                         '<strong>Success!</strong>' +
                         '</div>';
                     $('#altEditor-modal .modal-body').append(message);
+                    setTimeout(function() {
+                        $('#altEditor-modal').modal('hide');
+                    }, 1000);
 
                     this.s.dt.row({
                         selected : true
@@ -738,6 +741,9 @@
                         '<strong>Success!</strong>' +
                         '</div>';
                     $('#altEditor-modal .modal-body').append(message);
+                    setTimeout(function() {
+                        $('#altEditor-modal').modal('hide');
+                    }, 1000);
 
                     this.s.dt.row.add(data).draw(false);
 
@@ -766,6 +772,9 @@
                     '<strong>Success!</strong>' +
                     '</div>';
                 $('#altEditor-modal .modal-body').append(message);
+                setTimeout(function() {
+                    $('#altEditor-modal').modal('hide');
+                }, 1000);
                 
                 this.s.dt.row({ selected : true }).data(data);
                 this.s.dt.row({ selected : true }).deselect();
