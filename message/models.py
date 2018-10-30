@@ -115,8 +115,8 @@ class Message(BaseModel):
         for d in dist:
             message.distribution_set.create(
                 member_id=d.member.id,
-                email=d.email,
-                phone=d.phone)
+                send_email=d.send_email,
+                send_sms=d.send_sms)
         logger.info('Repaging {} as {}'.format(old_id, message.pk))
         message.queue()
         message_send.delay(message.pk)
@@ -126,8 +126,8 @@ class Message(BaseModel):
 class Distribution(BaseModel):
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    email = models.BooleanField(default=False)
-    phone = models.BooleanField(default=False)
+    send_email = models.BooleanField(default=False)
+    send_sms = models.BooleanField(default=False)
     read = models.BooleanField(default=False)
     bounced = models.BooleanField(default=False)
     read_at = models.DateTimeField(blank=True, null=True)
@@ -149,11 +149,11 @@ class Distribution(BaseModel):
     def queue(self):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
         self.save()
-        if self.phone:
+        if self.send_sms:
             for p in self.member.phone_set.filter(pagable=True):
                 sms, created = OutboundSms.objects.get_or_create(
                     distribution=self, phone=p)
-        if self.email:
+        if self.send_email:
             for e in self.member.email_set.filter(pagable=True):
                 email, created = OutboundEmail.objects.get_or_create(
                     distribution=self, email=e)

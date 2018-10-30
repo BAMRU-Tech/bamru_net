@@ -211,8 +211,8 @@ function SendPage ( e, dt, node, config ) {
     for (var i = 0; i < members.length; i++) {
         data.distribution_set.push({
           'member': members[i],
-          'email': viaEmail,
-          'phone': viaSms,
+          'send_email': viaEmail,
+          'send_sms': viaSms,
         });
     }
     data = JSON.stringify(data);
