@@ -49,12 +49,12 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'busy') + read_only_fields
 
 
-class CertSerializer(serializers.HyperlinkedModelSerializer):
+class CertSerializer(serializers.ModelSerializer):
         
     class Meta:
         model = Cert
         read_only_fields = ('is_expired', 'color', 'display',)
-        fields = ('id', 'member_id', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
+        fields = ('id', 'member', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
 
 
 class MemberCertSerializer(serializers.HyperlinkedModelSerializer):

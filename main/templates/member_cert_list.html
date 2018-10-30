@@ -88,7 +88,7 @@ columns: [
     { data: 'expiration', title: 'Expiration', responsivePriority: 2,
       type: 'date', 
       render: function(data, type, row, meta) {
-          if (type == 'display' && data != '') {
+          if (type == 'display' && data != '' && data != null) {
                   var date = new Date(data+'T00:00');
                   return date.toLocaleDateString();
           } else
@@ -176,6 +176,9 @@ function UpdateRow (dt, row, success, error, url, emsg) {
     var data = row;
 
     delete data.type;
+    if (data.expiration == "") {
+      data.expiration = null;
+    }
 
     var id = data.id;
     data = JSON.stringify(data);
