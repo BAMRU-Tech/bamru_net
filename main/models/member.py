@@ -55,8 +55,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
     v9 = models.CharField(max_length=255, blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True) # Django: Can log in
+    is_staff = models.BooleanField(default=False) # Django: Can use admin site
     is_current_do = models.BooleanField(default=False)
     sign_in_count = models.IntegerField(default=0)
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
@@ -163,6 +163,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         "Returns the short name for the user."
         return self.first_name
 
+    # TODO: remove or rename this property
     def isActive(self):
         """ Return member status, True is active member """
         return self.rank in self.ACTIVE_RANKS
