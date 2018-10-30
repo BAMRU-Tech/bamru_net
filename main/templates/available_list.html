@@ -76,7 +76,7 @@
 {# --- Table definition --- #}
 
 {% block table_options %}
-order: [[ 1, 'desc' ]],
+order: [[ 0, 'asc' ]],
 
 columnDefs: [
     { responsivePriority: 1, targets: 0 },
@@ -147,22 +147,11 @@ language: { emptyTable: 'No members selected' },
 
 {% block functions %}
 
-// Seems a little crazy that js doesn't offer better date support
-// But not worth loading another 20-30K
 function DateArray(start_date, days) {
-    //
-    // Create date array for date range, ISO formatted
-    //
-    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const mn = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-
+    // Create date array for date range formatted as yyyy-mm-dd
     var result = [];
     for (var i = 0; i < days; i++) {
-        var date = new Date(start_date);
-        date.setDate(date.getDate() + i);
-        var ds = date.toDateString().replace(/.{3} (.{3}) (\d{2}) (\d{4})/, '$3-$1-$2');
-        var month = ds.substr(5, 3);
-        ds = ds.replace(month, mn[m.indexOf(month)]);
+        var ds = DateBE(start_date, i);
         result.push(ds);
     }
     return result;
@@ -188,7 +177,7 @@ function AddRows(table, values) {
 
     var dd = DateArray(Date(), 5);
     url += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];
-    //FIXME: add error handling
+    //FX: add error handling
     $.getJSON(url, null, function( json ) {
         var dd = DateArray(Date(), 5);
         

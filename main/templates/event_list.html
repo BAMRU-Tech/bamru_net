@@ -106,7 +106,7 @@ function AddRowsByDate(table, start, end) {
     table.clear();
 
     const titleLength = 40;
-    //FIXME: add error handling
+    //FX: add error handling
     $.getJSON(url, null, function( json ) {
         
         for (var i = 0; i < json.length; i++)
@@ -153,15 +153,14 @@ var months = url.searchParams.get('months');
 var monthsSpecified = url.searchParams.get('months');
 
 if (current == '' || months) {
-    if (!startAfter) {
-        startAfter = new Date();
-        startAfter = startAfter.toLocaleDateString();
-    }
+    if (!startAfter)
+        startAfter = new Date().toLocaleDateString(); // mm/dd/yyyy
+
     if (!startBefore) {
         if (!months) months = 1;
         startBefore = new Date();
         startBefore.setMonth(startBefore.getMonth() + months);
-        startBefore = startBefore.toLocaleDateString();
+        startBefore = startBefore.toLocaleDateString(); // mm/dd/yyyy
     }
 }
 

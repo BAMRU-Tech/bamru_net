@@ -47,39 +47,51 @@
     {% endblock js%}
 
     <script>
-      // Bootstrap for IOS?  //FIXME: Check to see if this works
-      $(document).ready(function() { $('.dropdown-toggle').dropdown() });
+    // Bootstrap for IOS?  //FIXME: Check to see if this works
+    $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
 
-      // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
-      function getCookie(name) {
-      var cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-          var cookies = document.cookie.split(';');
-          for (var i = 0; i < cookies.length; i++) {
-              var cookie = jQuery.trim(cookies[i]);
-              // Does this cookie string begin with the name we want?
-              if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                  cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                  break;
-              }
-          }
-      }
-          return cookieValue;
-      }
+    // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = jQuery.trim(cookies[i]);
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 
-      function csrfSafeMethod(method) {
-          // these HTTP methods do not require CSRF protection
-          return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-      }
+    function csrfSafeMethod(method) {
+        // these HTTP methods do not require CSRF protection
+        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+    }
 
-      $.ajaxSetup({
-          beforeSend: function(xhr, settings) {
-              var csrftoken = getCookie('csrftoken');
-              if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                  xhr.setRequestHeader("X-CSRFToken", csrftoken);
-              }
-          }
-      });
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            var csrftoken = getCookie('csrftoken');
+            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    function DateFE( date ) {
+        // Create a frontend formatted date mm/dd/yyyy
+        return new Date(date + 'T00:00').toLocaleDateString();
+    }
+
+    function DateBE( date, offset=0 ) {
+        // Create a backend formatted date yyyy-mm-dd
+        var date = new Date(date);
+        if (offset) date.setDate(date.getDate() + offset);
+        return date.toLocaleDateString().replace(/(\d{2}).(\d{2}).(\d{4})/, '$3-$1-$2');
+    }
 
     </script>
   </body>

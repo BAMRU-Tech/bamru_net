@@ -164,30 +164,3 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
         return {
             'period':period,
         }
-
-
-#FIXME: where does this belong
-class MessageParticipantCreateView(LoginRequiredMixin, generic.ListView):    
-    model = Participant
-    fields = ['member', 'ahc', 'ol', 'period']
-    context_object_name = 'member_list'
-    template_name = 'message_participant_add.html'
-
-    def get_queryset(self):
-        """Return the member list."""
-        return Member.objects.filter(
-            Q(member_rank='TM') |
-            Q(member_rank='FM') |
-            Q(member_rank='T') |
-            Q(member_rank='R') |
-            Q(member_rank='S') |
-            Q(member_rank='A')).order_by('id')
-
-    def get_success_url(self):
-        return self.object.period.event.get_absolute_url()
-
-    def get_initial(self):
-        period = get_object_or_404(Period, pk=self.kwargs.get('period'))
-        return {
-            'period':period,
-        }

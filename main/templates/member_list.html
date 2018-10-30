@@ -114,7 +114,7 @@ function AddRows(table, values) {
     // Add rows based rank
     //
     var url = apiUrlMemberRank+values[0];
-    //FIXME: add error handling
+    //FX: add error handling
     $.getJSON(url, null, function( json ) {
         
         for (var i = 0; i < json.length; i++)
