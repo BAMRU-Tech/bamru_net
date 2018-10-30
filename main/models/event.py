@@ -93,6 +93,9 @@ class Period(BasePositionModel):
             participant__period=self.id,
             participant__return_home_at__isnull=True)
 
+    def members_for_test_page(self):
+        return Member.objects.filter( participant__period=self.id )
+
 
 class Participant(BaseModel):
     period = models.ForeignKey(Period, on_delete=models.CASCADE)

@@ -48,8 +48,6 @@ urlpatterns = [
 
     path('event/participant/add/<int:period>/',
          views.PeriodParticipantCreateView.as_view(), name='period_participant_add'),
-    path('message/participant/add/<int:period>/', #FIXME: Wrong namespace (views/event) - sort out w/Kevin
-         views.MessageParticipantCreateView.as_view(), name='message_participant_add'),
 
     path('member/', views.MemberListView.as_view(), name='member_list'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),

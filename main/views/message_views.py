@@ -64,7 +64,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                 elif period_format == 'return':
                     members = period.members_for_returned_page()
                 elif period_format == 'test':
-                    members = self.request.user.pk
+                    members = period.members_for_test_page()
                 else:
                     logger.error('Period format {} not found for: {}'.format(
                     period_format, self.request.body))
