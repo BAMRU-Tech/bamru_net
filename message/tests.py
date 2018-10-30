@@ -30,8 +30,8 @@ class OutgoingEmailTestCase(TestCase):
                                        message__format='page',
                                        message__period_format='invite',
                                        message__rsvp_template=self.rsvp_template,
-                                       email=True,
-                                       phone=False,
+                                       send_email=True,
+                                       send_sms=False,
                                        make_m2m=True)
         self.c = Client()
 
@@ -89,8 +89,8 @@ class OutgoingSmsTestCase(TestCase):
                                 make_m2m=True)
         self.distribution = mommy.make(Distribution,
                                        member=self.phone.member,
-                                       email=False,
-                                       phone=True,
+                                       send_email=False,
+                                       send_sms=True,
                                        make_m2m=True)
         self.c = Client()
 
@@ -139,8 +139,8 @@ class IncommingSmsTestCase(TestCase):
                                        message__period=self.participant.period,
                                        message__format='page',
                                        message__period_format='leave',
-                                       email=False,
-                                       phone=True,
+                                       send_email=False,
+                                       send_sms=True,
                                        make_m2m=True)
         self.c = Client()
 
@@ -176,8 +176,8 @@ class OutgoingSmsTwilioTestCase(TestCase):
                                 make_m2m=True)
         self.distribution = mommy.make(Distribution,
                                        member=self.phone.member,
-                                       email=False,
-                                       phone=True,
+                                       send_email=False,
+                                       send_sms=True,
                                        make_m2m=True)
         self.distribution.message.queue()
         message_send(0)

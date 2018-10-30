@@ -144,7 +144,7 @@ class DistributionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Distribution
         read_only_fields = ('message',)
-        fields = ('id', 'message', 'member', 'email', 'phone',)
+        fields = ('id', 'message', 'member', 'send_email', 'send_sms',)
 
 
 # This version currently requires a period. Future uses can change this.
