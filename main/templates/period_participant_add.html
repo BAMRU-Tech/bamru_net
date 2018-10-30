@@ -140,7 +140,7 @@ function AddParticipant ( e, dt, node, config ) {
             data.push({ 'period': period_id, 'member': members[i] });
         }
         data = JSON.stringify(data);
-        //FIXME: error handling
+        //FX: error handling
         $.ajax({
             method: 'POST',
             contentType: 'application/json',
@@ -173,7 +173,7 @@ function AddRows(table, values) {
     // Add rows based on rank =values[0]
     //
     var url = apiUrlMemberRank+values[0];
-    //FIXME: add error handling
+    //FX: add error handling
     $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)

@@ -54,8 +54,7 @@ columns: [
       type: 'date',
       render: function(data, type, row, meta) {
           if (type == 'display') {
-              var date = new Date(data+'T00:00');
-              return date.toLocaleDateString();
+              return DateFE(data);
           } else
               return data;
       },
@@ -64,8 +63,7 @@ columns: [
       type: 'date',
       render: function(data, type, row, meta) {
           if (type == 'display') {
-              var date = new Date(data+'T00:00');
-              return date.toLocaleDateString();
+              return DateFE(data);
           } else if (type == 'sort')
               return data;
           else
@@ -115,8 +113,11 @@ function AddBusy (dt, row, success, error) {
     var data = row;
 
     data.member = $('#memberId').val();
-    if (!data.start_on) { var d = new Date(); data.start_on = d.toISOString().substr(0, 10) }
+    if (!data.start_on)
+        data.start_on = DateBE(Date());
+
     if (!data.end_on) data.end_on = data.start_on
+
     data = JSON.stringify(data);
     //FX: error handling
     $.ajax({
@@ -140,15 +141,17 @@ function AddBusy (dt, row, success, error) {
 function UpdateRow (dt, row, success, error) {
     var data = row;
 
-    if (!data.start_on) { var d = new Date(); data.start_on = d.toISOString().substr(0, 10) }
+    if (!data.start_on)
+        data.start_on = DateBE(Date());
+
     if (!data.end_on) data.end_on = data.start_on
-    var bp = data.id;
+    var pid = data.id;
     data = JSON.stringify(data);
     //FX: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
-        url: '/api/availability/' + bp + '/',
+        url: '/api/availability/' + pid + '/',
         data: data,
         success: function (r, s, m) {
             var name = r.member.full_name;

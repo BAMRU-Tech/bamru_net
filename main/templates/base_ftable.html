@@ -176,7 +176,7 @@ function DeleteRow ( e, dt, node, config, type, api ) {
 
     if (ok) {
         for (var i=0; i<rows.length; i++) {
-            //FIXME: error handling
+            //FX: error handling
             $.ajax({
                 method: 'DELETE',
                 contentType: 'application/json',

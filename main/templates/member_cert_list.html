@@ -87,11 +87,10 @@ columns: [
     { data: 'expiration', title: 'Expiration', responsivePriority: 2,
       type: 'date', 
       render: function(data, type, row, meta) {
-          if (type == 'display' && data != '' && data != null) {
-                  var date = new Date(data+'T00:00');
-                  return date.toLocaleDateString();
+          if (type == 'display' && data != '') {
+              return DateFE(data);
           } else
-              return data;
+              return data;  // Use raw data for sorting
       },
     },
     { data: 'id', type: ['read-only', 'hidden'], visible: false, title: 'Id', },

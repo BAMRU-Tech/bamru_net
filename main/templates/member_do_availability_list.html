@@ -83,7 +83,7 @@ function InitialData() {
     table.clear();
 
     const titleLength = 40;
-    //FIXME: add error handling
+    //FX: add error handling
     $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
@@ -103,14 +103,14 @@ function UpdateRow (dt, row, success, error) {
 
     var id = data.id;
     data = JSON.stringify(data);
-    //FIXME: error handling
+    //FX: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
         url: '/api/availability/' + id + '/',
         data: data,
         success: function (r, s, m) {
-            var name = r.member.full_name;  //FIXME
+            var name = r.member.full_name;
             // Clear marks
             $('td.marked').removeClass('marked');
             return success(r, s, m);
