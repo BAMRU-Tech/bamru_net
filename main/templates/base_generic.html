@@ -43,9 +43,13 @@
     {% block js %}
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
     {% bootstrap_javascript %}
+
     {% endblock js%}
 
     <script>
+      // Bootstrap for IOS?  //FIXME: Check to see if this works
+      $(document).ready(function() { $('.dropdown-toggle').dropdown() });
+
       // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
       function getCookie(name) {
       var cookieValue = null;

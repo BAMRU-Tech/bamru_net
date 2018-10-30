@@ -5,8 +5,8 @@
 {% block title %}Participant Add{% endblock %}
 
 {% block subheader %}
-<strong class="d-md-none" >Events Add Participant</strong>
-<strong class="d-none d-md-block" id="subhdr">Events Add Participant</strong>
+<strong class="d-md-none" id="subhdr-sm"></strong>
+<strong class="d-none d-md-block" id="subhdr"></strong>
 {% endblock subheader %}
 
 {% block content %}
@@ -213,8 +213,9 @@ function UpdateSubheaderBasedOnSettings(table) {
     });
 
     //FIXME: Add link to event
-    $('#subhdr')[0].innerHTML = (event_name + ' > Add Participants (' +
-                                 showRanks.join(', ') + ')');
+    $('#subhdr')[0].innerHTML = event_name + ' > Add Participants (' +
+        showRanks.join(', ') + ')';
+    $('#subhdr-sm')[0].innerHTML = event_name + ' > Add Participants';
     document.title = 'Participant Add - ' + event_name;
 
 }

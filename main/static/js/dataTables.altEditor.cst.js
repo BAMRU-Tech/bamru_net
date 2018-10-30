@@ -21,6 +21,7 @@
  *                Cleared selection after edit
  *                Changed option comparison to == for boolean (rather than includes())
  *                Changed button 'edit' to 'update'
+ *  CST: 10/28/18 Added input type time 
  */
 (function (factory) {
     if (typeof define === 'function' && define.amd) {
@@ -338,6 +339,18 @@
                                 + adata.data()[0][columnDefs[j].name] + "'>";
                         }
 
+                        // Adding time-fields
+                        if (columnDefs[j].type.includes("time")) {
+                            data += "<input type='time'  id='"
+                                + columnDefs[j].name
+                                + "' name='"
+                                + columnDefs[j].title
+                                + "' placeholder='"
+                                + columnDefs[j].title
+                                + "' style='overflow:hidden'  class='form-control  form-control-sm' value='"
+                                + adata.data()[0][columnDefs[j].name] + "'>";
+                        }
+
                         // Adding select-fields
                         if (columnDefs[j].type.includes("select")) {
                             var options = "";
@@ -611,6 +624,16 @@
                                 + "' style='overflow:hidden'  class='form-control  form-control-sm' value=''>";
                         }
 
+                        // Adding time-fields
+                        if (columnDefs[j].type.includes("time")) {
+                            data += "<input type='time'  id='"
+                                + columnDefs[j].name
+                                + "' name='"
+                                + columnDefs[j].title
+                                + "' placeholder='"
+                                + columnDefs[j].title
+                                + "' style='overflow:hidden'  class='form-control  form-control-sm' value=''>";
+                        }
 
                         // Adding select-fields
                         if (columnDefs[j].type.includes("select")) {
@@ -684,6 +707,9 @@
                         '<strong>Success!</strong>' +
                         '</div>';
                     $('#altEditor-modal .modal-body').append(message);
+                    setTimeout(function() {
+                        $('#altEditor-modal').modal('hide');
+                    }, 1000);
 
                     this.s.dt.row({
                         selected : true
@@ -715,6 +741,9 @@
                         '<strong>Success!</strong>' +
                         '</div>';
                     $('#altEditor-modal .modal-body').append(message);
+                    setTimeout(function() {
+                        $('#altEditor-modal').modal('hide');
+                    }, 1000);
 
                     this.s.dt.row.add(data).draw(false);
 
@@ -743,6 +772,9 @@
                     '<strong>Success!</strong>' +
                     '</div>';
                 $('#altEditor-modal .modal-body').append(message);
+                setTimeout(function() {
+                    $('#altEditor-modal').modal('hide');
+                }, 1000);
                 
                 this.s.dt.row({ selected : true }).data(data);
                 this.s.dt.row({ selected : true }).deselect();

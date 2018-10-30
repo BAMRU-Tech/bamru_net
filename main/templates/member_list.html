@@ -6,7 +6,7 @@
 
 {% block subheader %}
 <strong class="d-md-none" >Members</strong>
-<strong class="d-none d-md-block" id="subhdr">Members</strong>
+<strong class="d-none d-md-block" id="subhdr"></strong>
 <ul class="navbar-nav ml-auto">
   <li class="nav-item ml-auto">
     <a class="nav-link" href="{% url 'member_detail' request.user.id %}?returnx=ml">
@@ -60,8 +60,9 @@ order: [[ 4, 'desc' ]],
 
 columnDefs: [
     { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 2, targets: 3 },
-    { responsivePriority: 3, targets: 4}
+    { responsivePriority: 2, targets: 6 },
+    { responsivePriority: 3, targets: 4},
+    { responsivePriority: 4, targets: 2 },
 ],
 
 columns: [

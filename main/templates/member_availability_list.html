@@ -115,8 +115,10 @@ function AddBusy (dt, row, success, error) {
     var data = row;
 
     data.member = $('#memberId').val();
+    if (!data.start_on) { var d = new Date(); data.start_on = d.toISOString().substr(0, 10) }
+    if (!data.end_on) data.end_on = data.start_on
     data = JSON.stringify(data);
-    //FIXME: error handling
+    //FX: error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
@@ -138,16 +140,18 @@ function AddBusy (dt, row, success, error) {
 function UpdateRow (dt, row, success, error) {
     var data = row;
 
-    var id = data.id;
+    if (!data.start_on) { var d = new Date(); data.start_on = d.toISOString().substr(0, 10) }
+    if (!data.end_on) data.end_on = data.start_on
+    var bp = data.id;
     data = JSON.stringify(data);
-    //FIXME: error handling
+    //FX: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
-        url: '/api/availability/' + id + '/',
+        url: '/api/availability/' + bp + '/',
         data: data,
         success: function (r, s, m) {
-            var name = r.member.full_name; //FIXME
+            var name = r.member.full_name;
             // Clear marks
             $('td.marked').removeClass('marked');
             return success(r, s, m);
@@ -159,40 +163,6 @@ function UpdateRow (dt, row, success, error) {
             return false;
         }
     })
-}
-
-//FIXME: delete
-function DeleteBusyPeriods ( e, dt, node, config ) {
-    var periods = [];
-    $.each($('td.mark-checkbox.marked'), function (i, el) {
-        periods.push($(this.firstChild).data().id)
-    });
-
-    if (periods.length == 0) {
-        alert('Select periods before deleting them');
-        return;
-    }
-
-    var ok = confirm('Delete '+periods.length+' periods?');
-
-    if (ok) {
-        for (var i=0; i<periods.length; i++) {
-            //FIXME: error handling
-            $.ajax({
-                method: 'DELETE',
-                contentType: 'application/json',
-                url: '/api/availability/' + periods[i] + '/',
-                success: function () {
-                    location.reload(true);
-                },
-                error: function (msg) {
-                    console.log('availability delete failed: '+msg);
-                    alert(msg);
-                    return false;
-                },
-            })
-        }
-    }
 }
 
 function UpdateSubheaderBasedOnSettings (table) {}
