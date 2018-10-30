@@ -357,9 +357,12 @@ function UpdateEventRow(dt, row, success, error) {
 }
 
 function DeleteEvent ( event, title ) {
-    const periods = {{ event.period_set.all|length }};
-    if (periods.length > 1) {
-        alert('Events with operational periods cannot be deleted');
+    var numParticipants = 0;
+    {% for period in event.period_set.all %}
+      numParticipants += {{ period.members_for_test_page|length }}
+    {% endfor %}
+    if (numParticipants > 0) {
+        alert('Events with active operational periods cannot be deleted');
         return;
     }
     var ok = confirm('Delete event?\n'+title);
