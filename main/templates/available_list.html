@@ -41,7 +41,7 @@
     
     <tbody>
       {% for member in member_list %}
-      {% if member.isActive %}
+      {% spaceless %}
       <tr>
         <td>
           <a href="{% url 'member_detail' member.id %}?returnx=al">{{ member.full_name }}</a>
@@ -65,7 +65,7 @@
           <div class="d-block d-md-none">{{member.end_date|date:"m-d"}}</div>
         </td>
       </tr>
-      {% endif %}
+      {% endspaceless %}
       {% endfor %}
     </tbody>
   </table>
