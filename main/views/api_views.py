@@ -126,7 +126,7 @@ class MessageFilter(filters.FilterSet):
 
 
 class MessageViewSet(BaseViewSet):
-    queryset = Message.objects.all().filter(id__lt=4500)
+    queryset = Message.objects.all()
     filterset_class = MessageFilter
     search_fields = ('author__username',)
     def get_serializer_class(self):
