@@ -40,7 +40,7 @@ select id, period_id, member_id, ahc, ol, comment, en_route_at, return_home_at, 
 insert into message_message (id, author_id, text, format, linked_rsvp_id, ancestry, period_id, period_format, created_at, updated_at)
 select id, author_id, text, format, linked_rsvp_id, ancestry, period_id, period_format, created_at, updated_at from messages where author_id in (select distinct id from main_member);
 
-insert into message_distribution (id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, rsvp_answer, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at)
+insert into message_distribution (id, message_id, member_id, send_email, send_sms, read, bounced, read_at, response_seconds, rsvp, rsvp_answer, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at)
 select id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, case rsvp_answer when 'Yes' then true when 'No' then false else null end, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at from distributions where message_id in (select distinct id from message_message);
 
 insert into message_rsvptemplate (id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at)
