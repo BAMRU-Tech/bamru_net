@@ -52,6 +52,7 @@ class Message(BaseModel):
         ('broadcast', 'broadcast'),
         ('leave', 'leave'),
         ('return', 'return'),
+        ('test', 'test'),
     )
     author = models.ForeignKey(Member, on_delete=models.CASCADE)
     text = models.TextField()

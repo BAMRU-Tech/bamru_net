@@ -1,63 +1,65 @@
 Manual Test Plan for UI (DRAFT)
 [it would be nice to automate this]
 
+Stored as main/UI_test_plan
+
 Events (EVENT_LIST.HTML)
- - Display current events
-   - Filter: hide/show operations
-   - Filter: Set date range
- - Display all events
-   - Filter: hide/show operations
-   - Filter: Set date range
+ - [  ] Display current events
+   - [  ] Filter: hide/show operations
+   - [  ] Filter: Set date range
+ - [  ] Display all events
+   - [  ] Filter: hide/show operations
+   - [  ] Filter: Set date range
 
 Events->Create new event (EVENT_CREATE.HTML)
- - Create event
+ - [  ] Create event
 
 Events->select event (EVENT_DETAIL.HTML)
- - Add some participants
- - Delete some participants
- - Add new OP, add participant
- - Delete OP with participant
- - Test all 5 Page OP option (check message body for appr msg)
- - Edit event
- - Delete event (check active OPs)
+ - [  ] Add some participants
+ - [  ] Delete some participants
+ - [  ] Add new OP, add participant
+ - [  ] Delete OP with participant
+ - [  ] Test all 5 Page OP option (check message body for appr msg)
+ - [  ] Edit event
+ - [  ] Delete event (check active OPs)
             
 Events->select event->Page (MESSAGE_ADD.HTML)
- - Filter: hide/show TM
- - Select All/Clear All
- - Send Page
+ - [  ] Filter: hide/show TM
+ - [  ] Select All/Clear All
+ - [  ] Send Page
 
 Team->Members (MEMBER_LIST.HTML)
- - Filter: hide/show TM
+ - [  ] Filter: hide/show TM
 
 Team->Availability (AVAILABLE_LIST.HTML)
- - Filter: hide/show TM
+ - [  ] Filter: hide/show TM
 
 Team->Certifications (CERT_LIST.HTML)
- - Filter: hide/show R
+ - [  ] Filter: hide/show R
 
 Team->Quarterly DO schedule (DO_LIST.HTML)
- - Prev/Next
- - Check Plan
+ - [  ] Prev/Next
+ - [  ] Check Plan
  
 Library->Message log (MESSAGE_LIST.HTML)
- - Sort by 'Sent at'
- - View a message detail
+ - [  ] Sort by 'Sent at'
+ - [  ] View a message detail
 
 <user>->Profile (MEMBER_EDIT.HTML)
- - View Profile
- - Edit Profile
+ - [  ] View Profile
+ - [  ] Edit Profile
 
 <user>->Availability (MEMBER_AVAILABILITY_LIST.HTML)
- - Add period
- - Edit period
- - Delete period
+ - [  ] Add period
+ - [  ] Edit period
+ - [  ] Delete period
 
 <user>->Profile (MEMBER_DO_AVAILABILITY_LIST.HTML
- - WIP
+ - [  ] WIP
 
 <user>->Certifications (MEMBER_CERT_LIST.HTML)
- - Add cert
- - Edit cert
- - Delete cert
+ - [  ] Add cert
+ - [  ] Edit cert
+ - [  ] Delete cert
 
 Reports
