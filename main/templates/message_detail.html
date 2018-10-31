@@ -5,7 +5,11 @@
 {% block title %}Message Detail{% endblock %}
 
 {% block subheader %}
-<strong>Message Detail{% if message.period %} - {{ message.period }}{% endif %}</strong>
+<strong>Message Detail
+  {% if message.period %}
+  - <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a>
+  {% endif %}
+</strong>
 {% endblock subheader %}
 
 {% block content %}
