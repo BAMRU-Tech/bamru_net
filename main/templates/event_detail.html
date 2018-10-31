@@ -224,7 +224,7 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=test&page=Testing';
+                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=test&page=Test';
                         }
                     }
                 ]
