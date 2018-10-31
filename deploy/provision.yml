@@ -216,6 +216,6 @@
       become: true
             
     - name: certbot
-      shell: "certbot --nginx --noninteractive --agree-tos -m {{ certbot_email }} -d {{ certbot_domain }}"
+      shell: "certbot --nginx --noninteractive --agree-tos -m {{ certbot_email }} -d {{ certbot_domain }} --redirect"
       become: true
       when: use_certbot
