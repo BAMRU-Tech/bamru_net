@@ -166,6 +166,9 @@ if strtobool(os.environ.get('USE_RAVEN', 'False')):
 TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
 
+# Temporary fix for #128
+DJANGO_TWILIO_FORGERY_PROTECTION=False
+
 if os.environ.get('MESSAGE_FILE_PATH'):
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     EMAIL_FILE_PATH = os.environ['MESSAGE_FILE_PATH']
