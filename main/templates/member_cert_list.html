@@ -21,11 +21,7 @@
         <td></td>
         <td>{{ cert.get_type_display }}</td>
         <td>{{ cert.description }}</td>
-        <td>
-          {% if cert.link %}
-            <a href="{{ cert.link }}" target="_blank">{{cert.link}}</a>
-          {% endif %}
-        </td>
+        <td>{{cert.link }}</td>
         <td>{{ cert.comment }}</td>
         <td>{{ cert.expiration|date:"Y-m-d" }}</td>
         <td>{{ cert.id }}</td>
@@ -77,9 +73,12 @@ columns: [
     { data: 'description', title: 'Description', responsivePriority: 3, },
     { data: 'link', title: 'Documentation', responsivePriority: 4,
       render: function(data, type, row, meta) {
-          if (type == 'display' && data == '') 
-              return row.comment;
-          else
+          if (type == 'display') {
+              if (data == '')
+                  return row.comment;
+              else
+                  return '<a href="' + data + '" target="_blank">' + data + '</a>'
+          } else
               return data
       }
     },

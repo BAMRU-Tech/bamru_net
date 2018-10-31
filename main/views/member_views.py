@@ -312,8 +312,15 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
         qs = Member.objects.prefetch_related(
             Prefetch('unavailable_set',
                      queryset=unavailable_set,
-                     to_attr='unavailable_filtered')
-        ).order_by('id')
+                     to_attr='unavailable_filtered'))
+
+        qs = qs.filter( Q(member_rank='TM') |
+                        Q(member_rank='FM') |
+                        Q(member_rank='T') |
+                        Q(member_rank='R') |
+                        Q(member_rank='S') |
+                        Q(member_rank='A')).order_by('id')
+
         for m in qs:
             m.days = ['' for x in range(self.days)]
             for u in m.unavailable_filtered:
