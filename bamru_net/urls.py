@@ -70,6 +70,8 @@ urlpatterns = [
     path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(), name='message_inbox'),
     path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
 
+    path('action/become_do/', views.ActionBecomeDo.as_view(), name='action_become_do'),
+
     path('', include('message.urls')),
 
     url(r'^api/', include(router.urls)),

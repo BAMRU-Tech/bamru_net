@@ -16,6 +16,7 @@ from django.views import generic
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
+from django.db.models import Q
 
 from main.models import Member, Participant, Period
 
@@ -36,7 +37,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
     #    return self.object.get_absolute_url()
 
     def get_queryset(self):
-        """Return context with members to page."""
+        """Return context for standard paging."""
         initial = {}
         initial['author'] = self.request.user.pk
         members = None
@@ -58,7 +59,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             if period_format == 'invite':
                 members = Member.active.exclude(
                     participant__period=period_id)
-            else:
+            else: #FIXME: is this else vs elif here for a reason?
                 if period_format == 'leave':
                     members = period.members_for_left_page()
                 elif period_format == 'return':
@@ -73,12 +74,18 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             try:
                 rsvp_template = RsvpTemplate.objects.get(name=page)
                 initial['rsvp_template'] = rsvp_template
+                #FIXME import pdb; pdb.set_trace()
             except RsvpTemplate.DoesNotExist:
                 logger.error('RsvpTemplate {} not found for period: {}'.format(
                     page, period_id))
 
             self.initial = initial  # Is there a better way to get info into the template?
-            return members
+
+        initial['title'] = "Page"
+        initial['input'] = "{}: {}".format(str(period), rsvp_template.text)
+        initial['type'] = "std_page"
+
+        return members
 
     def get_context_data(self, **kwargs):
         '''Add additional useful information.'''
@@ -256,3 +263,55 @@ def handle_outbound_email_tracking(sender, event, esp_name, **kwargs):
     if event.event_type == 'opened':
         email.opened = True
     email.save()
+
+
+class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
+    model = Message
+    template_name = 'message_add.html'
+    context_object_name = 'member_list'
+
+    #def get_success_url(self): FIXME
+    #    return self.object.get_absolute_url()
+
+    def get_queryset(self):
+        """Return context with members to page."""
+        initial = {}
+        initial['author'] = self.request.user.pk
+        members = None
+        period_id = self.request.GET.get('period')
+        period_format = self.request.GET.get('period_format')
+        page = self.request.GET.get('page')
+
+    def get_queryset(self):
+        """Return the member list."""
+        return Member.objects.filter(
+            Q(member_rank='TM') |
+            Q(member_rank='FM') |
+            Q(member_rank='T') |
+            Q(member_rank='R') |
+            Q(member_rank='S') |
+            Q(member_rank='A')).order_by('id')
+
+    def get_context_data(self, **kwargs):
+        """Return context for become DO"""
+        context = super().get_context_data(**kwargs)
+
+        context['type'] = "become_do"
+
+        # DO PII
+        do = self.request.user
+        context['do'] = do #FIXME: need?
+
+        context['title'] = "Page DO transition"
+
+        # text box canned message
+        do_shift = "0800 October 9 to 0800 October 16"
+        input = "BAMRU DO from {} is {}. {}. {}"
+        #FIXME import pdb; pdb.set_trace();
+        context['input'] = input.format( do_shift, do.full_name,
+                                         do.display_phone, do.display_email)
+        context['text'] = 'TEXT'
+
+        context['confirm_prologue']  = "Correct data and time for your shift?\\n"
+
+        return context
