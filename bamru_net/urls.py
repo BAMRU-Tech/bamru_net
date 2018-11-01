@@ -21,6 +21,7 @@ from django.urls import include, path
 from main import views
 
 from rest_framework import routers
+from rest_framework.documentation import include_docs_urls
 
 router = routers.DefaultRouter()
 router.register(r'events', views.EventViewSet)
@@ -34,6 +35,7 @@ router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
 router.register(r'message', views.MessageViewSet)
+
 
 urlpatterns = [
     path('', views.IndexView.as_view()),
@@ -74,6 +76,7 @@ urlpatterns = [
 
     url(r'^api/', include(router.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    url(r'^api-docs/', include_docs_urls(title='BAMRU API')),
 
     path('admin/', admin.site.urls),
 
