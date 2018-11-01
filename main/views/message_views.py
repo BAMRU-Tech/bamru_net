@@ -299,7 +299,8 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
         context['period_format'] = 'info'
         # text box canned message
         start = datetime.now()
-        end = start + timedelta(7)
+        # set end to next Tuesday
+        end = start + timedelta(7 - (start.weekday() - 1)  % 7)
         do_shift = "{} to {}".format(start.strftime("0800 %B %-d"),
                                      end.strftime("0800 %B %-d"))
         input = "BAMRU DO from {} is {} ({}, {})"
