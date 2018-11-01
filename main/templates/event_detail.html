@@ -154,28 +154,28 @@ $(document).ready( function() {
             { 'data': 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
-                  return RenderDate(d, t, r, m, 'en_route_time') },
+                  return RenderDateTime(d, t, r, m, 'en_route_time') },
             },
             { 'data': 'en_route_time', title: 'at', type: 'time', },
 
             { 'data': 'return_home_date', title: 'Returned', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
-                  return RenderDate(d, t, r, m, 'return_home_time') },
+                  return RenderDateTime(d, t, r, m, 'return_home_time') },
             },
             { 'data': 'return_home_time', title: 'at', type: 'time', },
 
             { 'data': 'signed_in_date', title: 'Signed in', responsivePriority: 3,
               type: 'date',
               render: function (d, t, r, m) {
-                  return RenderDate(d, t, r, m, 'signed_in_time') },
+                  return RenderDateTime(d, t, r, m, 'signed_in_time') },
             },
             { 'data': 'signed_in_time', title: 'at', type: 'time', },
 
             { 'data': 'signed_out_date', title: 'Signed out', responsivePriority: 3,
               type: 'date',
               render: function (d, t, r, m) {
-                  return RenderDate(d, t, r, m, 'signed_out_time') },
+                  return RenderDateTime(d, t, r, m, 'signed_out_time') },
             },
             { 'data': 'signed_out_time', title: 'at', type: 'time', },
 
@@ -268,13 +268,12 @@ $(document).ready( function() {
 
 })
 
-function RenderDate(data, type, row, meta, time) {
+function RenderDateTime(data, type, row, meta, time) {
     // Display Date and time
-    //FIXME: add sort
     var d = data;
     
     if ( data && type == 'display' ) {
-        d =  d.substr(5, 2) + '/' + d.substr(8, 2) + '/' + d.substr(0, 4); // mm-dd-yyyy
+        d =  DateFE(data);
 
         var t = row[time]
         if (t && t != '00:00')
