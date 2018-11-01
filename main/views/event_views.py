@@ -148,7 +148,7 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return the member list."""
         return Member.objects.filter(
-            member__rank=in['TM','FM','T','R','S','A']).order_by('id')
+            member_rank__in=['TM','FM','T','S']).order_by('id')
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()
