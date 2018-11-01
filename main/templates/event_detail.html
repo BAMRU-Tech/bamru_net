@@ -69,10 +69,7 @@
       {% for p in period.participant_set.all %}
       <tr>
         <td></td>
-        <td data-id={{ p.id }}>{{ p.member }}
-          {% if p.ahc %}(AHC){% endif %}
-          {% if p.ol %}(OL){% endif %}
-        </td>
+        <td data-id={{ p.id }}>{{ p.member }}</td>
         <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
         <td>
           {% if p.en_route_at|date:"H:i" != '00:00' %}
@@ -97,8 +94,8 @@
           {{ p.signed_out_at|date:"H:i" }}
         {% endif %}
         </td>
-	    <td>{{ p.ahc }}</td>
-	    <td>{{ p.ol }}</td>
+	    <td>{{ p.ahc|lower }}</td>
+	    <td>{{ p.ol|lower }}</td>
 	    <td>{{ p.id }}</td>
 	    <td>{{ p.member.id }}</td>
 	    <td>{{ p.period.id }}</td>
@@ -145,34 +142,45 @@ $(document).ready( function() {
             { 'data': 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
             },
-            { 'data': 'name', title: 'Name', responsivePriority: 1, type: 'readonly', },
-
+            { 'data': 'name', title: 'Name', responsivePriority: 1, type: 'readonly',
+              render: function (d, t, r, m) {
+                  if (t == 'display') {
+                      if (r.ahc == 'true') d += '(AHC)';
+                      if (r.ol == 'true') d += '(OL)';
+                  }
+                  return d;
+              }
+            },
             { 'data': 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date',
-              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'en_route_time') },
+              render: function (d, t, r, m) {
+                  return RenderDate(d, t, r, m, 'en_route_time') },
             },
             { 'data': 'en_route_time', title: 'at', type: 'time', },
 
             { 'data': 'return_home_date', title: 'Returned', responsivePriority: 2,
               type: 'date',
-              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'return_home_time') },
+              render: function (d, t, r, m) {
+                  return RenderDate(d, t, r, m, 'return_home_time') },
             },
             { 'data': 'return_home_time', title: 'at', type: 'time', },
 
             { 'data': 'signed_in_date', title: 'Signed in', responsivePriority: 3,
               type: 'date',
-              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'signed_in_time') },
+              render: function (d, t, r, m) {
+                  return RenderDate(d, t, r, m, 'signed_in_time') },
             },
             { 'data': 'signed_in_time', title: 'at', type: 'time', },
 
             { 'data': 'signed_out_date', title: 'Signed out', responsivePriority: 3,
               type: 'date',
-              render: function (d, t, r, m) { return RenderDate(d, t, r, m, 'signed_out_time') },
+              render: function (d, t, r, m) {
+                  return RenderDate(d, t, r, m, 'signed_out_time') },
             },
             { 'data': 'signed_out_time', title: 'at', type: 'time', },
 
-            { 'data': 'ahc', title: 'Ahc', type: 'select', options: [false, true], },
-            { 'data': 'ol', title: 'Ol', type: 'select', options: [false, true], },
+            { 'data': 'ahc', title: 'Ahc', type: 'select', options: ['false', 'true'], },
+            { 'data': 'ol', title: 'Ol', type: 'select', options: ['false', 'true'], },
             { 'data': 'id', type: ['readonly', 'hidden'] },
             { 'data': 'member', type: ['readonly', 'hidden'] },
             { 'data': 'period', type: ['readonly', 'hidden'] },
@@ -282,7 +290,6 @@ function UpdatePeriodRow(dt, row, success, error) {
 
     function ReturnData (data) {
         // Create closure with memberName
-        var name = memberName;
 
         function UncombineDateTime (ref) {
             // Separate date and time into _date and _time columns
@@ -299,16 +306,15 @@ function UpdatePeriodRow(dt, row, success, error) {
             data[ref + '_time'] = t;
         }
 
+        data.name = memberName;
         // Create additional rows for editing
         UncombineDateTime('en_route');
         UncombineDateTime('return_home');
         UncombineDateTime('signed_in');
         UncombineDateTime('signed_out');
 
-        //FIXME: wrong place to do this, use render
-        if (data.ahc) name += '(AHC)';
-        if (data.ol) name += '(OL)';
-        data.name = name;
+        data.ahc = data.ahc.toString();
+        data.ol = data.ol.toString();
 
         // Add ephemeral row
         data.mark = ''
