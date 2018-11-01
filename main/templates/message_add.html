@@ -224,7 +224,7 @@ function SendPage ( e, dt, node, config ) {
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
-        url: '/api/message/',
+        url: '/api/messages/',
         data: data,
         success: function (response) {
             console.log(response);

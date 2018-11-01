@@ -249,7 +249,7 @@ $(document).ready( function() {
             }
         ],
 
-        onEditRow: UpdateEventRow,
+        onEditRow: UpdatePeriodRow,
 
         language: { emptyTable: 'No members added' },
     });
@@ -276,10 +276,50 @@ function RenderDate(data, type, row, meta, time) {
     return d;
 }
 
-function UpdateEventRow(dt, row, success, error) {
+function UpdatePeriodRow(dt, row, success, error) {
     
-    function CombineDateTime (ref) {
-        // Combine date and time
+    var memberName = row.name;
+
+    function ReturnData (data) {
+        // Create closure with memberName
+        var name = memberName;
+
+        function UncombineDateTime (ref) {
+            // Separate date and time into _date and _time columns
+            var d = '';
+            var t = '';
+            var ft =  data[ref + '_at'];
+            if (ft) {
+                d = ft.substr(0, 10);
+                t = ft.substr(11, 5);
+                if (t == '00:00') t = '';
+            }
+
+            data[ref + '_date'] = d;
+            data[ref + '_time'] = t;
+        }
+
+        // Create additional rows for editing
+        UncombineDateTime('en_route');
+        UncombineDateTime('return_home');
+        UncombineDateTime('signed_in');
+        UncombineDateTime('signed_out');
+
+        //FIXME: wrong place to do this, use render
+        if (data.ahc) name += '(AHC)';
+        if (data.ol) name += '(OL)';
+        data.name = name;
+
+        // Add ephemeral row
+        data.mark = ''
+
+        // Clear marks
+        $('td.marked').removeClass('marked');
+        return success(data);
+    }
+
+    function DataDateTime (ref) {
+        // Combine date and time for BE
         var d = row[ref + '_date'];
         var t = row[ref + '_time'];
         var ft = null;
@@ -296,12 +336,11 @@ function UpdateEventRow(dt, row, success, error) {
 
     var data = {};
 
-    CombineDateTime('en_route');
-    CombineDateTime('return_home');
-    CombineDateTime('signed_in');
-    CombineDateTime('signed_out');
-
     data.id = row.id;
+    DataDateTime('en_route');
+    DataDateTime('return_home');
+    DataDateTime('signed_in');
+    DataDateTime('signed_out');
     data.ahc = row.ahc;
     data.ol = row.ol;
     
@@ -311,42 +350,9 @@ function UpdateEventRow(dt, row, success, error) {
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
-        url: '/api/edit_participants/' + pid + '/',
+        url: '/api/participants/' + pid + '/',
         data: data,
-        success: function (data, s, m) {
-            function UncombineDateTime (ref) {
-                // Separate date and time
-                var d = '';
-                var t = '';
-                var ft =  data[ref + '_at'];
-                if (ft) {
-                    d = ft.substr(0, 10);
-                    t = ft.substr(11, 5);
-                    if (t == '00:00') t = '';
-                }
-
-                data[ref + '_date'] = d;
-                data[ref + '_time'] = t;
-            }
-
-            UncombineDateTime('en_route');
-            UncombineDateTime('return_home');
-            UncombineDateTime('signed_in');
-            UncombineDateTime('signed_out');
-
-            var name = data.member.full_name;
-            //FIXME: wrong place to do this, use render
-            if (data.ahc) name += '(AHC)';
-            if (data.ol) name += '(OL)';
-            data.name = name;
-
-            // Add ephemeral row
-            data.mark = ''
-
-            // Clear marks
-            $('td.marked').removeClass('marked');
-            return success(data, s, m);
-        },
+        success: ReturnData,
         error: function (xhr) {
             console.log('member edit failed');
             console.log(xhr);

@@ -72,7 +72,6 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             try:
                 rsvp_template = RsvpTemplate.objects.get(name=page)
                 initial['rsvp_template'] = rsvp_template
-                #FIXME import pdb; pdb.set_trace()
             except RsvpTemplate.DoesNotExist:
                 logger.error('RsvpTemplate {} not found for period: {}'.format(
                     page, period_id))
@@ -299,9 +298,11 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
 
         context['period_format'] = 'info'
         # text box canned message
-        #FIXME
-        do_shift = "0800 October 9 to 0800 October 16"
-        input = "BAMRU DO from {} is {}. {}. {}"
+        start = datetime.now()
+        end = start + timedelta(7)
+        do_shift = "{} to {}".format(start.strftime("0800 %B %-d"),
+                                     end.strftime("0800 %B %-d"))
+        input = "BAMRU DO from {} is {} ({}, {})"
         context['input'] = input.format( do_shift, do.full_name,
                                          do.display_phone, do.display_email)
         context['text'] = 'TEXT'
