@@ -16,7 +16,6 @@ from django.views import generic
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from twilio.twiml.messaging_response import MessagingResponse
-from django.db.models import Q
 
 from main.models import Member, Participant, Period
 
@@ -59,16 +58,15 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             if period_format == 'invite':
                 members = Member.active.exclude(
                     participant__period=period_id)
-            else: #FIXME: is this else vs elif here for a reason?
-                if period_format == 'leave':
-                    members = period.members_for_left_page()
-                elif period_format == 'return':
-                    members = period.members_for_returned_page()
-                elif period_format == 'test':
-                    members = period.members_for_test_page()
-                else:
-                    logger.error('Period format {} not found for: {}'.format(
-                    period_format, self.request.body))
+            elif period_format == 'leave':
+                members = period.members_for_left_page()
+            elif period_format == 'return':
+                members = period.members_for_returned_page()
+            elif period_format == 'test':
+                members = period.members_for_test_page()
+            else:
+                logger.error('Period format {} not found for: {}'.format(
+                period_format, self.request.body))
 
             rsvp_template = None
             try:
@@ -285,12 +283,7 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return the member list."""
         return Member.objects.filter(
-            Q(member_rank='TM') |
-            Q(member_rank='FM') |
-            Q(member_rank='T') |
-            Q(member_rank='R') |
-            Q(member_rank='S') |
-            Q(member_rank='A')).order_by('id')
+            member_rank__in=['TM','FM','T','R','S','A']).order_by('id')
 
     def get_context_data(self, **kwargs):
         """Return context for become DO"""
@@ -304,10 +297,11 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
 
         context['title'] = "Page DO transition"
 
+        context['period_format'] = 'info'
         # text box canned message
+        #FIXME
         do_shift = "0800 October 9 to 0800 October 16"
         input = "BAMRU DO from {} is {}. {}. {}"
-        #FIXME import pdb; pdb.set_trace();
         context['input'] = input.format( do_shift, do.full_name,
                                          do.display_phone, do.display_email)
         context['text'] = 'TEXT'
