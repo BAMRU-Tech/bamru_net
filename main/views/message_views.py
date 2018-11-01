@@ -164,7 +164,7 @@ def handle_distribution_rsvp(distribution, rsvp=False):
             return ('Unknown response for {} page for {}.'
                     .format(distribution.message.period_format, distribution.message.period))
 
-    logger.error('Participant not found for: ' + request.body)
+    logger.error('Participant not found for: ' + str(request.body))
     return ('Error: You were not found as a participant for {}.'
             .format(distribution.message.period))
 
@@ -206,7 +206,7 @@ def sms(request):
         logger.info('Received SMS from {}: {}'.format(twilio_request.from_,
                                                       twilio_request.body))
     except:
-        logger.error('Unable to save message: ' + request.body)
+        logger.error('Unable to save message: ' + str(request.body))
         response.message('BAMRU.net Error: unable to parse your message.')
         return response
 
@@ -217,15 +217,15 @@ def sms(request):
                 .order_by('-pk').first())
     # TODO filter by texts that have associated question
     if not outbound:
-        logger.error('No matching OutboundSms for: ' + request.body)
+        logger.error('No matching OutboundSms for: ' + str(request.body))
         response.message(
             'BAMRU.net Warning: not sure what to do with your message. Maybe it was too long ago.')
         return response
 
     yn = twilio_request.body[0].lower()
     if yn != 'y' and yn != 'n':
-        logger.error('Unable to parse y/n message: ' + request.body)
-        response.message('Could not parse yes/no in your message.')
+        logger.error('Unable to parse y/n message: ' + str(request.body))
+        response.message('Could not parse yes/no in your message. Start your message with y or n.')
         return response
 
     response.message(handle_distribution_rsvp(
