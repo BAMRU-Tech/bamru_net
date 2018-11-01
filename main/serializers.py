@@ -125,21 +125,6 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
             return Participant.objects.create(**validated_data)
 
 
-#FIXME: This is here to get fullname without interfering with ParticipantAdd
-# normalize api around objects {members, events, ...}
-class BaseMemberSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = Member
-        fields = ('id', 'full_name',)
-
-
-class EditPeriodParticipantSerializer(serializers.ModelSerializer):
-    member = BaseMemberSerializer()
-    class Meta:
-        model = Participant
-        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
-
-
 class DistributionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Distribution

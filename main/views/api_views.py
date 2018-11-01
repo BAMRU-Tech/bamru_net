@@ -107,11 +107,6 @@ class ParticipantViewSet(CreateListModelMixin, BaseViewSet):
     serializer_class = PeriodParticipantSerializer
 
 
-class EditParticipantViewSet(CreateListModelMixin, BaseViewSet):
-    queryset = Participant.objects.all()
-    serializer_class = EditPeriodParticipantSerializer
-
-
 class DoViewSet(BaseViewSet):
     queryset = DoAvailable.objects.all()
     serializer_class = DoSerializer
