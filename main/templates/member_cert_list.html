@@ -42,23 +42,6 @@ altEditor: true,
 
 order: [[ 5, 'desc']],
 
-columnDefs: [ //FIXME: sort by most expired cert?
-    {
-        targets: [ 1, 4 ],
-        render: function ( data, type, row, meta ) {
-            if (meta.col == 0 && row.display) {
-                // Handle type 'cpr' -> 'CPR'
-                data = row.display
-            } else {
-                // Add color for up coming cert expirations
-                var rnode = $('#dTbl').DataTable().row(meta.row).node();
-                $('td:eq(4)', rnode).css('background-color', row.color)
-            }
-            return data;
-        },
-    },
-],
-
 columns: [
     { data: 'mark', width: '10px', responsivePriority: 1,
       orderable: false,
@@ -68,7 +51,16 @@ columns: [
           return '<div data-id="' + row.id + '"></div>';
       },
     },
-    { data: 'type', type: 'readonly', title: 'Type', responsivePriority: 1, },
+    { data: 'type', type: 'readonly', title: 'Type', responsivePriority: 1,
+      render: function ( data, type, row, meta ) {
+          if (type = 'display' && row.display) {
+              // Handle type 'cpr' -> 'CPR'
+              data = row.display
+          }
+
+          return data;
+      },
+    },
     { data: 'description', title: 'Description', responsivePriority: 3, },
     { data: 'link', title: 'Documentation', responsivePriority: 4,
       render: function(data, type, row, meta) {
@@ -85,10 +77,20 @@ columns: [
     { data: 'expiration', title: 'Expiration', responsivePriority: 2,
       type: 'date', 
       render: function(data, type, row, meta) {
-          if (type == 'display' && data != '') {
-              return DateFE(data);
-          } else
-              return data;  // Use raw data for sorting
+          if (type == 'display') {
+              if (data) {
+                  // Add color for up coming cert expirations
+                  var rnode = $('#dTbl').DataTable().row(meta.row).node();
+                  $('td:eq(4)', rnode).css('background-color', row.color)
+
+                  data = DateFE(data);
+              }
+          } else {
+              const colorOrder = { white: 1, red: 5, orange: 4, yellow: 3, limegreen: 2 };
+              data = colorOrder[row.color] + data;
+          }
+
+          return data;
       },
     },
     { data: 'id', type: ['read-only', 'hidden'], visible: false, title: 'Id', },
@@ -144,7 +146,7 @@ onEditRow: function (dt, row, success, error) {
 
 {% block functions %}
 
-//FIXME: Currently using cert_form
+//FX: Currently using cert_form
 function AddCert (dt, row, success, error) {
     var data = row;
 

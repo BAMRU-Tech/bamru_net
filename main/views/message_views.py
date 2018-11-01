@@ -292,7 +292,7 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
 
         # DO PII
         do = self.request.user
-        context['do'] = do #FIXME: need?
+        #context['do'] = do #FIXME: need?
 
         context['title'] = "Page DO transition"
 
