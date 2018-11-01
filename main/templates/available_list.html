@@ -160,7 +160,7 @@ function DateArray(start_date, days) {
 var numDays = 5;
 
 function SetBusy(busy, start, end, comment) {
-    //FIXME: make 'comment' a modal popup or tool tip or both
+    //FX: make 'comment' a modal popup or tool tip or both
     if (start < 0) start = 0;
     if (end <= 0) end = numDays;
     for (var i = start; i < end; i++) busy[i] = comment;
@@ -196,7 +196,7 @@ function AddRows(table, values) {
                 var end_on = dd.indexOf(period[p].end_on) + 1;
                 var comment = period[p].comment;
                 if (comment) {
-                    //FIXME: It would be nice to use different display sizes
+                    //FX: It would be nice to use different display sizes
                     //Decide on appropriate constants
                     if (comment.length > 10) comment = comment.slice(0, 10);
                 } else

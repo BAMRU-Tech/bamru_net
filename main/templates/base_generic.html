@@ -47,7 +47,6 @@
     {% endblock js%}
 
     <script>
-    // Bootstrap for IOS?  //FIXME: Check to see if this works
     $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
 
     // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
@@ -80,6 +79,9 @@
             }
         }
     });
+
+//FIXME: add to datatablesEditor and Django types(date, time) with alternative input method
+// Safari doesn't handle time well on Mac
 
     function DateFE( date ) {
         // Create a frontend formatted date mm/dd/yyyy
