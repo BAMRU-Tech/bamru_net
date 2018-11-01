@@ -56,12 +56,13 @@ class MemberUnavailableViewSet(BaseViewSet):
 
     def get_serializer(self, *args, **kwargs):
         filter_kwargs = {}
-        if self.request.query_params.get('date_range_start'):
-            filter_kwargs['end_on__gte'] = forms.DateField().clean(
-                    self.request.query_params['date_range_start'])
-        if self.request.query_params.get('date_range_end'):
-            filter_kwargs['start_on__lte'] = forms.DateField().clean(
-                    self.request.query_params['date_range_end'])
+        if hasattr(self.request, 'query_params'):
+            if self.request.query_params.get('date_range_start'):
+                filter_kwargs['end_on__gte'] = forms.DateField().clean(
+                        self.request.query_params['date_range_start'])
+            if self.request.query_params.get('date_range_end'):
+                filter_kwargs['start_on__lte'] = forms.DateField().clean(
+                        self.request.query_params['date_range_end'])
         return super().get_serializer(*args, unavailable_filter_kwargs=filter_kwargs, **kwargs)
 
 
