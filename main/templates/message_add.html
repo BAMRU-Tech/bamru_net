@@ -293,7 +293,11 @@ $.fn.dataTable.ext.search.push(
 $('#id_text').after($("<div id='length-message' class='text-muted'>"));
 $('#id_text').on('input', function(){
     var length = $('#id_text').val().length;
-    //FIXME: mark in red when char count exceeds 160
+    if (length > 160)
+        $('#id_text').css({'color':'red'});
+    else
+        $('#id_text').css({'color':'unset'});
+
     $("#length-message").text(length + " characters used (single SMS fits 160)");
 });
 $('#id_text').triggerHandler('input');

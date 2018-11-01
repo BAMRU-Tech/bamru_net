@@ -204,7 +204,7 @@ class Role(BaseModel):
 
 class Address(BasePositionModel):
     TYPES = (
-        ('home', 'home FIXME'),
+        ('home', 'home TODO'),
         ('Home', 'Home'),
         ('Work', 'Work'),
         ('Other', 'Other'),

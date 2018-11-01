@@ -64,7 +64,7 @@ var filterTypesCap = [];
 // Custom filtering function
 $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
-        //FIXME: Bug allows event type to be Capitalized when stored in DB
+        // DB data bug allows event type to be Capitalized (removed when no longer needed
         if ( filterTypes.includes(data[2]) || filterTypesCap.includes(data[2]) ) {
             return true;
         }
