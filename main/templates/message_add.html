@@ -2,7 +2,7 @@
 
 {# --- Page definition --- #}
 
-{% block title %}New Compose Message{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block subheader %}
 <strong class="d-md-none" id="subhdr-sm"></strong>
@@ -16,8 +16,7 @@
     <label for="id_text">Message:</label>
     <textarea name="text" cols="40" rows="2" class="form-control"
               placeholder="Enter message for {{text}}"
-              title="" required id="id_text"
-              >{{text}}: {{rsvp_template.text}}</textarea>
+              title="" required id="id_text">{{ input }}</textarea>
   </div>
   <input type="hidden" name="format" value="{{format}}" id="id_format" />
   <input type="hidden" name="period" value="{{period_id}}" id="id_period" />
@@ -80,7 +79,7 @@
 {% block table_options %}
 select: 'os',
 
-order: [[ 1, 'asc' ]],
+order: [[ 4, 'desc' ]],
 
 columns: [
     { data: 'mark', responsivePriority: 1,
@@ -88,7 +87,6 @@ columns: [
       orderable: false,
       className: 'mark-checkbox',
     },
-    //FIXME: Add render and check on use of id
     { data: 'name', title: 'Name', responsivePriority: 1, },
     { data: 'rank', title: 'Rank', responsivePriority: 5,
       render: function(data, type, row, meta) {
@@ -129,6 +127,12 @@ SetMemberFilter (table, false);
 {% endblock initComplete %}
 
 {% block ready_functions %}
+
+if (periodFormat != 'invite')
+    table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        // Pre-select participants
+        $(this.node()).children().first().addClass('marked');
+    })
 
 table.on( 'select', function ( e, dt, type, indices ) {
     var allMarked = true;
@@ -197,9 +201,9 @@ function SendPage ( e, dt, node, config ) {
         via = '()';
     }
     var text = $('#id_text').val();
-    var ok = confirm('Page via '+via+' '+members.length+' members\nMessage: '+text);
+    var ok = confirm('{{ confirm_prologue }}Page via ' + via + ' '
+                     + members.length + ' members\nMessage: ' + text);
     if (!ok) return false;
-    console.log(members);
     
     var data = {};
     data.text = text;
@@ -254,13 +258,20 @@ function UpdateSubheaderBasedOnSettings (table) {
         }
     });
 
-    var sh = '<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
-        '{{ text }}</a>:' + page;
+    if ('{{ type }}' == 'std_page') {
+        var sh = '<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
+            '{{ text }}</a>:' + page;
 
-    $('#subhdr-sm')[0].innerHTML = sh;
-    $('#subhdr')[0].innerHTML = sh + ' > Page Participants (' + showRanks.join(', ') + ')';
+        $('#subhdr-sm')[0].innerHTML = sh;
+        $('#subhdr')[0].innerHTML = sh + ' > Page Participants ('
+            + showRanks.join(', ') + ')';
  
-    document.title = '{{ text }} Page';
+        document.title = '{{ text }} Page';
+    } else {
+        var sh = "Page DO transition";
+        $('#subhdr-sm')[0].innerHTML = sh;
+        $('#subhdr')[0].innerHTML = sh;
+    }
 
     table.draw();
 
@@ -270,8 +281,6 @@ $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
         var node = $('#dTbl').DataTable().row(dataIndex).node();
         if ( showRanks.includes(data[2]) ) {
-            if (periodFormat != 'invite') //*FIXME: this really isn't the right place
-                $(node).children().first().addClass('marked');
             return true;
         }
 
