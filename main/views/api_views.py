@@ -84,7 +84,7 @@ class EventFilter(filters.FilterSet):
     start = filters.DateFromToRangeFilter()
     class Meta:
         model = Event
-        fields = ('type', 'start', )
+        fields = ('type', 'start', 'published',)
 
 
 class EventViewSet(BaseViewSet):
