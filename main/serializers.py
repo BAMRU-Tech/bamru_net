@@ -134,7 +134,7 @@ class DistributionSerializer(serializers.ModelSerializer):
 
 # This version currently requires a period. Future uses can change this.
 class MessageListSerializer(serializers.ModelSerializer):
-    rsvp_template = serializers.CharField()
+    rsvp_template = serializers.CharField(allow_null=True)
     class Meta:
         model = Message
         read_only_fields = ('author', 'created_at',)
@@ -154,10 +154,11 @@ class MessageDetailSerializer(MessageListSerializer):
 
         template_str = validated_data.pop('rsvp_template')
         rsvp_template = None
-        try:
-            rsvp_template = RsvpTemplate.objects.get(name=template_str)
-        except RsvpTemplate.DoesNotExist:
-            logger.error('RsvpTemplate {} not found'.format(template_str))
+        if template_str:
+            try:
+                rsvp_template = RsvpTemplate.objects.get(name=template_str)
+            except RsvpTemplate.DoesNotExist:
+                logger.error('RsvpTemplate {} not found'.format(template_str))
 
         message = Message.objects.create(
             author=author,

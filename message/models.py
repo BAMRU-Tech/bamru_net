@@ -16,6 +16,8 @@ from main.models import (BaseModel, BasePositionModel, Email, Member, Period,
 
 logger = logging.getLogger(__name__)
 
+# Set this if the UI does not append the template
+APPEND_RSVP_TEMPLATE = False
 
 class RsvpTemplate(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -31,7 +33,9 @@ class RsvpTemplate(BasePositionModel):
                       .format(base_url, yn, prompt)
                       for yn, prompt in
                       (('yes', self.yes_prompt), ('no', self.no_prompt))])
-        return '<p>{}</p>{}'.format(self.prompt, yn)
+        if APPEND_RSVP_TEMPLATE:
+            return '<p>{}</p>{}'.format(self.prompt, yn)
+        return yn
 
     @property
     def text(self):
@@ -73,7 +77,7 @@ class Message(BaseModel):
 
     @property
     def expanded_text(self):
-        if self.rsvp_template:
+        if APPEND_RSVP_TEMPLATE and self.rsvp_template:
             return '{} {}'.format(self.text, self.rsvp_template.text)
         return self.text
 
