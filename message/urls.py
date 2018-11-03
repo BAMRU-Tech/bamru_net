@@ -13,5 +13,4 @@ urlpatterns = [
     url(r'^bnet/anymail/', include('anymail.urls')),
     path('bnet/sms_callback/', views.sms_callback, name='sms_callback'),
     url(r'^bnet/sms/$', views.sms, name='sms'),
-    url(r'^bnet/test_send/$', views.test_send),
 ]
