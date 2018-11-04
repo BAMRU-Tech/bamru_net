@@ -19,10 +19,9 @@ from twilio.twiml.messaging_response import MessagingResponse
 
 from main.models import Member, Participant, Period
 
-from message.forms import MessageCreateForm
-from message.models import (Distribution, InboundSms, Message, OutboundEmail,
-                     OutboundSms, RsvpTemplate)
-from message.tasks import message_send
+from main.models import (Distribution, InboundSms, Message, OutboundEmail,
+                         OutboundSms, RsvpTemplate)
+from main.tasks import message_send
 
 logger = logging.getLogger(__name__)
 
@@ -231,19 +230,6 @@ def sms(request):
     response.message(handle_distribution_rsvp(
         outbound.distribution, (yn == 'y')))
     return response
-
-
-@login_required
-def test_send(request):
-    from django_twilio.client import twilio_client
-    message = twilio_client.messages.create(
-        body="test message",
-        to="+18182747750",
-        from_=settings.TWILIO_SMS_FROM,
-        status_callback='http://{}{}'.format(
-            settings.HOSTNAME, reverse('message:sms_callback')),
-    )
-    return HttpResponse('done ' + message.sid)
 
 
 @receiver(tracking)

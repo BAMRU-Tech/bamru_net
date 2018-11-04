@@ -69,3 +69,16 @@ class PeriodAdmin(admin.ModelAdmin):
 @admin.register(DoAvailable)
 class DoAvailableAdmin(admin.ModelAdmin):
     search_fields = ['member__last_name', 'member__first_name', 'member__username']
+
+
+class DistributionInline(InlineDefaults):
+    model = Distribution
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ('author', 'text', 'created_at',
+                    'format', 'period_format', )
+    inlines = [
+        DistributionInline,
+    ]

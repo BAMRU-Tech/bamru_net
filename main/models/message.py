@@ -11,8 +11,9 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from main.models import (BaseModel, BasePositionModel, Email, Member, Period,
-                         Phone)
+from .base import BaseModel, BasePositionModel
+from .event import Period
+from .member import Email, Member, Phone
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class Message(BaseModel):
 
     @models.permalink
     def get_absolute_url(self):
-        return ('main:message_detail', [str(self.id)])
+        return ('message_detail', [str(self.id)])
 
     @property
     def expanded_text(self):
@@ -85,7 +86,7 @@ class Message(BaseModel):
         html_body = self.text
         if self.rsvp_template:
             url = 'http://{}{}'.format(settings.HOSTNAME,
-                                       reverse('message:unauth_rsvp',
+                                       reverse('unauth_rsvp',
                                                args=[unauth_rsvp_token]))
             html_body += self.rsvp_template.html(url)
         return html_body
@@ -101,7 +102,7 @@ class Message(BaseModel):
 
     # TODO: Do not repage unavailable on invite
     def repage(self, author=None):
-        from .tasks import message_send  # Here to avoid circular dependency
+        from main.tasks import message_send  # Here to avoid circular dependency
         old_id = self.pk
         if self.rsvp_template is None:
             logger.error('Error: trying to repage a non-rsvp message.')
@@ -244,7 +245,7 @@ class OutboundSms(OutboundMessage):
             'to': e164,
             'from_': settings.TWILIO_SMS_FROM,
             'status_callback': 'http://{}{}'.format(
-                settings.HOSTNAME, reverse('message:sms_callback')),
+                settings.HOSTNAME, reverse('sms_callback')),
         }
 
         try:

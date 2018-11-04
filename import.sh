@@ -8,4 +8,3 @@ rm */migrations/00*
 psql -U postgres bnet_development < import.sql
 echo "update main_member set is_staff=TRUE, is_superuser=TRUE where id in (367, 559);" | python manage.py dbshell
 python manage.py sqlsequencereset main | python manage.py dbshell
-python manage.py sqlsequencereset message | python manage.py dbshell

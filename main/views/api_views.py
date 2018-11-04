@@ -1,6 +1,5 @@
 from main.models import *
 from main.serializers import *
-from message.models import *
 
 from django import forms
 from rest_framework import generics, mixins, parsers, permissions, response, views, viewsets

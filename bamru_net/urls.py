@@ -73,7 +73,12 @@ urlpatterns = [
 
     path('action/become_do/', views.ActionBecomeDo.as_view(), name='action_become_do'),
 
-    path('', include('message.urls')),
+    
+    # Message Webhook and Responses
+    path('unauth_rsvp/<slug:token>/', views.unauth_rsvp, name='unauth_rsvp'),
+    path('webhooks/anymail/', include('anymail.urls')),
+    path('webhooks/sms_callback/', views.sms_callback, name='sms_callback'),
+    path('webhooks/sms/', views.sms, name='sms'),
 
     url(r'^api/', include(router.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
