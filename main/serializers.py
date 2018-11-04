@@ -1,6 +1,5 @@
-from .models import Cert, DoAvailable, Event, Member, Participant, Period, Unavailable
-from message.models import Distribution, Message, RsvpTemplate
-from message.tasks import message_send
+from .models import *
+from .tasks import message_send
 from rest_framework import serializers
 from collections import defaultdict
 import logging

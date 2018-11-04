@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'main',
-    'message',
     'main.templatetags.filters',
 ]
 
@@ -257,11 +256,6 @@ LOGGING = {
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
         # Project logging
         'main': {
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-            'handlers': ['console', 'sentry', 'file'],
-            'propagate': False,
-        },
-        'message': {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'handlers': ['console', 'sentry', 'file'],
             'propagate': False,

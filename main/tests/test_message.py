@@ -7,12 +7,11 @@ from django.conf import settings
 from django.core import mail
 from django.test import Client, TestCase
 from django.test.utils import override_settings
+from django.urls import reverse
 from model_mommy import mommy
 
-from main.models import Email, Participant
-
-from .models import *
-from .tasks import *
+from main.models import *
+from main.tasks import *
 
 @override_settings(EMAIL_BACKEND='anymail.backends.test.EmailBackend')
 class OutgoingEmailTestCase(TestCase):
@@ -112,7 +111,7 @@ class OutgoingSmsTestCase(TestCase):
         sms = self.distribution.outboundsms_set.first()
         sms_id = sms.id
         self.assertEqual(sms.delivered, False)
-        response = self.c.post(reverse('message:sms_callback'),
+        response = self.c.post(reverse('sms_callback'),
                                {'MessageSid': sms.sid,
                                 'MessageStatus': 'delivered',
                                 })
@@ -153,7 +152,7 @@ class IncommingSmsTestCase(TestCase):
         self.assertIsNone(self.participant.en_route_at)
 
         # Respond Yes to page
-        response = self.c.post(reverse('message:sms'),
+        response = self.c.post(reverse('sms'),
                                {'To': '+5550123456',
                                 'From': self.number,
                                 'MessageSid': 'FAKE_SID_SMS',

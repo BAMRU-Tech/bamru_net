@@ -1,4 +1,4 @@
-TRUNCATE main_member, main_address, main_email, main_phone, main_emergencycontact, main_role, main_otherinfo, main_unavailable, main_cert, main_event, main_period, main_participant, message_message, message_distribution, message_rsvptemplate, main_doavailable CASCADE;
+TRUNCATE main_member, main_address, main_email, main_phone, main_emergencycontact, main_role, main_otherinfo, main_unavailable, main_cert, main_event, main_period, main_participant, main_message, main_distribution, main_rsvptemplate, main_doavailable CASCADE;
 
 insert into main_member (id, first_name, last_name, username, member_rank, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
 select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
@@ -37,13 +37,13 @@ select id, event_id, position, start, finish, created_at, updated_at from period
 insert into main_participant (id, period_id, member_id, ahc, ol, comment, en_route_at, return_home_at, signed_in_at, signed_out_at, created_at, updated_at)
 select id, period_id, member_id, ahc, ol, comment, en_route_at, return_home_at, signed_in_at, signed_out_at, created_at, updated_at from participants where member_id in (select distinct id from main_member);
 
-insert into message_message (id, author_id, text, format, linked_rsvp_id, ancestry, period_id, period_format, created_at, updated_at)
+insert into main_message (id, author_id, text, format, linked_rsvp_id, ancestry, period_id, period_format, created_at, updated_at)
 select id, author_id, text, format, linked_rsvp_id, ancestry, period_id, period_format, created_at, updated_at from messages where author_id in (select distinct id from main_member);
 
-insert into message_distribution (id, message_id, member_id, send_email, send_sms, read, bounced, read_at, response_seconds, rsvp, rsvp_answer, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at)
-select id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, case rsvp_answer when 'Yes' then true when 'No' then false else null end, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at from distributions where message_id in (select distinct id from message_message);
+insert into main_distribution (id, message_id, member_id, send_email, send_sms, read, bounced, read_at, response_seconds, rsvp, rsvp_answer, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at)
+select id, message_id, member_id, email, phone, read, bounced, read_at, response_seconds, rsvp, case rsvp_answer when 'Yes' then true when 'No' then false else null end, unauth_rsvp_token, unauth_rsvp_expires_at, created_at, updated_at from distributions where message_id in (select distinct id from main_message);
 
-insert into message_rsvptemplate (id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at)
+insert into main_rsvptemplate (id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at)
 select id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at from rsvp_templates;
 
 insert into main_doavailable (id, member_id, year, quarter, week, available, assigned, comment, created_at, updated_at)
