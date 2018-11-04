@@ -84,6 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'main.context_processors.dsn',
             ],
         },
     },
@@ -161,6 +162,7 @@ if strtobool(os.environ.get('USE_RAVEN', 'False')):
         # release based on the git info.
         'release': raven.fetch_git_sha(os.path.abspath(BASE_DIR)),
     }
+JAVASCRIPT_DSN = os.environ.get('JAVASCRIPT_DSN','')
 
 TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
