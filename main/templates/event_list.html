@@ -9,9 +9,9 @@
 
 {% block content %}
 <main role="main">
+
   <nav class="navbar navbar-expand-sm text-primary subhead">
-    <button class="btn navbar-btn"
-            onclick='$("#Upcoming_wrapper").toggle();'>
+    <button class="btn navbar-btn" onclick='$("#Upcoming_wrapper").toggle();'>
       <strong class="d-md-none"><i class="fa fa-calendar"></i> Upcoming events</strong>
       <strong class="d-none d-md-block" id="UpcomingSubhdr"></strong>
     </button>
@@ -23,24 +23,22 @@
     </ul>
   </nav>
   <table id="Upcoming" class="display table-bordered compact" style="width:100%"></table>
+
   <nav class="navbar navbar-expand-sm text-primary subhead">
-    <button class="btn navbar-btn"
-            onclick='$("#Recent_wrapper").toggle();'>
-      <strong class="d-md-none" >
-        <i class="fa fa-calendar"></i> Recent events
-      </strong>
+    <button class="btn navbar-btn" onclick='$("#Recent_wrapper").toggle();'>
+      <strong class="d-md-none" ><i class="fa fa-calendar"></i> Recent events</strong>
       <strong class="d-none d-md-block" id="RecentSubhdr"></strong>
     </button>
   </nav>
   <table id="Recent" class="display table-bordered compact" style="width:100%"></table>
+
   <nav class="navbar navbar-expand-sm text-primary subhead">
-    <button class="btn navbar-btn"
-            onclick='$("#dTbl_wrapper").toggle();'>
-    <strong class="d-md-none">
-        <i class="fa fa-calendar"></i> All events</strong>
+    <button class="btn navbar-btn" onclick='$("#dTbl_wrapper").toggle();'>
+      <strong class="d-md-none"><i class="fa fa-calendar"></i> All events</strong>
       <strong class="d-none d-md-block" id="subhdr"></strong>
     </button>
   </nav>
+
   <div id="show-filter" style="display: none">
     <select id="filter-type" multiple="multiple" selectableHeader="Display type">
       <option value='meeting'>Meeting</option>
@@ -89,24 +87,9 @@
 
 {% block table_options %}
 
-order: [[ 4, 'asc' ]],
-deferRender: true,
+order: [[ 7, 'desc' ]],
 
-columnDefs: [
-    { width: "30%", targets: 0 },
-    { width: "20%", targets: 1 },
-    { width: "5%", targets: 2 },
-    { width: "20%", targets: 3 },
-    { width: "15%", targets: 4 },
-],
-
-columns: [
-    { data: 'title', title: 'Title', responsivePriority: 1, render: Title, },
-    { data: 'display_location', title: 'Location', responsivePriority: 3, },
-    { data: 'type', title: 'Type', responsivePriority: 4, },
-    { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
-    { data: 'display_start', title: 'Start', type: 'date', responsivePriority: 2, },
-],
+columns: colDefs,
 
 language: { emptyTable: 'No events selected' },
 
@@ -131,28 +114,9 @@ $(document).ready(function() {
         paging:   false,
         info:     false,
 
-        order: [[ 4, 'asc' ]],
+        order: [[ 7, 'asc' ]],
 
-        columnDefs: [
-            { width: "30%", targets: 0 },
-            { width: "20%", targets: 1 },
-            { width: "5%", targets: 2 },
-            { width: "20%", targets: 3 },
-            { width: "15%", targets: 4 },
-        ],
-
-        columns: [
-            { data: 'title', title: 'Title', responsivePriority: 1, render: Title, },
-            { data: 'display_location', title: 'Location', responsivePriority: 3,
-              render: function(data, type, row, meta) {
-                  return Truncate( data, locationLength);
-              },
-            },
-            { data: 'type', title: 'Type', responsivePriority: 4, },
-            { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
-            { data: 'display_start', title: 'Start', responsivePriority: 2,
-              type: 'date', },
-        ],
+        columns: colDefs,
 
         language: { emptyTable: 'No events selected' },
 
@@ -188,24 +152,9 @@ $(document).ready(function() {
         paging:   false,
         info:     false,
 
-        order: [[ 4, 'desc' ]],
+        order: [[ 7, 'desc' ]],
 
-        columnDefs: [
-            { width: "30%", targets: 0 },
-            { width: "20%", targets: 1 },
-            { width: "5%", targets: 2 },
-            { width: "20%", targets: 3 },
-            { width: "15%", targets: 4 },
-        ],
-
-        columns: [
-            { data: 'title', title: 'Title', responsivePriority: 1, render: Title, },
-            { data: 'display_location', title: 'Location', responsivePriority: 3, },
-            { data: 'type', title: 'Type', responsivePriority: 4, },
-            { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
-            { data: 'display_start', title: 'Start', responsivePriority: 2,
-              type: 'date', },
-        ],
+        columns: colDefs,
 
         language: { emptyTable: 'No events selected' },
 
@@ -259,6 +208,26 @@ var filterTypesCap = [];
 const titleLength = 30;
 const locationLength = 20;
 
+const colDefs = [
+    { data: 'title', title: 'Title', width: "30%", responsivePriority: 1,
+      render: rTitle, },
+    { data: 'description', title: 'Description', visible: false,
+      responsivePriority: 1, },
+    { data: 'location', title: 'Location', width: "20%", responsivePriority: 3,  },
+    { data: 'lat', title: 'Lat', visible: false, responsivePriority: 3, },
+    { data: 'lon', title: 'Lon', visible: false, responsivePriority: 3, },
+    { data: 'type', title: 'Type', width: "5%", responsivePriority: 4, },
+    { data: 'leaders', title: 'Leaders', width: "20%", responsivePriority: 5, },
+    { data: 'start', title: 'Start', width: "15%", responsivePriority: 2,
+      type: 'date', render: rDate, },
+    { data: 'finish', title: 'Finish', visible: false, responsivePriority: 2,
+      type: 'date', },
+    { data: 'all_day', title: 'All day', visible: false, responsivePriority: 2,
+      type: ['false', 'true'], },
+    { data: 'published', title: 'Published', visible: false, responsivePriority: 2,
+      type: ['false', 'true'], },
+];
+
 function SetEventDates () {
     // Handle url parameters, dates should be in BE format but the API will accept both
     const url = new URL(window.location.href);
@@ -290,7 +259,8 @@ function SetEventDates () {
 $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
         //FX DB data bug allows event type to be Capitalized (remove when?)
-        if ( filterTypes.includes(data[2]) || filterTypesCap.includes(data[2]) ) {
+        //FIXME: why [5] and not data.type
+        if ( filterTypes.includes(data[5]) || filterTypesCap.includes(data[5]) ) {
             return true;
         }
         return false;
@@ -303,11 +273,11 @@ $('#filter-type').multiSelect({
     selectionHeader: '<div class="custom-header">Hide</div>',
     afterSelect: function(values){
         UpdateSubheaderBasedOnSettings(table);
-        table.draw();
+        table.draw().columns.adjust().responsive.recalc();//FX
     },
     afterDeselect: function(values){
         UpdateSubheaderBasedOnSettings(table);
-        table.draw();
+        table.draw().columns.adjust().responsive.recalc();//FX
     }
 });
 
@@ -396,11 +366,23 @@ function SelectDate () {
     $('#date-modal input[0]').focus();
 }
 
-function Title (data, type, row, meta) {
+function rTitle (data, type, row, meta) {
     if (type == 'display') {
         var title = Truncate(row.title, titleLength);
         return '<a href="/event/' + row.id + '/">' + title + '</a>';
     } else
+        return data;
+}
+
+function rLocation (data, type, row, meta) {
+    return Truncate( data, locationLength);
+}
+
+//FIXME: needs to format time or add '*' or something
+function rDate (data, type, row, meta) {
+    if (type == 'display' && data != null) 
+        return DateFE(data.substr(0, 10));
+    else
         return data;
 }
 

@@ -18,7 +18,7 @@
 {% endblock subheader %}
 
 {% block content %}
-<main role="main">
+<main class="flex-grow" role="main">
   <div id="show-filter" style="display: none">
     <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
       <option value="TM">Technical Member</option>
@@ -58,45 +58,7 @@
 {% block table_options %}
 order: [[ 4, 'desc' ]],
 
-columnDefs: [
-    { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 2, targets: 6 },
-    { responsivePriority: 3, targets: 4},
-    { responsivePriority: 4, targets: 2 },
-],
-
-columns: [
-    { data: 'full_name', title: 'Name', responsivePriority: 1,
-      render: function(data, type, row, meta) {
-          if (type == 'display')
-              return '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
-          else
-              return data;
-      }
-    },
-    { data: 'id', visible: false, },
-    { data: 'rank', title: 'Rank', responsivePriority: 2,
-      render: function(data, type, row, meta) {
-          if (type == 'sort')
-              return row.rank_order;
-          else
-              return data;
-      }
-    },
-    { data: 'rank_order', visible: false, },
-    { data: 'roles', title: 'Roles', responsivePriority: 1,
-      render: function(data, type, row, meta) {
-           if (type == 'sort') {
-               // order: asc and role_order doesn't work
-               return 99 - row.role_order; //FX?
-           } else
-              return data;
-      }
-    },
-    { data: 'role_order', visible: false, },
-    { data: 'display_phone', title: 'Phone', },
-    { data: 'display_email', title: 'eMail', },
-],
+columns: colDefs,
 
 language: { emptyTable: 'No members selected' },
 
@@ -108,6 +70,38 @@ SetMemberFilter (table, true);
 
 {% block functions %}
 const apiUrlMemberRank = '/api/members/?member_rank=';
+const colDefs = [
+    { data: 'full_name', title: 'Name', responsivePriority: 1,
+      render: function(data, type, row, meta) {
+          if (type == 'display')
+              return '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
+          else
+              return data;
+      }
+    },
+    { data: 'id', visible: false, },
+    { data: 'rank', title: 'Rank', responsivePriority: 4,
+      render: function(data, type, row, meta) {
+          if (type == 'sort')
+              return row.rank_order;
+          else
+              return data;
+      }
+    },
+    { data: 'rank_order', visible: false, },
+    { data: 'roles', title: 'Roles', responsivePriority: 3,
+      render: function(data, type, row, meta) {
+           if (type == 'sort') {
+               // order: asc and role_order doesn't work
+               return 99 - row.role_order; //FX?
+           } else
+              return data;
+      }
+    },
+    { data: 'role_order', visible: false, },
+    { data: 'display_phone', title: 'Phone', responsivePriority: 2, },
+    { data: 'display_email', title: 'eMail', responsivePriority: 2, },
+];
 
 function AddRows(table, values) {
     //

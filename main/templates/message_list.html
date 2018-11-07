@@ -53,9 +53,10 @@ deferRender: true,
 columns: [
     {data: 'text', title: 'Message', responsivePriority: 1, },
     {data: 'author', title: 'From', responsivePriority: 3, },
-    {data: 'sent_at', title: 'Sent at', responsivePriority: 2, },
-    {data: 'type', title: 'Type', responsivePriority: 6, },
-    {data: 'period_type', title: 'Period Type', responsivePriority: 4, },
+    //FIXME: Covert sent_at to FE date
+    {data: 'sent_at', title: 'Sent', responsivePriority: 2, },
+    {data: 'type', title: 'Type', visible: false, responsivePriority: 6, },
+    {data: 'period_type', title: 'Type', responsivePriority: 4, },
     {data: 'event', title: 'Event', responsivePriority: 5, },
 ],
 

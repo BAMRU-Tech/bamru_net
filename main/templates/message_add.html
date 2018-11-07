@@ -273,7 +273,7 @@ function UpdateSubheaderBasedOnSettings (table) {
         $('#subhdr')[0].innerHTML = sh;
     }
 
-    table.draw();
+    table.draw().columns.adjust().responsive.recalc(); //FX
 
 }
 

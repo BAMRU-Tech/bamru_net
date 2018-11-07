@@ -99,8 +99,8 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
 class EventListSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Event
-        read_only_fields = ('display_title', 'display_location', 'display_start',)
-        fields = ('id', 'title', 'type', 'leaders', 'description', 'location', 'start', 'finish', 'published',) + read_only_fields
+        fields = ('id', 'title', 'type', 'leaders', 'description',
+                  'location', 'lat', 'lon', 'start', 'finish', 'all_day', 'published',)
 
 
 class EventDetailSerializer(EventListSerializer):

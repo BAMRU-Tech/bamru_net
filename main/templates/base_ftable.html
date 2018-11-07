@@ -4,7 +4,6 @@
 
 {% block js %}
 {{ block.super }}
-
 <script>
 'use strict'
 
@@ -22,7 +21,6 @@ $(document).ready(function() {
         responsive: true,
         paging:   false,
         info:     false,
-        fixedHeader: true,
         {% block table_options %}{% endblock %}
         buttons: [
             {% block table_buttons_first %}{% endblock %}
@@ -78,6 +76,8 @@ $(document).ready(function() {
     {% block ready_functions %}{% endblock %}
 
 });
+
+{% block functions %}{% endblock %}
 
 function DisplayExpandDetailButton ( e, table, columns ) {
     //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
@@ -199,8 +199,5 @@ function DeleteRow ( e, dt, node, config, type, api ) {
     }
 }
 
-{% block functions %}{% endblock %}
-
 </script>
-
 {% endblock js %}
