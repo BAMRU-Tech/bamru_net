@@ -16,7 +16,7 @@
 
 {% block content %}
 <main role="main">
-  <table id="dTbl" class="display table-bordered" nowrap style="width:100%">
+  <table id="dTbl" class="display table-bordered compact" style="width:100%">
     <tbody>
       {% for message in message_list %}
       <tr>
@@ -48,6 +48,7 @@
 {% block table_options %}
 
 order: [[ 2, 'desc' ]],
+deferRender: true,
 
 columns: [
     {data: 'text', title: 'Message', responsivePriority: 1, },

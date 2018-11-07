@@ -23,7 +23,7 @@
       <option value="MA">Member Alum</option>
     </select>
   </div>
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%">
+  <table id="dTbl" class="display table-bordered compact" style="width:100%">
     <tbody>
       {% for member in member_list %}
       {% spaceless %}
@@ -55,9 +55,7 @@ order: [[ 5, 'desc' ]],
 
 columns: [
     { data: 'mark', width: '10px', responsivePriority: 1,
-      width: '10px',
-      orderable: false,
-      className: 'mark-checkbox',
+      orderable: false, className: 'mark-checkbox',
       render: function(data, type, row, meta) {
           if (type == 'display')
               return '<div data-id="' + row.id + '"></div>';

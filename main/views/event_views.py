@@ -20,9 +20,9 @@ import datetime
 import logging
 logger = logging.getLogger(__name__)
 
-
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
+
 
 class EventImmediateView(LoginRequiredMixin, generic.ListView):
     """ Render current event list """

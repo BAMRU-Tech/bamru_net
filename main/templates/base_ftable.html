@@ -10,8 +10,8 @@
 
 const labelShowFilter = '<i class="fa fa-filter"></i> Filter';
 const labelHideFilter = '<i class="fa fa-minus-square-o"></i> Hide Filter';
-const textShowDetail = ' Expand Detail';
-const htmlShowDetail = '<i class="fa fa-plus-square-o"></i>' + textShowDetail;
+const textShowDetail = 'Detail';
+const htmlShowDetail = '<i class="fa fa-plus-square-o"></i> ' + textShowDetail;
 const labelHideDetail = '<i class="fa fa-minus-square-o"></i> Hide Detail';
 
 var table;
@@ -22,6 +22,7 @@ $(document).ready(function() {
         responsive: true,
         paging:   false,
         info:     false,
+        fixedHeader: true,
         {% block table_options %}{% endblock %}
         buttons: [
             {% block table_buttons_first %}{% endblock %}
@@ -36,9 +37,9 @@ $(document).ready(function() {
                     } else {
                         $('#show-filter').css({'display':'none'})
                         node[0].innerHTML = labelShowFilter;
-                        //FIXME: hack, checking for fn def, needs to be replaced
+                        //FIXME: hack, checking for fn def needs to be replaced
                         if (typeof AddRowsByDate != 'undefined')
-                            AddRowsByDate(table, $('#start').val(), $('#end').val())
+                            AddRowsByDate(dt, $('#start').val(), $('#end').val())
                                           
                     }
                 }
@@ -47,23 +48,7 @@ $(document).ready(function() {
             {% block detail_button %}
             {
                 text: htmlShowDetail,
-                action: function ( e, dt, node, config ) {
-                    if (node[0].innerText == textShowDetail) {
-                        var mc = dt.cells('.marked').nodes();
-                        dt.rows(':not(.parent)').nodes()
-                            .to$().find('td:first-child').trigger('click')
-                            .removeClass('marked');
-                        $(mc).addClass('marked');
-                        node[0].innerHTML = labelHideDetail;
-                    } else {
-                        var mc = dt.cells('.marked').nodes();
-                        dt.rows('.parent').nodes()
-                            .to$().find('td:first-child').trigger('click')
-                            .removeClass('marked');
-                        $(mc).addClass('marked');
-                        node[0].innerHTML = htmlShowDetail;
-                    }                          
-                }
+                action: ShowHideDetail,
             },
             {% endblock detail_button %}
             {% block more_button %}
@@ -90,18 +75,38 @@ $(document).ready(function() {
 
     table.on( 'responsive-resize', DisplayExpandDetailButton );
 
-    function DisplayExpandDetailButton ( e, table, columns ) {
-        //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
-        if (table.row(0).count()
-            && getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')
-
-            $("button.dt-button:contains(' Expand Detail')").show();
-        else
-            $("button.dt-button:contains(' Expand Detail')").hide();
-    }
     {% block ready_functions %}{% endblock %}
 
 });
+
+function DisplayExpandDetailButton ( e, table, columns ) {
+    //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
+    var btn = $('button.dt-button:contains("' + textShowDetail + '")');
+    if (table.row(0).count() && table.row(0).node() &&
+        getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')
+
+        btn.show();
+    else
+        btn.hide();
+}
+
+function ShowHideDetail ( e, dt, node, config ) {
+    if (node[0].innerText == textShowDetail) {
+        var mc = dt.cells('.marked').nodes();
+        dt.rows(':not(.parent)').nodes()
+            .to$().find('td:first-child').trigger('click')
+            .removeClass('marked');
+        $(mc).addClass('marked');
+        node[0].innerHTML = labelHideDetail;
+    } else {
+        var mc = dt.cells('.marked').nodes();
+        dt.rows('.parent').nodes()
+            .to$().find('td:first-child').trigger('click')
+            .removeClass('marked');
+        $(mc).addClass('marked');
+        node[0].innerHTML = htmlShowDetail;
+    }
+}
 
 // Used by pp_add, msg_add, mem_add and cert_lst
 function SetMemberFilter (table, alterRows = false) {

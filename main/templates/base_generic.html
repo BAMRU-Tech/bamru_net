@@ -9,42 +9,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     {% block css %}
-    <link href='/static/favicon_p1.ico' rel='shortcut icon'
-          type='image/vnd.microsoft.icon'/>
-      <link rel="stylesheet" href="/static/css/style.css" />
-      <link rel="stylesheet" href="/static/font-awesome-4.7.0/css/font-awesome.min.css" />
-      {% bootstrap_css %}
-      <link rel="stylesheet" href="/static/css/style.css" />
+    <link href='/static/favicon_p1.ico' rel='shortcut icon' type='image/vnd.microsoft.icon'/>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="stylesheet" href="/static/font-awesome-4.7.0/css/font-awesome-cst.min.css" />
+    {% bootstrap_css %}
     {% endblock css %}
     <title>{% block title %}BAMRU.net{% endblock title %}</title>
   </head>
 
-
   <body>
-      <div class="container-fluid">
-        {% include 'navbar.html' %}
-        <nav class="navbar navbar-expand-sm text-primary subhead">
-          {% block subheader %}{% endblock subheader %}
-        </nav>
-
-        {% bootstrap_messages %}
-
-        {% block content %}{% endblock content %}
-      </div>
-
+    <div class="container-fluid">
+      {% include 'navbar.html' %}
+      <nav class="navbar navbar-expand-sm text-primary subhead">
+        {% block subheader %}{% endblock subheader %}
+      </nav>
+      
+      {% bootstrap_messages %}
+      
+      {% block content %}{% endblock content %}
+    </div>
+    
     <footer class="footer">
-        <div class="container text-center">
-          <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
-            General help</a>
-          | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
-          | <small>{{RELEASE}}</small>
-        </div>
+      <div class="container text-center">
+        <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
+          General help</a>
+        | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
+        | <small>{{RELEASE}}</small>
+      </div>
     </footer>
-
+    
     {% block js %}
+
+    {% block jquery %}{# Datatables combined load include jquery 3.3.1 #}
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    {% endblock jquery %}
+
     {% bootstrap_javascript %}
-    {% endblock js%}
+
+    {% endblock js %}
     <script src="https://browser.sentry-cdn.com/4.2.4/bundle.min.js" crossorigin="anonymous"></script>
     <script>
       Sentry.init({
@@ -69,8 +71,6 @@
     </script>
 
     <script>
-    $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
-
     // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
     function getCookie(name) {
         var cookieValue = null;
@@ -107,14 +107,29 @@
 
     function DateFE( date ) {
         // Create a frontend formatted date mm/dd/yyyy
+        // input: date string yyyy-mm-dd
         return new Date(date + 'T00:00').toLocaleDateString();
     }
 
     function DateBE( date, offset=0 ) {
         // Create a backend formatted date yyyy-mm-dd
+        // input: js date object and offset in days
+        function pad (n) { return n.length == 1 ? '0' + n : n; }
+
         var date = new Date(date);
+        date.setHours(0); date.setMinutes(0); date.setSeconds(0);
         if (offset) date.setDate(date.getDate() + offset);
-        return date.toLocaleDateString().replace(/(\d{2}).(\d{2}).(\d{4})/, '$3-$1-$2');
+
+        // handle both month and day as 01 or 1
+        var r = date.toLocaleDateString().match(/(\d+).(\d+).(\d{4})/);
+        dateString = r[3] + '-' + pad(r[1]) + '-' + pad(r[2]);
+
+        return dateString;
+
+    }
+
+    function Truncate(string, length) {
+        return string.substr(0, length)
     }
 
     </script>

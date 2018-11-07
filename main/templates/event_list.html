@@ -5,23 +5,42 @@
 {% block title %}Events{% endblock title %}
 
 {% block subheader %}
-<strong class="d-md-none">Events</strong>
-<strong class="d-none d-md-block" id="subhdr">Events</strong>
-<ul class="navbar-nav ml-auto">
-  <li class="nav-item ml-auto">
-    <a class="nav-link" href="{% url 'event_list' %}">
-      <i class="fa fa-calendar--o"></i> All events</a>
-  </li>
-  <li class="nav-item ml-auto">
-    <a class="nav-link" href="{% url 'event_add' %}">
-      <i class="fa fa-calendar-plus-o"></i> Create new event</a>
-  </li>
-</ul>
 {% endblock subheader %}
-
 
 {% block content %}
 <main role="main">
+  <nav class="navbar navbar-expand-sm text-primary subhead">
+    <button class="btn navbar-btn"
+            onclick='$("#Upcoming_wrapper").toggle();'>
+      <strong class="d-md-none"><i class="fa fa-calendar"></i> Upcoming events</strong>
+      <strong class="d-none d-md-block" id="UpcomingSubhdr"></strong>
+    </button>
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item ml-auto">
+        <a class="nav-link" href="{% url 'event_add' %}">
+          <i class="fa fa-calendar-plus-o"></i> New event</a>
+      </li>
+    </ul>
+  </nav>
+  <table id="Upcoming" class="display table-bordered compact" style="width:100%"></table>
+  <nav class="navbar navbar-expand-sm text-primary subhead">
+    <button class="btn navbar-btn"
+            onclick='$("#Recent_wrapper").toggle();'>
+      <strong class="d-md-none" >
+        <i class="fa fa-calendar"></i> Recent events
+      </strong>
+      <strong class="d-none d-md-block" id="RecentSubhdr"></strong>
+    </button>
+  </nav>
+  <table id="Recent" class="display table-bordered compact" style="width:100%"></table>
+  <nav class="navbar navbar-expand-sm text-primary subhead">
+    <button class="btn navbar-btn"
+            onclick='$("#dTbl_wrapper").toggle();'>
+    <strong class="d-md-none">
+        <i class="fa fa-calendar"></i> All events</strong>
+      <strong class="d-none d-md-block" id="subhdr"></strong>
+    </button>
+  </nav>
   <div id="show-filter" style="display: none">
     <select id="filter-type" multiple="multiple" selectableHeader="Display type">
       <option value='meeting'>Meeting</option>
@@ -29,13 +48,40 @@
       <option value='training'>Training</option>
       <option value='community'>Community</option>
     </select>
-    <label for="start">Start after</label>
-    <input type="date" id="start"></input>
-    <label for="end">End before</label>
-    <input type="date" id="end"></input>
   </div>
-  <table id="dTbl" class="display table-bordered nowrap" style="width:100%"></table>
+  <table id="dTbl" class="display table-bordered compact" style="width:100%"></table>
 </main>
+
+<div class="modal fade" id="date-modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 style="padding-top: 1rem;padding-left: 1rem;" class="modal-title">
+          Select Date Range
+        </h4>
+        <button style="margin: initial;" type="button" class="close" data-dismiss="modal">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>
+        <label for="start">Start after: &nbsp </label> {#FX: better alignment #}
+        <input type="date" id="start" value="2018-12-12"></input>
+        </p><p>
+        <label for="end"  >End before: </label>
+        <input type="date" id="end"></input>
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" data-content="remove" class="btn btn-primary" id="dateBtn">
+          Select
+        </button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock content %}
 
 
@@ -44,9 +90,18 @@
 {% block table_options %}
 
 order: [[ 4, 'asc' ]],
+deferRender: true,
+
+columnDefs: [
+    { width: "30%", targets: 0 },
+    { width: "20%", targets: 1 },
+    { width: "5%", targets: 2 },
+    { width: "20%", targets: 3 },
+    { width: "15%", targets: 4 },
+],
 
 columns: [
-    { data: 'href_title', title: 'Title', responsivePriority: 1, },
+    { data: 'title', title: 'Title', responsivePriority: 1, render: Title, },
     { data: 'display_location', title: 'Location', responsivePriority: 3, },
     { data: 'type', title: 'Type', responsivePriority: 4, },
     { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
@@ -57,14 +112,184 @@ language: { emptyTable: 'No events selected' },
 
 {% endblock table_options %}
 
+{% block table_buttons_first %}
+{
+    text: '<i class="fa fa-clock-o"></i> Select',
+    action: SelectDate,
+    name: 'date',
+},
+{% endblock table_buttons_first %}
+
+{% block ready_functions %}
+
+$(document).ready(function() {
+    // Create Upcoming events table
+    var tableUpcoming = $('#Upcoming').DataTable( {
+        dom: 'Bfrtip',
+        ajax: { url: ComputeUpcoming(), dataSrc: '', },
+        responsive: true,
+        paging:   false,
+        info:     false,
+
+        order: [[ 4, 'asc' ]],
+
+        columnDefs: [
+            { width: "30%", targets: 0 },
+            { width: "20%", targets: 1 },
+            { width: "5%", targets: 2 },
+            { width: "20%", targets: 3 },
+            { width: "15%", targets: 4 },
+        ],
+
+        columns: [
+            { data: 'title', title: 'Title', responsivePriority: 1, render: Title, },
+            { data: 'display_location', title: 'Location', responsivePriority: 3,
+              render: function(data, type, row, meta) {
+                  return Truncate( data, locationLength);
+              },
+            },
+            { data: 'type', title: 'Type', responsivePriority: 4, },
+            { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
+            { data: 'display_start', title: 'Start', responsivePriority: 2,
+              type: 'date', },
+        ],
+
+        language: { emptyTable: 'No events selected' },
+
+        initComplete: function (settings) {
+            var table = new $.fn.dataTable.Api( settings );
+            DisplayExpandDetailButton(null, table, []);
+        },
+
+        buttons: [
+            {
+                text: htmlShowDetail,
+                action: ShowHideDetail,
+            },
+            {
+                text: '<i class="fa fa-newspaper-o"></i> More',
+                extend: 'collection',
+                autoClose: true,
+                buttons: [ 'copy', 'csv', 'excel', 'print', 'colvis']
+            },
+        ],
+
+    })
+
+    tableUpcoming.on( 'responsive-resize', DisplayExpandDetailButton );
+
+    // Create Recent events table
+    // Initialize datatable with responsive behavior and datatable buttons
+    var tableRecent = $('#Recent').DataTable( {
+        dom: 'Bfrtip',
+        ajax: { url: ComputeRecent(), dataSrc: '', },
+        deferRender: true,
+        responsive: true,
+        paging:   false,
+        info:     false,
+
+        order: [[ 4, 'desc' ]],
+
+        columnDefs: [
+            { width: "30%", targets: 0 },
+            { width: "20%", targets: 1 },
+            { width: "5%", targets: 2 },
+            { width: "20%", targets: 3 },
+            { width: "15%", targets: 4 },
+        ],
+
+        columns: [
+            { data: 'title', title: 'Title', responsivePriority: 1, render: Title, },
+            { data: 'display_location', title: 'Location', responsivePriority: 3, },
+            { data: 'type', title: 'Type', responsivePriority: 4, },
+            { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
+            { data: 'display_start', title: 'Start', responsivePriority: 2,
+              type: 'date', },
+        ],
+
+        language: { emptyTable: 'No events selected' },
+
+        initComplete: function (settings) {
+            var table = new $.fn.dataTable.Api( settings );
+            DisplayExpandDetailButton(null, table, []);
+        },
+
+        buttons: [
+            {
+                text: htmlShowDetail,
+                action: ShowHideDetail,
+            },
+            {
+                text: '<i class="fa fa-newspaper-o"></i> More',
+                extend: 'collection',
+                autoClose: true,
+                buttons: [ 'copy', 'csv', 'excel', 'print', 'colvis']
+            }
+        ],
+    })
+
+    tableRecent.on( 'responsive-resize', DisplayExpandDetailButton );
+
+    // Set All Events range
+    SetEventDates();
+
+    // Handle Select date
+    $(document).on('click', '#dateBtn', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        //FIXME inputValidation
+        var start = $('#start').val()
+        var end = $('#end').val()
+
+        AddRowsByDate(table, start, end)
+
+        $('#date-modal').modal('hide');
+    });
+
+    $("#Recent_wrapper").hide();
+    $("#dTbl_wrapper").hide();
+});
+
+{% endblock ready_functions %}
+
 {% block functions %}
 var filterTypes = [];
 var filterTypesCap = [];
+const titleLength = 30;
+const locationLength = 20;
 
-// Custom filtering function
+function SetEventDates () {
+    // Handle url parameters, dates should be in BE format but the API will accept both
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get('current');
+    var startBefore = url.searchParams.get('start_before');
+    var startAfter = url.searchParams.get('start_after');
+    var months = url.searchParams.get('months');
+
+    var start = new Date();
+    var y = start.getFullYear();
+
+    if (startAfter == null || startAfter == '')
+        // start at new year
+        startAfter = DateBE(new Date(y, 0, 1));
+
+    if (startBefore == null || startBefore == '') {
+        if (!months) months = 12;
+        start.setMonth(start.getMonth() + months);
+        startBefore = DateBE(new Date(y, months, 1) - 1);
+    }
+
+    if (startAfter) $('#start').val(startAfter);
+    if (startBefore) $('#end').val(startBefore);
+
+    AddRowsByDate(table, startAfter, startBefore);
+}
+
+// Enable custom filtering function
 $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
-        // DB data bug allows event type to be Capitalized (removed when no longer needed
+        //FX DB data bug allows event type to be Capitalized (remove when?)
         if ( filterTypes.includes(data[2]) || filterTypesCap.includes(data[2]) ) {
             return true;
         }
@@ -72,6 +297,7 @@ $.fn.dataTable.ext.search.push(
     }
 );
 
+// Initialize selection filter
 $('#filter-type').multiSelect({
     selectableHeader: '<div class="custom-header">Show</div>',
     selectionHeader: '<div class="custom-header">Hide</div>',
@@ -85,15 +311,14 @@ $('#filter-type').multiSelect({
     }
 });
 
-
-function AddRowsByDate(table, start, end) {
+function AddRowsByDate (table, start, end) {
     //
     // Add rows based on date range
+    // (assumes that start end end have been validated) 
     //
-    //FIXME: needs date range validation
     const apiUrlEvent = '/api/events/';
     var url;
-    
+
     if (start && end)
         url = apiUrlEvent+'?start_after='+start+'&start_before='+end;
     else if (start)
@@ -105,17 +330,12 @@ function AddRowsByDate(table, start, end) {
 
     table.clear();
 
-    const titleLength = 40;
     //FX: add error handling
     $.getJSON(url, null, function( json ) {
-        
+
         for (var i = 0; i < json.length; i++)
         {
             var data = json[i];
-            var title = data.title;
-            if (title.length > titleLength) 
-                title = title.substring(0, titleLength - 3) + '...';
-            data.href_title = '<a href="/event/' + data.id + '/">' + title + '</a>';
             table.row.add(data).invalidate()
         }
 
@@ -124,8 +344,9 @@ function AddRowsByDate(table, start, end) {
     })
 }
 
+function UpdateSubheaderBasedOnSettings (table) {
 
-function UpdateSubheaderBasedOnSettings(table) {
+    // Clear filter types
     filterTypes = [];
     filterTypesCap = [];
 
@@ -137,38 +358,50 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    // hack to shorten display on sm devices
-    $('#subhdr')[0].innerHTML = ('Events (' + filterTypes.join(', ') + ')').replace('operation', 'ops');
+    $('#subhdr').html(
+        '<i class="fa fa-calendar"></i>  All events (' + filterTypes.join(', ') + ')');
 
 }
+
+function ComputeUpcoming () {
+    var start = DateBE(Date());
+    var end = new Date;
+    end.setMonth(end.getMonth() + 1);
+    var end = DateBE(end);
+    var fstart = DateFE(start);
+    var fend = DateFE(end);
+
+    $('#UpcomingSubhdr').html('<i class="fa fa-calendar"></i> Upcoming events ('
+                              + fstart + ' to ' + fend + ')');
+
+    return '/api/events/?start_after=' + start + '&start_before=' + end;
+}
+
+function ComputeRecent () {
+    var start = new Date;
+    start.setMonth(start.getMonth() + -1);
+    var start = DateBE(start);
+    var end = DateBE(Date(), -1);
+    var fstart = DateFE(start);
+    var fend = DateFE(end);
+
+    $('#RecentSubhdr').html('<i class="fa fa-calendar"></i> Recent events ('
+                            + fstart + ' to ' + fend + ')');
+
+    return '/api/events/?start_after=' + start + '&start_before=' + end;
+}
+
+function SelectDate () {
+    $('#date-modal').modal('show');
+    $('#date-modal input[0]').focus();
+}
+
+function Title (data, type, row, meta) {
+    if (type == 'display') {
+        var title = Truncate(row.title, titleLength);
+        return '<a href="/event/' + row.id + '/">' + title + '</a>';
+    } else
+        return data;
+}
+
 {% endblock functions %}
-
-
-{% block ready_functions %}
-const url = new URL(window.location.href);
-const current = url.searchParams.get('current');
-var startBefore = url.searchParams.get('start_before');
-var startAfter = url.searchParams.get('start_after');
-var months = url.searchParams.get('months');
-var monthsSpecified = url.searchParams.get('months');
-
-if (current == '' || months) {
-    if (!startAfter)
-        startAfter = new Date().toLocaleDateString(); // mm/dd/yyyy
-
-    if (!startBefore) {
-        if (!months) months = 1;
-        startBefore = new Date();
-        startBefore.setMonth(startBefore.getMonth() + months);
-        startBefore = startBefore.toLocaleDateString(); // mm/dd/yyyy
-    }
-}
-
-if (startBefore || startAfter) {
-    if (startAfter) $('#start').val(startAfter);
-    if (startBefore) $('#end').val(startBefore);
-}
-
-AddRowsByDate(table, startAfter, startBefore);
-
-{% endblock ready_functions %}
