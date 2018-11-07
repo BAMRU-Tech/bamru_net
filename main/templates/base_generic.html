@@ -34,6 +34,7 @@
         <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
           General help</a>
         | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
+        | <small>{{RELEASE}}</small>
       </div>
     </footer>
     
@@ -46,6 +47,28 @@
     {% bootstrap_javascript %}
 
     {% endblock js %}
+    <script src="https://browser.sentry-cdn.com/4.2.4/bundle.min.js" crossorigin="anonymous"></script>
+    <script>
+      Sentry.init({
+        dsn: '{{JAVASCRIPT_DSN}}',
+        release: '{{RELEASE}}',
+      });
+      Sentry.configureScope((scope) => {
+        scope.setUser({"username": "{{ request.user }}"});
+      });
+      $(document).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
+        Sentry.captureMessage(thrownError || jqXHR.statusText, {
+          extra: {
+              type: ajaxSettings.type,
+              url: ajaxSettings.url,
+              data: ajaxSettings.data,
+              status: jqXHR.status,
+              error: thrownError || jqXHR.statusText,
+              response: jqXHR.responseText.substring(0, 100)
+          }
+        });
+      });
+    </script>
 
     <script>
     // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
