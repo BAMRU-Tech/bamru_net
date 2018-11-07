@@ -155,12 +155,13 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT')
 
 # Raven config for Sentry.io logging
+RELEASE = raven.fetch_git_sha(os.path.abspath(BASE_DIR))
 if strtobool(os.environ.get('USE_RAVEN', 'False')):
     RAVEN_CONFIG = {
         'dsn': os.environ['RAVEN_DSN'],
         # If you are using git, you can also automatically configure the
         # release based on the git info.
-        'release': raven.fetch_git_sha(os.path.abspath(BASE_DIR)),
+        'release': RELEASE,
     }
 JAVASCRIPT_DSN = os.environ.get('JAVASCRIPT_DSN','')
 
