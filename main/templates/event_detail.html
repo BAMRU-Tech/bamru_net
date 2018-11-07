@@ -64,7 +64,8 @@
       </ul>
     </nav>
 
-    <table id="dTbl{{period.position}}" class="display table-bordered nowrap table-striped" cellpadding="0" cellspacing="0" style="width:100%">
+    <table id="dTbl{{period.position}}" class="display table-bordered compact"
+           cellpadding="0" cellspacing="0" style="width:100%">
       <tbody>
       {% for p in period.participant_set.all %}
       <tr>
@@ -205,7 +206,11 @@ $(document).ready( function() {
                     {
                         text: '<i class="fa fa-calendar-check-o"></i> Are you available',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=invite&page=Available?';
+                            location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&period_format=invite' +
+                                '&page=Available?';
                         }
                     },
                     {
@@ -214,7 +219,11 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=leave&page=Left?';
+                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&period_format=leave' +
+                                '&page=Left?';
                         }
                     },
                     {
@@ -223,7 +232,37 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=return&page=Returned?';
+                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&period_format=return' +
+                                '&page=Returned?';
+                        }
+                    },
+                    {
+                        text: '<i class="fa fa-wrench"></i> Info (team)',
+                        action: function ( e, dt, node, config ) {
+                            if (dt.rows().count() == 0)
+                                alert('Add members to period before paging them');
+                            else
+                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&period_format=info' +
+                                '&page=Info';
+                        }
+                    },
+                    {
+                        text: '<i class="fa fa-wrench"></i> Broadcast (unit)',
+                        action: function ( e, dt, node, config ) {
+                            if (dt.rows().count() == 0)
+                                alert('Add members to period before paging them');
+                            else
+                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&period_format=broadcast' +
+                                '&page=Broadcast';
                         }
                     },
                     {
@@ -232,9 +271,13 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}&OP={{ period.position }}&period={{ period.id }}&period_format=test&page=Test';
+                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&period_format=test' +
+                                '&page=Test';
                         }
-                    }
+                    },
                 ]
             },
             {

@@ -9,46 +9,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     {% block css %}
-    <link href='/static/favicon_p1.ico' rel='shortcut icon'
-          type='image/vnd.microsoft.icon'/>
-      <link rel="stylesheet" href="/static/css/style.css" />
-      <link rel="stylesheet" href="/static/font-awesome-4.7.0/css/font-awesome.min.css" />
-      {% bootstrap_css %}
-      <link rel="stylesheet" href="/static/css/style.css" />
+    <link href='/static/favicon_p1.ico' rel='shortcut icon' type='image/vnd.microsoft.icon'/>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="stylesheet" href="/static/font-awesome-4.7.0/css/font-awesome-cst.min.css" />
+    {% bootstrap_css %}
     {% endblock css %}
     <title>{% block title %}BAMRU.net{% endblock title %}</title>
   </head>
 
-
   <body>
-      <div class="container-fluid">
-        {% include 'navbar.html' %}
-        <nav class="navbar navbar-expand-sm text-primary subhead">
-          {% block subheader %}{% endblock subheader %}
-        </nav>
-
-        {% bootstrap_messages %}
-
-        {% block content %}{% endblock content %}
-      </div>
-
+    <div class="container-fluid">
+      {% include 'navbar.html' %}
+      <nav class="navbar navbar-expand-sm text-primary subhead">
+        {% block subheader %}{% endblock subheader %}
+      </nav>
+      
+      {% bootstrap_messages %}
+      
+      {% block content %}{% endblock content %}
+    </div>
+    
     <footer class="footer">
-        <div class="container text-center">
-          <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
-            General help</a>
-          | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
-        </div>
+      <div class="container text-center">
+        <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
+          General help</a>
+        | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
+      </div>
     </footer>
-
+    
     {% block js %}
+
+    {% block jquery %}{# Datatables combined load include jquery 3.3.1 #}
     <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    {% endblock jquery %}
+
     {% bootstrap_javascript %}
 
-    {% endblock js%}
+    {% endblock js %}
 
     <script>
-    $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
-
     // CSRF code from Django docs: https://docs.djangoproject.com/en/2.1/ref/csrf/
     function getCookie(name) {
         var cookieValue = null;

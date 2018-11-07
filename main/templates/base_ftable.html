@@ -22,6 +22,7 @@ $(document).ready(function() {
         responsive: true,
         paging:   false,
         info:     false,
+        fixedHeader: true,
         {% block table_options %}{% endblock %}
         buttons: [
             {% block table_buttons_first %}{% endblock %}
@@ -81,8 +82,8 @@ $(document).ready(function() {
 function DisplayExpandDetailButton ( e, table, columns ) {
     //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
     var btn = $('button.dt-button:contains("' + textShowDetail + '")');
-    if (table.row(0).count()
-        && getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')
+    if (table.row(0).count() && table.row(0).node() &&
+        getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')
 
         btn.show();
     else

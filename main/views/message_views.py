@@ -55,12 +55,17 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             initial['text'] = str(period)
 
             if period_format == 'invite':
-                members = Member.active.exclude(
-                    participant__period=period_id)
+                members = (Member.active
+                .filter(member_rank__in=['TM','FM','T','R','S'])
+                .exclude(participant__period=period_id))
             elif period_format == 'leave':
                 members = period.members_for_left_page()
             elif period_format == 'return':
                 members = period.members_for_returned_page()
+            elif period_format == 'info':
+                members = Member.active.filter(participant__period=period_id)
+            elif period_format == 'broadcast':
+                members = Member.active.filter(member_rank__in=['TM','FM','T','R','S'])
             elif period_format == 'test':
                 members = period.members_for_test_page()
             else:
@@ -78,7 +83,10 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             self.initial = initial  # Is there a better way to get info into the template?
 
         initial['title'] = "Page"
-        initial['input'] = "{}: {}".format(str(period), rsvp_template.text)
+        if (rsvp_template != None):  # TODO: add empty templates for Info and Broadcast
+            initial['input'] = "{}: {}".format(str(period), rsvp_template.text)
+        else:
+            initial['input'] = "{}: ".format(str(period))
         initial['type'] = "std_page"
 
         return members
