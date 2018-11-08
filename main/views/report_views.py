@@ -45,8 +45,9 @@ class ReportRosterView(LoginRequiredMixin, BaseReportView):
         context = {}
         context['members'] = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set', 'emergencycontact_set')
-                .filter(member_rank__in=Member.ACTIVE_RANKS)
+                .prefetch_related('address_set', 'phone_set', 'email_set',
+                                  'emergencycontact_set')
+                .filter(member_rank__in=Member.CURRENT_RANKS) #TODO:FIXME: correct list?
                 .order_by('last_name', 'first_name')
         )
         context['now'] = timezone.now()
@@ -60,8 +61,9 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         buffer = io.StringIO()
         members = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set', 'emergencycontact_set')
-                .filter(member_rank__in=Member.ACTIVE_RANKS)
+                .prefetch_related('address_set', 'phone_set', 'email_set',
+                                  'emergencycontact_set')
+                .filter(member_rank__in=Member.CURRENT_RANKS)
                 .order_by('last_name', 'first_name')
         )
 
@@ -126,7 +128,7 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
         members = (
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set')
-                .filter(member_rank__in=Member.ACTIVE_RANKS)
+                .filter(member_rank__in=Member.CURRENT_RANKS)
                 .order_by('last_name', 'first_name')
         )
         cards = [self.vcard_for_member(m) for m in members]

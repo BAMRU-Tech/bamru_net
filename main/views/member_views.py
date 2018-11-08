@@ -257,8 +257,7 @@ class CertListView(LoginRequiredMixin, generic.ListView):
         for idx, t in enumerate(Cert.TYPES):
             cert_lookup[t[0]] = idx
         qs = Member.members.prefetch_related('cert_set')
-        qs = qs.filter(
-            member_rank__in=['TM','FM','T']).order_by('id')
+        qs = qs.filter(member_rank__in=Member.CURRENT_RANKS).order_by('id')
 
         for m in qs:
             m.certs = [{'cert':None, 'count':0} for x in cert_lookup]
@@ -311,8 +310,7 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
                      queryset=unavailable_set,
                      to_attr='unavailable_filtered'))
 
-        qs = qs.filter(
-            member_rank__in=['TM','FM','T','S']).order_by('id')
+        qs = qs.filter(member_rank__in=Member.AVAILABLE_RANKS).order_by('id')
 
         for m in qs:
             m.days = ['' for x in range(self.days)]

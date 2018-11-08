@@ -55,17 +55,16 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             initial['text'] = str(period)
 
             if period_format == 'invite':
-                members = (Member.active
-                .filter(member_rank__in=['TM','FM','T','R','S'])
+                members = (Member.members.filter(member_rank__in=Member.AVAILABLE_RANKS)
                 .exclude(participant__period=period_id))
             elif period_format == 'leave':
                 members = period.members_for_left_page()
             elif period_format == 'return':
                 members = period.members_for_returned_page()
             elif period_format == 'info':
-                members = Member.active.filter(participant__period=period_id)
+                members = Member.members.filter(participant__period=period_id)
             elif period_format == 'broadcast':
-                members = Member.active.filter(member_rank__in=['TM','FM','T','R','S'])
+                members = Member.members.filter(member_rank__in=Member.AVAILABLE_RANKS)
             elif period_format == 'test':
                 members = period.members_for_test_page()
             else:
@@ -275,8 +274,7 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(
-            member_rank__in=['TM','FM','T','R','S','A']).order_by('id')
+        return Member.objects.filter(member_rank__in=Member.CURRENT_RANKS).order_by('id')
 
     def get_context_data(self, **kwargs):
         """Return context for become DO"""

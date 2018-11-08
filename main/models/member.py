@@ -16,20 +16,15 @@ class CustomUserManager(BaseUserManager):
         case_insensitive_username_field = '{}__iexact'.format(self.model.USERNAME_FIELD)
         return self.get(**{case_insensitive_username_field: username})
 
-class ActiveMemberManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(member_rank__in=['TM','FM','T'])
-
 class CurrentMemberManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(
-            member_rank__in=['TM','FM','T','R','S','A'])
+        return super().get_queryset().filter(member_rank__in=Member.CURRENT_RANKS)
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     objects = CustomUserManager()
-    active = ActiveMemberManager()
+    #active = ActiveMemberManager()
     members = CurrentMemberManager()
     
     TYPES = (
@@ -46,7 +41,9 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         ('GN', 'Guest No-contact'),
         )
 
-    ACTIVE_RANKS = ['TM', 'FM', 'T']
+    CURRENT_RANKS = ('TM', 'FM', 'T', 'R', 'S', 'A')
+    AVAILABLE_RANKS = ('TM', 'FM', 'T', 'S')
+    PRO_RANKS = ('TM', 'FM', 'T')
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -162,11 +159,6 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def short_name(self):
         "Returns the short name for the user."
         return self.first_name
-
-    # TODO: remove or rename this property
-    def isActive(self):
-        """ Return member status, True is active member """
-        return self.rank in self.ACTIVE_RANKS
 
     @models.permalink
     def get_absolute_url(self):
