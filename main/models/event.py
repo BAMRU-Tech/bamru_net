@@ -26,8 +26,12 @@ class Event(BaseModel):
     lon = models.CharField(max_length=255, blank=True, null=True)
     start = models.DateTimeField()
     finish = models.DateTimeField(blank=True, null=True)
-    all_day = models.BooleanField(default=False)
-    published = models.BooleanField(default=False)
+    all_day = models.BooleanField(
+        default=False,
+        help_text='All Day events do not have a start or end time.')
+    published = models.BooleanField(
+        default=False,
+        help_text='Published events are viewable by the public.')
 
     def save(self, *args, **kwargs):
         super(Event, self).save(*args, **kwargs)
