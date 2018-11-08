@@ -7,6 +7,30 @@ body {
   padding-bottom: 4px;
 }
 
+table td {
+  overflow: hidden; /* this is what fixes the expansion */
+  text-overflow: ellipsis; /* not supported in all browsers */
+  white-space: nowrap;
+}
+
+table.display {
+  table-layout: fixed
+}
+
+td, th {
+  width: auto;
+  border: 1px solid #eee;
+}
+td.min, th.min {
+  width: 1% !important;
+  white-space: nowrap !important;
+}
+
+td.primary, th.primary {
+  min-width: 200px !important;
+  white-space: nowrap !important;
+}
+
 .sortable {
   list-style-type: none;
   padding: 0;

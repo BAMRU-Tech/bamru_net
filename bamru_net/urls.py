@@ -39,8 +39,7 @@ router.register(r'messages', views.MessageViewSet)
 urlpatterns = [
     path('', views.IndexView.as_view()),
 
-    path('event/proximate', views.EventImmediateView.as_view(), name='event_immediate'),
-    path('event/', views.EventAllView.as_view(), name='event_list'),
+    path('event/', views.EventListView.as_view(), name='event_list'),
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
     path('event/add', views.EventCreateView.as_view(), name='event_add'),
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),

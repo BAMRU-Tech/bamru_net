@@ -167,7 +167,7 @@ function RemoveRows(table, values) {
         function ( idx, data, node ) { return data.rank == values[0]; } )
         .remove();
 
-    table.draw();
+        table.draw().columns.adjust().responsive.recalc();//FX
 }
 
 function UpdateSubheaderBasedOnSettings(table) {

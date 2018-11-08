@@ -24,44 +24,25 @@ from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 
 
-class EventImmediateView(LoginRequiredMixin, generic.ListView):
-    """ Render current event list """
+class EventListView(LoginRequiredMixin, generic.ListView):
+    """ This view does not do anything anymore, left as an example of a simple view """ 
     template_name = 'event_list.html'
     context_object_name = 'event_list'
 
     def get_queryset(self):
-        """Return current event list """
-        today = timezone.now().today()
-        qs = Event.objects.all()
-        upcoming = qs.filter(start__gte=today) \
-                     .exclude(start__gte=today + timedelta(days=14))
-        recent = qs.filter(start__lt=today) \
-                   .exclude(start__lt=today - timedelta(days=30))
-        qs = upcoming | recent
-        return qs.order_by('start')
+        """Example: create query set """
+        return None
+        #qs = Event.objects.all()
+        #qs = qs.filter(start__gte=timezone.now().today() - timedelta(days=365))
+        #return qs.order_by('start')
 
     def get_context_data(self, **kwargs):
+        """Example: adding to the context, in addition to the query set """
         context = super().get_context_data(**kwargs)
-        # Add column sort for datatable (zero origin)
-        context['sortOrder'] = '4, "desc"'
         return context
-
-
-class EventAllView(LoginRequiredMixin, generic.ListView):
-    template_name = 'event_list.html'
-    context_object_name = 'event_list'
-
-    def get_queryset(self):
-        """Return event list within the last year """
-        qs = Event.objects.all()
-        qs = qs.filter(start__gte=timezone.now().today() - timedelta(days=365))
-        return qs.order_by('start')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
         # Add column sort for datatable (zero origin)
-        context['sortOrder'] = '4, "asc"'
-        return context
+        #context['sortOrder'] = '4, "asc"'
+        #return context
 
 
 class EventDetailView(LoginRequiredMixin, generic.DetailView):

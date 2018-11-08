@@ -132,7 +132,7 @@ function RemoveRows(table, values)
         } )
         .remove();
 
-    table.draw()
+    table.draw().columns.adjust().responsive.recalc();//FX
 }
 
 function UpdateSubheaderBasedOnSettings(table) {

@@ -46,31 +46,6 @@ class Event(BaseModel):
         else:
             self.period_set.create()
 
-    @property
-    def display_title(self):
-        """ Return event title, properly sized for table display """
-        title = self.title
-        title = (title[:50] + '..') if len(title) > 50 else title
-        return title.strip()
-
-    @property
-    def display_location(self):
-        """ Return event location, properly sized for table display """
-        location = self.location
-        location = (location[:50] + '..') if len(location) > 50 else location
-        return location.strip()
-    
-    @property
-    def display_start(self):
-        if self.all_day:
-            return self.start.strftime('%x')
-        else:
-            return utc_to_local(self.start).strftime('%x %R')
-
-    @property
-    def start_order(self):
-        return self.start.timestamp()
-
     @models.permalink
     def get_absolute_url(self):
         return ('event_detail', [str(self.id)])
