@@ -42,14 +42,21 @@ class BaseReportView(View):
 
 class ReportRosterView(LoginRequiredMixin, BaseReportView):
     def get(self, request, **kwargs):
+
+        if (kwargs['roster_type'] == 'names.html'):
+            ranks = Member.PRO_RANKS
+        else:
+             ranks = Member.CURRENT_RANKS
+
         context = {}
         context['members'] = (
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set',
                                   'emergencycontact_set')
-                .filter(member_rank__in=Member.CURRENT_RANKS) #TODO:FIXME: correct list?
+                .filter(member_rank__in=ranks)
                 .order_by('last_name', 'first_name')
         )
+        import pdb; pdb.set_trace()
         context['now'] = timezone.now()
 
         report_filename = 'BAMRU-' + kwargs['roster_type']
