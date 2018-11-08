@@ -22,7 +22,7 @@
       </li>
     </ul>
   </nav>
-  <table id="Upcoming" class="display table-bordered compact nowrap" style="width:100%"></table>
+  <table id="Upcoming" class="display list table-bordered compact nowrap" style="width:100%"></table>
 
   <nav class="navbar navbar-expand-sm text-primary subhead">
     <button class="btn navbar-btn" onclick='$("#Recent_wrapper").toggle();'>
@@ -30,7 +30,7 @@
       <strong class="d-none d-md-block" id="RecentSubhdr"></strong>
     </button>
   </nav>
-  <table id="Recent" class="display table-bordered compact nowrap" style="width:100%"></table>
+  <table id="Recent" class="display list table-bordered compact nowrap" style="width:100%"></table>
 
   <nav class="navbar navbar-expand-sm text-primary subhead">
     <button class="btn navbar-btn" onclick='$("#dTbl_wrapper").toggle();'>
@@ -47,7 +47,7 @@
       <option value='community'>Community</option>
     </select>
   </div>
-  <table id="dTbl" class="display table-bordered compact nowrap" style="width:100%"></table>
+  <table id="dTbl" class="display list table-bordered compact nowrap" style="width:100%"></table>
 </main>
 
 <div class="modal fade" id="date-modal" tabindex="-1" role="dialog">
@@ -211,15 +211,14 @@ const locationLength = 20;
 const colDefs = [
     { data: 'title', title: 'Title', responsivePriority: 1,
       className: 'primary', render: rTitle, },
-    { data: 'description', title: 'Description', visible: false,
-      responsivePriority: 99, },
+    { data: 'description', title: 'Description', visible: false, responsivePriority: 99, },
     { data: 'location', title: 'Location', responsivePriority: 3, className: 'primary', },
     { data: 'lat', title: 'Lat', visible: false, responsivePriority: 99, },
     { data: 'lon', title: 'Lon', visible: false, responsivePriority: 99, },
-    { data: 'type', title: 'Type', responsivePriority: 4, },
     { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
-    { data: 'start', title: 'Start', responsivePriority: 2,
+    { data: 'start', title: 'Start', width: '6em', responsivePriority: 2,
       type: 'date', render: rDate, },
+    { data: 'type', title: 'Type', responsivePriority: 4, className: 'd-none d-md-block' },
     { data: 'finish', title: 'Finish', visible: false, responsivePriority: 99,
       type: 'date', },
     { data: 'all_day', title: 'All day', visible: false, responsivePriority: 99,
@@ -259,8 +258,8 @@ function SetEventDates () {
 $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
         //FX DB data bug allows event type to be Capitalized (remove when?)
-        //FIXME: why [5] and not data.type
-        if ( filterTypes.includes(data[5]) || filterTypesCap.includes(data[5]) ) {
+        //FIXME: why [] and not data.type
+        if ( filterTypes.includes(data[7]) || filterTypesCap.includes(data[5]) ) {
             return true;
         }
         return false;
@@ -368,13 +367,14 @@ function SelectDate () {
 
 function rTitle (data, type, row, meta) {
     if (type == 'display') {
-        var title = Truncate(row.title, titleLength);
+        var title = row.title; //Truncate(row.title, titleLength);
         return '<a href="/event/' + row.id + '/">' + title + '</a>';
     } else
         return data;
 }
 
 function rLocation (data, type, row, meta) {
+    return data;
     return Truncate( data, locationLength);
 }
 

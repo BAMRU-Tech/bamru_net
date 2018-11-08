@@ -22,7 +22,7 @@ class CreateListModelMixin(object):
 class MemberViewSet(BaseViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
-    filter_fields = ('member_rank', 'is_active', ) #TODO:FIXME: why is this here?
+    filter_fields = ('member_rank', )
     search_fields = ('username',  )
 
 

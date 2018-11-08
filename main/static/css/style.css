@@ -7,27 +7,12 @@ body {
   padding-bottom: 4px;
 }
 
-table td {
-  overflow: hidden; /* this is what fixes the expansion */
-  text-overflow: ellipsis; /* not supported in all browsers */
-  white-space: nowrap;
-}
+table.dataTable.list { table-layout: fixed; }
+table.dataTable.list td { text-overflow: ellipsis; }
+table.dataTable.list th, table.dataTable.list td {padding: 5px 3px;font-size: 13px;overflow: hidden; }
 
-table.display {
-  table-layout: fixed
-}
-
-td, th {
-  width: auto;
-  border: 1px solid #eee;
-}
 td.min, th.min {
   width: 1% !important;
-  white-space: nowrap !important;
-}
-
-td.primary, th.primary {
-  min-width: 200px !important;
   white-space: nowrap !important;
 }
 
