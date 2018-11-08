@@ -133,7 +133,7 @@ class MessageInboxView(LoginRequiredMixin, generic.ListView):
         return qs.order_by('-created_at')
 
 
-def handle_distribution_rsvp(distribution, rsvp=False):
+def handle_distribution_rsvp(request, distribution, rsvp=False):
     """Helper function to process a RSVP response.
     distribution -- A Distribution object
     rsvp -- boolean RSVP response
@@ -182,7 +182,7 @@ def unauth_rsvp(request, token):
         response_text = 'Error: token expired'
     else:
         rsvp = request.GET.get('rsvp')[0].lower() == 'y'
-        response_text = handle_distribution_rsvp(d, rsvp)
+        response_text = handle_distribution_rsvp(request, d, rsvp)
     return HttpResponse(response_text)  # TODO template
 
 
@@ -223,7 +223,7 @@ def sms(request):
                         created_at__gte=date_from)
                 .order_by('-pk').first())
     # TODO filter by texts that have associated question
-    if not outbound:
+    if (not outbound) or (not outbound.distribution):
         logger.error('No matching OutboundSms for: ' + str(request.body))
         response.message(
             'BAMRU.net Warning: not sure what to do with your message. Maybe it was too long ago.')
@@ -236,7 +236,7 @@ def sms(request):
         return response
 
     response.message(handle_distribution_rsvp(
-        outbound.distribution, (yn == 'y')))
+        request, outbound.distribution, (yn == 'y')))
     return response
 
 
