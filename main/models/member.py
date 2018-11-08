@@ -41,9 +41,9 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         ('GN', 'Guest No-contact'),
         )
 
-    CURRENT_RANKS = ('TM', 'FM', 'T', 'R', 'S', 'A')
-    AVAILABLE_RANKS = ('TM', 'FM', 'T', 'S')
-    PRO_RANKS = ('TM', 'FM', 'T')
+    CURRENT_RANKS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
+    AVAILABLE_RANKS = ('TM', 'FM', 'T', 'S')         # Available for operations
+    PRO_RANKS = ('TM', 'FM', 'T')                    # Available for pro-deals
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
