@@ -32,7 +32,7 @@ class MemberListView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(membership__in=CURRENT_MEMBERS).order_by('id')
+        return Member.objects.filter(membership__in=Member.CURRENT_MEMBERS).order_by('id')
 
 
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
