@@ -25,7 +25,7 @@
   <table id="Upcoming" class="display list table-bordered compact nowrap" style="width:100%"></table>
 
   <nav class="navbar navbar-expand-sm text-primary subhead">
-    <button class="btn navbar-btn" onclick='$("#Recent_wrapper").toggle();'>
+    <button class="btn navbar-btn" id="recent-btn" onclick='$("#Recent_wrapper").toggle();'>
       <strong class="d-md-none" ><i class="fa fa-calendar"></i> Recent events</strong>
       <strong class="d-none d-md-block" id="RecentSubhdr"></strong>
     </button>
@@ -88,6 +88,7 @@
 {% block table_options %}
 
 order: [[ 7, 'desc' ]],
+autoWidth: false,
 
 columns: colDefs,
 
@@ -115,6 +116,7 @@ $(document).ready(function() {
         info:     false,
 
         order: [[ 7, 'asc' ]],
+        autoWidth: false,
 
         columns: colDefs,
 
@@ -147,12 +149,12 @@ $(document).ready(function() {
     var tableRecent = $('#Recent').DataTable( {
         dom: 'Bfrtip',
         ajax: { url: ComputeRecent(), dataSrc: '', },
-        deferRender: true,
         responsive: true,
         paging:   false,
         info:     false,
 
         order: [[ 7, 'desc' ]],
+        autoWidth: false,
 
         columns: colDefs,
 
@@ -198,6 +200,7 @@ $(document).ready(function() {
 
     $("#Recent_wrapper").hide();
     $("#dTbl_wrapper").hide();
+
 });
 
 {% endblock ready_functions %}
@@ -215,10 +218,10 @@ const colDefs = [
     { data: 'location', title: 'Location', responsivePriority: 3, className: 'primary', },
     { data: 'lat', title: 'Lat', visible: false, responsivePriority: 99, },
     { data: 'lon', title: 'Lon', visible: false, responsivePriority: 99, },
-    { data: 'leaders', title: 'Leaders', responsivePriority: 5, },
-    { data: 'start', title: 'Start', width: '6em', responsivePriority: 2,
+    { data: 'leaders', title: 'Leaders', width: '17%', responsivePriority: 4, },
+    { data: 'start', title: 'Start', width: '20%', responsivePriority: 2,
       type: 'date', render: rDate, },
-    { data: 'type', title: 'Type', responsivePriority: 4, className: 'd-none d-md-block' },
+    { data: 'type', title: 'Type', width: '40px', responsivePriority: 5, },
     { data: 'finish', title: 'Finish', visible: false, responsivePriority: 99,
       type: 'date', },
     { data: 'all_day', title: 'All day', visible: false, responsivePriority: 99,

@@ -67,10 +67,13 @@ columns: [
           if (type == 'display') {
               if (data == '')
                   return row.comment;
-              else
+              else if (data != 'None')
                   return '<a href="' + data + '" target="_blank">' + data + '</a>'
-          } else
-              return data
+              else
+                  return ''
+          }
+
+          return data
       }
     },
     { data: 'comment', title: 'Comment', visible: false, },

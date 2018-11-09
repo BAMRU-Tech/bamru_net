@@ -11,9 +11,8 @@ table.dataTable.list { table-layout: fixed; }
 table.dataTable.list td { text-overflow: ellipsis; }
 table.dataTable.list th, table.dataTable.list td {padding: 5px 3px;font-size: 13px;overflow: hidden; }
 
-td.min, th.min {
-  width: 1% !important;
-  white-space: nowrap !important;
+.primary {
+    min-width: 80px;
 }
 
 .sortable {
