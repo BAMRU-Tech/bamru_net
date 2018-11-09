@@ -56,7 +56,6 @@ class ReportRosterView(LoginRequiredMixin, BaseReportView):
                 .filter(membership__in=ranks)
                 .order_by('last_name', 'first_name')
         )
-        import pdb; pdb.set_trace()
         context['now'] = timezone.now()
 
         report_filename = 'BAMRU-' + kwargs['roster_type']
