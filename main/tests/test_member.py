@@ -12,7 +12,7 @@ class MemberTestCase(TestCase):
         self.user = Member.objects.create(first_name='John',
                                           last_name='Doe',
                                           username='john doe',
-                                          member_rank='T',
+                                          membership='T',
         )
 
     def test_str(self):
@@ -26,13 +26,13 @@ class MemberTestCase(TestCase):
                 first_name='Jane',
                 last_name='Smith',
                 username='jane smith',
-                member_rank='FM',
+                membership='FM',
         )
         user_tm = Member.objects.create(
                 first_name='User',
                 last_name='Three',
                 username='user three',
-                member_rank='TM',
+                membership='TM',
         )
         users = [user_t, user_tm, user_fm]
         users.sort(key=lambda x: x.rank_order)
@@ -44,7 +44,7 @@ class MemberTestCase(TestCase):
                 first_name='Jane',
                 last_name='Smith',
                 username='jane smith',
-                member_rank='FM',
+                membership='FM',
         )
         Role.objects.create(member=user_fm_ul_ol, role='UL')
         Role.objects.create(member=user_fm_ul_ol, role='OL')
@@ -52,7 +52,7 @@ class MemberTestCase(TestCase):
                 first_name='User',
                 last_name='Three',
                 username='user three',
-                member_rank='TM',
+                membership='TM',
         )
         Role.objects.create(member=user_tm_xo, role='XO')
         users = [user_t, user_tm_xo, user_fm_ul_ol]

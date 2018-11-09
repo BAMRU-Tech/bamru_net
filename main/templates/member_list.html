@@ -69,7 +69,7 @@ SetMemberFilter (table, true);
 {% endblock initComplete %}
 
 {% block functions %}
-const apiUrlMemberRank = '/api/members/?member_rank=';
+const apiUrlMembership = '/api/members/?membership=';
 const colDefs = [
     { data: 'full_name', title: 'Name', responsivePriority: 1,
       render: function(data, type, row, meta) {
@@ -107,7 +107,7 @@ function AddRows(table, values) {
     //
     // Add rows based rank
     //
-    var url = apiUrlMemberRank+values[0];
+    var url = apiUrlMembership+values[0];
     //FX: add error handling
     $.getJSON(url, null, function( json ) {
         

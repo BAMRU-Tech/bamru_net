@@ -168,13 +168,13 @@ function SetBusy(busy, start, end, comment) {
     return i;
 }
 
-const apiUrlMemberRank = '/api/member_availability/?member_rank=';
+const apiUrlMembership = '/api/member_availability/?membership=';
 
 function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    var url = apiUrlMemberRank+values[0];
+    var url = apiUrlMembership+values[0];
 
     var dd = DateArray(Date(), 5);
     url += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];

@@ -116,13 +116,13 @@ function RenderColor (data, type, row, meta) {
           return data;
       }
 
-const apiUrlMemberRank = '/api/member_certs/?member_rank=';
+const apiUrlMembership = '/api/member_certs/?membership=';
 
 function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    var url = apiUrlMemberRank+values[0];
+    var url = apiUrlMembership+values[0];
     //FX: add error handling
     $.getJSON(url, null, function( json ) {
         for (var i = 0; i < json.length; i++)

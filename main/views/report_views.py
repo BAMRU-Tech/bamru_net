@@ -53,7 +53,7 @@ class ReportRosterView(LoginRequiredMixin, BaseReportView):
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set',
                                   'emergencycontact_set')
-                .filter(member_rank__in=ranks)
+                .filter(membership__in=ranks)
                 .order_by('last_name', 'first_name')
         )
         import pdb; pdb.set_trace()
@@ -70,7 +70,7 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set',
                                   'emergencycontact_set')
-                .filter(member_rank__in=Member.CURRENT_RANKS)
+                .filter(membership__in=Member.CURRENT_RANKS)
                 .order_by('last_name', 'first_name')
         )
 
@@ -135,7 +135,7 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
         members = (
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set')
-                .filter(member_rank__in=Member.CURRENT_RANKS)
+                .filter(membership__in=Member.CURRENT_RANKS)
                 .order_by('last_name', 'first_name')
         )
         cards = [self.vcard_for_member(m) for m in members]

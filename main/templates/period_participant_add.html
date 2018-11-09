@@ -118,7 +118,7 @@ const event_id = url.searchParams.get('eid');
 const period_num = url.searchParams.get('pn');
 const period_id = url.searchParams.get('pid');
 
-const apiUrlMemberRank = '/api/members/?member_rank=';
+const apiUrlMembership = '/api/members/?membership=';
 
 function AddParticipant ( e, dt, node, config ) {
         var members = [];
@@ -170,7 +170,7 @@ function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    var url = apiUrlMemberRank+values[0];
+    var url = apiUrlMembership+values[0];
     //FX: add error handling
     $.getJSON(url, null, function( json ) {
         
