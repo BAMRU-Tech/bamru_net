@@ -22,7 +22,7 @@ class CreateListModelMixin(object):
 class MemberViewSet(BaseViewSet):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
-    filter_fields = ('member_rank', 'is_active', )
+    filter_fields = ('membership', )
     search_fields = ('username',  )
 
 
@@ -30,7 +30,7 @@ class UnavailableFilter(filters.FilterSet):
     start_on = filters.DateFromToRangeFilter()
     class Meta:
         model = Unavailable
-        fields = ('member__member_rank', 'start_on', )
+        fields = ('member__membership', 'start_on', )
 
 
 class UnavailableViewSet(BaseViewSet):
@@ -50,7 +50,7 @@ class ApiUnavailableViewSet(BaseViewSet):
 class MemberUnavailableViewSet(BaseViewSet):
     queryset = Member.members.prefetch_related('unavailable_set')
     serializer_class = MemberUnavailableSerializer
-    filter_fields = ('member_rank', )
+    filter_fields = ('membership', )
     search_fields = ('username',  )
 
     def get_serializer(self, *args, **kwargs):
@@ -68,14 +68,14 @@ class MemberUnavailableViewSet(BaseViewSet):
 class CertViewSet(BaseViewSet):
     queryset = Cert.objects.all()
     serializer_class = CertSerializer
-    filter_fields = ('member__member_rank', 'type', )
+    filter_fields = ('member__membership', 'type', )
     search_fields = ('member__username',  )
 
 
 class MemberCertViewSet(BaseViewSet):
     queryset = Member.members.prefetch_related('cert_set')
     serializer_class = MemberCertSerializer
-    filter_fields = ('member_rank', )
+    filter_fields = ('membership', )
     search_fields = ('username',  )
 
 

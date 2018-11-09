@@ -7,6 +7,14 @@ body {
   padding-bottom: 4px;
 }
 
+table.dataTable.list { table-layout: fixed; }
+table.dataTable.list td { text-overflow: ellipsis; }
+table.dataTable.list th, table.dataTable.list td {padding: 5px 3px;font-size: 13px;overflow: hidden; }
+
+.primary {
+    min-width: 80px;
+}
+
 .sortable {
   list-style-type: none;
   padding: 0;

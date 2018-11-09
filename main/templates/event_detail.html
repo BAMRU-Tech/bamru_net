@@ -26,15 +26,33 @@
 </ul>
 {% endblock subheader %}
 
+    
 {% block content %}
 <main role="main" class="container">
   <div id="content">
     <p><strong>Description:</strong> {{ event.description }}</p>
-    <p><strong>Location:</strong> {{ event.location }}</p>
+    <p><strong>Location:</strong> {{ event.location }}
+      <p>
+      {% if event.lat != None %}
+      <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
+      {% endif %}
+      {% if event.lon != None %}
+      <strong>Lon:</strong> {{ event.lon|floatformat:8 }}
+      {% endif %}
+      </p></p>
     <p><strong>Leaders:</strong> {{ event.leaders }}</p>
     <p>
-      <strong>Start:</strong> {{ event.start|date:'M j, Y Hi' }}
-      <strong>End:</strong> {{ event.finish|date:'M j, Y Hi' }}
+      <strong>Start:</strong>
+      {% if event.all_day %}
+        {{ event.start|date:'M j, Y' }}
+      {% else %}
+        {{ event.start|date:'M j, Y H:i' }}
+      {% endif %}
+      {% if event.all_day %}
+        {{ event.finish|date:'M j, Y' }}
+      {% else %}
+        {{ event.finish|date:'M j, Y H:i' }}
+      {% endif %}
     </p>
     <p>
       <strong>All day:</strong> {{ event.all_day }}

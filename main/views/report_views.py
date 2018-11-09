@@ -42,11 +42,18 @@ class BaseReportView(View):
 
 class ReportRosterView(LoginRequiredMixin, BaseReportView):
     def get(self, request, **kwargs):
+
+        if (kwargs['roster_type'] == 'names.html'):
+            ranks = Member.PRO_RANKS
+        else:
+             ranks = Member.CURRENT_RANKS
+
         context = {}
         context['members'] = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set', 'emergencycontact_set')
-                .filter(member_rank__in=Member.ACTIVE_RANKS)
+                .prefetch_related('address_set', 'phone_set', 'email_set',
+                                  'emergencycontact_set')
+                .filter(membership__in=ranks)
                 .order_by('last_name', 'first_name')
         )
         context['now'] = timezone.now()
@@ -60,8 +67,9 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         buffer = io.StringIO()
         members = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set', 'emergencycontact_set')
-                .filter(member_rank__in=Member.ACTIVE_RANKS)
+                .prefetch_related('address_set', 'phone_set', 'email_set',
+                                  'emergencycontact_set')
+                .filter(membership__in=Member.CURRENT_RANKS)
                 .order_by('last_name', 'first_name')
         )
 
@@ -126,7 +134,7 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
         members = (
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set')
-                .filter(member_rank__in=Member.ACTIVE_RANKS)
+                .filter(membership__in=Member.CURRENT_RANKS)
                 .order_by('last_name', 'first_name')
         )
         cards = [self.vcard_for_member(m) for m in members]

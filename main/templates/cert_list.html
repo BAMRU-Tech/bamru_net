@@ -23,7 +23,7 @@
       <option value='MA'>Member Alum</option>
     </select>
   </div>
-  <table id="dTbl" class="display table-bordered compact wrap" style="width:100%">
+  <table id="dTbl" class="display table-bordered compact nowrap" style="width:100%">
     <tbody>
       {% for member in member_list %}
       <tr>
@@ -54,8 +54,8 @@ order: [[ 0, 'asc' ]],
 
 columnDefs: [
     { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 2, targets: 2 },
-    { responsivePriority: 3, targets: 3},
+    { responsivePriority: 2, targets: 4 },
+    { responsivePriority: 3, targets: 5 },
 ],
 
 columns: [
@@ -116,13 +116,13 @@ function RenderColor (data, type, row, meta) {
           return data;
       }
 
-const apiUrlMemberRank = '/api/member_certs/?member_rank=';
+const apiUrlMembership = '/api/member_certs/?membership=';
 
 function AddRows(table, values) {
     //
     // Add rows based on rank =values[0]
     //
-    var url = apiUrlMemberRank+values[0];
+    var url = apiUrlMembership+values[0];
     //FX: add error handling
     $.getJSON(url, null, function( json ) {
         for (var i = 0; i < json.length; i++)
@@ -167,7 +167,7 @@ function RemoveRows(table, values) {
         function ( idx, data, node ) { return data.rank == values[0]; } )
         .remove();
 
-    table.draw();
+        table.draw().columns.adjust().responsive.recalc();//FX
 }
 
 function UpdateSubheaderBasedOnSettings(table) {

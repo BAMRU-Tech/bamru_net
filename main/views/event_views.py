@@ -12,7 +12,7 @@ from django.views import generic
 from django.forms import widgets
 from main.models import Member, Event, Participant, Period
 
-from django.forms.widgets import Select, Widget, SelectDateWidget
+from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from datetime import timedelta
 import datetime
@@ -24,44 +24,25 @@ from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 
 
-class EventImmediateView(LoginRequiredMixin, generic.ListView):
-    """ Render current event list """
+class EventListView(LoginRequiredMixin, generic.ListView):
+    """ This view does not do anything anymore, left as an example of a simple view """ 
     template_name = 'event_list.html'
     context_object_name = 'event_list'
 
     def get_queryset(self):
-        """Return current event list """
-        today = timezone.now().today()
-        qs = Event.objects.all()
-        upcoming = qs.filter(start__gte=today) \
-                     .exclude(start__gte=today + timedelta(days=14))
-        recent = qs.filter(start__lt=today) \
-                   .exclude(start__lt=today - timedelta(days=30))
-        qs = upcoming | recent
-        return qs.order_by('start')
+        """Example: create query set """
+        return None
+        #qs = Event.objects.all()
+        #qs = qs.filter(start__gte=timezone.now().today() - timedelta(days=365))
+        #return qs.order_by('start')
 
     def get_context_data(self, **kwargs):
+        """Example: adding to the context, in addition to the query set """
         context = super().get_context_data(**kwargs)
-        # Add column sort for datatable (zero origin)
-        context['sortOrder'] = '4, "desc"'
         return context
-
-
-class EventAllView(LoginRequiredMixin, generic.ListView):
-    template_name = 'event_list.html'
-    context_object_name = 'event_list'
-
-    def get_queryset(self):
-        """Return event list within the last year """
-        qs = Event.objects.all()
-        qs = qs.filter(start__gte=timezone.now().today() - timedelta(days=365))
-        return qs.order_by('start')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
         # Add column sort for datatable (zero origin)
-        context['sortOrder'] = '4, "asc"'
-        return context
+        #context['sortOrder'] = '4, "asc"'
+        #return context
 
 
 class EventDetailView(LoginRequiredMixin, generic.DetailView):
@@ -78,7 +59,7 @@ class EventForm(ModelForm):
     class Meta:
         model = Event
         fields = ['title', 'description', 'type',
-                  'location', 'leaders',
+                  'location', 'lat', 'lon', 'leaders',
                   'start', 'finish',
                   'all_day', 'published',
                   ]
@@ -97,6 +78,9 @@ class EventForm(ModelForm):
                 date_attrs={'type': 'date'},
                 time_attrs={'type': 'time'},
             ),
+            'lat': widgets.HiddenInput(),
+            'lon': widgets.HiddenInput(),
+                
         }
 
     def clean(self):
@@ -111,7 +95,18 @@ class EventForm(ModelForm):
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
     form_class = EventForm
-    template_name = 'base_form.html'
+    template_name = 'event_update.html'
+
+    def get_form(self):
+        form = super(EventUpdateView, self).get_form()
+
+        # Mark required fields
+        form.fields['title'].label = "Title*"
+        form.fields['type'].label = "Type*"
+        form.fields['location'].label = "Location*"
+        form.fields['start'].label = "Start*"
+
+        return form
 
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
@@ -148,7 +143,7 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return the member list."""
         return Member.objects.filter(
-            member_rank__in=['TM','FM','T','S']).order_by('id')
+            membership__in=Member.AVAILABLE_RANKS).order_by('id')
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()

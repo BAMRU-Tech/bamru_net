@@ -14,13 +14,13 @@ class OrderListJson(BaseDatatableView):
     model = Member
 
     # define the columns that will be returned
-    columns = ['last_name', 'member_rank', 'role', 'phone', 'email']
+    columns = ['last_name', 'membership', 'role', 'phone', 'email']
         
     # define column names that will be used in sorting
     # order is important and should be same as order of columns
     # displayed by datatables. For non sortable columns use empty
     # value like ''
-    order_columns = ['last_name', 'member_rank', 'role', '', '']
+    order_columns = ['last_name', 'membership', 'role', '', '']
 
     # set max limit of records returned, this is used to protect our site
     # if someone tries to attack our site and make it return huge amount of data

@@ -48,7 +48,7 @@ class RosterTestCase(TestCase):
         # This is the user we'll make requests as. Make sure they can log in.
         cls.user = cls.members[0]
         if cls.user.rank not in ['TM', 'FM', 'T']:
-            cls.user.member_rank = 'T'
+            cls.user.membership = 'T'
             cls.user.is_active = True
             cls.user.save()
             mommy.make(Role, member=cls.user, role=cls.user.rank)

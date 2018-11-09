@@ -8,7 +8,7 @@ class TestApiRoot(APITestCase):
         self.user = Member.objects.create(first_name='John',
                                           last_name='Doe',
                                           username='john doe',
-                                          member_rank='T',
+                                          membership='T',
         )
 
     def test_access(self):

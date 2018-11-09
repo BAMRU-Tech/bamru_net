@@ -16,20 +16,15 @@ class CustomUserManager(BaseUserManager):
         case_insensitive_username_field = '{}__iexact'.format(self.model.USERNAME_FIELD)
         return self.get(**{case_insensitive_username_field: username})
 
-class ActiveMemberManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(member_rank__in=['TM','FM','T'])
-
 class CurrentMemberManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(
-            member_rank__in=['TM','FM','T','R','S','A'])
+        return super().get_queryset().filter(membership__in=Member.CURRENT_RANKS)
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     objects = CustomUserManager()
-    active = ActiveMemberManager()
+    #active = ActiveMemberManager()
     members = CurrentMemberManager()
     
     TYPES = (
@@ -46,12 +41,14 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         ('GN', 'Guest No-contact'),
         )
 
-    ACTIVE_RANKS = ['TM', 'FM', 'T']
+    CURRENT_RANKS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
+    AVAILABLE_RANKS = ('TM', 'FM', 'T', 'S')         # Available for operations
+    PRO_RANKS = ('TM', 'FM', 'T')                    # Available for pro-deals
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
-    member_rank = models.CharField(choices=TYPES, max_length=255, blank=True)
+    membership = models.CharField(choices=TYPES, max_length=255, blank=True)
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
     v9 = models.CharField(max_length=255, blank=True, null=True)
@@ -72,14 +69,14 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def rank(self):
-        return self.member_rank  # Don't rename member.rank to rank, postgres gets upset
+        return self.membership  #FIXME Don't rename member.rank to rank, postgres gets upset
 
 
     @property
     def rank_order(self):
         """ Return int, lowest value is TM, follows order in Member.TYPES """
         for rankTuple in Member.TYPES:
-            if rankTuple[0] == self.rank:
+            if rankTuple[0] == self.membership:
                 return Member.TYPES.index(rankTuple)
         return len(Member.TYPES)
 
@@ -162,11 +159,6 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def short_name(self):
         "Returns the short name for the user."
         return self.first_name
-
-    # TODO: remove or rename this property
-    def isActive(self):
-        """ Return member status, True is active member """
-        return self.rank in self.ACTIVE_RANKS
 
     @models.permalink
     def get_absolute_url(self):
