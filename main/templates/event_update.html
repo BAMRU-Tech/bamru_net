@@ -1,11 +1,11 @@
 {% extends 'base_generic.html' %}
 {% load bootstrap4 %}
 
-{% block title %}Create Event{% endblock title %}
+{% block title %}Update Event{% endblock title %}
 
 {% block subheader %}
 <strong>
-  <a href="{% url 'event_list' %}">Events</a> &gt; Create
+  <a href="{% url 'event_list' %}">Events</a> &gt; Update
 </strong>
 {% endblock subheader %}
 
@@ -31,20 +31,32 @@
 $(document).ready(function() {
     $('#id_location').parent().append($('#geo'));
 
-    $( "#id_all_day" ).click(function() {
-        $('#id_start_1').toggle()
-        $('#id_finish_1').toggle()
+    $('#id_all_day').click(function() {
+        if ($('#id_all_day').prop('checked')) {
+            $('#id_start_1').hide()
+            $('#id_finish_1').hide()
+            $('#id_start_1').val('00:00')
+            if ($('#id_finish_0').val() != '')
+                $('#id_finish_1').val('23:59')
+        } else {
+            $('#id_start_1').show()
+            $('#id_finish_1').show()
+            $('#id_start_1').val('')
+            $('#id_finish_1').val('')
+        }
 
-        if ($('#id_start_1').val() == '') $('#id_start_1').val('00:00')
-        if ($('#id_finish_0').val() != '' && $('#id_finish_1').val() == '') $('#id_finish_1').val('23:59')
-
+        return true;
     });
-    $( "#id_all_day" ).click();
+
+    if ($('#id_all_day').prop('checked')) {
+        $('#id_start_1').hide()
+        $('#id_finish_1').hide()
+    }
 });
 
 function lookupGeoData() {            
     myGeoPositionGeoPicker({
-        startAddress     : ' 525 Marshall St, Redwood City, CA 94063',
+        startAddress     : $('#id_location').val(),
         returnFieldMap   : {
             'id_lat' : '<LAT>',
             'id_lon' : '<LNG>',

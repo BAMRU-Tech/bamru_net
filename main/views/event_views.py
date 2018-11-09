@@ -12,7 +12,7 @@ from django.views import generic
 from django.forms import widgets
 from main.models import Member, Event, Participant, Period
 
-from django.forms.widgets import Select, Widget, SelectDateWidget
+from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from datetime import timedelta
 import datetime
@@ -59,7 +59,7 @@ class EventForm(ModelForm):
     class Meta:
         model = Event
         fields = ['title', 'description', 'type',
-                  'location', 'leaders',
+                  'location', 'lat', 'lon', 'leaders',
                   'start', 'finish',
                   'all_day', 'published',
                   ]
@@ -78,6 +78,9 @@ class EventForm(ModelForm):
                 date_attrs={'type': 'date'},
                 time_attrs={'type': 'time'},
             ),
+            'lat': widgets.HiddenInput(),
+            'lon': widgets.HiddenInput(),
+                
         }
 
     def clean(self):
@@ -92,7 +95,18 @@ class EventForm(ModelForm):
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
     form_class = EventForm
-    template_name = 'base_form.html'
+    template_name = 'event_update.html'
+
+    def get_form(self):
+        form = super(EventUpdateView, self).get_form()
+
+        # Mark required fields
+        form.fields['title'].label = "Title*"
+        form.fields['type'].label = "Type*"
+        form.fields['location'].label = "Location*"
+        form.fields['start'].label = "Start*"
+
+        return form
 
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
