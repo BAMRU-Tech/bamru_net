@@ -1,11 +1,11 @@
 {% extends 'base_generic.html' %}
 {% load bootstrap4 %}
 
-{% block title %}Create Event{% endblock title %}
+{% block title %}{{ action }} Event{% endblock title %}
 
 {% block subheader %}
 <strong>
-  <a href="{% url 'event_list' %}">Events</a> &gt; Create
+  <a href="{% url 'event_list' %}">Events</a> &gt; {{ action }}
 </strong>
 {% endblock subheader %}
 
@@ -25,26 +25,56 @@
 
 {% block js %}
 {{ block.super }}
-<script src="http://api.mygeoposition.com/api/geopicker/api.js" type="text/javascript"></script>
+    <script src="http://api.mygeoposition.com/api/geopicker/api.js"
+            type="text/javascript"></script>
 
 <script type="text/javascript">
 $(document).ready(function() {
     $('#id_location').parent().append($('#geo'));
 
+    {%if action == 'Create' %}
     $( "#id_all_day" ).click(function() {
         $('#id_start_1').toggle()
         $('#id_finish_1').toggle()
 
-        if ($('#id_start_1').val() == '') $('#id_start_1').val('00:00')
-        if ($('#id_finish_0').val() != '' && $('#id_finish_1').val() == '') $('#id_finish_1').val('23:59')
+        if ($('#id_start_1').val() == '')
+            $('#id_start_1').val('00:00')
+        if ($('#id_finish_0').val() != '' && $('#id_finish_1').val() == '')
+            $('#id_finish_1').val('23:59')
 
-    });
+    })
     $( "#id_all_day" ).click();
+
+    {% else %}
+    $('#id_all_day').click(function() {
+        if ($('#id_all_day').prop('checked')) {
+            $('#id_start_1').hide()
+            $('#id_finish_1').hide()
+            $('#id_start_1').val('00:00')
+            if ($('#id_finish_0').val() != '')
+                $('#id_finish_1').val('23:59')
+        } else {
+            $('#id_start_1').show()
+            $('#id_finish_1').show()
+            $('#id_start_1').val('')
+            $('#id_finish_1').val('')
+        }
+    })
+
+    if ($('#id_all_day').prop('checked')) {
+        $('#id_start_1').hide()
+        $('#id_finish_1').hide()
+    }
+    {% endif %}
 });
 
 function lookupGeoData() {            
     myGeoPositionGeoPicker({
+        {%if action == 'Create' %}
         startAddress     : ' 525 Marshall St, Redwood City, CA 94063',
+        {% else %}
+        startAddress     : $('#id_location').val(),
+        {% endif %}
         returnFieldMap   : {
             'id_lat' : '<LAT>',
             'id_lon' : '<LNG>',

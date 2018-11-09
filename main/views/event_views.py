@@ -95,7 +95,7 @@ class EventForm(ModelForm):
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
     model = Event
     form_class = EventForm
-    template_name = 'event_update.html'
+    template_name = 'event_create.html'
 
     def get_form(self):
         form = super(EventUpdateView, self).get_form()
@@ -107,6 +107,11 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
         form.fields['start'].label = "Start*"
 
         return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['action'] = 'Update'
+        return context
 
 
 class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
@@ -124,6 +129,11 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
         form.fields['start'].label = "Start*"
 
         return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['action'] = 'Create'
+        return context
 
 
 class EventPeriodAddView(LoginRequiredMixin, generic.base.RedirectView):
@@ -143,7 +153,7 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return the member list."""
         return Member.objects.filter(
-            membership__in=Member.AVAILABLE_RANKS).order_by('id')
+            membership__in=Member.AVAILABLE_MEMBERS).order_by('id')
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()

@@ -32,8 +32,7 @@ class MemberListView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(
-            membership__in=['TM','FM','T','R','S']).order_by('id')
+        return Member.objects.filter(membership__in=CURRENT_MEMBERS).order_by('id')
 
 
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
@@ -257,7 +256,7 @@ class CertListView(LoginRequiredMixin, generic.ListView):
         for idx, t in enumerate(Cert.TYPES):
             cert_lookup[t[0]] = idx
         qs = Member.members.prefetch_related('cert_set')
-        qs = qs.filter(membership__in=Member.CURRENT_RANKS).order_by('id')
+        qs = qs.filter(membership__in=Member.CURRENT_MEMBERS).order_by('id')
 
         for m in qs:
             m.certs = [{'cert':None, 'count':0} for x in cert_lookup]
@@ -310,7 +309,7 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
                      queryset=unavailable_set,
                      to_attr='unavailable_filtered'))
 
-        qs = qs.filter(membership__in=Member.AVAILABLE_RANKS).order_by('id')
+        qs = qs.filter(membership__in=Member.AVAILABLE_MEMBERS).order_by('id')
 
         for m in qs:
             m.days = ['' for x in range(self.days)]
