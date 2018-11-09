@@ -42,8 +42,17 @@
       </p></p>
     <p><strong>Leaders:</strong> {{ event.leaders }}</p>
     <p>
-      <strong>Start:</strong> {{ event.start|date:'M j, Y Hi' }}
-      <strong>End:</strong> {{ event.finish|date:'M j, Y Hi' }}
+      <strong>Start:</strong>
+      {% if event.all_day %}
+        {{ event.start|date:'M j, Y' }}
+      {% else %}
+        {{ event.start|date:'M j, Y H:i' }}
+      {% endif %}
+      {% if event.all_day %}
+        {{ event.finish|date:'M j, Y' }}
+      {% else %}
+        {{ event.finish|date:'M j, Y H:i' }}
+      {% endif %}
     </p>
     <p>
       <strong>All day:</strong> {{ event.all_day }}
