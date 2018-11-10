@@ -269,8 +269,7 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=info' +
-                                '&page=Info';
+                                '&period_format=info';
                         }
                     },
                     {
@@ -282,8 +281,7 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=broadcast' +
-                                '&page=Broadcast';
+                                '&period_format=broadcast';
                         }
                     },
                     {
