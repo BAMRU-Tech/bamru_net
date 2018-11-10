@@ -65,7 +65,7 @@ language: { emptyTable: 'No members selected' },
 {% endblock table_options %}
 
 {% block initComplete %}
-SetMemberFilter (table, true);
+SetMemberFilter (table);
 {% endblock initComplete %}
 
 {% block functions %}
@@ -102,38 +102,6 @@ const colDefs = [
     { data: 'display_phone', title: 'Phone', width: '75px', responsivePriority: 2, },
     { data: 'display_email', title: 'eMail', responsivePriority: 2, },
 ];
-
-function AddRows(table, values) {
-    //
-    // Add rows based rank
-    //
-    var url = apiUrlMembership+values[0];
-    //FX: add error handling
-    $.getJSON(url, null, function( json ) {
-        
-        for (var i = 0; i < json.length; i++)
-        {
-            var data = json[i];
-            table.row.add(data);
-        }
-        
-        // redraw table after async call
-        table.draw().columns.adjust().responsive.recalc();
-    })
-}
-
-
-function RemoveRows(table, values)
-{
-    // Remove rows based on rank
-    table.rows(
-        function ( idx, data, node ) {
-            return data.rank == values[0];
-        } )
-        .remove();
-
-    table.draw().columns.adjust().responsive.recalc();//FX
-}
 
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected ranks based on filter
