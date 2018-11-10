@@ -317,7 +317,7 @@ class OutboundEmail(OutboundMessage):
         html_body = self.distribution.html
         try:
             message = AnymailMessage(
-                subject="BAMRU.net page",
+                subject="BAMRU.net page [{}]".format(uuid.uuid4().hex),
                 body=body,
                 to=[self.destination],
                 from_email=settings.MAILGUN_EMAIL_FROM,
