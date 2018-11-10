@@ -107,7 +107,7 @@ language: { emptyTable: 'No participants selected' },
 {% endblock table_buttons_first %}
 
 {% block initComplete %}
-SetMemberFilter (table, true);
+SetMemberFilter (table);
 {% endblock initComplete %}
 
 {% block functions %}
@@ -164,41 +164,6 @@ function SelectAll ( e, dt, node, config ) {
 function ClearAll ( e, dt, node, config ) {
     $('td.mark-checkbox').removeClass('marked');
     table.rows().deselect();
-}
-
-function AddRows(table, values) {
-    //
-    // Add rows based on rank =values[0]
-    //
-    var url = apiUrlMembership+values[0];
-    //FX: add error handling
-    $.getJSON(url, null, function( json ) {
-        
-        for (var i=0; i<json.length; i++)
-        {
-            var data = json[i];
-            data.mark = '';
-            table.row.add(data);
-        }
-
-        // redraw table after async call
-        table.draw().columns.adjust().responsive.recalc();
-    });
-}
-
-function RemoveRows(table, values) {
-    // Remove rows based on rank
-    table.rows(
-        function ( idx, data, node ) {
-            var rank = data.rank
-            // Handle both cases: 'FM' and <td ...>FM</td>
-            if (rank[0] == '<')
-                rank = data.rank.match('.*>(.*)<')[1]
-            return rank == values[0];
-        } )
-        .remove();
-
-    table.draw().columns.adjust().responsive.recalc();//FX
 }
 
 function UpdateSubheaderBasedOnSettings(table) {
