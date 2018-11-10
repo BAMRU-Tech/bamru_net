@@ -48,10 +48,13 @@
       {% else %}
         {{ event.start|date:'M j, Y H:i' }}
       {% endif %}
+      {% if event.finish != None %}
+      <strong>End:</strong>
       {% if event.all_day %}
         {{ event.finish|date:'M j, Y' }}
       {% else %}
         {{ event.finish|date:'M j, Y H:i' }}
+      {% endif %}
       {% endif %}
     </p>
     <p>

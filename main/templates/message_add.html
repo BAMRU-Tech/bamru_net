@@ -87,7 +87,7 @@ columns: [
       orderable: false,
       className: 'mark-checkbox',
     },
-    { data: 'name', title: 'Name', responsivePriority: 1, },
+    { data: 'full_name', title: 'Name', responsivePriority: 1, },
     { data: 'rank', title: 'Rank', responsivePriority: 5,
       render: function(data, type, row, meta) {
           if (type == 'sort')
@@ -123,7 +123,7 @@ language: { emptyTable: 'No participants selected' },
 {% endblock table_buttons_first %}
 
 {% block initComplete %}
-SetMemberFilter (table, false);
+SetMemberFilter (table);
 {% endblock initComplete %}
 
 {% block ready_functions %}

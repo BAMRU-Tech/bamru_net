@@ -18,13 +18,12 @@ class CustomUserManager(BaseUserManager):
 
 class CurrentMemberManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(membership__in=Member.CURRENT_RANKS)
+        return super().get_queryset().filter(membership__in=Member.CURRENT_MEMBERS)
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     objects = CustomUserManager()
-    #active = ActiveMemberManager()
     members = CurrentMemberManager()
     
     TYPES = (
@@ -41,9 +40,9 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         ('GN', 'Guest No-contact'),
         )
 
-    CURRENT_RANKS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
-    AVAILABLE_RANKS = ('TM', 'FM', 'T', 'S')         # Available for operations
-    PRO_RANKS = ('TM', 'FM', 'T')                    # Available for pro-deals
+    CURRENT_MEMBERS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
+    AVAILABLE_MEMBERS = ('TM', 'FM', 'T', 'S')         # Available for operations
+    PRO_MEMBERS = ('TM', 'FM', 'T')                    # Available for pro-deals
 
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
