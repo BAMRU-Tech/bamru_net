@@ -19,6 +19,7 @@ export LOG_ROOT=/home/{{ app_user }}/logs/django
 {% if use_raven %}
 export USE_RAVEN=True
 export RAVEN_DSN='{{ raven_dsn }}'
+export JAVASCRIPT_DSN='{{ javascript_dsn }}'
 {% endif %}
 
 export TWILIO_ACCOUNT_SID={{ twilio_account_sid }}
