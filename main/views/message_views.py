@@ -72,12 +72,13 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                 period_format, self.request.body))
 
             rsvp_template = None
-            try:
-                rsvp_template = RsvpTemplate.objects.get(name=page)
-                initial['rsvp_template'] = rsvp_template
-            except RsvpTemplate.DoesNotExist:
-                logger.error('RsvpTemplate {} not found for period: {}'.format(
-                    page, period_id))
+            if page is not None:
+                try:
+                    rsvp_template = RsvpTemplate.objects.get(name=page)
+                    initial['rsvp_template'] = rsvp_template
+                except RsvpTemplate.DoesNotExist:
+                    logger.error('RsvpTemplate {} not found for period: {}'.format(
+                        page, period_id))
 
             self.initial = initial  # Is there a better way to get info into the template?
 
