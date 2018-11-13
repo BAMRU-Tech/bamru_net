@@ -275,7 +275,7 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(membership__in=Member.CURRENT_MEMBERS).order_by('id')
+        return Member.objects.filter(membership__in=Member.DO_SHIFT_MEMBERS).order_by('id')
 
     def get_context_data(self, **kwargs):
         """Return context for become DO"""
