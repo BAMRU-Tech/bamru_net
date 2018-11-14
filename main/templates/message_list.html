@@ -54,8 +54,14 @@ paging: true,
 columns: [
     {data: 'text', title: 'Message', responsivePriority: 1, },
     {data: 'author', title: 'From', responsivePriority: 3, },
-    //FIXME: Covert sent_at to FE date
-    {data: 'sent_at', title: 'Sent', responsivePriority: 2, },
+    {data: 'sent_at', title: 'Sent', responsivePriority: 2,
+     render: function (data, type, row, meta) {
+         if (type == 'display') {
+             var d = data.split('T');
+             return DateFE(d[0]) + ' ' + d[1];
+         } else
+             return data;
+     }},
     {data: 'type', title: 'Type', visible: false, responsivePriority: 6, },
     {data: 'period_type', title: 'Type', responsivePriority: 4, },
     {data: 'event', title: 'Event', responsivePriority: 5, },
