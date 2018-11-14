@@ -56,6 +56,8 @@
     {% endblock js %}
     <script src="https://browser.sentry-cdn.com/4.2.4/bundle.min.js" crossorigin="anonymous"></script>
     <script>
+      $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
+
       Sentry.init({
         dsn: '{{JAVASCRIPT_DSN}}',
         release: '{{RELEASE}}',
@@ -115,6 +117,7 @@
     function DateFE( date ) {
         // Create a frontend formatted date mm/dd/yyyy
         // input: date string yyyy-mm-dd
+        //FIXME add throw
         return new Date(date + 'T00:00').toLocaleDateString();
     }
 
@@ -123,6 +126,7 @@
         // input: js date object and offset in days
         function pad (n) { return n.length == 1 ? '0' + n : n; }
 
+        //FIXME add throw
         var date = new Date(date);
         date.setHours(0); date.setMinutes(0); date.setSeconds(0);
         if (offset) date.setDate(date.getDate() + offset);
