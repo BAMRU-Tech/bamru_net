@@ -16,7 +16,10 @@
     <form method="post">
       {% csrf_token %}
       {% bootstrap_form form %}
+      {% comment %}
+      //FX: Get https: version of geopicker
       <button type="button" id="geo" onclick="lookupGeoData();">GeoPicker</button>
+      {% endcomment %}
       <input type="submit" value="Update" />
     </form>
   </div>
@@ -25,47 +28,50 @@
 
 {% block js %}
 {{ block.super }}
+{% comment %}
+    //FX: Get https: version of geopicker
     <script src="http://api.mygeoposition.com/api/geopicker/api.js"
             type="text/javascript"></script>
+{% endcomment %}
 
 <script type="text/javascript">
 $(document).ready(function() {
-    $('#id_location').parent().append($('#geo'));
 
-    {%if action == 'Create' %}
-    $( "#id_all_day" ).click(function() {
-        $('#id_start_1').toggle()
-        $('#id_finish_1').toggle()
+    $('#id_start_0').blur(ValidateDateRange);
+    $('#id_finish_0').blur(ValidateDateRange);
+    $('#id_start_1').blur(ValidateDateRange);
+    $('#id_finish_1').blur(ValidateDateRange);
+    ValidateDateRange();
 
-        if ($('#id_start_1').val() == '')
-            $('#id_start_1').val('00:00')
-        if ($('#id_finish_0').val() != '' && $('#id_finish_1').val() == '')
-            $('#id_finish_1').val('23:59')
-
-    })
-    $( "#id_all_day" ).click();
-
-    {% else %}
     $('#id_all_day').click(function() {
         if ($('#id_all_day').prop('checked')) {
             $('#id_start_1').hide()
-            $('#id_finish_1').hide()
             $('#id_start_1').val('00:00')
-            if ($('#id_finish_0').val() != '')
-                $('#id_finish_1').val('23:59')
+            $('#id_finish_1').hide()
+            $('#id_finish_1').val('23:59')
         } else {
             $('#id_start_1').show()
             $('#id_finish_1').show()
-            $('#id_start_1').val('')
-            $('#id_finish_1').val('')
         }
     })
+
+    {%if action == 'Create' %}
+
+    // Default to all_day
+    $('#id_all_day').click();
+
+    {% else %}
 
     if ($('#id_all_day').prop('checked')) {
         $('#id_start_1').hide()
         $('#id_finish_1').hide()
     }
+
     {% endif %}
+
+    //FX: Get https: version of geopicker
+    //$('#id_location').parent().append($('#geo'));
+
 });
 
 function lookupGeoData() {            
@@ -82,5 +88,47 @@ function lookupGeoData() {
         }
     });
 }
+
+function ValidateDateRange () {
+    // There are probalby some policy decision built-in
+    // Enforces: start date <= finish date
+    // Enforces: On the same day, start time <= finish time
+    // If start triggered the validation then finish is changed
+    // If finish triggered the validation then start is changed
+    // Changes happen after date or time element loses focus
+    var now = new Date();
+    var sd = $('#id_start_0').val();
+    var fd = $('#id_finish_0').val();
+    var sameDay = sd == fd;
+    sd = sd ? new Date(DateFE(sd)) : now;
+    fd = fd ? new Date(DateFE(fd)) : now;
+
+    var st = $('#id_start_1').val();
+    var st = st ? st : '00:00';
+    var sh = st.substr(0, 2), sm = st.substr(3, 2);
+    var ft = $('#id_finish_1').val();
+    var ft = ft ? ft : '23:59';
+    var fh = ft.substr(0, 2), fm = ft.substr(3, 2);
+
+    var allDay = $('#id_all_day').prop('checked');
+
+    sd.setHours(sh, sm, 0);
+    fd.setHours(fh, fm, 0);
+
+    if (this.id == 'id_start_0' || this.id == 'id_start_1') {
+        if (sd > fd) { fd = sd; if (!allDay && sameDay) ft = st }
+    } else if (this.id == 'id_finish_0' || this.id == 'id_finish_1') {
+        if (sd > fd) { sd = fd; if (!allDay && sameDay) st = ft }
+    } else {
+        // called directly, not blur - just set the defaults
+    }
+
+    $('#id_start_0').val(DateBE(sd.toLocaleDateString()));
+    $('#id_finish_0').val(DateBE(fd.toLocaleDateString()));
+    $('#id_start_1').val(st);
+    $('#id_finish_1').val(ft);
+
+}
+
 </script>
 {% endblock js %}
