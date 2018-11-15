@@ -56,6 +56,7 @@
     {% endblock js %}
     <script src="https://browser.sentry-cdn.com/4.2.4/bundle.min.js" crossorigin="anonymous"></script>
     <script>
+      // Needed for IOS
       $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
 
       Sentry.init({

@@ -72,7 +72,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                 period_format, self.request.body))
 
             rsvp_template = None
-            if page is not None:
+            if period_format not in ('info', 'broadcast'):
                 try:
                     rsvp_template = RsvpTemplate.objects.get(name=page)
                     initial['rsvp_template'] = rsvp_template

@@ -269,7 +269,8 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=info';
+                                '&period_format=info'+
+                                '&page=Team msg';
                         }
                     },
                     {
@@ -281,7 +282,8 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=broadcast';
+                                '&period_format=broadcast' +
+                                '&page=Unit msg';
                         }
                     },
                     {
