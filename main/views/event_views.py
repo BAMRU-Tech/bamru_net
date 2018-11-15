@@ -70,13 +70,17 @@ class EventForm(ModelForm):
         widgets = {
             'start': forms.SplitDateTimeWidget(
                 time_format='%H:%M',
-                date_attrs={'type': 'date'},
-                time_attrs={'type': 'time'},
+                date_attrs={'type': 'text', 'pattern': '[0-9]{4}-[0-9]{2}-[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid date yyyy-mm-dd')"},
+                time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
             'finish': forms.SplitDateTimeWidget(
                 time_format='%H:%M',
-                date_attrs={'type': 'date'},
-                time_attrs={'type': 'time'},
+                date_attrs={'type': 'date', 'pattern': '[0-9]{4}-[0-9]{2}-[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid date yyyy-mm-dd')"},
+                time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
             'lat': widgets.HiddenInput(),
             'lon': widgets.HiddenInput(),

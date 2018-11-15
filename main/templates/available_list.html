@@ -161,7 +161,7 @@ function DateArray(start_date, days) {
 var numDays = 5;
 
 function SetBusy(busy, start, end, comment) {
-    //FX: make 'comment' a modal popup or tool tip or both
+    //FX: make 'comment' a modal popup for mobile
     if (start < 0) start = 0;
     if (end <= 0) end = numDays;
     for (var i = start; i < end; i++) busy[i] = comment;
