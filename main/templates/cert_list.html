@@ -12,7 +12,7 @@
 {% block content %}
 <main role="main">
   <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
       <option value='TM'>Technical Member</option>
       <option value='FM'>Field Member</option>
       <option value='T'>Trainee</option>
@@ -29,8 +29,8 @@
       <tr>
         <td>{{ member.full_name }}</td>
         <td>{{ member.id }}</td>
-        <td>{{ member.rank }}</td>
-        <td>{{ member.rank_order }}</td>
+        <td>{{ member.status }}</td>
+        <td>{{ member.status_order }}</td>
         {% for c in member.certs %}
         <td bgcolor="{{c.cert.color | default:"white" }}">
           {% if c.count %}
@@ -70,15 +70,15 @@ columns: [
       },
     },
     { data: 'id', visible: false, },
-    { data: 'rank', title: 'Rank',
+    { data: 'status', title: 'Status',
       render: function(data, type, row, meta) {
           if (type == 'sort')
-              return row.rank_order;
+              return row.status_order;
           else
               return data;
       }
     },
-    { data: 'rank_order', visible: false, },
+    { data: 'status_order', visible: false, },
     { data: 'medical', title: 'Medical',
       render: RenderColor,
     },
@@ -120,7 +120,7 @@ const apiUrlMembership = '/api/member_certs/?membership=';
 
 function AddRows(table, values) {
     //
-    // Add rows based on rank =values[0]
+    // Add rows based on status =values[0]
     //
     var url = apiUrlMembership+values[0];
     //FX: add error handling
@@ -162,26 +162,26 @@ function AddRows(table, values) {
 }
 
 function RemoveRows(table, values) {
-    // Remove rows based on rank
+    // Remove rows based on status
     table.rows(
-        function ( idx, data, node ) { return data.rank == values[0]; } )
+        function ( idx, data, node ) { return data.status == values[0]; } )
         .remove();
 
         table.draw().columns.adjust().responsive.recalc();//FX
 }
 
 function UpdateSubheaderBasedOnSettings(table) {
-    // Extract currently selected ranks based on filter
-    var showRanks = [];
-    $('#filter-rank option').each(function() {
+    // Extract currently selected status based on filter
+    var showStatus = [];
+    $('#filter-status option').each(function() {
         if (!this.selected) {
-            showRanks.push(this.value);
+            showStatus.push(this.value);
         }
     });
 
     var shsm = '<a href=' + {% url 'member_list' %} + '>Members</a> > Certifications';
     var sh = '<a href=' + {% url 'member_list' %} +
-        '>Members</a> (' +  showRanks.join(', ') + ') > Certifications';
+        '>Members</a> (' +  showStatus.join(', ') + ') > Certifications';
 
     $('#subhdr-sm')[0].innerHTML = shsm;
     $('#subhdr')[0].innerHTML = sh;

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
-        read_only_fields = ('full_name', 'rank', 'rank_order', 'roles', 'role_order',
+        read_only_fields = ('full_name', 'status', 'status_order', 'roles', 'role_order',
                             'display_email', 'display_phone', 'short_name',)
         fields = ('id', 'username', 'dl', 'ham', 'v9', 'is_staff', 'is_current_do',
                   'is_superuser', 'last_login',) + read_only_fields
@@ -44,7 +44,7 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Member
-        read_only_fields = ('full_name', 'rank', 'rank_order')
+        read_only_fields = ('full_name', 'status', 'status_order')
         fields = ('id', 'busy') + read_only_fields
 
 
@@ -66,7 +66,7 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
         return [grouped_certs[t[0]] for t in Cert.TYPES]
     class Meta:
         model = Member
-        read_only_fields = ('full_name', 'rank', 'rank_order')
+        read_only_fields = ('full_name', 'status', 'status_order')
         fields = ('id', 'certs') + read_only_fields
 
 

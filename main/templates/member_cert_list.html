@@ -6,7 +6,7 @@
 {% block subheader %}
 <strong>
     <a href="{% url 'member_detail' member.id %}?returnx=mc">
-    {{member.full_name }} ({{ member.rank }})</a>
+    {{member.full_name }} ({{ member.status }})</a>
     &gt; Certs
 </strong>
 {% endblock subheader %}

@@ -47,7 +47,7 @@ tfoot td {
   </thead>
   {% for member in members %}
     <tr>
-      <td>{{ member.full_name }}<br/>{% if member.roles %}{{ member.roles }}, {% endif %}{{member.rank}}</td>
+      <td>{{ member.full_name }}<br/>{% if member.roles %}{{ member.roles }}, {% endif %}{{member.status}}</td>
       <td>
         {% for address in member.address_set.all %}
           <p>

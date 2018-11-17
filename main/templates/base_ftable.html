@@ -110,20 +110,20 @@ function ShowHideDetail ( e, dt, node, config ) {
 
 // Used by pp_add, msg_add, mem_add and cert_lst
 function SetMemberFilter (table, alterRows = true) {
-    //find displayable members and set selected on filter-rank
-    window.ranks = [];
+    //find displayable members and set selected on filter-status
+    var status = [];
     table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-        ranks[this.data().rank] = true;
+        status[this.data().status] = true;
     });
-    ranks = Object.keys(ranks);
-    $('#filter-rank > option').each( function ( i ) {
-        if (ranks.includes(this.value))
+    status = Object.keys(status);
+    $('#filter-status > option').each( function ( i ) {
+        if (status.includes(this.value))
             this.removeAttribute('selected');
         else
             this.setAttribute('selected', '');
     });
 
-    $('#filter-rank').multiSelect({
+    $('#filter-status').multiSelect({
         // The sense of the multiSelect is inverted: show = deselect, hide = select
         selectableHeader: '<div class="custom-header">Show</div>',
         selectionHeader: '<div class="custom-header">Hide</div>',
@@ -141,7 +141,7 @@ function SetMemberFilter (table, alterRows = true) {
 //Used by mem_list, message_add, period_participant_add
 function AddRows(table, values) {
     //
-    // Add rows based on rank =values[0]
+    // Add rows based on status =values[0]
     //
     var url = apiUrlMembership+values[0];
     //FX: add error handling
@@ -162,10 +162,10 @@ function AddRows(table, values) {
 //Used by mem_list, message_add, period_participant_add
 function RemoveRows(table, values)
 {
-    // Remove rows based on rank
+    // Remove rows based on status
     table.rows(
         function ( idx, data, node ) {
-            return data.rank == values[0];
+            return data.status == values[0];
         } )
         .remove();
 

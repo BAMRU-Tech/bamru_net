@@ -12,7 +12,7 @@
 {% block content %}
 <main role="main">
   <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
       <option value='TM'>Technical Member</option>
       <option value='FM'>Field Member</option>
       <option value='T'>Trainee</option>
@@ -27,7 +27,7 @@
   <table id="dTbl" class="display table-bordered compact" style="width:100%">
     <thead>
       <tr>
-        <th>Name</th><th>Rank</th><th>Rank order</th>
+        <th>Name</th><th>Status</th><th>Status order</th>
         {% for h in headers %}
         <th>
           <div class="d-none d-lg-block">{{h}}</div>
@@ -46,8 +46,8 @@
         <td>
           <a href="{% url 'member_detail' member.id %}?returnx=al">{{ member.full_name }}</a>
         </td>
-        <td>{{ member.rank }}</td>
-        <td>{{ member.rank_order }}</td>
+        <td>{{ member.status }}</td>
+        <td>{{ member.status_order }}</td>
         {% for day in member.days %}
         {% if day %}
         <td style="background-color:orange" title="{{day}}" style="overflow: hidden">
@@ -118,19 +118,19 @@ language: { emptyTable: 'No members selected' },
 {
     //FX: Slightly different
     //find members and set selection
-    window.ranks = [];
+    var status = [];
     table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-        ranks[this.data()[1]] = true; //FX
+        status[this.data()[1]] = true; //FX
     });
-    ranks = Object.keys(ranks);
-    $('#filter-rank > option').each( function ( i ) {
-        if (ranks.includes(this.value))
+    status = Object.keys(status);
+    $('#filter-status > option').each( function ( i ) {
+        if (status.includes(this.value))
             this.removeAttribute('selected');
         else
             this.setAttribute('selected', '');
     });
 
-    $('#filter-rank').multiSelect({
+    $('#filter-status').multiSelect({
         // The sense of the multiSelect is inverted: show = deselect, hide = select
         selectableHeader: '<div class="custom-header">Show</div>',
         selectionHeader: '<div class="custom-header">Hide</div>',
@@ -172,7 +172,7 @@ const apiUrlMembership = '/api/member_availability/?membership=';
 
 function AddRows(table, values) {
     //
-    // Add rows based on rank =values[0]
+    // Add rows based on status =values[0]
     //
     var url = apiUrlMembership+values[0];
 
@@ -188,7 +188,7 @@ function AddRows(table, values) {
             var row = json[m];
             var data = [
                 '<a href="/member/' + row.id+'?returnx=al">' + row.full_name + '</a>',
-                row.rank, row.rank_order
+                row.status, row.status_order
             ];
             var busy = Array(numDays + 1).fill('');
             var period = row.busy;
@@ -219,7 +219,7 @@ function AddRows(table, values) {
 }
 
 function RemoveRows(table, values) {
-    // Remove rows based on rank
+    // Remove rows based on status
     table.rows(
         function ( idx, data, node ) {
             return data[1] == values[0];
@@ -230,17 +230,17 @@ function RemoveRows(table, values) {
 }
 
 function UpdateSubheaderBasedOnSettings(table) {
-    // Extract currently selected ranks based on filter
-    var showRanks = [];
-    $('#filter-rank option').each(function() {
+    // Extract currently selected status based on filter
+    var showStatus = [];
+    $('#filter-status option').each(function() {
         if (!this.selected) {
-            showRanks.push(this.value);
+            showStatus.push(this.value);
         }
     })
 
     var shsm = '<a href=' + {% url 'member_list' %} + '>Member</a> > Availability';
     var sh = '<a href=' + {% url 'member_list' %} + '>Members</a> ('
-        + showRanks.join(', ') + ') > Availability';
+        + showStatus.join(', ') + ') > Availability';
 
     $('#subhdr-sm')[0].innerHTML = shsm;
     $('#subhdr')[0].innerHTML = sh;

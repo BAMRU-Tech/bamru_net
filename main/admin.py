@@ -33,8 +33,8 @@ class MemberUserAdmin(UserAdmin):
 
 @admin.register(Member)
 class MemberAdmin(MemberUserAdmin):
-    list_display = ('last_name', 'first_name', 'rank')
-#xxx    list_filter = ('rank', )
+    list_display = ('last_name', 'first_name', 'status')
+#xxx    list_filter = ('status', )
     search_fields = ['last_name', 'first_name', 'username',]
     inlines = [
         AddressInline,

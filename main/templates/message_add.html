@@ -36,7 +36,7 @@
   </div>
 
   <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
       <option value="TM">Technical Member</option>
       <option value="FM">Field Member</option>
       <option value="T">Trainee</option>
@@ -58,8 +58,8 @@
         <td>
           <a href="{% url 'member_detail' member.id %}?returnx=ml">{{ member.full_name }}</a>
         </td>
-        <td>{{ member.rank }}</td>
-        <td>{{ member.rank_order }}</td>
+        <td>{{ member.status }}</td>
+        <td>{{ member.status_order }}</td>
         <td>{{ member.roles }}</td>
         <td>{{ member.role_order }}</td>
         <td>{{ member.display_phone }}</td>
@@ -88,15 +88,15 @@ columns: [
       className: 'mark-checkbox',
     },
     { data: 'full_name', title: 'Name', responsivePriority: 1, },
-    { data: 'rank', title: 'Rank', responsivePriority: 5,
+    { data: 'status', title: 'Status', responsivePriority: 5,
       render: function(data, type, row, meta) {
           if (type == 'sort')
-              return row.rank_order;
+              return row.status_order;
           else
               return data;
       }
     },
-    { data: 'rank_order', visible: false, },
+    { data: 'status_order', visible: false, },
     { data: 'roles', title: 'Roles', responsivePriority: 4,
       render: function(data, type, row, meta) {
            if (type == 'sort') {
@@ -174,7 +174,7 @@ const periodFormat = url.searchParams.get('period_format');
 const page = url.searchParams.get('page');
 
 const apiUrlMembership = '/api/members/?membership=';
-var showRanks = [];
+var showStatus = [];
 
 function SendPage ( e, dt, node, config ) {
     var members = [];
@@ -250,11 +250,11 @@ function ClearAll ( e, dt, node, config ) {
 }
 
 function UpdateSubheaderBasedOnSettings (table) {
-    // Extract currently selected ranks based on filter
-    showRanks = [];
-    $('#filter-rank option').each(function() {
+    // Extract currently selected status based on filter
+    var showStatus = [];
+    $('#filter-status option').each(function() {
         if (!this.selected) {
-            showRanks.push(this.value);
+            showStatus.push(this.value);
         }
     });
 
@@ -264,7 +264,7 @@ function UpdateSubheaderBasedOnSettings (table) {
 
         $('#subhdr-sm')[0].innerHTML = sh;
         $('#subhdr')[0].innerHTML = sh + ' > Page Participants ('
-            + showRanks.join(', ') + ')';
+            + showStatus.join(', ') + ')';
  
         document.title = '{{ text }} Page';
     } else {
@@ -280,7 +280,7 @@ function UpdateSubheaderBasedOnSettings (table) {
 $.fn.dataTable.ext.search.push(
     function( settings, data, dataIndex ) {
         var node = $('#dTbl').DataTable().row(dataIndex).node();
-        if ( showRanks.includes(data[2]) ) {
+        if ( showStatus.includes(data[2]) ) {
             return true;
         }
 

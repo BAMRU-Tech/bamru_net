@@ -67,16 +67,16 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return full_name.strip()
 
     @property
-    def rank(self):
-        return self.membership  #FIXME Don't rename member.rank to rank, postgres gets upset
+    def status(self):
+        return self.membership
 
 
     @property
-    def rank_order(self):
+    def status_order(self):
         """ Return int, lowest value is TM, follows order in Member.TYPES """
-        for rankTuple in Member.TYPES:
-            if rankTuple[0] == self.membership:
-                return Member.TYPES.index(rankTuple)
+        for statusTuple in Member.TYPES:
+            if statusTuple[0] == self.membership:
+                return Member.TYPES.index(statusTuple)
         return len(Member.TYPES)
 
     @property
@@ -89,7 +89,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     @property
     def classic_roles(self):
         """ Return string, list of ordered roles """
-        roles = [r.role for r in self.role_set.all()] + [self.rank]
+        roles = [r.role for r in self.role_set.all()] + [self.status]
         CLASSIC_ROSTER_TYPES = ['Bd', 'OL', 'TM', 'FM', 'T']
         result = [r for r in CLASSIC_ROSTER_TYPES if r in roles]
         return ' '.join(result)
