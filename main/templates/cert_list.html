@@ -70,7 +70,7 @@ columns: [
       },
     },
     { data: 'id', visible: false, },
-    { data: 'status', title: 'Status',
+    { data: 'status', title: 'Status', width: '35px',
       render: function(data, type, row, meta) {
           if (type == 'sort')
               return row.status_order;
@@ -116,13 +116,13 @@ function RenderColor (data, type, row, meta) {
           return data;
       }
 
-const apiUrlMembership = '/api/member_certs/?membership=';
+const apiUrlMemberCert = '/api/member_certs/?status=';
 
 function AddRows(table, values) {
     //
-    // Add rows based on status =values[0]
+    // Add rows based on status
     //
-    var url = apiUrlMembership+values[0];
+    var url = apiUrlMemberCert + values[0];
     //FX: add error handling
     $.getJSON(url, null, function( json ) {
         for (var i = 0; i < json.length; i++)

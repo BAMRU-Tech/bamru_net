@@ -18,7 +18,7 @@ class CustomUserManager(BaseUserManager):
 
 class CurrentMemberManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(membership__in=Member.CURRENT_MEMBERS)
+        return super().get_queryset().filter(status__in=Member.CURRENT_MEMBERS)
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
@@ -47,7 +47,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
-    membership = models.CharField(choices=TYPES, max_length=255, blank=True)
+    status = models.CharField(choices=TYPES, max_length=255, blank=True)
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
     v9 = models.CharField(max_length=255, blank=True, null=True)
@@ -67,15 +67,10 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return full_name.strip()
 
     @property
-    def status(self):
-        return self.membership
-
-
-    @property
     def status_order(self):
         """ Return int, lowest value is TM, follows order in Member.TYPES """
         for statusTuple in Member.TYPES:
-            if statusTuple[0] == self.membership:
+            if statusTuple[0] == self.status:
                 return Member.TYPES.index(statusTuple)
         return len(Member.TYPES)
 

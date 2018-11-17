@@ -72,7 +72,7 @@ columns: [
       }
     },
     { data: 'id', visible: false, },
-    { data: 'status', title: 'Status', responsivePriority: 2,
+    { data: 'status', title: 'Status', width: '35px', responsivePriority: 2,
       render: function(data, type, row, meta) {
           if (type == 'sort')
               return row.status_order;
@@ -117,8 +117,6 @@ const event_name = url.searchParams.get('et');
 const event_id = url.searchParams.get('eid');
 const period_num = url.searchParams.get('pn');
 const period_id = url.searchParams.get('pid');
-
-const apiUrlMembership = '/api/members/?membership=';
 
 function AddParticipant ( e, dt, node, config ) {
         var members = [];

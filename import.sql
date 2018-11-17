@@ -1,6 +1,6 @@
 TRUNCATE main_member, main_address, main_email, main_phone, main_emergencycontact, main_role, main_otherinfo, main_unavailable, main_cert, main_event, main_period, main_participant, main_message, main_distribution, main_rsvptemplate, main_doavailable CASCADE;
 
-insert into main_member (id, first_name, last_name, username, membership, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
+insert into main_member (id, first_name, last_name, username, status, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
 select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
 
 insert into main_address (id, member_id, type, address1, address2, city, state, zip, position, created_at, updated_at)

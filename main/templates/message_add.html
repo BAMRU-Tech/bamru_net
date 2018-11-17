@@ -173,7 +173,6 @@ const periodId = url.searchParams.get('period');
 const periodFormat = url.searchParams.get('period_format');
 const page = url.searchParams.get('page');
 
-const apiUrlMembership = '/api/members/?membership=';
 var showStatus = [];
 
 function SendPage ( e, dt, node, config ) {
@@ -251,7 +250,7 @@ function ClearAll ( e, dt, node, config ) {
 
 function UpdateSubheaderBasedOnSettings (table) {
     // Extract currently selected status based on filter
-    var showStatus = [];
+    showStatus = [];
     $('#filter-status option').each(function() {
         if (!this.selected) {
             showStatus.push(this.value);

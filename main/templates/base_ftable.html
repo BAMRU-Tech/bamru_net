@@ -138,12 +138,14 @@ function SetMemberFilter (table, alterRows = true) {
     })
 }
 
+const apiUrlMemberStatus = '/api/members/?status=';
+
 //Used by mem_list, message_add, period_participant_add
 function AddRows(table, values) {
     //
-    // Add rows based on status =values[0]
+    // Add rows based on status
     //
-    var url = apiUrlMembership+values[0];
+    var url = apiUrlMemberStatus + values[0];
     //FX: add error handling
     $.getJSON(url, null, function( json ) {
 
