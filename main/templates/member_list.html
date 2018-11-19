@@ -38,8 +38,8 @@
       <tr>
         <td>{{ member.full_name }}</td>
         <td>{{ member.id }}</td>
-        <td>{{ member.status }}</td> {#FX#}
-        <td>{{ member.status_order }}</td> {#FX#}
+        <td>{{ member.status }}</td>
+        <td>{{ member.status_order }}</td>
         <td>{{ member.roles }}</td>
         <td>{{ member.role_order }}</td>
         <td>{{ member.display_phone }}</td>
@@ -79,7 +79,7 @@ const colDefs = [
       }
     },
     { data: 'id', visible: false, },
-    { data: 'status', title: 'Status', width: '35px', responsivePriority: 4, {#FX#}
+    { data: 'status', title: 'Status', width: '35px', responsivePriority: 4,
       render: function(data, type, row, meta) {
           if (type == 'sort')
               return row.status_order;

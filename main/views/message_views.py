@@ -36,12 +36,21 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return context for standard paging."""
+        format_convert = {'headsUp': ['invite', 'Heads Up'],
+                          'available': ['invite', 'Available?'],
+                          'leave': ['leave', 'Left?'],
+                          'return': ['return', 'Returned?'],
+                          'info': ['info', None],
+                          'broadcast': ['broadcast', None],
+                          'test': ['test', 'test']
+                          }
         initial = {}
         initial['author'] = self.request.user.pk
         members = None
         period_id = self.request.GET.get('period')
-        period_format = self.request.GET.get('period_format')
-        page = self.request.GET.get('page')
+        page_format = self.request.GET.get('page_format')
+        period_format = format_convert[page_format][0]
+        rsvp_name = format_convert[page_format][1]
         if period_id:
             try:
                 period = Period.objects.get(pk=period_id)
@@ -52,7 +61,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             initial['format'] = 'page'
             initial['period_id'] = period_id
             initial['period_format'] = period_format
-            initial['text'] = str(period)
+            initial['period'] = str(period)
 
             if period_format == 'invite':
                 members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
@@ -66,28 +75,27 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             elif period_format == 'broadcast':
                 members = Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
             elif period_format == 'test':
-                members = period.members_for_test_page()
+                members = Member.members.filter(participant__period=period_id)
             else:
                 logger.error('Period format {} not found for: {}'.format(
                 period_format, self.request.body))
 
             rsvp_template = None
-            if period_format not in ('info', 'broadcast'):
+            if rsvp_name is not None:
                 try:
-                    rsvp_template = RsvpTemplate.objects.get(name=page)
+                    rsvp_template = RsvpTemplate.objects.get(name=rsvp_name)
                     initial['rsvp_template'] = rsvp_template
                 except RsvpTemplate.DoesNotExist:
                     logger.error('RsvpTemplate {} not found for period: {}'.format(
-                        page, period_id))
+                        rsvp_name, period_id))
 
-            self.initial = initial  # Is there a better way to get info into the template?
+            self.initial = initial
 
-        initial['title'] = "Page"
-        if (rsvp_template != None):  # TODO: add empty templates for Info and Broadcast
+        initial['type'] = "std_page"
+        if (rsvp_template != None):
             initial['input'] = "{}: {}".format(str(period), rsvp_template.text)
         else:
             initial['input'] = "{}: ".format(str(period))
-        initial['type'] = "std_page"
 
         return members
 
@@ -285,8 +293,6 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
 
         # DO PII
         do = self.request.user
-        #context['do'] = do #FIXME: need?
-
         context['title'] = "Page DO transition"
 
         context['period_format'] = 'info'
@@ -299,8 +305,7 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
         input = "BAMRU DO from {} is {} ({}, {})"
         context['input'] = input.format( do_shift, do.full_name,
                                          do.display_phone, do.display_email)
-        context['text'] = 'TEXT'
-
         context['confirm_prologue']  = "Correct data and time for your shift?\\n"
+        context['type'] = "do_page"
 
         return context

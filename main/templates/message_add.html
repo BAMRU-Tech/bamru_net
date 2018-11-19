@@ -2,7 +2,7 @@
 
 {# --- Page definition --- #}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{% endblock %}
 
 {% block subheader %}
 <strong class="d-md-none" id="subhdr-sm"></strong>
@@ -18,10 +18,6 @@
               placeholder="Enter message for {{text}}"
               title="" required id="id_text">{{ input }}</textarea>
   </div>
-  <input type="hidden" name="format" value="{{format}}" id="id_format" />
-  <input type="hidden" name="period" value="{{period_id}}" id="id_period" />
-  <input type="hidden" name="period_format" value="{{period_format}}" id="id_period_format" />
-  <input type="hidden" name="rsvp_template" value="{{rsvp_template.id}}" id="id_rsvp_template" />
   <div class="form-group">
     <div class="form-check">
       <input type="checkbox" name="email" class="form-check-input" id="id_email" checked />
@@ -123,12 +119,12 @@ language: { emptyTable: 'No participants selected' },
 {% endblock table_buttons_first %}
 
 {% block initComplete %}
-SetMemberFilter (table, 'invite broadcast'.includes(periodFormat));
+SetMemberFilter (table, 'invite broadcast'.includes(pageFormat));
 {% endblock initComplete %}
 
 {% block ready_functions %}
 
-if (periodFormat != 'invite')
+if (!'headsUp available'.includes(pageFormat))
     table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
         // Pre-select participants
         $(this.node()).children().first().addClass('marked');
@@ -170,8 +166,7 @@ const url = new URL(window.location.href);
 const eventId = url.searchParams.get('eid');
 const periodPosition = url.searchParams.get('OP');
 const periodId = url.searchParams.get('period');
-const periodFormat = url.searchParams.get('period_format');
-const page = url.searchParams.get('page');
+const pageFormat = url.searchParams.get('page_format');
 
 var showStatus = [];
 
@@ -206,10 +201,10 @@ function SendPage ( e, dt, node, config ) {
     
     var data = {};
     data.text = text;
-    data.format = 'page';
-    data.period = periodId;
-    data.period_format = periodFormat;
-    data.rsvp_template = page;
+    data.format = '{{format}}';
+    data.period = '{{period_id}}';
+    data.period_format = '{{period_format}}';
+    data.rsvp_template = '{{rsvp_name}}';
     data.distribution_set = [];
     for (var i = 0; i < members.length; i++) {
         data.distribution_set.push({
@@ -259,17 +254,19 @@ function UpdateSubheaderBasedOnSettings (table) {
 
     if ('{{ type }}' == 'std_page') {
         var sh = '<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
-            '{{ text }}</a>:' + page;
+            '{{ period }}</a>:' + pageFormat;
 
         $('#subhdr-sm')[0].innerHTML = sh;
         $('#subhdr')[0].innerHTML = sh + ' > Page Participants ('
             + showStatus.join(', ') + ')';
  
-        document.title = '{{ text }} Page';
-    } else {
+        document.title = '{{ period }} Page';
+    } else if ('{{ type }}' == 'do_page') {
         var sh = "Page DO transition";
         $('#subhdr-sm')[0].innerHTML = sh;
         $('#subhdr')[0].innerHTML = sh;
+    } else {
+        //FIXME: error
     }
 
     table.draw().columns.adjust().responsive.recalc(); //FX

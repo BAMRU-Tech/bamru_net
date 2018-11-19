@@ -80,7 +80,7 @@ $(document).ready(function() {
 {% block functions %}{% endblock %}
 
 function DisplayExpandDetailButton ( e, table, columns ) {
-    //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
+    {#//FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols #}
     var btn = $('button.dt-button:contains("' + textShowDetail + '")');
     if (table.row(0).count() && table.row(0).node() &&
         getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')

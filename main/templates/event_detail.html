@@ -30,7 +30,9 @@
 {% block content %}
 <main role="main" class="container">
   <div id="content">
+    {% if event.description %}
     <p><strong>Description:</strong> {{ event.description }}</p>
+    {% endif %}
     <p><strong>Location:</strong> {{ event.location }}
       <p>
       {% if event.lat != None %}
@@ -220,8 +222,7 @@ $(document).ready( function() {
                             location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=invite' +
-                                '&page=Heads Up';
+                                '&page_format=headsUp';
                         }
                     },
                     {
@@ -230,8 +231,7 @@ $(document).ready( function() {
                             location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=invite' +
-                                '&page=Available?';
+                                '&page_format=available';
                         }
                     },
                     {
@@ -243,8 +243,7 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=leave' +
-                                '&page=Left?';
+                                '&page_format=leave';
                         }
                     },
                     {
@@ -256,8 +255,7 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=return' +
-                                '&page=Returned?';
+                                '&page_format=return';
                         }
                     },
                     {
@@ -269,8 +267,7 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=info'+
-                                '&page=Team msg';
+                                '&page_format=info';
                         }
                     },
                     {
@@ -282,8 +279,7 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=broadcast' +
-                                '&page=Unit msg';
+                                '&page_format=broadcast';
                         }
                     },
                     {
@@ -295,8 +291,7 @@ $(document).ready( function() {
                                 location.href='{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&period_format=test' +
-                                '&page=Test';
+                                '&page_format=test';
                         }
                     },
                 ]
@@ -448,8 +443,7 @@ function DeleteEvent ( event, title ) {
             contentType: 'application/json',
             url: '/api/events/' + event + '/',
         })
-        //FIXME: does this work with async call
-        location.href = '/event/?current';
+        location.href = '/event/';
     }
 }
 
