@@ -11,7 +11,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from .base import BaseModel, BasePositionModel
+from .base import BaseModel, BasePositionModel, Configuration
 from .event import Period
 from .member import Email, Member, Phone
 
@@ -19,6 +19,27 @@ logger = logging.getLogger(__name__)
 
 # Set this if the UI does not append the template
 APPEND_RSVP_TEMPLATE = False
+
+def get_next_sms_from(increment=True):
+    """Gets the next SMS_FROM number from settings.  If increment,
+    following messages will come from a new number. This is used when
+    a RSVP response is expected in case the next text asks another
+    question.
+    """
+    obj, created = Configuration.objects.get_or_create(
+        key='sms_sender_index', defaults={'value': '0'})
+    try:
+        index = int(obj.value)
+    except ValueError as e:
+        index = 0
+    if index >= len(settings.TWILIO_SMS_FROM):
+        index = 0
+    sms_from = settings.TWILIO_SMS_FROM[index]
+    if increment:
+        index += 1
+    obj.value = str(index)
+    obj.save()
+    return sms_from
 
 class RsvpTemplate(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -97,8 +118,12 @@ class Message(BaseModel):
         Because sending can take some time, we only create the OutgoingMessages.
         Actual sending is done in the message_send task.
         """
+        increment = ((self.rsvp_template is not None) and
+                     (self.distribution_set.filter(send_sms=True).count() > 0))
+        sms_from = get_next_sms_from(increment)
+        logger.info('sending {} from {}'.format(str(self), sms_from))
         for d in self.distribution_set.all():
-            d.queue()
+            d.queue(sms_from)
 
     # TODO: Do not repage unavailable on invite
     def repage(self, author=None):
@@ -152,13 +177,14 @@ class Distribution(BaseModel):
     def html(self):
         return self.message.html(self.unauth_rsvp_token)
 
-    def queue(self):
+    def queue(self, sms_from):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
         self.save()
         if self.send_sms:
             for p in self.member.phone_set.filter(pagable=True):
                 sms, created = OutboundSms.objects.get_or_create(
-                    distribution=self, phone=p)
+                    distribution=self, phone=p,
+                    defaults={'source':sms_from})
         if self.send_email:
             for e in self.member.email_set.filter(pagable=True):
                 email, created = OutboundEmail.objects.get_or_create(
@@ -216,6 +242,7 @@ class OutboundMessage(BaseModel):
 class OutboundSms(OutboundMessage):
     phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
     error_code = models.IntegerField(blank=True, null=True)
+    source = models.CharField(max_length=255, blank=True)
 
     @property
     def e164(self):
@@ -243,7 +270,7 @@ class OutboundSms(OutboundMessage):
         kwargs = {
             'body': self.distribution.text,
             'to': e164,
-            'from_': settings.TWILIO_SMS_FROM,
+            'from_': self.source,
             'status_callback': 'http://{}{}'.format(
                 settings.HOSTNAME, reverse('sms_callback')),
         }
