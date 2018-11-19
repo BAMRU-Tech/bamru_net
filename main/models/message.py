@@ -104,12 +104,21 @@ class Message(BaseModel):
         return self.text
 
     def html(self, unauth_rsvp_token):
-        html_body = self.text
+        # TODO: Use a Django template for this
+        html_body = ''
+        html_body += '<h3>Message:</h3><p>{}</p>'.format(self.text)
         if self.rsvp_template:
             url = 'http://{}{}'.format(settings.HOSTNAME,
                                        reverse('unauth_rsvp',
                                                args=[unauth_rsvp_token]))
             html_body += self.rsvp_template.html(url)
+        if self.period:
+            url = 'http://{}{}'.format(settings.HOSTNAME,
+                                       self.period.event.get_absolute_url())
+            html_body += '<h3>Event:</h3><p><a href="{}">{}</a></p>'.format(
+                url, self.period)
+        html_body += '<h3>Sent by:</h3><p>{}<br>{}<br>{}</p>'.format(
+            self.author, self.author.display_phone, self.author.display_email)
         return html_body
 
     def queue(self):
