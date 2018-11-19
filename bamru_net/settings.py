@@ -165,7 +165,7 @@ if strtobool(os.environ.get('USE_RAVEN', 'False')):
     }
 JAVASCRIPT_DSN = os.environ.get('JAVASCRIPT_DSN','')
 
-TWILIO_SMS_FROM = os.environ['TWILIO_SMS_FROM']
+TWILIO_SMS_FROM = [e.strip() for e in os.environ['TWILIO_SMS_FROM'].split(',')]
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
 
 # Temporary fix for #128
