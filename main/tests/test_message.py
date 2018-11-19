@@ -166,7 +166,7 @@ class IncommingSmsTestCase(TestCase):
 
 
 
-@override_settings(TWILIO_SMS_FROM='+15005550006')
+@override_settings(TWILIO_SMS_FROM=['+15005550006'])
 class OutgoingSmsTwilioTestCase(TestCase):
     def send_number_expect_code(self, number, code):
         self.number = number
