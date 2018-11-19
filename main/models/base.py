@@ -20,3 +20,7 @@ class BasePositionModel(BaseModel):
     class Meta(BaseModel.Meta):
         abstract = True
         ordering = ['position',]
+
+class Configuration(BaseModel):
+    key = models.CharField(max_length=255, unique=True)
+    value = models.CharField(max_length=255)
