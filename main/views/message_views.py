@@ -42,7 +42,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                           'return': ['return', 'Returned?'],
                           'info': ['info', None],
                           'broadcast': ['broadcast', None],
-                          'test': ['test', 'test']
+                          'test': ['test', 'Test']
                           }
         initial = {}
         initial['author'] = self.request.user.pk
