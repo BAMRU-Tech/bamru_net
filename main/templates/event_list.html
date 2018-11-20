@@ -12,7 +12,7 @@
 
   <nav class="navbar navbar-expand-sm text-primary subhead">
     <button class="btn navbar-btn" onclick='$("#Upcoming_wrapper").toggle();'>
-      <strong class="d-md-none"><i class="fa fa-calendar"></i> Upcoming events</strong>
+      <strong class="d-md-none"><i class="fa fa-calendar"></i> Current events</strong>
       <strong class="d-none d-md-block" id="UpcomingSubhdr"></strong>
     </button>
     <ul class="navbar-nav ml-auto">
@@ -153,7 +153,7 @@ $(document).ready(function() {
         paging:   false,
         info:     false,
 
-        order: [[ 7, 'desc' ]],
+        order: [[ 6, 'desc' ]],
         autoWidth: false,
 
         columns: colDefs,
@@ -336,17 +336,20 @@ function UpdateSubheaderBasedOnSettings (table) {
 }
 
 function ComputeUpcoming () {
-    var start = DateBE(Date());
-    var end = new Date;
-    end.setMonth(end.getMonth() + 1);
-    var end = DateBE(end);
-    var fstart = DateFE(start);
-    var fend = DateFE(end);
+    var start, end, fstart, fend;
 
-    $('#UpcomingSubhdr').html('<i class="fa fa-calendar"></i> Upcoming events ('
+    start = DateBE(Date());
+    end = new Date;
+    end.setMonth(end.getMonth() + 1);
+    end = DateBE(end);
+
+    fstart = DateFE(start);
+    fend = DateFE(end);
+
+    $('#UpcomingSubhdr').html('<i class="fa fa-calendar"></i> Current events ('
                               + fstart + ' to ' + fend + ')');
 
-    return '/api/events/?start_after=' + start + '&start_before=' + end;
+    return '/api/events/?finish_after=' + start + '&start_before=' + end;
 }
 
 function ComputeRecent () {
@@ -360,7 +363,7 @@ function ComputeRecent () {
     $('#RecentSubhdr').html('<i class="fa fa-calendar"></i> Recent events ('
                             + fstart + ' to ' + fend + ')');
 
-    return '/api/events/?start_after=' + start + '&start_before=' + end;
+    return '/api/events/?finish_after=' + start + '&start_before=' + end;
 }
 
 function SelectDate () {
