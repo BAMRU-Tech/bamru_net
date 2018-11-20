@@ -273,8 +273,10 @@ class OutboundSms(OutboundMessage):
         self.save()
         e164 = self.e164
         self.destination = e164
-        logger.info('Sending text to {}: {}'.format(self.destination,
-                                                    self.distribution.text))
+        logger.info('Sending text to {} from {}: {}'.format(
+            self.destination,
+            self.source,
+            self.distribution.text))
 
         kwargs = {
             'body': self.distribution.text,
