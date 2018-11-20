@@ -81,15 +81,17 @@ class MemberCertViewSet(BaseViewSet):
 
 class EventFilter(filters.FilterSet):
     start = filters.DateFromToRangeFilter()
+    finish = filters.DateFromToRangeFilter()
     class Meta:
         model = Event
-        fields = ('type', 'start', 'published',)
+        fields = ('type', 'start', 'finish', 'published',)
 
 
 class EventViewSet(BaseViewSet):
     queryset = Event.objects.all().order_by('-start')
     filterset_class = EventFilter
     search_fields = ('title', 'description', 'location', )
+
     def get_serializer_class(self):
         if getattr(self, 'action', None) == 'list':
             return EventListSerializer
