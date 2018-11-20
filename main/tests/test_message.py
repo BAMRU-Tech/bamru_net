@@ -133,11 +133,13 @@ class IncommingSmsTestCase(TestCase):
         self.participant = mommy.make(Participant,
                                       member=self.phone.member,
                                       make_m2m=True)
+        self.rsvp = mommy.make(RsvpTemplate)
         self.distribution = mommy.make(Distribution,
                                        member=self.phone.member,
                                        message__period=self.participant.period,
                                        message__format='page',
                                        message__period_format='leave',
+                                       message__rsvp_template=self.rsvp,
                                        send_email=False,
                                        send_sms=True,
                                        make_m2m=True)
@@ -147,13 +149,14 @@ class IncommingSmsTestCase(TestCase):
         # Send a transit page
         self.distribution.message.queue()
         message_send(0)
+        source = self.distribution.outboundsms_set.first().source
 
         # Check no RSVP before
         self.assertIsNone(self.participant.en_route_at)
 
         # Respond Yes to page
         response = self.c.post(reverse('sms'),
-                               {'To': '+5550123456',
+                               {'To': source,
                                 'From': self.number,
                                 'MessageSid': 'FAKE_SID_SMS',
                                 'Body': 'Yes',
