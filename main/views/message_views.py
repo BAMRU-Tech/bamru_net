@@ -220,9 +220,10 @@ def sms(request):
     date_from = timezone.now() - timedelta(hours=12)
     outbound = (OutboundSms.objects
                 .filter(destination=twilio_request.from_,
+                        source=twilio_request.to,
+                        distribution__message__rsvp_template__isnull=False,
                         created_at__gte=date_from)
                 .order_by('-pk').first())
-    # TODO filter by texts that have associated question
     if (not outbound) or (not outbound.distribution):
         logger.error('No matching OutboundSms for: ' + str(request.body))
         response.message(
