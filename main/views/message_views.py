@@ -225,7 +225,8 @@ def sms(request):
                         created_at__gte=date_from)
                 .order_by('-pk').first())
     if (not outbound) or (not outbound.distribution):
-        logger.error('No matching OutboundSms for: ' + str(request.body))
+        logger.error('No matching OutboundSms from: {} to: {} body: {}'.format(
+            twilio_request.from_, twilio_request.to, twilio_request.body))
         response.message(
             'BAMRU.net Warning: not sure what to do with your message. Maybe it was too long ago.')
         return response
