@@ -70,13 +70,17 @@ class EventForm(ModelForm):
         widgets = {
             'start': forms.SplitDateTimeWidget(
                 time_format='%H:%M',
-                date_attrs={'type': 'date'},
-                time_attrs={'type': 'time'},
+                date_attrs={'type': 'date', 'pattern': '[0-9]{4}-[0-9]{2}-[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid date yyyy-mm-dd')"},
+                time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
             'finish': forms.SplitDateTimeWidget(
                 time_format='%H:%M',
-                date_attrs={'type': 'date'},
-                time_attrs={'type': 'time'},
+                date_attrs={'type': 'date', 'pattern': '[0-9]{4}-[0-9]{2}-[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid date yyyy-mm-dd')"},
+                time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
+                            'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
             'lat': widgets.HiddenInput(),
             'lon': widgets.HiddenInput(),
@@ -153,7 +157,7 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return the member list."""
         return Member.objects.filter(
-            membership__in=Member.AVAILABLE_MEMBERS).order_by('id')
+            status__in=Member.AVAILABLE_MEMBERS).order_by('id')
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()

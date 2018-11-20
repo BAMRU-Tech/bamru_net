@@ -61,7 +61,7 @@ body {
 td.marked::after {
     content: "✔";
     margin-top: -11px;
-    margin-left: -4px;
+    margin-left: 0px;  /*FIXME: was -4px
     text-align: center;
     text-shadow: rgb(176, 190, 217) 1px 1px, rgb(176, 190, 217) -1px -1px, rgb(176, 190, 217) 1px -1px, rgb(176, 190, 217) -1px 1px;
 }

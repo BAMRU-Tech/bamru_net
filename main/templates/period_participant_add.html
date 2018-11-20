@@ -12,7 +12,7 @@
 {% block content %}
 <main role="main">
   <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
       <option value="TM">Technical Member</option>
       <option value="FM">Field Member</option>
       <option value="T">Trainee</option>
@@ -31,8 +31,8 @@
         <td></td>
         <td>{{ member.full_name }}</td>
         <td>{{ member.id }}</td>
-        <td>{{ member.rank }}</td>
-        <td>{{ member.rank_order }}</td>
+        <td>{{ member.status }}</td>
+        <td>{{ member.status_order }}</td>
         <td>{{ member.roles }}</td>
         <td>{{ member.role_order }}</td>
         <td>{{ member.display_phone }}</td>
@@ -72,15 +72,15 @@ columns: [
       }
     },
     { data: 'id', visible: false, },
-    { data: 'rank', title: 'Rank', responsivePriority: 2,
+    { data: 'status', title: 'Status', width: '35px', responsivePriority: 2,
       render: function(data, type, row, meta) {
           if (type == 'sort')
-              return row.rank_order;
+              return row.status_order;
           else
               return data;
       }
     },
-    { data: 'rank_order', visible: false, },
+    { data: 'status_order', visible: false, },
     { data: 'roles', title: 'Roles', responsivePriority: 1,
       render: function(data, type, row, meta) {
            if (type == 'sort') {
@@ -117,8 +117,6 @@ const event_name = url.searchParams.get('et');
 const event_id = url.searchParams.get('eid');
 const period_num = url.searchParams.get('pn');
 const period_id = url.searchParams.get('pid');
-
-const apiUrlMembership = '/api/members/?membership=';
 
 function AddParticipant ( e, dt, node, config ) {
         var members = [];
@@ -167,17 +165,17 @@ function ClearAll ( e, dt, node, config ) {
 }
 
 function UpdateSubheaderBasedOnSettings(table) {
-    // Extract currently selected ranks based on filter
-    var showRanks = [];
-    $('#filter-rank option').each(function() {
+    // Extract currently selected status based on filter
+    var showStatus = [];
+    $('#filter-status option').each(function() {
         if (!this.selected) {
-            showRanks.push(this.value);
+            showStatus.push(this.value);
         }
     });
 
     //FIXME: Add link to event
     $('#subhdr')[0].innerHTML = event_name + ' > Add Participants (' +
-        showRanks.join(', ') + ')';
+        showStatus.join(', ') + ')';
     $('#subhdr-sm')[0].innerHTML = event_name + ' > Add Participants';
     document.title = 'Participant Add - ' + event_name;
 

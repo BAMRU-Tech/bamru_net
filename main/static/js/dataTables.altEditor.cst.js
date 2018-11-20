@@ -157,7 +157,7 @@
                     '</div>' +
                     '<div class="modal-footer">' +
                     '<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>' +
-                    '<input type="submit" form="altEditor-form" class="btn btn-primary"></input>' +
+                    '<input type="submit" form="altEditor-form" class="btn btn-primary">' +
                     '</div>' +
                     '</div>' +
                     '</div>' +
@@ -276,7 +276,7 @@
                 for (var j in columnDefs) {
                     // handle hidden fields
                     if (columnDefs[j].type.includes("hidden")) {
-                        data += "<input type='hidden' id='" + columnDefs[j].name + "' value='" + adata.data()[0][columnDefs[j].name] + "'></input>";
+                        data += "<input type='hidden' id='" + columnDefs[j].name + "' value='" + adata.data()[0][columnDefs[j].name] + "'>";
                     }
                     else {
                         // handle fields that are visible to the user
@@ -327,9 +327,10 @@
                                 + adata.data()[0][columnDefs[j].name] + "'>";
                         }
 
-                        // Adding date-fields
+                        // Adding date-fields FIXME: move up into input someday
                         if (columnDefs[j].type.includes("date")) {
-                            data += "<input type='date'  id='"
+                            data += "<input type='date' pattern='[0-9]{4}-[0-9]{2}-[0-9]{2}'" +
+                                " oninvalid='this.setCustomValidity(\"Enter valid date yyyy-mm-dd\")' id='"
                                 + columnDefs[j].name
                                 + "' name='"
                                 + columnDefs[j].title
@@ -341,7 +342,8 @@
 
                         // Adding time-fields
                         if (columnDefs[j].type.includes("time")) {
-                            data += "<input type='time'  id='"
+                            data += "<input type='time' pattern='[0-9]{2}:[0-9]{2}'" +
+                                " oninvalid='this.setCustomValidity(\"Enter valid time 24H hh:mm\")' id='"
                                 + columnDefs[j].name
                                 + "' name='"
                                 + columnDefs[j].title
@@ -455,7 +457,7 @@
                 data += '<input type="hidden" id="tblId" value="' + dt.table().node().id +'">';
                 for (var j in columnDefs) {
                     if (columnDefs[j].type.includes("hidden")) {
-                        data += "<input type='hidden' id='" + columnDefs[j].title + "' value='" + adata.data()[0][columnDefs[j].name] + "'></input>";
+                        data += "<input type='hidden' id='" + columnDefs[j].title + "' value='" + adata.data()[0][columnDefs[j].name] + "'>";
                     }
                     else {
                         data += "<div style='margin-left: initial;margin-right: initial;' class='form-group row'><label for='"
@@ -471,7 +473,7 @@
                             + "' style='overflow:hidden'  class='form-control' value='"
                             + that._quoteattr(adata.data()[0][columnDefs[j].name]) + "' >"
                             + adata.data()[0][columnDefs[j].name]
-                            + "</input></div>";
+                            + "</div>";
                     }
                 }
                 // close the form
@@ -613,9 +615,10 @@
                                 + "' style='overflow:hidden'  class='form-control  form-control-sm' value=''>";
                         }
 
-                        // Adding date-fields
+                        // Adding date-fields FIXME: move up into input someday
                         if (columnDefs[j].type.includes("date")) {
-                            data += "<input type='date'  id='"
+                            data += "<input type='date' pattern='[0-9]{4}-[0-9]{2}-[0-9]{2}'" +
+                                " oninvalid='this.setCustomValidity(\"Enter valid date yyyy-mm-dd\")' id='"
                                 + columnDefs[j].name
                                 + "' name='"
                                 + columnDefs[j].title
@@ -626,7 +629,8 @@
 
                         // Adding time-fields
                         if (columnDefs[j].type.includes("time")) {
-                            data += "<input type='time'  id='"
+                            data += "<input type='time' pattern='[0-9]{2}:[0-9]{2}'" +
+                                " oninvalid='this.setCustomValidity(\"Enter valid time 24H hh:mm\")' id='"
                                 + columnDefs[j].name
                                 + "' name='"
                                 + columnDefs[j].title

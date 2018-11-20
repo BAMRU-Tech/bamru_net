@@ -20,7 +20,7 @@
 {% block content %}
 <main class="flex-grow" role="main">
   <div id="show-filter" style="display: none">
-    <select id="filter-rank" multiple="multiple" selectableHeader="Display rank">
+    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
       <option value="TM">Technical Member</option>
       <option value="FM">Field Member</option>
       <option value="T">Trainee</option>
@@ -38,8 +38,8 @@
       <tr>
         <td>{{ member.full_name }}</td>
         <td>{{ member.id }}</td>
-        <td>{{ member.rank }}</td>
-        <td>{{ member.rank_order }}</td>
+        <td>{{ member.status }}</td>
+        <td>{{ member.status_order }}</td>
         <td>{{ member.roles }}</td>
         <td>{{ member.role_order }}</td>
         <td>{{ member.display_phone }}</td>
@@ -69,7 +69,6 @@ SetMemberFilter (table);
 {% endblock initComplete %}
 
 {% block functions %}
-const apiUrlMembership = '/api/members/?membership=';
 const colDefs = [
     { data: 'full_name', title: 'Name', responsivePriority: 1,
       render: function(data, type, row, meta) {
@@ -80,15 +79,15 @@ const colDefs = [
       }
     },
     { data: 'id', visible: false, },
-    { data: 'rank', title: 'Rank', width: '30px', responsivePriority: 4,
+    { data: 'status', title: 'Status', width: '35px', responsivePriority: 4,
       render: function(data, type, row, meta) {
           if (type == 'sort')
-              return row.rank_order;
+              return row.status_order;
           else
               return data;
       }
     },
-    { data: 'rank_order', visible: false, },
+    { data: 'status_order', visible: false, },
     { data: 'roles', title: 'Roles', width: '50px', responsivePriority: 3,
       render: function(data, type, row, meta) {
            if (type == 'sort') {
@@ -104,15 +103,15 @@ const colDefs = [
 ];
 
 function UpdateSubheaderBasedOnSettings(table) {
-    // Extract currently selected ranks based on filter
-    var showRanks = [];
-    $('#filter-rank option').each(function() {
+    // Extract currently selected status based on filter
+    var showStatus = [];
+    $('#filter-status option').each(function() {
         if (!this.selected) {
-            showRanks.push(this.value);
+            showStatus.push(this.value);
         }
     })
 
-    $('#subhdr')[0].innerHTML = 'Members (' + showRanks.join(', ') + ')';
+    $('#subhdr')[0].innerHTML = 'Members (' + showStatus.join(', ') + ')';
 }
 
 {% endblock functions %}

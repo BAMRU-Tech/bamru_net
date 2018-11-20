@@ -44,16 +44,16 @@ class ReportRosterView(LoginRequiredMixin, BaseReportView):
     def get(self, request, **kwargs):
 
         if (kwargs['roster_type'] == 'names.html'):
-            ranks = Member.PRO_MEMBERS
+            status = Member.PRO_MEMBERS
         else:
-             ranks = Member.CURRENT_MEMBERS
+             status = Member.CURRENT_MEMBERS
 
         context = {}
         context['members'] = (
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set',
                                   'emergencycontact_set')
-                .filter(membership__in=ranks)
+                .filter(status__in=status)
                 .order_by('last_name', 'first_name')
         )
         context['now'] = timezone.now()
@@ -69,7 +69,7 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set',
                                   'emergencycontact_set')
-                .filter(membership__in=Member.CURRENT_MEMBERS)
+                .filter(status__in=Member.CURRENT_MEMBERS)
                 .order_by('last_name', 'first_name')
         )
 
@@ -134,7 +134,7 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
         members = (
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set')
-                .filter(membership__in=Member.CURRENT_MEMBERS)
+                .filter(status__in=Member.CURRENT_MEMBERS)
                 .order_by('last_name', 'first_name')
         )
         cards = [self.vcard_for_member(m) for m in members]

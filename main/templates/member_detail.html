@@ -56,7 +56,7 @@ $(document).ready( function() {
     rx = rx ? rx : 'ml';
     href = returns[ rx ];
 
-    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.rank }})";
+    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }})";
 });
 </script>
 {% endblock js %}

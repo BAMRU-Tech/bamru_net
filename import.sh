@@ -2,7 +2,7 @@
 echo 'drop database bnet_development;' | psql -U postgres
 echo 'create database bnet_development;' | psql -U postgres
 psql -U postgres bnet_development < ~/bnet.sql
-rm */migrations/00*
+rm -f */migrations/00*
 ./manage.py makemigrations
 ./manage.py migrate
 psql -U postgres bnet_development < import.sql
