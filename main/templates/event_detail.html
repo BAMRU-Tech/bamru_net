@@ -46,16 +46,16 @@
     <p>
       <strong>Start:</strong>
       {% if event.all_day %}
-        {{ event.start_on|date:'M j, Y' }}
+        {{ event.start_at|date:'M j, Y' }}
       {% else %}
-        {{ event.start_on|date:'M j, Y H:i' }}
+        {{ event.start_at|date:'M j, Y H:i' }}
       {% endif %}
-      {% if event.finish_on != None %}
+      {% if event.finish_at != None %}
       <strong>End:</strong>
       {% if event.all_day %}
-        {{ event.finish_on|date:'M j, Y' }}
+        {{ event.finish_at|date:'M j, Y' }}
       {% else %}
-        {{ event.finish_on|date:'M j, Y H:i' }}
+        {{ event.finish_at|date:'M j, Y H:i' }}
       {% endif %}
       {% endif %}
     </p>

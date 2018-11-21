@@ -53,13 +53,13 @@ class CertSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cert
         read_only_fields = ('is_expired', 'color', 'display',)
-        fields = ('id', 'member', 'type', 'expiration', 'description', 'comment', 'link', ) + read_only_fields
+        fields = ('id', 'member', 'type', 'expires_on', 'description', 'comment', 'link', ) + read_only_fields
 
 
 class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
     certs = serializers.SerializerMethodField()
     def get_certs(self, member):
-        ordered_certs = member.cert_set.all().order_by('-expiration', '-id')
+        ordered_certs = member.cert_set.all().order_by('-expires_on', '-id')
         grouped_certs = defaultdict(list)
         for c in ordered_certs:
             grouped_certs[c.type].append(CertSerializer(c, context=self.context).data)
@@ -93,14 +93,14 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     participant_set = ParticipantSerializer(many=True, read_only=True)
     class Meta:
         model = Period
-        fields = ('id', 'position', 'start_on', 'finish_on', 'participant_set',)
+        fields = ('id', 'position', 'start_at', 'finish_at', 'participant_set',)
 
 
 class EventListSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Event
         fields = ('id', 'title', 'type', 'leaders', 'description',
-                  'location', 'lat', 'lon', 'start_on', 'finish_on', 'all_day', 'published',)
+                  'location', 'lat', 'lon', 'start_at', 'finish_at', 'all_day', 'published',)
 
 
 class EventDetailSerializer(EventListSerializer):

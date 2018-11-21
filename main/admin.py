@@ -54,14 +54,14 @@ class PeriodInline(InlineDefaults):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'type', 'start_on', 'finish_on',)
+    list_display = ('title', 'type', 'start_at', 'finish_at',)
     inlines = [
         PeriodInline,
         ]
 
 @admin.register(Period)
 class PeriodAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'event', 'position', 'start_on', 'finish_on',)
+    list_display = ('__str__', 'event', 'position', 'start_at', 'finish_at',)
     inlines = [
         ParticipantInline,
         ]

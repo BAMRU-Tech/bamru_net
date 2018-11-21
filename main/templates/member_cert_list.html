@@ -22,7 +22,7 @@
         <td>{{ cert.description }}</td>
         <td>{{cert.link }}</td>
         <td>{{ cert.comment }}</td>
-        <td>{{ cert.expiration|date:"Y-m-d" }}</td>
+        <td>{{ cert.expires_on|date:"Y-m-d" }}</td>
         <td>{{ cert.id }}</td>
         <td>{{ cert.is_expired }}</td>
         <td>{{ cert.color }}</td>
@@ -77,12 +77,12 @@ columns: [
       }
     },
     { data: 'comment', title: 'Comment', visible: false, },
-    { data: 'expiration', title: 'Expiration', responsivePriority: 2,
+    { data: 'expires_on', title: 'Expiration', responsivePriority: 2,
       type: 'date', 
       render: function(data, type, row, meta) {
           if (type == 'display') {
               if (data) {
-                  // Add color for up coming cert expirations
+                  // Add color for up coming cert expires_on
                   var rnode = $('#dTbl').DataTable().row(meta.row).node();
                   $('td:eq(4)', rnode).css('background-color', row.color)
 
@@ -177,11 +177,11 @@ function UpdateRow (dt, row, success, error, url, emsg) {
     var data = row;
 
     delete data.type;
-    if (data.expiration == "") {
-      data.expiration = null;
+    if (data.expires_on == "") {
+      data.expires_on = null;
     }
 
-    if (!data.expiration) data.expiration = null;
+    if (!data.expires_on) data.expires_on = null;
     var cid = data.id;
     data = JSON.stringify(data);
     //FX: error handling
@@ -191,7 +191,7 @@ function UpdateRow (dt, row, success, error, url, emsg) {
         url: '/api/certs/' + cid + '/',
         data: data,
         success: function (r, s, m) {
-            if (!r.expiration) r.expiration = '';
+            if (!r.expires_on) r.expires_on = '';
             // Clear marks
             $('td.marked').removeClass('marked');
             return success(r, s, m);

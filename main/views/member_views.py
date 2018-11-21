@@ -140,7 +140,7 @@ class MemberCertListView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         qs = Cert.objects.filter(member=self.kwargs['pk'])
-        qs = qs.order_by(Cert.type_order_expression(), '-expiration', '-id')
+        qs = qs.order_by(Cert.type_order_expression(), '-expires_on', '-id')
         return qs
 
     def get_context_data(self, **kwargs):
@@ -161,7 +161,7 @@ class CertEditMixin:
     def get_form_class(self):
         cert_type = self.get_cert_type()
 
-        fields = ['id', 'type', 'expiration', 'description']
+        fields = ['id', 'type', 'expires_on', 'description']
         if cert_type == "ham":
             fields += ['link']
         else:
@@ -178,7 +178,7 @@ class CertEditMixin:
                 'description': widgets.TextInput(),
                 'comment': widgets.TextInput(),
                 'link': widgets.TextInput(),
-                'expiration': widgets.DateInput(attrs={'type': 'date'}),
+                'expires_on': widgets.DateInput(attrs={'type': 'date'}),
             },
         )
 

@@ -127,7 +127,7 @@ class CertTestCase(MemberTestCase):
 
         response = self.client.post(reverse('member_cert_new', args=[self.user.id]) + '?type=medical', {
             'type': 'medical',
-            'expiration': '2018-12-31',
+            'expires_on': '2018-12-31',
             'description': 'WFR',
             'comment': '',
         })

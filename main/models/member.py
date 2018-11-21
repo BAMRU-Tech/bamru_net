@@ -364,7 +364,7 @@ class Cert(BasePositionModel):
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     type = models.CharField(choices=TYPES, max_length=255)
-    expiration = models.DateField(blank=True, null=True)
+    expires_on = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
     link = models.TextField(blank=True, null=True)
@@ -391,12 +391,12 @@ class Cert(BasePositionModel):
     @property
     def is_expired(self):
         # We will allow certs expiring today, thus < not <=
-        return ((self.expiration is not None) and
-                (self.expiration < timezone.now().date()))
+        return ((self.expires_on is not None) and
+                (self.expires_on < timezone.now().date()))
 
     @property
     def color(self):
-        exp = self.expiration
+        exp = self.expires_on
         now = timezone.now().date()
         if not exp:
             return "white"

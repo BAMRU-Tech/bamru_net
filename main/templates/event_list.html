@@ -219,10 +219,10 @@ const colDefs = [
     { data: 'lat', title: 'Lat', visible: false, responsivePriority: 99, },
     { data: 'lon', title: 'Lon', visible: false, responsivePriority: 99, },
     { data: 'leaders', title: 'Leaders', width: '17%', responsivePriority: 4, },
-    { data: 'start_on', title: 'Start', width: '20%', responsivePriority: 2,
+    { data: 'start_at', title: 'Start', width: '20%', responsivePriority: 2,
       type: 'date', render: rDate, },
     { data: 'type', title: 'Type', width: '40px', responsivePriority: 5, },
-    { data: 'finish_on', title: 'Finish', visible: false, responsivePriority: 99,
+    { data: 'finish_at', title: 'Finish', visible: false, responsivePriority: 99,
       type: 'date', },
     { data: 'all_day', title: 'All day', visible: false, responsivePriority: 99,
       type: ['false', 'true'], },
@@ -292,11 +292,11 @@ function AddRowsByDate (table, start, end) {
     var url;
 
     if (start && end)
-        url = apiUrlEvent+'?start_on_after='+start+'&start_on_before='+end;
+        url = apiUrlEvent+'?start_at_after='+start+'&start_at_before='+end;
     else if (start)
-        url = apiUrlEvent+'?start_on_after='+start;
+        url = apiUrlEvent+'?start_at_after='+start;
     else if (end)
-        url = apiUrlEvent+'?start_on_before='+end;
+        url = apiUrlEvent+'?start_at_before='+end;
     else
         url = apiUrlEvent;
 
@@ -349,7 +349,7 @@ function ComputeUpcoming () {
     $('#UpcomingSubhdr').html('<i class="fa fa-calendar"></i> Current events ('
                               + fstart + ' to ' + fend + ')');
 
-    return '/api/events/?finish_on_after=' + start + '&start_on_before=' + end;
+    return '/api/events/?finish_at_after=' + start + '&start_at_before=' + end;
 }
 
 function ComputeRecent () {
@@ -363,7 +363,7 @@ function ComputeRecent () {
     $('#RecentSubhdr').html('<i class="fa fa-calendar"></i> Recent events ('
                             + fstart + ' to ' + fend + ')');
 
-    return '/api/events/?finish_on_after=' + start + '&start_on_before=' + end;
+    return '/api/events/?finish_at_after=' + start + '&start_at_before=' + end;
 }
 
 function SelectDate () {
