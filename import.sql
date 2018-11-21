@@ -27,6 +27,15 @@ select id, member_id, start_on, end_on, comment, created_at, updated_at from ava
 insert into main_cert (id, member_id, type, expires_on, description, comment, link, position, cert_file, cert_file_name, cert_content_type, cert_file_size, cert_updated_at, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at)
 select id, member_id, typ, expiration, description, comment, link, position, cert_file, cert_file_name, cert_content_type, cert_file_size, cert_updated_at, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at from certs;
 
+/*
+    Clean up the database for all_day events:
+       - all start dates 0800 UTC assumes this is run assuming PST
+       - all finish dates exists and the time is 23:59 PST
+*/
+update events set start=start::date + interval '8 hours' where all_day=true;
+update events set finish=finish::date + interval '8 hours' where all_day=true;
+update events set finish=start where finish is null and all_day=true;
+update events set finish=finish + interval '23 hours' + interval '59 minutes' where all_day=true;
 
 insert into main_event (id, type, title, leaders, description, location, lat, lon, start_at, finish_at, all_day, published, created_at, updated_at)
 select id, typ, title, leaders, description, location, lat, lon, start, finish, all_day, published, created_at, updated_at from events;

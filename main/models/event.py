@@ -25,7 +25,7 @@ class Event(BaseModel):
     lat = models.CharField(max_length=255, blank=True, null=True)
     lon = models.CharField(max_length=255, blank=True, null=True)
     start_at = models.DateTimeField()
-    finish_at = models.DateTimeField(blank=True, null=True)
+    finish_at = models.DateTimeField()
     all_day = models.BooleanField(
         default=False,
         help_text='All Day events do not have a start or end time.')
