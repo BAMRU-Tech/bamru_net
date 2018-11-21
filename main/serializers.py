@@ -93,14 +93,14 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     participant_set = ParticipantSerializer(many=True, read_only=True)
     class Meta:
         model = Period
-        fields = ('id', 'position', 'start', 'finish', 'participant_set',)
+        fields = ('id', 'position', 'start_on', 'finish_on', 'participant_set',)
 
 
 class EventListSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Event
         fields = ('id', 'title', 'type', 'leaders', 'description',
-                  'location', 'lat', 'lon', 'start', 'finish', 'all_day', 'published',)
+                  'location', 'lat', 'lon', 'start_on', 'finish_on', 'all_day', 'published',)
 
 
 class EventDetailSerializer(EventListSerializer):

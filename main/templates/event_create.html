@@ -37,21 +37,21 @@
 <script type="text/javascript">
 $(document).ready(function() {
 
-    $('#id_start_0').blur(ValidateDateRange);
-    $('#id_finish_0').blur(ValidateDateRange);
-    $('#id_start_1').blur(ValidateDateRange);
-    $('#id_finish_1').blur(ValidateDateRange);
+    $('#id_start_on_0').blur(ValidateDateRange);
+    $('#id_finish_on_0').blur(ValidateDateRange);
+    $('#id_start_on_1').blur(ValidateDateRange);
+    $('#id_finish_on_1').blur(ValidateDateRange);
     ValidateDateRange();
 
     $('#id_all_day').click(function() {
         if ($('#id_all_day').prop('checked')) {
-            $('#id_start_1').hide()
-            $('#id_start_1').val('00:00')
-            $('#id_finish_1').hide()
-            $('#id_finish_1').val('23:59')
+            $('#id_start_on_1').hide()
+            $('#id_start_on_1').val('00:00')
+            $('#id_finish_on_1').hide()
+            $('#id_finish_on_1').val('23:59')
         } else {
-            $('#id_start_1').show()
-            $('#id_finish_1').show()
+            $('#id_start_on_1').show()
+            $('#id_finish_on_1').show()
         }
     })
 
@@ -63,8 +63,8 @@ $(document).ready(function() {
     {% else %}
 
     if ($('#id_all_day').prop('checked')) {
-        $('#id_start_1').hide()
-        $('#id_finish_1').hide()
+        $('#id_start_on_1').hide()
+        $('#id_finish_on_1').hide()
     }
 
     {% endif %}
@@ -97,16 +97,16 @@ function ValidateDateRange () {
     // If finish triggered the validation then start is changed
     // Changes happen after date or time element loses focus
     var now = new Date();
-    var sd = $('#id_start_0').val();
-    var fd = $('#id_finish_0').val();
+    var sd = $('#id_start_on_0').val();
+    var fd = $('#id_finish_on_0').val();
     var sameDay = sd == fd;
     sd = sd ? new Date(DateFE(sd)) : now;
     fd = fd ? new Date(DateFE(fd)) : now;
 
-    var st = $('#id_start_1').val();
+    var st = $('#id_start_on_1').val();
     var st = st ? st : '00:00';
     var sh = st.substr(0, 2), sm = st.substr(3, 2);
-    var ft = $('#id_finish_1').val();
+    var ft = $('#id_finish_on_1').val();
     var ft = ft ? ft : '23:59';
     var fh = ft.substr(0, 2), fm = ft.substr(3, 2);
 
@@ -115,18 +115,18 @@ function ValidateDateRange () {
     sd.setHours(sh, sm, 0);
     fd.setHours(fh, fm, 0);
 
-    if (this.id == 'id_start_0' || this.id == 'id_start_1') {
+    if (this.id == 'id_start_on_0' || this.id == 'id_start_on_1') {
         if (sd > fd) { fd = sd; if (!allDay && sameDay) ft = st }
-    } else if (this.id == 'id_finish_0' || this.id == 'id_finish_1') {
+    } else if (this.id == 'id_finish_on_0' || this.id == 'id_finish_on_1') {
         if (sd > fd) { sd = fd; if (!allDay && sameDay) st = ft }
     } else {
         // called directly, not blur - just set the defaults
     }
 
-    $('#id_start_0').val(DateBE(sd.toLocaleDateString()));
-    $('#id_finish_0').val(DateBE(fd.toLocaleDateString()));
-    $('#id_start_1').val(st);
-    $('#id_finish_1').val(ft);
+    $('#id_start_on_0').val(DateBE(sd.toLocaleDateString()));
+    $('#id_finish_on_0').val(DateBE(fd.toLocaleDateString()));
+    $('#id_start_on_1').val(st);
+    $('#id_finish_on_1').val(ft);
 
 }
 
