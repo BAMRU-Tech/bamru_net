@@ -328,18 +328,15 @@ $(document).ready( function() {
 })
 
 function RenderDateTime(data, type, row, meta, time) {
-    // Display Date and time
-    var d = data;
-    
+    // Display date and time
     if ( data && type == 'display' ) {
-        d =  DateFE(data);
-
-        var t = row[time]
-        if (t && t != '00:00')
-            d = d + ' ' + t;
+        var d =  DateFE(data);
+        var t = row[time];
+        if (t == '') t = '00:00';
+        return d + ' ' + t;
     }
 
-    return d;
+    return data;
 }
 
 function UpdatePeriodRow(dt, row, success, error) {
