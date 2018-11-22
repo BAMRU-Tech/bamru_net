@@ -86,17 +86,17 @@ class CertTestCase(MemberTestCase):
             member=self.user,
             type='medical',
             description="WFR",
-            expiration=today + timedelta(days=100),
+            expires_on=today + timedelta(days=100),
         )
         Cert.objects.create(
             member=self.user,
             type='cpr',
-            expiration=today + timedelta(days=50),
+            expires_on=today + timedelta(days=50),
         )
         Cert.objects.create(
             member=self.user,
             type='ham',
-            expiration=today + timedelta(days=10),
+            expires_on=today + timedelta(days=10),
         )
         Cert.objects.create(
             member=self.user,
@@ -105,7 +105,7 @@ class CertTestCase(MemberTestCase):
         Cert.objects.create(
             member=self.user,
             type='driver',
-            expiration=today + timedelta(days=-10),
+            expires_on=today + timedelta(days=-10),
         )
 
     def test_cert_list(self):
@@ -127,7 +127,7 @@ class CertTestCase(MemberTestCase):
 
         response = self.client.post(reverse('member_cert_new', args=[self.user.id]) + '?type=medical', {
             'type': 'medical',
-            'expiration': '2018-12-31',
+            'expires_on': '2018-12-31',
             'description': 'WFR',
             'comment': '',
         })

@@ -24,8 +24,8 @@ class Event(BaseModel):
     location = models.CharField(max_length=255)
     lat = models.CharField(max_length=255, blank=True, null=True)
     lon = models.CharField(max_length=255, blank=True, null=True)
-    start = models.DateTimeField()
-    finish = models.DateTimeField(blank=True, null=True)
+    start_at = models.DateTimeField()
+    finish_at = models.DateTimeField()
     all_day = models.BooleanField(
         default=False,
         help_text='All Day events do not have a start or end time.')
@@ -57,8 +57,8 @@ class Event(BaseModel):
 
 class Period(BasePositionModel):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    start = models.DateTimeField(blank=True, null=True)
-    finish = models.DateTimeField(blank=True, null=True)
+    start_at = models.DateTimeField(blank=True, null=True)
+    finish_at = models.DateTimeField(blank=True, null=True)
     def __str__(self):
         return "{} OP{}".format(self.event.title, self.position)
 

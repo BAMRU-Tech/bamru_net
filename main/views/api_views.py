@@ -80,15 +80,15 @@ class MemberCertViewSet(BaseViewSet):
 
 
 class EventFilter(filters.FilterSet):
-    start = filters.DateFromToRangeFilter()
-    finish = filters.DateFromToRangeFilter()
+    start_at = filters.DateFromToRangeFilter()
+    finish_at = filters.DateFromToRangeFilter()
     class Meta:
         model = Event
-        fields = ('type', 'start', 'finish', 'published',)
+        fields = ('type', 'start_at', 'finish_at', 'published',)
 
 
 class EventViewSet(BaseViewSet):
-    queryset = Event.objects.all().order_by('-start')
+    queryset = Event.objects.all().order_by('-start_at')
     filterset_class = EventFilter
     search_fields = ('title', 'description', 'location', )
 
