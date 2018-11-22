@@ -86,17 +86,17 @@ class CertTestCase(MemberTestCase):
             member=self.user,
             type='medical',
             description="WFR",
-            expiration=today + timedelta(days=100),
+            expires_on=today + timedelta(days=100),
         )
         Cert.objects.create(
             member=self.user,
             type='cpr',
-            expiration=today + timedelta(days=50),
+            expires_on=today + timedelta(days=50),
         )
         Cert.objects.create(
             member=self.user,
             type='ham',
-            expiration=today + timedelta(days=10),
+            expires_on=today + timedelta(days=10),
         )
         Cert.objects.create(
             member=self.user,
@@ -105,7 +105,7 @@ class CertTestCase(MemberTestCase):
         Cert.objects.create(
             member=self.user,
             type='driver',
-            expiration=today + timedelta(days=-10),
+            expires_on=today + timedelta(days=-10),
         )
 
     def test_cert_list(self):
