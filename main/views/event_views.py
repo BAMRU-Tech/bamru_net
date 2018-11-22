@@ -32,9 +32,6 @@ class EventListView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Example: create query set """
         return None
-        #qs = Event.objects.all()
-        #qs = qs.filter(start__gte=timezone.now().today() - timedelta(days=365))
-        #return qs.order_by('start')
 
     def get_context_data(self, **kwargs):
         """Example: adding to the context, in addition to the query set """
@@ -60,22 +57,22 @@ class EventForm(ModelForm):
         model = Event
         fields = ['title', 'description', 'type',
                   'location', 'lat', 'lon', 'leaders',
-                  'start', 'finish',
+                  'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
         field_classes = {
-            'start': forms.SplitDateTimeField,
-            'finish': forms.SplitDateTimeField,
+            'start_at': forms.SplitDateTimeField,
+            'finish_at': forms.SplitDateTimeField,
         }
         widgets = {
-            'start': forms.SplitDateTimeWidget(
+            'start_at': forms.SplitDateTimeWidget(
                 time_format='%H:%M',
                 date_attrs={'type': 'date', 'pattern': '[0-9]{4}-[0-9]{2}-[0-9]{2}',
                             'oninvalid': "this.setCustomValidity('Enter valid date yyyy-mm-dd')"},
                 time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
                             'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
-            'finish': forms.SplitDateTimeWidget(
+            'finish_at': forms.SplitDateTimeWidget(
                 time_format='%H:%M',
                 date_attrs={'type': 'date', 'pattern': '[0-9]{4}-[0-9]{2}-[0-9]{2}',
                             'oninvalid': "this.setCustomValidity('Enter valid date yyyy-mm-dd')"},
@@ -89,8 +86,8 @@ class EventForm(ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        start = cleaned_data.get('start')
-        finish = cleaned_data.get('finish')
+        start = cleaned_data.get('start_at')
+        finish = cleaned_data.get('finish_at')
         if finish and finish < start:
             self.add_error('finish', 'Finish time must not be earlier than start time')
         return cleaned_data
@@ -108,7 +105,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
         form.fields['title'].label = "Title*"
         form.fields['type'].label = "Type*"
         form.fields['location'].label = "Location*"
-        form.fields['start'].label = "Start*"
+        form.fields['start_at'].label = "Start*"
 
         return form
 
@@ -130,7 +127,7 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
         form.fields['title'].label = "Title*"
         form.fields['type'].label = "Type*"
         form.fields['location'].label = "Location*"
-        form.fields['start'].label = "Start*"
+        form.fields['start_at'].label = "Start*"
 
         return form
 

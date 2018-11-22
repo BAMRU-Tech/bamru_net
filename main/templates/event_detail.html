@@ -46,16 +46,16 @@
     <p>
       <strong>Start:</strong>
       {% if event.all_day %}
-        {{ event.start|date:'M j, Y' }}
+        {{ event.start_at|date:'M j, Y' }}
       {% else %}
-        {{ event.start|date:'M j, Y H:i' }}
+        {{ event.start_at|date:'M j, Y H:i' }}
       {% endif %}
-      {% if event.finish != None %}
+      {% if event.finish_at != None %}
       <strong>End:</strong>
       {% if event.all_day %}
-        {{ event.finish|date:'M j, Y' }}
+        {{ event.finish_at|date:'M j, Y' }}
       {% else %}
-        {{ event.finish|date:'M j, Y H:i' }}
+        {{ event.finish_at|date:'M j, Y H:i' }}
       {% endif %}
       {% endif %}
     </p>
@@ -328,18 +328,15 @@ $(document).ready( function() {
 })
 
 function RenderDateTime(data, type, row, meta, time) {
-    // Display Date and time
-    var d = data;
-    
+    // Display date and time
     if ( data && type == 'display' ) {
-        d =  DateFE(data);
-
-        var t = row[time]
-        if (t && t != '00:00')
-            d = d + ' ' + t;
+        var d =  DateFE(data);
+        var t = row[time];
+        if (t == '') t = '00:00';
+        return d + ' ' + t;
     }
 
-    return d;
+    return data;
 }
 
 function UpdatePeriodRow(dt, row, success, error) {
