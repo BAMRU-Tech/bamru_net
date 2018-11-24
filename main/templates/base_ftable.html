@@ -80,7 +80,7 @@ $(document).ready(function() {
 {% block functions %}{% endblock %}
 
 function DisplayExpandDetailButton ( e, table, columns ) {
-    {#//FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols #}
+    //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
     var btn = $('button.dt-button:contains("' + textShowDetail + '")');
     if (table.row(0).count() && table.row(0).node() &&
         getComputedStyle(table.row(0).node().children[0],'before').content == '"+"')
@@ -235,5 +235,103 @@ function DeleteRow ( e, dt, node, config, type, api ) {
     }
 }
 
+function EnableMarkSelection (table) {
+    var rselected = [];  // Last selected range
+    var rstart = null;   // Start of selection
+    var rcurrent = null; // Current selected row
+    var rmarked = [];    // tmp variable
+    var runmarked = [];  // tmp variable
+
+    table.on( 'deselect', function ( e, dt, type, indexes ) {
+
+        // Was this the last selected range
+        var equal =
+            !(rselected.length == 1 && rselected[0] == rcurrent) &&
+            rselected.length === indexes.length &&
+            rselected.every( function ( value, index ) { return value === indexes[index] });
+
+        if (equal) {
+            // Leave marks
+        } else {
+            // Unmark deselected rows
+            // indexes don't include the row the user selected, seems like a bug
+            if (!indexes.includes(rcurrent)) indexes.push(rcurrent);
+            dt.rows(indexes).every( function ( rowIdx, tableLoop, rowLoop ) {
+                $(this.node()).children().first().removeClass('marked');
+            });
+        }
+
+        // Clear selections
+        rselected = []; rstart = null;
+
+        dt.rows( { selected: true } ).deselect();
+    });
+
+    table.on( 'user-select', function ( e, dt, type, cell ) {
+
+        // Remember current row selection
+        rcurrent = cell[0][0].row;
+        return true;
+    });
+
+    table.on( 'select', function ( e, dt, type, indexes ) {
+
+        // Leave marks if user selection is in selected region
+        if (rselected.length > 1 && rselected.includes(rcurrent)) {
+            rselected = []; rstart = null;
+            return;
+        }
+
+        // This is an attempt to handle the ambiguity between
+        // single click that selects and deselects vs click that marks
+        // the beginning of the selection range
+
+        if (indexes.length >1) {
+            // Don't toggle row that was start of selection range
+            indexes = indexes.filter( function (e) { return e != rstart; });
+
+            // Are any rows in the new selection marked
+            rmarked = false; runmarked = true;
+            dt.rows( indexes ).every( function ( rowIdx, tableLoop, rowLoop ) {
+                var m = $(this.node()).children().first().hasClass('marked');
+                rmarked = rmarked || m;
+                runmarked = runmarked && !m;
+            });
+
+            // Included rstart when it appears to be part of the selected group
+            var rsm = $(dt.row(rstart).node()).children().first().hasClass('marked')  // rstart marked
+            if ((rsm && rmarked) || (!rsm && runmarked)) 
+                // If all are marked/unmarked include rstart in the toggle selection
+                indexes.push(rstart);
+
+            // Toggle row marks based on the selection range
+            dt.rows( indexes ).every( function ( rowIdx, tableLoop, rowLoop ) {
+                var el = $(this.node()).children().first();
+                if (!el.hasClass('marked')) {
+                    el.addClass('marked');
+                } else {
+                    el.removeClass('marked');
+                }
+            });
+        } else {
+            // Handle a single selection by deselecting
+            var el = $(dt.row( indexes ).node()).children().first();
+            if (!el.hasClass('marked')) {
+                el.addClass('marked');
+            } else {
+                dt.row( indexes ).deselect();
+            }
+        }
+
+        // Remember the last set of selected rows
+        rselected = [];
+        dt.rows( { selected: true } ).every( function ( rowIdx, tableLoop, rowLoop ) {
+            rselected.push(rowIdx)
+        });
+
+        rstart = rcurrent;
+
+    });
+}
 </script>
 {% endblock js %}
