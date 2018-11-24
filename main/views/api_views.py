@@ -1,3 +1,4 @@
+from main.lib.gcal import default_gcal_manager, default_gcal_manager_enabled
 from main.models import *
 from main.serializers import *
 
@@ -96,6 +97,21 @@ class EventViewSet(BaseViewSet):
         if getattr(self, 'action', None) == 'list':
             return EventListSerializer
         return EventDetailSerializer
+
+    def perform_create(self, serializer):
+        super(EventViewSet, self).perform_create(serializer)
+        if default_gcal_manager_enabled():
+            default_gcal_manager().sync_event(serializer.instance)
+
+    def perform_update(self, serializer):
+        super(EventViewSet, self).perform_update(serializer)
+        if default_gcal_manager_enabled():
+            default_gcal_manager().sync_event(serializer.instance)
+
+    def perform_destroy(self, event):
+        if default_gcal_manager_enabled():
+            default_gcal_manager().delete_event(event)
+        super(EventViewSet, self).perform_destroy(event)
 
 
 class PeriodViewSet(BaseViewSet):
