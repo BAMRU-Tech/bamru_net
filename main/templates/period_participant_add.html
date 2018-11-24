@@ -137,7 +137,6 @@ function AddParticipant ( e, dt, node, config ) {
             data.push({ 'period': period_id, 'member': members[i] });
         }
         data = JSON.stringify(data);
-        //FX: error handling
         $.ajax({
             method: 'POST',
             contentType: 'application/json',

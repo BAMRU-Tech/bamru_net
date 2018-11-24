@@ -179,7 +179,6 @@ function AddRows(table, values) {
 
     var dd = DateArray(Date(), 5);
     url += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];
-    //FX: add error handling
     $.getJSON(url, null, function( json ) {
         var dd = DateArray(Date(), 5);
         

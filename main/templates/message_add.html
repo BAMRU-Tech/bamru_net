@@ -190,7 +190,6 @@ function SendPage ( e, dt, node, config ) {
         });
     }
     data = JSON.stringify(data);
-    //FX: add error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',

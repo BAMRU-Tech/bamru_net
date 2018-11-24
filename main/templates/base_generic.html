@@ -60,29 +60,29 @@
             integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
             crossorigin="anonymous"></script>
     {% endblock js %}
-    <script src="https://browser.sentry-cdn.com/4.2.4/bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://browser.sentry-cdn.com/4.3.4/bundle.min.js" crossorigin="anonymous"></script>
     <script>
       // Needed for IOS
       $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
 
       Sentry.init({
-        dsn: '{{JAVASCRIPT_DSN}}',
-        release: '{{RELEASE}}',
+          dsn: '{{JAVASCRIPT_DSN}}',
+          release: '{{RELEASE}}',
       });
       Sentry.configureScope((scope) => {
-        scope.setUser({"username": "{{ request.user }}"});
+          scope.setUser({"username": "{{ request.user }}"});
       });
       $(document).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
-        Sentry.captureMessage(thrownError || jqXHR.statusText, {
-          extra: {
-              type: ajaxSettings.type,
-              url: ajaxSettings.url,
-              data: ajaxSettings.data,
-              status: jqXHR.status,
-              error: thrownError || jqXHR.statusText,
-              response: jqXHR.responseText.substring(0, 100)
-          }
-        });
+          Sentry.captureMessage(thrownError || jqXHR.statusText, {
+              extra: {
+                  type: ajaxSettings.type,
+                  url: ajaxSettings.url,
+                  data: ajaxSettings.data,
+                  status: jqXHR.status,
+                  error: thrownError || jqXHR.statusText,
+                  response: jqXHR.responseText.substring(0, 100)
+              }
+          });
       });
     </script>
 

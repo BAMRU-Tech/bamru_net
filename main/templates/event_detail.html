@@ -219,19 +219,31 @@ $(document).ready( function() {
                     {
                         text: '<i class="fa fa-hourglass-start"></i> Heads Up',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                            var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=headsUp';
+                            Sentry.withScope(scope => {
+                                scope.setLevel('info');
+                                Sentry.captureMessage("Paging HeadsUp",
+                                                      { extra: { page: href } });
+                            });
+                            location.href = href;
                         }
                     },
                     {
                         text: '<i class="fa fa-calendar-check-o"></i> Are you available',
                         action: function ( e, dt, node, config ) {
-                            location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                            var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=available';
+                            Sentry.withScope(scope => {
+                                scope.setLevel('info');
+                                Sentry.captureMessage("Paging Available",
+                                                      { extra: { page: href } });
+                            });
+                            location.href = href;
                         }
                     },
                     {
@@ -240,10 +252,16 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=leave';
+                            Sentry.withScope(scope => {
+                                scope.setLevel('info');
+                                Sentry.captureMessage("Paging Left",
+                                                      { extra: { page: href } });
+                            });
+                            location.href = href;
                         }
                     },
                     {
@@ -252,10 +270,16 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=return';
+                            Sentry.withScope(scope => {
+                                scope.setLevel('info');
+                                Sentry.captureMessage("Paging Returned",
+                                                      { extra: { page: href } });
+                            });
+                            location.href = href;
                         }
                     },
                     {
@@ -264,10 +288,16 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0)
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=info';
+                            Sentry.withScope(scope => {
+                                scope.setLevel('info');
+                                Sentry.captureMessage("Paging Info",
+                                                      { extra: { page: href } });
+                            });
+                            location.href = href;
                         }
                     },
                     {
@@ -276,10 +306,16 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0)
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=broadcast';
+                            Sentry.withScope(scope => {
+                                scope.setLevel('info');
+                                Sentry.captureMessage("Paging Broadcast",
+                                                      { extra: { page: href } });
+                            });
+                            location.href = href;
                         }
                     },
                     {
@@ -288,10 +324,16 @@ $(document).ready( function() {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
                             else
-                                location.href='{% url "message_add" %}?eid={{ event.id }}' +
+                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=test';
+                            Sentry.withScope(scope => {
+                                scope.setLevel('info');
+                                Sentry.captureMessage("Paging Test",
+                                                      { extra: { page: href } });
+                            });
+                            location.href = href;
                         }
                     },
                 ]
@@ -407,7 +449,6 @@ function UpdatePeriodRow(dt, row, success, error) {
     
     var pid = data.id;
     data = JSON.stringify(data);
-    //FX: add error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
@@ -426,7 +467,7 @@ function UpdatePeriodRow(dt, row, success, error) {
 function DeleteEvent ( event, title ) {
     var numParticipants = 0;
     {% for period in event.period_set.all %}
-      numParticipants += {{ period.members_for_test_page|length }}
+      numParticipants += {{ period.members_for_info_page|length }}
     {% endfor %}
     if (numParticipants > 0) {
         alert('Events with active operational periods cannot be deleted');
@@ -434,7 +475,6 @@ function DeleteEvent ( event, title ) {
     }
     var ok = confirm('Delete event?\n'+title);
     if (ok) {
-        //FX: error handling
         $.ajax({
             method: 'DELETE',
             contentType: 'application/json',
@@ -454,7 +494,6 @@ function DeleteOP (tblName, period, position ) {
         ok = confirm('Are you sure?  This period has participants!');
 
     if (ok) {
-        //FX: error handling
         $.ajax({
             method: 'DELETE',
             contentType: 'application/json',
@@ -487,7 +526,6 @@ function DeleteParticipants ( e, dt, node, config ) {
     
     if (ok) {
         for (var i=0; i<members.length; i++) {
-            //FX: error handling
             $.ajax({
                 method: 'DELETE',
                 contentType: 'application/json',
