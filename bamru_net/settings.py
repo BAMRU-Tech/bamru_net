@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'anymail',
     'bootstrap4',
     'django_filters',
+    'oidc_provider',
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'main',
@@ -153,6 +154,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT')
+
+LOGIN_URL = '/accounts/login/'
+OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 
 # Raven config for Sentry.io logging
 RELEASE = raven.fetch_git_sha(os.path.abspath(BASE_DIR))
