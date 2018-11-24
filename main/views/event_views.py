@@ -12,7 +12,7 @@ from django.views import generic
 from django.forms import widgets
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
-from main.lib.gcal import default_gcal_manager, default_gcal_manager_enabled
+from main.lib.gcal import get_gcal_manager
 from main.models import Member, Event, Participant, Period
 
 from datetime import timedelta
@@ -112,8 +112,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
 
     # Abuse get_success_url to do a calendar update after updating the object.
     def get_success_url(self, *args, **kwargs):
-        if default_gcal_manager_enabled():
-            default_gcal_manager().sync_event(self.object)
+        get_gcal_manager().sync_event(self.object)
         return super(EventUpdateView, self).get_success_url(*args, **kwargs)
 
 
@@ -141,8 +140,7 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
 
     # Abuse get_success_url to do a calendar update after creating the object.
     def get_success_url(self, *args, **kwargs):
-        if default_gcal_manager_enabled():
-            default_gcal_manager().sync_event(self.object)
+        get_gcal_manager().sync_event(self.object)
         return super(EventCreateView, self).get_success_url(*args, **kwargs)
 
     def get_context_data(self, **kwargs):

@@ -1,4 +1,4 @@
-from main.lib.gcal import default_gcal_manager, default_gcal_manager_enabled
+from main.lib.gcal import get_gcal_manager
 from main.models import *
 from main.serializers import *
 
@@ -100,17 +100,14 @@ class EventViewSet(BaseViewSet):
 
     def perform_create(self, serializer):
         super(EventViewSet, self).perform_create(serializer)
-        if default_gcal_manager_enabled():
-            default_gcal_manager().sync_event(serializer.instance)
+        get_gcal_manager().sync_event(serializer.instance)
 
     def perform_update(self, serializer):
         super(EventViewSet, self).perform_update(serializer)
-        if default_gcal_manager_enabled():
-            default_gcal_manager().sync_event(serializer.instance)
+        get_gcal_manager().sync_event(serializer.instance)
 
     def perform_destroy(self, event):
-        if default_gcal_manager_enabled():
-            default_gcal_manager().delete_event(event)
+        get_gcal_manager().delete_for_event(event)
         super(EventViewSet, self).perform_destroy(event)
 
 
