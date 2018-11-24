@@ -146,7 +146,6 @@ function AddRows(table, values) {
     // Add rows based on status
     //
     var url = apiUrlMemberStatus + values[0];
-    //FX: add error handling
     $.getJSON(url, null, function( json ) {
 
         for (var i=0; i<json.length; i++)
@@ -217,7 +216,6 @@ function DeleteRow ( e, dt, node, config, type, api ) {
 
     if (ok) {
         for (var i=0; i<rows.length; i++) {
-            //FX: error handling
             $.ajax({
                 method: 'DELETE',
                 contentType: 'application/json',

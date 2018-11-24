@@ -302,7 +302,6 @@ function AddRowsByDate (table, start, end) {
 
     table.clear();
 
-    //FX: add error handling
     $.getJSON(url, null, function( json ) {
 
         for (var i = 0; i < json.length; i++)

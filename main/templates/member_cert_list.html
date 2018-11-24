@@ -155,7 +155,6 @@ function AddCert (dt, row, success, error) {
 
     data.member = $('#memberId').val();
     data = JSON.stringify(data);
-    //FX: error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
@@ -184,7 +183,6 @@ function UpdateRow (dt, row, success, error, url, emsg) {
     if (!data.expires_on) data.expires_on = null;
     var cid = data.id;
     data = JSON.stringify(data);
-    //FX: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',

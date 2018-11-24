@@ -83,7 +83,6 @@ function InitialData() {
     table.clear();
 
     const titleLength = 40;
-    //FX: add error handling
     $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
@@ -103,7 +102,6 @@ function UpdateRow (dt, row, success, error) {
 
     var id = data.id;
     data = JSON.stringify(data);
-    //FX: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
