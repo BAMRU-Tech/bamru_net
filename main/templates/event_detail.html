@@ -68,7 +68,7 @@
     <a name="OP{{period.position}}"></a>
     <nav class="navbar navbar-expand-md navbar-light bg-light">
       <button class="btn navbar-btn" onclick='$("#dTbl{{period.position}}_wrapper").toggle();'>
-        <i class="fa fa-area-chart"></i> OP {{period.position}}
+        <i class="fa fa-folder-open-o"></i> OP {{period.position}}
       </button>
       
       <ul class="nav navbar-nav navbar-right">
@@ -133,7 +133,7 @@
   <nav class="navbar navbar-expand-md navbar-light bg-light">
     <button class="btn navbar-btn"
             onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
-      <i class="fa fa-area-chart"></i> OP Next
+      <i class="fa fa-plus-square-o"></i> OP Next
     </button>
   </nav>
 
