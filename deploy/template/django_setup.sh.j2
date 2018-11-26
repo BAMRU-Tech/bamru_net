@@ -12,6 +12,7 @@ source {{ venv_path }}/bin/activate
   rm -f */migrations/00*
   ./manage.py makemigrations
   ./manage.py migrate
+  ./manage.py creatersakey
 
   # import and clean up database
   python manage.py dbshell < ../data/bnet.sql
