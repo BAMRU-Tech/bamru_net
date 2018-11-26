@@ -119,7 +119,6 @@ function AddBusy (dt, row, success, error) {
     if (!data.end_on) data.end_on = data.start_on
 
     data = JSON.stringify(data);
-    //FX: error handling
     $.ajax({
         method: 'POST',
         contentType: 'application/json',
@@ -147,7 +146,6 @@ function UpdateRow (dt, row, success, error) {
     if (!data.end_on) data.end_on = data.start_on
     var pid = data.id;
     data = JSON.stringify(data);
-    //FX: error handling
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
