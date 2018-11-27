@@ -171,6 +171,8 @@ JAVASCRIPT_DSN = os.environ.get('JAVASCRIPT_DSN','')
 
 TWILIO_SMS_FROM = [e.strip() for e in os.environ['TWILIO_SMS_FROM'].split(',')]
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
+# Needed for django-oidc-provider
+SITE_URL = '{}://{}'.format(os.environ.get('DJANGO_SCHEMA', 'https'), HOSTNAME)
 
 # Temporary fix for #128
 DJANGO_TWILIO_FORGERY_PROTECTION=False

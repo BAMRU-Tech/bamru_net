@@ -73,6 +73,9 @@ class Period(BasePositionModel):
             participant__period=self.id,
             participant__return_home_at__isnull=True)
 
+    def members_for_info_page(self): # used in event_detail
+        return Member.objects.filter( participant__period=self.id )
+
 
 class Participant(BaseModel):
     period = models.ForeignKey(Period, on_delete=models.CASCADE)
