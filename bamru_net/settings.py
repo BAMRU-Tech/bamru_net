@@ -171,6 +171,8 @@ JAVASCRIPT_DSN = os.environ.get('JAVASCRIPT_DSN','')
 
 TWILIO_SMS_FROM = [e.strip() for e in os.environ['TWILIO_SMS_FROM'].split(',')]
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
+# Needed for django-oidc-provider
+SITE_URL = '{}://{}'.format(os.environ.get('DJANGO_SCHEMA', 'https'), HOSTNAME)
 
 # Temporary fix for #128
 DJANGO_TWILIO_FORGERY_PROTECTION=False
@@ -189,6 +191,10 @@ ANYMAIL = {
 }
 MAILGUN_EMAIL_FROM = os.environ['MAILGUN_EMAIL_FROM']
 DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
+
+GOOGLE_CREDENTIALS_FILE = os.environ.get('GOOGLE_CREDENTIALS_FILE', '')
+GOOGLE_TOKEN_FILE = os.environ.get('GOOGLE_TOKEN_FILE', '')
+GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID', '')
 
 CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
 CELERYD_HIJACK_ROOT_LOGGER = False

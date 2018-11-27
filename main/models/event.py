@@ -32,6 +32,7 @@ class Event(BaseModel):
     published = models.BooleanField(
         default=False,
         help_text='Published events are viewable by the public.')
+    gcal_id = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         super(Event, self).save(*args, **kwargs)
