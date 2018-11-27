@@ -8,46 +8,54 @@
 {% endblock subheader %}
 
 {% block content %}
-<main role="main">
+<main role="main" class="container">
 
-  <nav class="navbar navbar-expand-sm text-primary subhead">
-    <button class="btn navbar-btn" onclick='$("#Upcoming_wrapper").toggle();'>
-      <strong class="d-md-none"><i class="fa fa-calendar"></i> Current events</strong>
-      <strong class="d-none d-md-block" id="UpcomingSubhdr"></strong>
-    </button>
-    <ul class="navbar-nav ml-auto">
-      <li class="nav-item ml-auto">
-        <a class="nav-link" href="{% url 'event_add' %}">
-          <i class="fa fa-calendar-plus-o"></i> New event</a>
-      </li>
-    </ul>
-  </nav>
-  <table id="Upcoming" class="display list table-bordered compact nowrap" style="width:100%"></table>
+  <details class="hdr" open>
+      <summary id="Upcoming-hdr" class="row">
+        <div class="col-auto mr-auto">
+          <strong class="d-md-none"><i class="fa fa-calendar"></i> Current events</strong>
+          <strong class="d-none d-md-block" id="UpcomingSubhdr"></strong>
+        </div>
+        <div class="col-auto">
+          <a class="d-inline nav-link" href="{% url 'event_add' %}">
+            <i class="fa fa-calendar-plus-o"></i>
+            <span class="d-none d-md-inline"> New event</span>
+          </a>
+        </div>
+      </summary>
+      <table id="Upcoming" class="display list table-bordered compact nowrap">
+      </table>
+  </details>
 
-  <nav class="navbar navbar-expand-sm text-primary subhead">
-    <button class="btn navbar-btn" id="recent-btn" onclick='$("#Recent_wrapper").toggle();'>
-      <strong class="d-md-none" ><i class="fa fa-calendar"></i> Recent events</strong>
-      <strong class="d-none d-md-block" id="RecentSubhdr"></strong>
-    </button>
-  </nav>
-  <table id="Recent" class="display list table-bordered compact nowrap" style="width:100%"></table>
+  <details>
+    <summary id="Recent-hdr" class="row">
+      <div class="col-auto mr-auto">
+        <strong class="d-md-none" ><i class="fa fa-calendar"></i> Recent events</strong>
+        <strong class="d-none d-md-block" id="RecentSubhdr"></strong>
+      </div>
+    </summary>
+    <table id="Recent" class="display list table-bordered compact nowrap">
+    </table>
+  </details>
 
-  <nav class="navbar navbar-expand-sm text-primary subhead">
-    <button class="btn navbar-btn" onclick='$("#dTbl_wrapper").toggle();'>
-      <strong class="d-md-none"><i class="fa fa-calendar"></i> All events</strong>
-      <strong class="d-none d-md-block" id="subhdr"></strong>
-    </button>
-  </nav>
-
-  <div id="show-filter" style="display: none">
-    <select id="filter-type" multiple="multiple" selectableHeader="Display type">
-      <option value='meeting'>Meeting</option>
-      <option value='operation'>Operation</option>
-      <option value='training'>Training</option>
-      <option value='community'>Community</option>
-    </select>
-  </div>
-  <table id="dTbl" class="display list table-bordered compact nowrap" style="width:100%"></table>
+  <details>
+    <summary id="All-hdr" class="row">
+      <div class="col-auto mr-auto">
+        <strong class="d-md-none"><i class="fa fa-calendar"></i> All events</strong>
+        <strong class="d-none d-md-block" id="subhdr"></strong>
+      </div>
+    </summary>
+    <div id="show-filter" style="display: none">
+      <select id="filter-type" multiple="multiple" selectableHeader="Display type">
+        <option value='meeting'>Meeting</option>
+        <option value='operation'>Operation</option>
+        <option value='training'>Training</option>
+        <option value='community'>Community</option>
+      </select>
+    </div>
+    <table id="dTbl" class="display list table-bordered compact nowrap">
+    </table>
+  </details>
 </main>
 
 <div class="modal fade" id="date-modal" tabindex="-1" role="dialog">
@@ -133,16 +141,27 @@ $(document).ready(function() {
                 action: ShowHideDetail,
             },
             {
-                text: '<i class="fa fa-newspaper-o"></i> More',
+                text: '<i class="fa fa-bars"></i>' +
+                    '<span class="d-none d-md-inline"> More</span>',
                 extend: 'collection',
                 autoClose: true,
-                buttons: [ 'copy', 'csv', 'excel', 'print', 'colvis']
+                buttons: [
+                    { text: 'Search',
+                      action: function () { $("#Upcoming_filter").toggle() }
+                    },
+                    'copy', 'csv', 'excel', 'print', 'colvis'],
+                attr: { id: 'Upcoming-more' },
             },
         ],
 
     })
 
     tableUpcoming.on( 'responsive-resize', DisplayExpandDetailButton );
+    $('#Upcoming-more').click( function (e) {
+        $('details').attr('open', '');
+        e.preventDefault();
+        e.stopPropagation();
+    });
 
     // Create Recent events table
     // Initialize datatable with responsive behavior and datatable buttons
@@ -171,15 +190,26 @@ $(document).ready(function() {
                 action: ShowHideDetail,
             },
             {
-                text: '<i class="fa fa-newspaper-o"></i> More',
+                text: '<i class="fa fa-bars"></i>' +
+                    '<span class="d-none d-md-inline"> More</span>',
                 extend: 'collection',
                 autoClose: true,
-                buttons: [ 'copy', 'csv', 'excel', 'print', 'colvis']
+                buttons: [
+                    { text: 'Search',
+                      action: function () { $("#Recent_filter").toggle() }
+                    },
+                    'copy', 'csv', 'excel', 'print', 'colvis'],
+                attr: { id: 'Recent-more' },
             }
         ],
     })
 
     tableRecent.on( 'responsive-resize', DisplayExpandDetailButton );
+    $('#Recent-more').click( function (e) {
+        $('details').attr('open', '');
+        e.preventDefault();
+        e.stopPropagation();
+    });
 
     // Set All Events range
     SetEventDates();
@@ -198,9 +228,24 @@ $(document).ready(function() {
         $('#date-modal').modal('hide');
     });
 
-    $("#Recent_wrapper").hide();
-    $("#dTbl_wrapper").hide();
+    $("#Upcoming_filter").hide();
+    $("#Recent_filter").hide();
 
+    $('#Upcoming-hdr').append($('#Upcoming-more'));
+    ModifyButtonClasses('#Upcoming-more');
+    $('#Recent-hdr').append($('#Recent-more'));
+    ModifyButtonClasses('#Recent-more');
+    $('#All-hdr').append($('#dTbl-more'));
+    ModifyButtonClasses('#dTbl-more');
+
+    function ModifyButtonClasses( btn ) {
+        $(btn).removeClass('dt-button ui-button ui-state-default ui-button-text-only');
+        $(btn).removeClass('buttons-collection');
+
+        $(btn + ' span').removeClass('ui-button-text');
+
+        $(btn).addClass('navbar-toggler'); //FIXME: better formatting needed
+    }
 });
 
 {% endblock ready_functions %}

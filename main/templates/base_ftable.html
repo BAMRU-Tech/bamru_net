@@ -51,10 +51,16 @@ $(document).ready(function() {
             {% endblock detail_button %}
             {% block more_button %}
             {
-                text: '<i class="fa fa-newspaper-o"></i> More',
+                text: '<i class="fa fa-bars"></i>' +
+                    '<span class="d-none d-md-inline"> More</span>',
                 extend: 'collection',
                 autoClose: true,
-                buttons: [ 'copy', 'csv', 'excel', 'print', 'colvis']
+                buttons: [
+                    { text: 'Search',
+                      action: function () { $("#dTbl_filter").toggle() }
+                    },
+                    'copy', 'csv', 'excel', 'print', 'colvis'],
+                attr: { id: 'dTbl-more' },
             }
             {% endblock more_button %}
         ],
@@ -67,9 +73,10 @@ $(document).ready(function() {
 
         },
 
-    })
+    });
 
     UpdateSubheaderBasedOnSettings(table);
+    $("#dTbl_filter").hide();
 
     table.on( 'responsive-resize', DisplayExpandDetailButton );
 
@@ -91,21 +98,19 @@ function DisplayExpandDetailButton ( e, table, columns ) {
 }
 
 function ShowHideDetail ( e, dt, node, config ) {
-    if (node[0].innerText == textShowDetail) {
-        var mc = dt.cells('.marked').nodes();
+    var mc = dt.cells('.marked').nodes(); // Save any marks
+    if (node[0].innerText == ' ' + textShowDetail) { //FX: adding space seems fragile
         dt.rows(':not(.parent)').nodes()
             .to$().find('td:first-child').trigger('click')
             .removeClass('marked');
-        $(mc).addClass('marked');
         node[0].innerHTML = labelHideDetail;
     } else {
-        var mc = dt.cells('.marked').nodes();
         dt.rows('.parent').nodes()
             .to$().find('td:first-child').trigger('click')
             .removeClass('marked');
-        $(mc).addClass('marked');
         node[0].innerHTML = htmlShowDetail;
     }
+    $(mc).addClass('marked');  // Restore marks
 }
 
 // Used by pp_add, msg_add, mem_add and cert_lst

@@ -12,24 +12,6 @@
       Edit
     </a>
   </li>
-  <li class="nav-item dropdown">
-    <a class="nav-link" href="{% url 'member_availability_list'  request.user.id %}">
-      <i class="fa fa-calendar-times-o"></i>
-      Availability
-    </a>
-  </li>
-  <li class="nav-item dropdown">
-    <a class="nav-link" href="{% url 'member_cert_list'  request.user.id %}">
-      <i class="fa fa-calendar-times-o"></i>
-      Certs
-    </a>
-  </li>
-  <li class="nav-item dropdown">
-   <a class="nav-link"  href="{% url 'message_inbox' request.user.id%}">
-     <i class="fa fa-inbox"></i>
-      Inbox
-    </a>
-  </li>
 </ul>
 {% endif %}
 {% endblock subheader %}
