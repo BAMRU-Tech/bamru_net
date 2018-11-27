@@ -5,30 +5,31 @@
 {% block title %}Event Detail - {{ event.title }}{% endblock title %}
 
 {% block subheader %}
-<strong class="d-md-none">
-  <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }}
-</strong>
-<strong class="d-none d-md-block">
-  <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }} ({{ event.type }})
-</strong>
-<ul class="navbar-nav ml-auto">
-  {# FIXME: <a> if left justified <button. seems centered #}
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'event_update' event.id %}">
+<div class="row">
+  <div class="col-auto mr-auto">
+    <strong class="d-md-none">
+      <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }}
+    </strong>
+    <strong class="d-none d-md-block">
+      <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }} ({{ event.type }})
+    </strong>
+  </div>
+  <div class="col float-right">
+    <a href="{% url 'event_update' event.id %}">
       <i class="fa fa-pencil"></i> Edit
     </a>
-  </li>
-  <li class="nav-item">
-    <button class="btn btn-link" onclick="DeleteEvent({{ event.id }}, '{{ event.title }}')" %}'>
+  </div>
+  <div class="col-auto float-right">
+    <a href="#" onclick="DeleteEvent({{ event.id }}, '{{ event.title }}')" %}'>
       <i class="fa fa-trash"></i> Delete
-    </button>
-  </li>
-</ul>
+    </a>
+  </div>
+</div>
 {% endblock subheader %}
 
     
 {% block content %}
-<main role="main" class="container">
+<main role="main" class="container-fluid">
   <div id="content">
     {% if event.description %}
     <p><strong>Description:</strong> {{ event.description }}</p>
@@ -66,76 +67,68 @@
 
     {% for period in event.period_set.all %}
     <a name="OP{{period.position}}"></a>
-    <nav class="navbar navbar-expand-md navbar-light bg-light">
-      <button class="btn navbar-btn" onclick='$("#dTbl{{period.position}}_wrapper").toggle();'>
-        <i class="fa fa-area-chart"></i> OP {{period.position}}
-      </button>
-      
-      <ul class="nav navbar-nav navbar-right">
-        <li class="nav-item">
-          <a  class="nav-link btn-link" href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}'><i class="fa fa-address-book"></i> Add</a>
-        </li>
-      </ul>
-      <ul class="nav navbar-nav navbar-right">
-        <li class="nav-item">
-          <button class="btn nav-link btn-link"
-                  onclick="DeleteOP('#dTbl{{period.position}}',
-                  {{ period.id }}, {{ period.position }})" %}'>
-            <i class="fa fa-trash"></i> Delete OP
-          </button>
-        </li>
-      </ul>
-    </nav>
+    <details class="hdr" open>
 
-    <table id="dTbl{{period.position}}" class="display table-bordered compact"
-           cellpadding="0" cellspacing="0" style="width:100%">
-      <tbody>
-      {% for p in period.participant_set.all %}
-      <tr>
-        <td></td>
-        <td data-id={{ p.id }}>{{ p.member }}</td>
-        <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
-        <td>
-          {% if p.en_route_at|date:"H:i" != '00:00' %}
-          {{ p.en_route_at|date:"H:i" }}
-          {% endif %}
-        </td>
-	    <td>{{ p.return_home_at|date:"Y-m-d" }}</td>
-	    <td>
-          {% if p.return_home_at|date:"H:i" != '00:00' %}
-          {{ p.return_home_at|date:"H:i" }}
-          {% endif %}
-        </td>
-	    <td>{{ p.signed_in_at|date:"Y-m-d" }}</td>
-	    <td>
-          {% if p.signed_in_at|date:"H:i" != '00:00' %}
-          {{ p.signed_in_at|date:"H:i" }}
-        {% endif %}
-        </td>
-	    <td>{{ p.signed_out_at|date:"Y-m-d" }}</td>
-	    <td>
-          {% if p.signed_out_at|date:"H:i" != '00:00' %}
-          {{ p.signed_out_at|date:"H:i" }}
-        {% endif %}
-        </td>
-	    <td>{{ p.ahc|lower }}</td>
-	    <td>{{ p.ol|lower }}</td>
-	    <td>{{ p.id }}</td>
-	    <td>{{ p.member.id }}</td>
-	    <td>{{ p.period.id }}</td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+      <summary>
+        OP {{period.position}}
+        <a href="#" class="float-right"
+                onclick="DeleteOP('#dTbl{{period.position}}',
+                         {{ period.id }}, {{ period.position }})" %}'>
+          <i class="fa fa-trash"></i> Delete OP
+        </a>
+      </summary>
+
+      <table id="dTbl{{period.position}}" class="display table-bordered compact"
+             cellpadding="0" cellspacing="0" style="width:100%">
+        <tbody>
+          {% for p in period.participant_set.all %}
+          <tr>
+            <td></td>
+            <td data-id={{ p.id }}>{{ p.member }}</td>
+            <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
+            <td>
+              {% if p.en_route_at|date:"H:i" != '00:00' %}
+              {{ p.en_route_at|date:"H:i" }}
+              {% endif %}
+            </td>
+	        <td>{{ p.return_home_at|date:"Y-m-d" }}</td>
+	        <td>
+              {% if p.return_home_at|date:"H:i" != '00:00' %}
+              {{ p.return_home_at|date:"H:i" }}
+              {% endif %}
+            </td>
+	        <td>{{ p.signed_in_at|date:"Y-m-d" }}</td>
+	        <td>
+              {% if p.signed_in_at|date:"H:i" != '00:00' %}
+              {{ p.signed_in_at|date:"H:i" }}
+              {% endif %}
+            </td>
+	        <td>{{ p.signed_out_at|date:"Y-m-d" }}</td>
+	        <td>
+              {% if p.signed_out_at|date:"H:i" != '00:00' %}
+              {{ p.signed_out_at|date:"H:i" }}
+              {% endif %}
+            </td>
+	        <td>{{ p.ahc|lower }}</td>
+	        <td>{{ p.ol|lower }}</td>
+	        <td>{{ p.id }}</td>
+	        <td>{{ p.member.id }}</td>
+	        <td>{{ p.period.id }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
     {% endfor %}
   </div>
 
-  <nav class="navbar navbar-expand-md navbar-light bg-light">
-    <button class="btn navbar-btn"
+  <p></p>
+  <div class="row">
+    <a href="#" class="btn navbar-btn"
             onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
-      <i class="fa fa-area-chart"></i> OP Next
-    </button>
-  </nav>
+      <i class="fa fa-plus-square-o"></i> OP Next
+    </a>
+  </div>
 
 </main>
 {% endblock content %}
@@ -211,6 +204,13 @@ $(document).ready( function() {
         ],
 
         buttons: [
+            {
+                text: '<i class="fa fa-address-book"></i> Add',
+                action: function () {
+                    var href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
+                    location.href = href;
+                }
+            },
             {
                 text: '<i class="fa fa-bullhorn"></i> Page',
                 extend: 'collection',
@@ -345,14 +345,18 @@ $(document).ready( function() {
             },
             {
                 autoClose: true,
-                text: '<i class="fa fa-trash"></i> Delete',
+                text: '<i class="fa fa-user"></i> Delete',
                 action: DeleteParticipants,
             },
             {
-                text: '<i class="fa fa-newspaper-o"></i> More',
+                text: '<i class="fa fa-bars"></i>' +
+                    '<span class="d-none d-md-inline"> More</span>',
                 extend: 'collection',
                 autoClose: true,
                 buttons: [
+                    { text: 'Search',
+                      action: function () { $("#dTbl{{period.position}}_filter").toggle() }
+                    },
                     'copy', 'csv', 'excel', 'print', 'colvis'
                 ]
             }
@@ -364,7 +368,8 @@ $(document).ready( function() {
     });
     
     table{{period.position}}.on( 'select', MarkRow);
-    
+    $("#dTbl{{period.position}}_filter").hide();
+
     {% endfor %}
 
 })
