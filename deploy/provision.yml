@@ -102,6 +102,16 @@
             dest: ~/.ssh/id_rsa
             mode: 0600
 
+        - name: write google oauth token file
+          copy:
+            content: "{{ google_token_json }}"
+            dest: ~/google-token.json
+
+        - name: write google oauth credentials file
+          copy:
+            content: "{{ google_credentials_json }}"
+            dest: ~/google-credentials.json
+
         - copy:
             src: "{{ data_dir }}/bnet.sql"
             dest: ~/data/
