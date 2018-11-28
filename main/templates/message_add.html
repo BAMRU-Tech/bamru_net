@@ -180,7 +180,8 @@ function SendPage ( e, dt, node, config ) {
     data.format = '{{format}}';
     data.period = '{{period_id}}';
     data.period_format = '{{period_format}}';
-    data.rsvp_template = '{{rsvp_template.name}}';
+    data.rsvp_template = '{{rsvp_template.name}}'?'{{rsvp_template.name}}':null;
+
     data.distribution_set = [];
     for (var i = 0; i < members.length; i++) {
         data.distribution_set.push({
