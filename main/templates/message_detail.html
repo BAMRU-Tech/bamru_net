@@ -5,10 +5,11 @@
 {% block title %}Message Detail{% endblock %}
 
 {% block subheader %}
-<strong>Message Detail
+<strong><a href="{% url 'message_list' %}">Messages</a> &gt; 
   {% if message.period %}
-  - <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a>
+  <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a> &gt;
   {% endif %}
+  Message Detail
 </strong>
 {% endblock subheader %}
 

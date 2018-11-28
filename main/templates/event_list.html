@@ -5,10 +5,11 @@
 {% block title %}Events{% endblock title %}
 
 {% block subheader %}
+<strong>Events</strong>
 {% endblock subheader %}
 
 {% block content %}
-<main role="main" class="container">
+<main role="main" class="container-fluid">
 
   <details class="hdr" open>
       <summary id="Upcoming-hdr" class="row">
@@ -17,7 +18,7 @@
           <strong class="d-none d-md-block" id="UpcomingSubhdr"></strong>
         </div>
         <div class="col-auto">
-          <a id="New-event" class="nav-link" href="{% url 'event_add' %}">
+          <a id="New-event" class="nav-link" href="#">
             <i class="fa fa-calendar-plus-o"></i>
             <span class="d-none d-md-inline"> New event</span>
           </a>
