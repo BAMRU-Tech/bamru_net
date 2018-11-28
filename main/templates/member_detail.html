@@ -84,8 +84,9 @@ $(document).ready( function() {
 
   {% if member.ham %}<strong>Ham:</strong> {{ member.ham }}{% endif %}
   {% if member.v9 %}<strong>V9:</strong>{{ member.v9 }}{% endif %}
-  {% if member.is_active %}<strong>Access</strong>{% endif %}
-  {% if member.is_staff %}<strong>Staff</strong>{% endif %}
+  <strong> Privileges:</strong>
+    {% if member.is_active %}Login{% endif %}
+    {% if member.is_staff %}Staff{% endif %}
   {# FIXME: Add cert details for others to see #}
 </main>
 {% endblock %}
