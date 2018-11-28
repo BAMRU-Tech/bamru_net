@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 # Set this if the UI does not append the template
 APPEND_RSVP_TEMPLATE = False
 
+def format_e164(number):
+    return phonenumbers.format_number(
+        phonenumbers.parse(number, 'US'),
+        phonenumbers.PhoneNumberFormat.E164)
+
 def get_next_sms_from(increment=True):
     """Gets the next SMS_FROM number from settings.  If increment,
     following messages will come from a new number. This is used when
@@ -39,7 +44,7 @@ def get_next_sms_from(increment=True):
         index += 1
     obj.value = str(index)
     obj.save()
-    return sms_from
+    return format_e164(sms_from)
 
 class RsvpTemplate(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -255,9 +260,7 @@ class OutboundSms(OutboundMessage):
 
     @property
     def e164(self):
-        return phonenumbers.format_number(
-            phonenumbers.parse(self.phone.number, 'US'),
-            phonenumbers.PhoneNumberFormat.E164)
+        return format_e164(self.phone.number)
 
     @property
     def destination_display(self):
