@@ -7,7 +7,7 @@
 {% if member.id == request.user.id %}
 <ul class="navbar-nav ml-auto">
   <li class="nav-item dropdown">
-    <a href={% url 'member_edit' member.id %} class="nav-link">
+    <a href={% url 'member_edit' member.id %}>
       <i class="fa fa-pencil"></i>
       Edit
     </a>
