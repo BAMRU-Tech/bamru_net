@@ -311,9 +311,9 @@ function SetEventDates () {
 
 // Enable custom filtering function
 $.fn.dataTable.ext.search.push(
+    // Custom filter data is an array not an object, change this if cols reordered
     function( settings, data, dataIndex ) {
         //FX DB data bug allows event type to be Capitalized (remove when?)
-        //FIXME: why [] and not data.type
         if ( filterTypes.includes(data[7]) || filterTypesCap.includes(data[5]) ) {
             return true;
         }
@@ -435,7 +435,6 @@ function rLocation (data, type, row, meta) {
     return Truncate( data, locationLength);
 }
 
-//FIXME: needs to format time or add '*' or something
 function rDate (data, type, row, meta) {
     if (type == 'display' && data != null) 
         return DateFE(data.substr(0, 10));

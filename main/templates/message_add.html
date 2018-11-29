@@ -250,6 +250,7 @@ function UpdateSubheaderBasedOnSettings (table) {
 }
 
 $.fn.dataTable.ext.search.push(
+    // Custom filter data is an array not an object, change this if cols reordered
     function( settings, data, dataIndex ) {
         var node = $('#dTbl').DataTable().row(dataIndex).node();
         if ( showStatus.includes(data[2]) ) {

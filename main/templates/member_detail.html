@@ -1,4 +1,4 @@
-{% extends 'base_generic.html' %}
+{% extends 'base_table.html' %}
 
 {% block title %}Member - {{member.username}}{% endblock title %}
 
@@ -15,34 +15,6 @@
 </ul>
 {% endif %}
 {% endblock subheader %}
-
-
-{% block js %}
-{{ block.super }}
-<script>
-$(document).ready( function() {
-    const url = new URL(window.location.href);
-    var rx = url.searchParams.get('returnx');
-
-    const returns = {
-        'ml': '<a href="{% url 'member_list' %}"> Members </a>',
-        'al': '<a href="{% url 'available_list' %}"> Team Availability </a>',
-        'cl': '<a href="{% url 'cert_list' %}"> Team Certs </a>',
-        'ma': '<a href="{% url 'member_availability_list'  member.id %}"> Availability </a>',
-        'mc': '<a href="{% url 'member_cert_list' member.id %}"> Certification </a>',
-        'pp': '<a href="{% url 'member_list' %}"> Members </a>', //FIXME: needs better return
-        'md': '<a href="{% url 'member_detail' member.id %}"> Members </a>',
-    }
-    //FIXME: do something similar for event_detail -> (event_list, message_list)
-
-    rx = rx ? rx : 'ml';
-    href = returns[ rx ];
-
-    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }})";
-});
-</script>
-{% endblock js %}
-
 
 {% block content %}
 <main role="main" class="container">
@@ -87,6 +59,98 @@ $(document).ready( function() {
   <strong> Privileges:</strong>
     {% if member.is_active %}Login{% endif %}
     {% if member.is_staff %}Staff{% endif %}
-  {# FIXME: Add cert details for others to see #}
+
+  <p></p>
+  {% if member.id != request.user.id %}
+  <strong>Certifications:</strong>
+  <table id="dTbl" class="display table-bordered compact"
+         cellpadding="0" cellspacing="0" style="width:100%">
+  </table>
+  {% endif %}
 </main>
 {% endblock %}
+
+{% block js %}
+{{ block.super }}
+<script>
+$(document).ready( function() {
+    var certUrl = '/api/member_certs/{{ member.id }}';
+    var table = $('#dTbl').DataTable( {
+        dom: 'rtip',
+        ajax: { url: certUrl,
+                dataSrc: function ( json ) {
+                    var data = [];
+                    for ( var i=0 ; i< json.certs.length ; i++ ) {
+                        if (json.certs[i][0])
+                            data.push(json.certs[i][0]);
+                    }
+                    return data;
+                }
+        },
+        responsive: true,
+        paging:   false,
+        info:     false,
+
+        order: [[ 3, 'desc' ]],
+
+        columns: [
+            { data: 'display', title: 'Cert', responsivePriority: 1 },
+            { data: 'description', title: 'Description', responsivePriority: 3, },
+            { data: 'link', title: 'Documentation', responsivePriority: 4,
+              render: function(data, type, row, meta) {
+                  if (type == 'display') {
+                      if (!data) return row.comment;
+                      else if (data != 'None')
+                          return '<a href="' + data + '" target="_blank">' + data + '</a>'
+                      else return ''
+                  }
+
+                  return data
+              }
+            },
+            { data: 'expires_on', title: 'Expiration', responsivePriority: 2,
+              type: 'date',
+              render: function(data, type, row, meta) {
+                  if (type == 'display') {
+                      if (data) {
+                          // Add color for up coming cert expires_on
+                          var cell = $('#dTbl').DataTable().cell(meta.row, meta.col);
+                          $(cell.node()).css('background-color', row.color)
+
+                          data = DateFE(data);
+                      }
+                  } else {
+                      const co = { white: 1, red: 5, orange: 4, yellow: 3, limegreen: 2 };
+                      data = co[row.color] + data;
+                  }
+
+                  return data;
+              },
+            },
+        ],
+
+        language: { emptyTable: 'No active certifications' },
+
+    });
+
+    const url = new URL(window.location.href);
+    var rx = url.searchParams.get('returnx');
+
+    const returns = {
+        ml: '<a href="{% url 'member_list' %}"> Members </a>',
+        al: '<a href="{% url 'available_list' %}"> Team Availability </a>',
+        cl: '<a href="{% url 'cert_list' %}"> Team Certs </a>',
+        ma: '<a href="{% url 'member_availability_list'  member.id %}"> Availability </a>',
+        mc: '<a href="{% url 'member_cert_list' member.id %}"> Certification </a>',
+        pp: '<a href="{% url 'member_list' %}"> Members </a>', //FX: needs better return
+        md: '<a href="{% url 'member_detail' member.id %}"> Members </a>',
+    }
+    //FX: do something similar for event_detail -> (event_list, message_list)
+
+    rx = rx ? rx : 'ml';
+    href = returns[ rx ];
+
+    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }})";
+});
+</script>
+{% endblock js %}

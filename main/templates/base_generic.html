@@ -117,8 +117,12 @@
     function DateFE( date ) {
         // Create a frontend formatted date mm/dd/yyyy
         // input: date string yyyy-mm-dd
-        //FIXME add throw
-        return new Date(date + 'T00:00').toLocaleDateString();
+        var r = date.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (r == null || r.length != 4)
+            throw('DateFE: Bad date format, expected yyyy-mm-dd');
+        //FIXME: what is stored in the DB? UTC or local
+        var nd = new Date(date + 'T00:00').toLocaleDateString();
+        return nd;
     }
 
     function DateBE( date, offset=0 ) {
@@ -126,14 +130,14 @@
         // input: js date object and offset in days
         function pad (n) { return n.length == 1 ? '0' + n : n; }
 
-        //FIXME add throw
         var date = new Date(date);
         date.setHours(0); date.setMinutes(0); date.setSeconds(0);
         if (offset) date.setDate(date.getDate() + offset);
 
         // handle both month and day as 01 or 1
         var r = date.toLocaleDateString().match(/(\d+).(\d+).(\d{4})/);
-        if (r == null || r.length != 4) throw('DateBE: Bad date format, expected yyyy-mm-dd');
+        if (r == null || r.length != 4)
+            throw('DateBE: Bad date format, expected yyyy-mm-dd');
         dateString = r[3] + '-' + pad(r[1]) + '-' + pad(r[2]);
 
         return dateString;
