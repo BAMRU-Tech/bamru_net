@@ -156,10 +156,10 @@ $(document).ready( function() {
         ],
 
         columns: [
-            { 'data': 'mark', width: '10px', responsivePriority: 1,
+            { data: 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
             },
-            { 'data': 'name', title: 'Name', responsivePriority: 1, type: 'readonly',
+            { data: 'name', title: 'Name', responsivePriority: 1, type: 'readonly',
               render: function (d, t, r, m) {
                   if (t == 'display') {
                       if (r.ahc == 'true') d += '(AHC)';
@@ -168,39 +168,39 @@ $(document).ready( function() {
                   return d;
               }
             },
-            { 'data': 'en_route_date', title: 'Left', responsivePriority: 2,
+            { data: 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'en_route_time') },
             },
-            { 'data': 'en_route_time', title: 'at', type: 'time', },
+            { data: 'en_route_time', title: 'at', type: 'time', },
 
-            { 'data': 'return_home_date', title: 'Returned', responsivePriority: 2,
+            { data: 'return_home_date', title: 'Returned', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'return_home_time') },
             },
-            { 'data': 'return_home_time', title: 'at', type: 'time', },
+            { data: 'return_home_time', title: 'at', type: 'time', },
 
-            { 'data': 'signed_in_date', title: 'Signed in', responsivePriority: 3,
+            { data: 'signed_in_date', title: 'Signed in', responsivePriority: 3,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_in_time') },
             },
-            { 'data': 'signed_in_time', title: 'at', type: 'time', },
+            { data: 'signed_in_time', title: 'at', type: 'time', },
 
-            { 'data': 'signed_out_date', title: 'Signed out', responsivePriority: 3,
+            { data: 'signed_out_date', title: 'Signed out', responsivePriority: 3,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_out_time') },
             },
-            { 'data': 'signed_out_time', title: 'at', type: 'time', },
+            { data: 'signed_out_time', title: 'at', type: 'time', },
 
-            { 'data': 'ahc', title: 'Ahc', type: 'select', options: ['false', 'true'], },
-            { 'data': 'ol', title: 'Ol', type: 'select', options: ['false', 'true'], },
-            { 'data': 'id', type: ['readonly', 'hidden'] },
-            { 'data': 'member', type: ['readonly', 'hidden'] },
-            { 'data': 'period', type: ['readonly', 'hidden'] },
+            { data: 'ahc', title: 'Ahc', type: 'select', options: ['false', 'true'], },
+            { data: 'ol', title: 'Ol', type: 'select', options: ['false', 'true'], },
+            { data: 'id', type: ['readonly', 'hidden'] },
+            { data: 'member', type: ['readonly', 'hidden'] },
+            { data: 'period', type: ['readonly', 'hidden'] },
         ],
 
         buttons: [

@@ -164,6 +164,10 @@ function ClearAll ( e, dt, node, config ) {
     table.rows().deselect();
 }
 
+const eventId = url.searchParams.get('eid');
+const eventTitle = url.searchParams.get('et');
+const periodPosition = url.searchParams.get('pn');
+
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected status based on filter
     var showStatus = [];
@@ -173,10 +177,11 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    //FIXME: Add link to event
-    $('#subhdr')[0].innerHTML = event_name + ' > Add Participants (' +
+    var sh = '<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
+            eventTitle + '</a>';
+    $('#subhdr')[0].innerHTML = sh + ' > Add Participants (' +
         showStatus.join(', ') + ')';
-    $('#subhdr-sm')[0].innerHTML = event_name + ' > Add Participants';
+    $('#subhdr-sm')[0].innerHTML = sh + ' > Add Participants';
     document.title = 'Participant Add - ' + event_name;
 
 }
