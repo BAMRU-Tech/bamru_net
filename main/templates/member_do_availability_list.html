@@ -9,14 +9,14 @@
   <a href="{% url 'member_detail' member.id %}?returnx=ma">
     {{member.full_name }} ({{ member.status }})
   </a>
-  &gt; DO Availability
+  &gt; DO Availability<span id="subhdr"></span>
 </strong>
 {% endblock subheader %}
 
 {% block content %}
-<h4>Work in progress</h4>
 <main role="main">
-  <table id="dTbl" class="display table-bordered compact" style="width:100%"></table>
+  <table id="dTbl" class="display table-bordered compact" style="width:100%">
+  </table>
 </main>
 {% endblock content %}
 
@@ -28,25 +28,21 @@
 select: 'os',
 altEditor: true,
 
-order: [[ 1, 'asc']],
+order: [[ 0, 'asc']],
 
 columns: [
-    { data: 'mark', width: '10px',
-      orderable: false,
-      className: 'mark-checkbox',
-      type: ['readonly', 'hidden'],
-      render: function(data, type, row, meta) {
-          return '<div data-id="'+row.id+'"></div>';
-      },
-    },
     { data: 'week', title: 'Week', width: '10%',
-      type: 'number', className: "dt-center",
+      type: ['readonly'], className: 'dt-center',
     },
     { data: 'available', title: 'Available', width: '10%', responsivePriority: 1,
-      className: "dt-center",
+      type: 'select', options: [false, true], className: 'dt-center',
     },
     { data: 'comment', title: 'Comment' },
-    { data: 'id', title: 'ID',
+    { data: 'id',
+      visible: false,
+      type: ['readonly', 'hidden']
+    },
+    { data: 'assigned', width: '10%', responsivePriority: 1,
       visible: false,
       type: ['readonly', 'hidden']
     },
@@ -59,10 +55,27 @@ onEditRow: UpdateRow,
 {% endblock table_options %}
 
 {% block table_buttons_first %}
+
 {
     extend: 'selected', // Bind to Selected row
     text: '<i class="fa fa-edit"></i> Edit',
     name: 'edit'        // do not change name
+},
+{
+    text: '<i class="fa fa-plus-square-o"></i> Set all',
+    action: SetAll,
+},
+{
+    text: '<i class="fa fa-minus-square-o"></i> Clear all',
+    action: ClearAll,
+},
+{
+    text: '<i class="fa fa-caret-square-o-left"></i> Prev',
+    action: PrevQtr
+},
+{
+    text: '<i class="fa fa-caret-square-o-right"></i> Next',
+    action: NextQtr
 },
 
 {% endblock table_buttons_first %}
@@ -73,30 +86,78 @@ onEditRow: UpdateRow,
 
 {% block functions %}
 
+function SetAll ( e, dt, node, config ) {
+    dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        var data = this.data();
+        data.available = true;
+        this.data(data);
+        UpdateRow(table, data);
+    } )
+}
+
+function ClearAll ( e, dt, node, config ) {
+    dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        var data = this.data();
+        data.available = false;
+        this.data(data);
+        UpdateRow(table, data);
+    } )
+}
+
+var currentPeriod = GetPeriod();
+
+function PrevQtr ( e, dt, node, config ) {
+    currentPeriod.quarter -= 1;
+    if (currentPeriod.quarter < 1) {
+        currentPeriod.quarter = 4;
+        currentPeriod.year -= 1;
+    }
+
+    InitialData()
+    UpdateSubheaderBasedOnSettings(dt)
+}
+
+function NextQtr ( e, dt, node, config ) {
+    currentPeriod.quarter += 1;
+    if (currentPeriod.quarter > 4) {
+        currentPeriod.quarter = 1;
+        currentPeriod.year += 1;
+    }
+
+    InitialData()
+    UpdateSubheaderBasedOnSettings(dt)
+}
+
+function GetPeriod(d) {
+    d = d || new Date(); // If no date supplied, use today
+    return { quarter: Math.floor((d.getMonth() + 3) / 3),
+             year: d.getFullYear() };
+}
+
 function InitialData() {
-    //
     // Add rows based on date range
-    //
-    const apiUrlDoAvailEvent = '/api/do/?member={{ request.user.id }}&year=2018&quarter=3';
+    const apiUrlDoAvailEvent =
+          '/api/do/?member={{ request.user.id }}' +
+          '&year=' + currentPeriod.year + '&quarter=' + currentPeriod.quarter;
     var url = apiUrlDoAvailEvent;
     
     table.clear();
 
-    const titleLength = 40;
     $.getJSON(url, null, function( json ) {
         
         for (var i=0; i<json.length; i++)
         {
             var data = json[i];
-            // comment isn't sent if empty
-            data.comment = (data.comment) ? data.comment : '';
             table.row.add(data);
         }
         table.draw().columns.adjust().responsive.recalc();
     })
 }
 
-function UpdateRow (dt, row, success, error) {
+function UpdateRow (dt, row,
+                    success = function() { return true },
+                    error = function() { return false })
+{
 
     var data = row;
 
@@ -105,14 +166,9 @@ function UpdateRow (dt, row, success, error) {
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
-        url: '/api/availability/' + id + '/',
+        url: '/api/do/' + id + '/',
         data: data,
-        success: function (r, s, m) {
-            var name = r.member.full_name;
-            // Clear marks
-            $('td.marked').removeClass('marked');
-            return success(r, s, m);
-        },
+        success: success,
         error: function (xhr) {
             console.log('availability edit failed');
             console.log(xhr);
@@ -123,13 +179,15 @@ function UpdateRow (dt, row, success, error) {
 }
 
 
-function UpdateSubheaderBasedOnSettings(table) {}
+function UpdateSubheaderBasedOnSettings(table) {
+    $('#subhdr')[0].innerHTML = ' Q' + currentPeriod.quarter + ' - ' +
+        currentPeriod.year;
+}
 
 {% endblock functions %}
 
 
 {% block ready_functions %}
-table.on( 'select', MarkRow);
 InitialData();
 {% endblock ready_functions %}
 

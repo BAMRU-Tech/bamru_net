@@ -124,7 +124,8 @@ class ParticipantViewSet(CreateListModelMixin, BaseViewSet):
 class DoViewSet(BaseViewSet):
     queryset = DoAvailable.objects.all()
     serializer_class = DoSerializer
-    filter_fields = ('year', 'quarter', 'week', 'available', 'assigned', 'comment', 'member', )
+    filter_fields = ('year', 'quarter', 'week', 'available', 'assigned',
+                     'comment', 'member', )
     search_fields = ('member__username',)
 
 
