@@ -428,6 +428,7 @@ function UpdatePeriodRow(dt, row, success, error) {
 
     function DataDateTime (ref) {
         // Combine date and time for BE
+        // assumes localtime
         var d = row[ref + '_date'];
         var t = row[ref + '_time'];
         var ft = null;

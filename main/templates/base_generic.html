@@ -120,9 +120,8 @@
         var r = date.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (r == null || r.length != 4)
             throw('DateFE: Bad date format, expected yyyy-mm-dd');
-        //FIXME: what is stored in the DB? UTC or local
-        var nd = new Date(date + 'T00:00').toLocaleDateString();
-        return nd;
+        var nd = new Date(date); nd.setHours(0,0,0,0);
+        return nd.toLocaleDateString();
     }
 
     function DateBE( date, offset=0 ) {
