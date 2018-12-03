@@ -2,7 +2,7 @@
 
 {% block subheader %}
 <strong>
-  {% block do_title %}{% endblock %} {{ year }} - Quarter {{ quarter }}
+  {% block do_title %}{% endblock %} for Quarter {{ quarter }} - {{ year }}
 </strong>
 <ul class="navbar-nav ml-auto">
   <li class="nav-item dropdown">
@@ -14,11 +14,6 @@
     <a class="nav-link" href="{% url 'do_plan' %}{{ query_this }}">
       <i class="fa fa-columns"></i>
       Plan</a>
-  </li>
-  <li class="nav-item dropdown">
-    <a class="nav-link" href="{% url 'do_availability_list' request.user.id %}{{ query_this }}">
-      <i class="fa fa-calendar-check-o"></i>
-      Availability</a>
   </li>
 </ul>
 {% endblock %}
