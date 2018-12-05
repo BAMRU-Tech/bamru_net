@@ -137,15 +137,15 @@ class NoopGcalManager:
 def get_token_store():
     return file.Storage(settings.GOOGLE_TOKEN_FILE)
 
-def get_gcal_manager():
+def get_gcal_manager(fallback_manager=NoopGcalManager()):
     if not (settings.GOOGLE_TOKEN_FILE and settings.GOOGLE_CALENDAR_ID):
         logger.info("Google calendar not configured")
-        return NoopGcalManager()
+        return fallback_manager
 
     creds = get_token_store().get()
     if not creds or creds.invalid:
         logger.error("Bad google calendar oauth credentials!")
-        return NoopGcalManager()
+        return fallback_manager
 
     client = googleapiclient.discovery.build(
         'calendar', 'v3', http=creds.authorize(Http()))
