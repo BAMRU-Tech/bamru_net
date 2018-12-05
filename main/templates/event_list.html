@@ -6,6 +6,10 @@
 
 {% block subheader %}
 <strong>Events</strong>
+<a id="New-event" class="ml-auto" href="#">
+  <i class="fa fa-calendar-plus-o"></i>
+  <span class="d-none d-md-inline"> New event</span>
+</a>
 {% endblock subheader %}
 
 {% block content %}
@@ -16,12 +20,6 @@
         <div class="col-auto mr-auto">
           <strong class="d-md-none"><i class="fa fa-calendar"></i> Current events</strong>
           <strong class="d-none d-md-block" id="UpcomingSubhdr"></strong>
-        </div>
-        <div class="col-auto">
-          <a id="New-event" class="nav-link" href="#">
-            <i class="fa fa-calendar-plus-o"></i>
-            <span class="d-none d-md-inline"> New event</span>
-          </a>
         </div>
       </summary>
       <table id="Upcoming" class="display list table-bordered compact nowrap">
@@ -42,7 +40,7 @@
   <details>
     <summary id="All-hdr" class="row">
       <div class="col-auto mr-auto">
-        <strong class="d-md-none"><i class="fa fa-calendar"></i> All events</strong>
+        <strong class="d-md-none"><i class="fa fa-calendar"></i> More events</strong>
         <strong class="d-none d-md-block" id="subhdr"></strong>
       </div>
     </summary>
@@ -283,7 +281,8 @@ const colDefs = [
 ];
 
 function SetEventDates () {
-    // Handle url parameters, dates should be in BE format but the API will accept both
+    // Handle url parameters, dates should be in BE format
+    // but the API will accept both
     const url = new URL(window.location.href);
     const current = url.searchParams.get('current');
     var startBefore = url.searchParams.get('start_before');
@@ -300,7 +299,7 @@ function SetEventDates () {
     if (startBefore == null || startBefore == '') {
         if (!months) months = 12;
         start.setMonth(start.getMonth() + months);
-        startBefore = DateBE(new Date(y, months, 1) - 1);
+        startBefore = DateBE(new Date(y, months, 0));
     }
 
     if (startAfter) $('#start').val(startAfter);
@@ -382,14 +381,14 @@ function UpdateSubheaderBasedOnSettings (table) {
     });
 
     $('#subhdr').html(
-        '<i class="fa fa-calendar"></i>  All events (' + filterTypes.join(', ') + ')');
+        '<i class="fa fa-calendar"></i>  More events (' + filterTypes.join(', ') + ')');
 
 }
 
 function ComputeUpcoming () {
     var start, end, fstart, fend;
 
-    start = DateBE(Date());
+    start = DateBE(new Date);
     end = new Date;
     end.setMonth(end.getMonth() + 1);
     end = DateBE(end);
@@ -407,7 +406,7 @@ function ComputeRecent () {
     var start = new Date;
     start.setMonth(start.getMonth() + -1);
     var start = DateBE(start);
-    var end = DateBE(Date(), -1);
+    var end = DateBE(new Date, -1);
     var fstart = DateFE(start);
     var fend = DateFE(end);
 

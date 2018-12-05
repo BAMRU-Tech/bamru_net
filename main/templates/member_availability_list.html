@@ -114,7 +114,7 @@ function AddBusy (dt, row, success, error) {
 
     data.member = $('#memberId').val();
     if (!data.start_on)
-        data.start_on = DateBE(Date());
+        data.start_on = DateBE(new Date);
 
     if (!data.end_on) data.end_on = data.start_on
 
@@ -141,9 +141,16 @@ function UpdateRow (dt, row, success, error) {
     var data = row;
 
     if (!data.start_on)
-        data.start_on = DateBE(Date());
+        data.start_on = DateBE(new Date);
 
     if (!data.end_on) data.end_on = data.start_on
+
+    if (new Date(data.start_on) > new Date(data.end_on)) {
+        // force an error
+        var e = {responseJSON: {errors: {badDate: ['End must be after start']}}}
+        return error(e);
+    }
+
     var pid = data.id;
     data = JSON.stringify(data);
     $.ajax({

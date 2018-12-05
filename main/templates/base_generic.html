@@ -120,27 +120,22 @@
         var r = date.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (r == null || r.length != 4)
             throw('DateFE: Bad date format, expected yyyy-mm-dd');
-        var nd = new Date(date); nd.setHours(0,0,0,0);
-        return nd.toLocaleDateString();
+        return r[2] + '/' + r[3] + '/' + r[1]
     }
 
     function DateBE( date, offset=0 ) {
         // Create a backend formatted date yyyy-mm-dd
         // input: js date object and offset in days
-        function pad (n) { return n.length == 1 ? '0' + n : n; }
+        function pad (n) { return n < 10 == 1 ? '0' + n : n; }
 
-        var date = new Date(date);
-        date.setHours(0); date.setMinutes(0); date.setSeconds(0);
+        if (typeof date !== 'object')
+            throw('DateBE: Bad date format, expected date object');
+
         if (offset) date.setDate(date.getDate() + offset);
 
-        // handle both month and day as 01 or 1
-        var r = date.toLocaleDateString().match(/(\d+).(\d+).(\d{4})/);
-        if (r == null || r.length != 4)
-            throw('DateBE: Bad date format, expected yyyy-mm-dd');
-        dateString = r[3] + '-' + pad(r[1]) + '-' + pad(r[2]);
-
-        return dateString;
-
+        return date.getFullYear() +
+            '-' + pad(date.getMonth()+1) +
+            '-'+pad(date.getDate());
     }
 
     function Truncate(string, length) {

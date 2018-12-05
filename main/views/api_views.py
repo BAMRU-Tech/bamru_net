@@ -122,7 +122,7 @@ class ParticipantViewSet(CreateListModelMixin, BaseViewSet):
 
 
 class DoViewSet(BaseViewSet):
-    queryset = DoAvailable.objects.all()
+    queryset = DoAvailable.objects.all().order_by('week')
     serializer_class = DoSerializer
     filter_fields = ('year', 'quarter', 'week', 'available', 'assigned',
                      'comment', 'member', )

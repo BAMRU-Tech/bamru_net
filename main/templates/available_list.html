@@ -177,10 +177,10 @@ function AddRows(table, values) {
     //
     var url = apiUrlMemberAvail + values[0];
 
-    var dd = DateArray(Date(), 5);
+    var dd = DateArray(new Date, 5);
     url += '&date_range_start='+dd[0]+'&date_range_end='+dd[4];
     $.getJSON(url, null, function( json ) {
-        var dd = DateArray(Date(), 5);
+        var dd = DateArray(new Date, 5);
         
         // Foreach member mark busy period within date range
         for (var m = 0; m < json.length; m++)
