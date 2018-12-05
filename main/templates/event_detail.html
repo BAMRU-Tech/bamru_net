@@ -5,26 +5,25 @@
 {% block title %}Event Detail - {{ event.title }}{% endblock title %}
 
 {% block subheader %}
-<div class="row">
-  <div class="col-auto mr-auto">
-    <strong class="d-md-none">
-      <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }}
-    </strong>
-    <strong class="d-none d-md-block">
-      <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }} ({{ event.type }})
-    </strong>
-  </div>
-  <div class="col float-right">
-    <a href="{% url 'event_update' event.id %}">
+<strong class="d-md-none">
+  <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }}
+</strong>
+<strong class="d-none d-md-block">
+  <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }} ({{ event.type }})
+</strong>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item">
+    <a class="" href="{% url 'event_update' event.id %}">
       <i class="fa fa-pencil"></i> Edit
     </a>
-  </div>
-  <div class="col-auto float-right">
-    <a href="#" onclick="DeleteEvent({{ event.id }}, '{{ event.title }}')" %}'>
+  </li>
+  <li class="nav-item">
+    <a class="" href="#" onclick="DeleteEvent({{ event.id }}, '{{ event.title }}')" %}'>
+      <span>&nbsp;</span> {#FX: shouldn't be necessary #}
       <i class="fa fa-trash"></i> Delete
     </a>
-  </div>
-</div>
+  </li>
+</ul>
 {% endblock subheader %}
 
     

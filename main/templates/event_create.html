@@ -91,18 +91,19 @@ function lookupGeoData() {
 }
 
 function ValidateDateRange () {
-    // There are probalby some policy decision built-in
+    // There are policy decisions built-in (probably need review)
     // Enforces: start date <= finish date
     // Enforces: On the same day, start time <= finish time
     // If start triggered the validation then finish is changed
     // If finish triggered the validation then start is changed
     // Changes happen after date or time element loses focus
     var now = new Date();
-    var sd = $('#id_start_at_0').val();
-    var fd = $('#id_finish_at_0').val();
-    var sameDay = sd == fd;
-    sd = sd ? new Date(DateFE(sd)) : now;
-    fd = fd ? new Date(DateFE(fd)) : now;
+    var sdefault = $('#id_start_at_0').val();
+    var fdefault = $('#id_finish_at_0').val();
+    var sameDay = (sdefault == fdefault);
+
+    var sd = sdefault ? new Date( DateFE(sdefault) ) : now;
+    var fd = fdefault ? new Date( DateFE(fdefault) ) : new Date(now);
 
     var st = $('#id_start_at_1').val();
     var st = st ? st : '00:00';
@@ -124,8 +125,8 @@ function ValidateDateRange () {
         // called directly, not blur - just set the defaults
     }
 
-    $('#id_start_at_0').val(DateBE(sd.toLocaleDateString()));
-    $('#id_finish_at_0').val(DateBE(fd.toLocaleDateString()));
+    $('#id_start_at_0').val( DateBE(sd) );
+    $('#id_finish_at_0').val( DateBE(fd) );
     $('#id_start_at_1').val(st);
     $('#id_finish_at_1').val(ft);
 

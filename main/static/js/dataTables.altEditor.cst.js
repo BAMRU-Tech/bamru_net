@@ -794,7 +794,7 @@
              * Called after AJAX server returned an error
              */
             _errorCallback: function (response, status, more) {
-                    var error = resp;
+                    var error = response;
                     $('#altEditor-modal .modal-body .alert').remove();
                     var errstr = "There was an unknown error!";
                     if (error.responseJSON && error.responseJSON.errors) {
