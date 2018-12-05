@@ -38,14 +38,9 @@ columns: [
       type: 'select', options: [false, true], className: 'dt-center',
     },
     { data: 'comment', title: 'Comment' },
-    { data: 'id',
-      visible: false,
-      type: ['readonly', 'hidden']
-    },
-    { data: 'assigned', width: '10%', responsivePriority: 1,
-      visible: false,
-      type: ['readonly', 'hidden']
-    },
+    { data: 'id', visible: false, type: ['readonly', 'hidden'] },
+    { data: 'assigned', visible: false, type: ['readonly', 'hidden'], },
+    { data: 'member', visible: false, type: ['readonly', 'hidden'], },
 ],
 
 language: { emptyTable: 'No DO periods' },
@@ -113,7 +108,7 @@ function PrevQtr ( e, dt, node, config ) {
         currentPeriod.year -= 1;
     }
 
-    InitialData()
+    InitializeData()
     UpdateSubheaderBasedOnSettings(dt)
 }
 
@@ -124,7 +119,7 @@ function NextQtr ( e, dt, node, config ) {
         currentPeriod.year += 1;
     }
 
-    InitialData()
+    InitializeData()
     UpdateSubheaderBasedOnSettings(dt)
 }
 
@@ -134,7 +129,17 @@ function GetPeriod(d) {
              year: d.getFullYear() };
 }
 
-function InitialData() {
+function WeeksPerQtr() {
+    if (currentPeriod.quarter == 4) {
+        var date = new Date(currentPeriod.year, 11, 1) // Dec 1st
+        // If Dec start on Sun, Mon, Tues
+        if ([0, 1, 2].includes(date.getDay())) return 14
+    }
+
+    return 13;
+}
+
+function InitializeData() {
     // Add rows based on date range
     const apiUrlDoAvailEvent =
           '/api/do/?member={{ request.user.id }}' +
@@ -145,9 +150,17 @@ function InitialData() {
 
     $.getJSON(url, null, function( json ) {
         
-        for (var i=0; i<json.length; i++)
+        var w = WeeksPerQtr()
+        for (var i=1; i<=w; i++)
         {
-            var data = json[i];
+            if (json[0] && json[0].week == i)
+                // assumes an ordered list
+                var data = json.shift();
+            else
+                var data = { week: i, available: false, comment: '',
+                             id: 0, assigned: false,
+                             member: '{{ request.user.id }}', }
+
             table.row.add(data);
         }
         table.draw().columns.adjust().responsive.recalc();
@@ -162,20 +175,42 @@ function UpdateRow (dt, row,
     var data = row;
 
     var id = data.id;
+    if (id == 0) {
+        // Create new availability
+        data.year = currentPeriod.year;
+        data.quarter = currentPeriod.quarter;
+        data = JSON.stringify(data);
+        $.ajax({
+            method: 'POST',
+            contentType: 'application/json',
+            url: '/api/do/',
+            data: data,
+            success: function (r, s, m) {
+                return success(r, s, m);
+            },
+            error: function (xhr) {
+                console.log('availability create failed');
+                console.log(xhr);
+                alert(xhr.responseText);
+                return false;
+            }
+        })
+    } else {
     data = JSON.stringify(data);
-    $.ajax({
-        method: 'PATCH',
-        contentType: 'application/json',
-        url: '/api/do/' + id + '/',
-        data: data,
-        success: success,
-        error: function (xhr) {
-            console.log('availability edit failed');
-            console.log(xhr);
-            alert(xhr.responseText);
-            return false;
-        }
-    })
+        $.ajax({
+            method: 'PATCH',
+            contentType: 'application/json',
+            url: '/api/do/' + id + '/',
+            data: data,
+            success: success,
+            error: function (xhr) {
+                console.log('availability edit failed');
+                console.log(xhr);
+                alert(xhr.responseText);
+                return false;
+            }
+        })
+    }
 }
 
 
@@ -188,7 +223,7 @@ function UpdateSubheaderBasedOnSettings(table) {
 
 
 {% block ready_functions %}
-InitialData();
+InitializeData();
 {% endblock ready_functions %}
 
 

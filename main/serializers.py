@@ -72,11 +72,11 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'certs') + read_only_fields
 
 
-class DoSerializer(serializers.HyperlinkedModelSerializer):
+class DoSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoAvailable
         fields = ('id', 'year', 'quarter', 'week', 'available', 'assigned',
-                  'comment', 'member_id')
+                  'comment', 'member')
 
         
 class BareParticipantSerializer(serializers.ModelSerializer):
