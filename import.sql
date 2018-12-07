@@ -56,8 +56,8 @@ select id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at
 insert into main_doavailable (id, member_id, year, quarter, week, available, assigned, comment, created_at, updated_at)
 select id, member_id, year, quarter, week, case typ when 'available' then true else false end, false, comment, created_at, updated_at from avail_dos where member_id in (select distinct id from main_member);
 
-insert into main_datafile (id, member_id, download_count, extension, file, name, size, data_content_type, caption, published, created_at, updated_at)
-select id, member_id, download_count, data_file_extension, format("data/%d/original/%s", id, data_file_name), data_file_name, data_file_size::integer, data_content_type, caption, published, created_at, updated_at from data_files;
+insert into main_datafile (id, member_id, download_count, extension, file, name, size, content_type, caption, published, created_at, updated_at)
+select id, member_id, download_count, data_file_extension, format('data/%s/original/%s', id, data_file_name), data_file_name, data_file_size::integer, data_content_type, caption, published, created_at, updated_at from data_files;
 
 update main_doavailable set assigned = true
 from do_assignments where

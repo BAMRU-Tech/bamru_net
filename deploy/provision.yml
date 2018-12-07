@@ -7,6 +7,8 @@
     install_packages: true
     # Completely wipe the database and re-import
     update_database: true
+    # upload initial file dump
+    upload_files: true
 
   tasks:
     - name: Include vars from user vault or default vault
@@ -115,7 +117,12 @@
         - copy:
             src: "{{ data_dir }}/bnet.sql"
             dest: ~/data/
-      
+
+        - unarchive:
+            src: "{{ data_dir }}/bamru_files.tar.gz"
+            dest: /home/{{ app_user }}
+          when: upload_files
+
         - name: erase existing repo
           file:
             path: ~/repo
