@@ -4,4 +4,5 @@ def dsn(request):
     return {
         'JAVASCRIPT_DSN': settings.JAVASCRIPT_DSN,
         'RELEASE': settings.RELEASE,
+        'WIKI_URL': settings.WIKI_URL,
     }
