@@ -155,6 +155,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT')
 
+MEDIA_URL = '/system/'
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', 'system/')
+
 LOGIN_URL = '/accounts/login/'
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 

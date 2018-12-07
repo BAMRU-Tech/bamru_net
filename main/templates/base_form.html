@@ -4,7 +4,7 @@
 {% block content %}
 <main role="main" class="container">
   <div id="content">
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       {% bootstrap_form form %}
       <input type="submit" value="Update" />

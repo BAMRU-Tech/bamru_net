@@ -16,6 +16,12 @@ server {
     access_log /home/{{ app_user }}/logs/nginx-access.log;
     error_log /home/{{ app_user }}/logs/nginx-error.log;
 
+    # protected content
+    location /system/ {
+        internal;
+        alias {{ media_root }}
+    }
+
     location /static/ {
         alias /home/{{ app_user }}/static/;
     }

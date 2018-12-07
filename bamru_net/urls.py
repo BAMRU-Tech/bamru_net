@@ -14,7 +14,9 @@
         1. Import the include() function: from django.urls import include, path
         2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.conf.urls import url
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
@@ -37,7 +39,7 @@ router.register(r'messages', views.MessageViewSet)
 
 
 urlpatterns = [
-    path('', views.IndexView.as_view()),
+    path('', views.IndexView.as_view(), name='home'),
 
     path('event/', views.EventListView.as_view(), name='event_list'),
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
@@ -55,6 +57,10 @@ urlpatterns = [
 
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
     path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
+
+    path('file/upload/', views.DataFileFormView.as_view()),
+    path('file/<int:id>/', views.download_data_file_by_id_view),
+    path('file/<path:name>', views.download_data_file_by_name_view),
 
     path('cert/', views.CertListView.as_view(), name='cert_list'),
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
@@ -95,4 +101,4 @@ urlpatterns = [
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
 
     path('home/wiki', views.LegacyWikiSsoView.as_view()),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -10,6 +10,8 @@ export DJANGO_DB_USER={{ db_user }}
 export DJANGO_DB_PASS={{ db_pass }}
 export DJANGO_DB_HOST={{ db_host }}
 
+export MEDIA_ROOT={{ media_root }}
+
 # set this to use file instead of servers
 {% if use_message_file %}
 export MESSAGE_FILE_PATH=/home/{{ app_user }}/logs/message
