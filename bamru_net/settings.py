@@ -174,6 +174,8 @@ HOSTNAME = os.environ['DJANGO_HOSTNAME']
 # Needed for django-oidc-provider
 SITE_URL = '{}://{}'.format(os.environ.get('DJANGO_SCHEMA', 'https'), HOSTNAME)
 
+WIKI_URL = os.environ.get('WIKI_URL', '')
+
 # Temporary fix for #128
 DJANGO_TWILIO_FORGERY_PROTECTION=False
 
