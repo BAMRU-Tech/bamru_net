@@ -1,7 +1,8 @@
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
-from django.shortcuts import redirect
+from django.shortcuts import get_list_or_404, get_object_or_404, redirect
 from django.urls import reverse
 from django.views.generic.edit import CreateView
 
@@ -39,12 +40,16 @@ def download_data_file_helper(data_file):
     response = HttpResponse()
     response['X-Accel-Redirect'] = data_file.file.url
     response['Content-Disposition'] = 'attachment; filename="{}"'.format(
-        data_file.file.name)
+        data_file.name)
     return response
 
+@login_required
 def download_data_file_by_id_view(request, id):
-    return download_data_file_helper(DataFile.objects.get(id=id))
+    f = get_object_or_404(DataFile, id=id)
+    return download_data_file_helper(f)
 
+@login_required
 def download_data_file_by_name_view(request, name):
-    f = DataFile.objects.filter(name=name).order_by('id').first()
+    files = get_list_or_404(DataFile, name=name)
+    f = files[0]  # TODO: Do we prefer the oldest or most recent?
     return download_data_file_helper(f)

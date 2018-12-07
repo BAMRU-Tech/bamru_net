@@ -19,7 +19,7 @@ server {
     # protected content
     location /system/ {
         internal;
-        alias {{ media_root }}
+        alias {{ media_root }}/;
     }
 
     location /static/ {

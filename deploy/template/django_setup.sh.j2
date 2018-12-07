@@ -19,7 +19,6 @@ source {{ venv_path }}/bin/activate
   python manage.py dbshell < import.sql
   echo "update main_member set is_staff=TRUE, is_superuser=TRUE where id in (367, 559);" | python manage.py dbshell
   python manage.py sqlsequencereset main | python manage.py dbshell
-  python manage.py sqlsequencereset message | python manage.py dbshell
 {% else %}
   # migrate from previous version
   ./manage.py makemigrations
