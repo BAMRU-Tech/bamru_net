@@ -6,3 +6,4 @@ from .base import BaseModel, BasePositionModel, Configuration
 from .member import Member, Role, Phone, Email, Address, EmergencyContact, OtherInfo, Unavailable, DoAvailable, Cert
 from .event import Event, Period, Participant
 from .message import RsvpTemplate, Message, Distribution, OutboundSms, InboundSms, OutboundEmail
+from .file import DataFile

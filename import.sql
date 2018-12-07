@@ -1,4 +1,4 @@
-TRUNCATE main_member, main_address, main_email, main_phone, main_emergencycontact, main_role, main_otherinfo, main_unavailable, main_cert, main_event, main_period, main_participant, main_message, main_distribution, main_rsvptemplate, main_doavailable CASCADE;
+TRUNCATE main_member, main_address, main_email, main_phone, main_emergencycontact, main_role, main_otherinfo, main_unavailable, main_cert, main_event, main_period, main_participant, main_message, main_distribution, main_rsvptemplate, main_doavailable, main_datafile CASCADE;
 
 insert into main_member (id, first_name, last_name, username, status, dl, ham, v9, is_active, is_staff, is_superuser, is_current_do, sign_in_count, last_sign_in_at, created_at, updated_at, password)
 select id, first_name, last_name, replace(user_name,'_',' '), typ, dl, ham, v9, TRUE, admin, developer, current_do, sign_in_count, last_sign_in_at, created_at, updated_at, 'bcrypt$' || password_digest from members where typ is not null;
@@ -55,6 +55,9 @@ select id, name, prompt, yes_prompt, no_prompt, position, created_at, updated_at
 
 insert into main_doavailable (id, member_id, year, quarter, week, available, assigned, comment, created_at, updated_at)
 select id, member_id, year, quarter, week, case typ when 'available' then true else false end, false, comment, created_at, updated_at from avail_dos where member_id in (select distinct id from main_member);
+
+insert into main_datafile (id, member_id, download_count, extension, file, name, size, data_content_type, caption, published, created_at, updated_at)
+select id, member_id, download_count, data_file_extension, format("data/%d/original/%s", id, data_file_name), data_file_name, data_file_size::integer, data_content_type, caption, published, created_at, updated_at from data_files;
 
 update main_doavailable set assigned = true
 from do_assignments where
