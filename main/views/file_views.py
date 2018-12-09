@@ -20,10 +20,8 @@ class DataFileFormView(LoginRequiredMixin, CreateView):
     def get_form(self, form_class=None):
         form = super(DataFileFormView, self).get_form(form_class)
         form.instance.member = self.request.user
-        logger.info('get_form ' + str(form.instance))
         if 'file' in self.request.FILES:
             f = self.request.FILES['file']
-            logger.info('get_form file ' + str(f))
             form.instance.name = f.name
             form.instance.size = f.size
             form.instance.content_type = f.content_type

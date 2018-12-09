@@ -20,7 +20,8 @@
         <td></td>
         <td>{{ cert.get_type_display }}</td>
         <td>{{ cert.description }}</td>
-        <td>{{cert.link }}</td>
+        <td>{{ cert.cert_name }}</td>
+        <td>{{ cert.link }}</td>
         <td>{{ cert.comment }}</td>
         <td>{{ cert.expires_on|date:"Y-m-d" }}</td>
         <td>{{ cert.id }}</td>
@@ -62,21 +63,11 @@ columns: [
       },
     },
     { data: 'description', title: 'Description', responsivePriority: 3, },
-    { data: 'link', title: 'Documentation', responsivePriority: 4,
-      render: function(data, type, row, meta) {
-          if (type == 'display') {
-              if (data == '')
-                  return row.comment;
-              else if (data != 'None')
-                  return '<a href="' + data + '" target="_blank">' + data + '</a>'
-              else
-                  return ''
-          }
-
-          return data
-      }
+    { data: 'cert_name', type: ['read-only', 'hidden'], title: 'Documentation', responsivePriority: 3,
+      render: renderCertDocumentation
     },
-    { data: 'comment', title: 'Comment', visible: false, },
+    { data: 'link',  visible: false, title: 'Link', },
+    { data: 'comment', title: 'Comment', responsivePriority: 10 },
     { data: 'expires_on', title: 'Expiration', responsivePriority: 2,
       type: 'date', 
       render: function(data, type, row, meta) {
@@ -84,7 +75,7 @@ columns: [
               if (data) {
                   // Add color for up coming cert expires_on
                   var rnode = $('#dTbl').DataTable().row(meta.row).node();
-                  $('td:eq(4)', rnode).css('background-color', row.color)
+                  $('td:eq(5)', rnode).css('background-color', row.color)
 
                   data = DateFE(data);
               }

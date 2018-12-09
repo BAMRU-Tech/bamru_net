@@ -97,18 +97,7 @@ $(document).ready( function() {
             { data: 'display', title: 'Cert', responsivePriority: 1 },
             { data: 'description', title: 'Description', responsivePriority: 3, },
             { data: 'cert_name', title: 'Documentation', responsivePriority: 4,
-              render: function(data, type, row, meta) {
-                  if (type == 'display') {
-                      if (!data) {
-                          if (row.link && (row.link != 'None')) {
-                              return '<a href="' + row.link + '" target="_blank">' + row.link + '</a>'
-                          }
-                          return '';
-                      }
-                      return '<a href="/member/{{ member.id }}/certs/' + row.id + '/download/' + data + '" target="_blank">' + data + '</a>'
-                  }
-                  return data
-              }
+              render: renderCertDocumentation
             },
             { data: 'comment', title: 'Comment', responsivePriority: 10, },
             { data: 'expires_on', title: 'Expiration', responsivePriority: 2,

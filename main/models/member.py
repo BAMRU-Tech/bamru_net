@@ -382,6 +382,14 @@ class Cert(BasePositionModel):
     thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        if self.pk is None:
+            saved_file = self.cert_file
+            self.cert_file = None
+            super(Cert, self).save(*args, **kwargs)
+            self.cert_file = saved_file
+        super(Cert, self).save(*args, **kwargs)
+
     def __str__(self):
         if self.description is None:
             return ""

@@ -150,7 +150,7 @@ class MemberCertListView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class CertEditMixin:
+class CertEditMixin(generic.edit.ModelFormMixin):
     model = Cert
     template_name = 'cert_form.html'
 
@@ -166,7 +166,7 @@ class CertEditMixin:
             fields += ['link']
         else:
             fields += [
-                # TODO: file upload
+                'cert_file',
                 'comment',
             ]
         return modelform_factory(
@@ -181,6 +181,15 @@ class CertEditMixin:
                 'expires_on': widgets.DateInput(attrs={'type': 'date'}),
             },
         )
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if 'cert_file' in self.request.FILES:
+            f = self.request.FILES['cert_file']
+            form.instance.cert_name = f.name
+            form.instance.cert_size = f.size
+            form.instance.cert_content_type = f.content_type
+        return form
 
     def get_initial(self):
         return {'type': self.get_cert_type()}
