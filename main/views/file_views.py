@@ -41,16 +41,22 @@ class FileListView(LoginRequiredMixin, generic.ListView):
         return DataFile.objects.order_by('name')
 
 
+def download_file_helper(url, filename='', download=False):
+    """Set download to make browsers download instead of displaying inline."""
+    if settings.DEBUG:
+        return redirect(url)
+    response = HttpResponse()
+    response['Content-Type'] = ''  # Let nginx infer it
+    response['X-Accel-Redirect'] = url
+    if download:
+        response['Content-Disposition'] = 'attachment; filename="{}"'.format(
+            filename)
+    return response
+
 def download_data_file_helper(data_file):
     data_file.download_count += 1
     data_file.save()
-    if settings.DEBUG:
-        return redirect(data_file.file.url)
-    response = HttpResponse()
-    response['X-Accel-Redirect'] = data_file.file.url
-    response['Content-Disposition'] = 'attachment; filename="{}"'.format(
-        data_file.name)
-    return response
+    return download_file_helper(data_file.file.url, data_file.name, False)
 
 @login_required
 def download_data_file_by_id_view(request, id):
