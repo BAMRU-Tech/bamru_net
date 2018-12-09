@@ -3,8 +3,7 @@
 {% block title %}Files{% endblock title %}
 
 {% block subheader %}
-<strong class="d-md-none" >Files</strong>
-<strong class="d-none d-md-block" id="subhdr">Files</strong>
+<strong>Files</strong>
 <ul class="navbar-nav ml-auto">
   <li class="nav-item ml-auto">
     <a href="{% url 'file_upload' %}">
@@ -16,18 +15,9 @@
 {% endblock subheader %}
 
 {% block content %}
-<main class="flex-grow" role="main">
-  <table id="dTbl" class="display list table-bordered compact nowrap" style="width:100%">
-    <thead>
-      <tr>
-        <th>File name</th>
-        <th>Description</th>
-        <th>Size</th>
-        <th>Download Count</th>
-        <th>Type</th>
-        <th>Uploaded By</th>
-      </tr>
-    </thead>
+<main role="main" class="container-fluid">
+  <table id="dTbl" class="display table-bordered compact nowrap" style="width:100%">
+    <thead></thead>
     <tbody>
       {% for file in file_list %}
       {% spaceless %}
@@ -51,21 +41,27 @@
 
 {% block table_options %}
 order: [[ 0, 'asc' ]],
+deferRender: true,
+paging: true,
 
-columnDefs: [
-    { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 2, targets: 1 },
-    { responsivePriority: 3, targets: 5 },
-    { responsivePriority: 2, targets: [ 2, 3, 4] },
+columns: [
+    { data: 'name', title: 'File name', width: '40%', responsivePriority: 1, },
+    { data: 'caption', title: 'Description', width: '20%', responsivePriority: 2, },
+    { data: 'size', title: 'Size', responsivePriority: 3, },
+    { data: 'download_count', title: 'Downloads', responsivePriority: 5, },
+    { data: 'extension', title: 'Type', responsivePriority: 6, },
+    { data: 'full_name', title: 'Uploaded By', responsivePriority: 4, },
 ],
 
 language: { emptyTable: 'No files found' },
 
 {% endblock table_options %}
 
+{# remove filter button #}
+{% block filter_button %}{% endblock %}
+
 {% block functions %}
 
-function UpdateSubheaderBasedOnSettings(table) {
-}
+function UpdateSubheaderBasedOnSettings(table) {}
 
 {% endblock functions %}
