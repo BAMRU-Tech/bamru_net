@@ -374,7 +374,7 @@ class Cert(BasePositionModel):
     link = models.CharField(max_length=255, blank=True, null=True)
     # The following 'cert_' fields all refer to the cert_file.
     cert_file = models.FileField(upload_to=cert_upload_path_handler,
-                                 max_length=255, null=True)
+                                 max_length=255, blank=True, null=True)
     cert_name = models.CharField(max_length=255, blank=True, null=True)  # original file name
     cert_content_type = models.CharField(max_length=255, blank=True, null=True)
     cert_size = models.TextField(blank=True, null=True)
@@ -388,7 +388,9 @@ class Cert(BasePositionModel):
             self.cert_file = None
             super(Cert, self).save(*args, **kwargs)
             self.cert_file = saved_file
-        super(Cert, self).save(*args, **kwargs)
+            super(Cert, self).save()
+        else:
+            super(Cert, self).save(*args, **kwargs)
 
     def __str__(self):
         if self.description is None:

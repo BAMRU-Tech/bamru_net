@@ -28,4 +28,6 @@ class DataFile(BaseModel):
             self.file = None
             super(DataFile, self).save(*args, **kwargs)
             self.file = saved_file
-        super(DataFile, self).save(*args, **kwargs)
+            super(DataFile, self).save()
+        else:
+            super(DataFile, self).save(*args, **kwargs)
