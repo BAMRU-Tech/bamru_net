@@ -11,7 +11,9 @@ from django.shortcuts import get_object_or_404, redirect, render, render_to_resp
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
+
 from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Unavailable
+from main.views.file_views import download_file_helper
 
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
@@ -294,11 +296,7 @@ class CertListView(LoginRequiredMixin, generic.ListView):
 @login_required
 def cert_file_download_view(request, cert, **kwargs):
     c = get_object_or_404(Cert, id=cert)
-    if settings.DEBUG:
-        return redirect(c.cert_file.url)
-    response = HttpResponse()
-    response['X-Accel-Redirect'] = c.cert_file.url
-    return response
+    return download_file_helper(c.cert_file.url)
 
 
 class AvailableListView(LoginRequiredMixin, generic.ListView):
