@@ -54,7 +54,7 @@ class CertSerializer(serializers.ModelSerializer):
         
     class Meta:
         model = Cert
-        read_only_fields = ('is_expired', 'color', 'display',)
+        read_only_fields = ('is_expired', 'color', 'display', 'cert_name',)
         fields = ('id', 'member', 'type', 'expires_on', 'description', 'comment', 'link', ) + read_only_fields
 
 

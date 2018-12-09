@@ -349,6 +349,10 @@ class DoAvailable(BaseModel):  # was AvailDos
         return cls.shift_start(year, quarter, week) + timedelta(days=7) - timedelta(minutes=1)
 
 
+def cert_upload_path_handler(instance, filename):
+    return "certs/{id}/original/{name}".format(
+        id=instance.pk, name=filename)
+
 class Cert(BasePositionModel):
     TYPES = (
         ('medical', 'Medical'),
@@ -365,14 +369,15 @@ class Cert(BasePositionModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     type = models.CharField(choices=TYPES, max_length=255)
     expires_on = models.DateField(blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
-    comment = models.TextField(blank=True, null=True)
-    link = models.TextField(blank=True, null=True)
-    cert_file = models.TextField(blank=True, null=True)
-    cert_file_name = models.TextField(blank=True, null=True)
-    cert_content_type = models.TextField(blank=True, null=True)
-    cert_file_size = models.TextField(blank=True, null=True)
-    cert_updated_at = models.TextField(blank=True, null=True)
+    description = models.CharField(max_length=255)
+    comment = models.CharField(max_length=255, blank=True, null=True)
+    link = models.CharField(max_length=255, blank=True, null=True)
+    # The following 'cert_' fields all refer to the cert_file.
+    cert_file = models.FileField(upload_to=cert_upload_path_handler,
+                                 max_length=255, null=True)
+    cert_name = models.CharField(max_length=255, blank=True, null=True)  # original file name
+    cert_content_type = models.CharField(max_length=255, blank=True, null=True)
+    cert_size = models.TextField(blank=True, null=True)
     ninety_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)

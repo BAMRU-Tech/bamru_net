@@ -74,7 +74,7 @@
 {{ block.super }}
 <script>
 $(document).ready( function() {
-    var certUrl = '/api/member_certs/{{ member.id }}';
+    var certUrl = '/api/member_certs/{{ member.id }}/';
     var table = $('#dTbl').DataTable( {
         dom: 'rtip',
         ajax: { url: certUrl,
@@ -91,23 +91,26 @@ $(document).ready( function() {
         paging:   false,
         info:     false,
 
-        order: [[ 3, 'desc' ]],
+        order: [[ 0, 'asc' ]],
 
         columns: [
             { data: 'display', title: 'Cert', responsivePriority: 1 },
             { data: 'description', title: 'Description', responsivePriority: 3, },
-            { data: 'link', title: 'Documentation', responsivePriority: 4,
+            { data: 'cert_name', title: 'Documentation', responsivePriority: 4,
               render: function(data, type, row, meta) {
                   if (type == 'display') {
-                      if (!data) return row.comment;
-                      else if (data != 'None')
-                          return '<a href="' + data + '" target="_blank">' + data + '</a>'
-                      else return ''
+                      if (!data) {
+                          if (row.link && (row.link != 'None')) {
+                              return '<a href="' + row.link + '" target="_blank">' + row.link + '</a>'
+                          }
+                          return '';
+                      }
+                      return '<a href="/member/{{ member.id }}/certs/' + row.id + '/download/' + data + '" target="_blank">' + data + '</a>'
                   }
-
                   return data
               }
             },
+            { data: 'comment', title: 'Comment', responsivePriority: 10, },
             { data: 'expires_on', title: 'Expiration', responsivePriority: 2,
               type: 'date',
               render: function(data, type, row, meta) {

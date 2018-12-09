@@ -67,6 +67,7 @@ urlpatterns = [
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
     path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='member_cert_new'),
     path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='member_cert_delete'),
+    path('member/<int:member>/certs/<int:cert>/download/<path:name>', views.cert_file_download_view, name='member_cert_download'),
 
     path('do/', views.DoListView.as_view(), name='do_list'),
     path('do/<int:pk>/', views.DoMemberListView.as_view(), name='do_availability_list'),

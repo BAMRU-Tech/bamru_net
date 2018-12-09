@@ -7,7 +7,7 @@ from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render, render_to_response
+from django.shortcuts import get_object_or_404, redirect, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
@@ -280,6 +280,16 @@ class CertListView(LoginRequiredMixin, generic.ListView):
         context = super().get_context_data(**kwargs)
         context['headers'] = [x[1] for x in Cert.TYPES]
         return context
+
+
+@login_required
+def cert_file_download_view(request, cert, **kwargs):
+    c = get_object_or_404(Cert, id=cert)
+    if settings.DEBUG:
+        return redirect(c.cert_file.url)
+    response = HttpResponse()
+    response['X-Accel-Redirect'] = c.cert_file.url
+    return response
 
 
 class AvailableListView(LoginRequiredMixin, generic.ListView):
