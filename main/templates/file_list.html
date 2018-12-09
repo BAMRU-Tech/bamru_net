@@ -1,0 +1,71 @@
+{% extends 'base_ftable.html' %}
+
+{% block title %}Files{% endblock title %}
+
+{% block subheader %}
+<strong class="d-md-none" >Files</strong>
+<strong class="d-none d-md-block" id="subhdr">Files</strong>
+<ul class="navbar-nav ml-auto">
+  <li class="nav-item ml-auto">
+    <a href="{% url 'file_upload' %}">
+      <i class="fa fa-upload"></i>
+      Upload a new file
+    </a>
+  </li>
+</ul>
+{% endblock subheader %}
+
+{% block content %}
+<main class="flex-grow" role="main">
+  <table id="dTbl" class="display list table-bordered compact nowrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>File name</th>
+        <th>Description</th>
+        <th>Size</th>
+        <th>Download Count</th>
+        <th>Type</th>
+        <th>Uploaded By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for file in file_list %}
+      {% spaceless %}
+      <tr>
+        <td><a href="{% url 'file_download' file.id %}">{{ file.name }}</td>
+        <td>{{ file.caption }}</td>
+        <td>{{ file.size }}</td>
+        <td>{{ file.download_count }}</td>
+        <td>{{ file.extension }}</td>
+        <td>{{ file.member.full_name }}</td>
+      </tr>
+      {% endspaceless %}
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock content %}
+
+
+{# --- Table definition --- #}
+
+{% block table_options %}
+order: [[ 0, 'asc' ]],
+
+columnDefs: [
+    { responsivePriority: 1, targets: 0 },
+    { responsivePriority: 2, targets: 1 },
+    { responsivePriority: 3, targets: 5 },
+    { responsivePriority: 2, targets: [ 2, 3, 4] },
+],
+
+language: { emptyTable: 'No files found' },
+
+{% endblock table_options %}
+
+{% block functions %}
+
+function UpdateSubheaderBasedOnSettings(table) {
+}
+
+{% endblock functions %}

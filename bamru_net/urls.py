@@ -58,14 +58,16 @@ urlpatterns = [
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
     path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
 
-    path('file/upload/', views.DataFileFormView.as_view()),
-    path('file_id/<int:id>/', views.download_data_file_by_id_view),
+    path('file/', views.FileListView.as_view(), name='file_list'),
+    path('file/upload/', views.DataFileFormView.as_view(), name='file_upload'),
+    path('file_id/<int:id>/', views.download_data_file_by_id_view, name='file_download'),
     path('file/<path:name>', views.download_data_file_by_name_view), # used by wiki
 
     path('cert/', views.CertListView.as_view(), name='cert_list'),
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
     path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='member_cert_new'),
     path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='member_cert_delete'),
+    path('member/<int:member>/certs/<int:cert>/download/<path:name>', views.cert_file_download_view, name='member_cert_download'),
 
     path('do/', views.DoListView.as_view(), name='do_list'),
     path('do/<int:pk>/', views.DoMemberListView.as_view(), name='do_availability_list'),

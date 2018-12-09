@@ -142,6 +142,23 @@
         return string.substr(0, length)
     }
 
+    // TODO: move to better location
+    // Render the 'documentation' column for Certs on the member cert page and
+    // the user's list/edit certs page.
+    function renderCertDocumentation(data, type, row, meta) {
+        if (type == 'display') {
+            file = row.cert_name;
+            if (!file || (file == 'None')) {
+                if (row.link && (row.link != 'None')) {
+                    return '<a href="' + row.link + '" target="_blank">' + row.link + '</a>'
+                }
+                return '';
+            }
+            return '<a href="/member/{{ member.id }}/certs/' + row.id + '/download/' + file + '" target="_blank">' + file + '</a>'
+        }
+        return data
+    }
+
     </script>
   </body>
 </html>

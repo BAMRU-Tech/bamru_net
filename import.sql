@@ -24,8 +24,8 @@ select id, member_id, label, value, position, created_at, updated_at from other_
 insert into main_unavailable (id, member_id, start_on, end_on, comment, created_at, updated_at)
 select id, member_id, start_on, end_on, comment, created_at, updated_at from avail_ops;
 
-insert into main_cert (id, member_id, type, expires_on, description, comment, link, position, cert_file, cert_file_name, cert_content_type, cert_file_size, cert_updated_at, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at)
-select id, member_id, typ, expiration, description, comment, link, position, cert_file, cert_file_name, cert_content_type, cert_file_size, cert_updated_at, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at from certs;
+insert into main_cert (id, member_id, type, expires_on, description, comment, link, position, cert_file, cert_name, cert_content_type, cert_size, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at)
+select id, member_id, typ, expiration, description, comment, link, position, format('certs/%s/original/%s', id, cert_file_name), cert_file_name, cert_content_type, cert_file_size, created_at, updated_at, ninety_day_notice_sent_at, thirty_day_notice_sent_at, expired_notice_sent_at from certs;
 
 /*
     Ensure all finish dates exist.

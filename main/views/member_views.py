@@ -7,7 +7,7 @@ from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render, render_to_response
+from django.shortcuts import get_object_or_404, redirect, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
@@ -150,7 +150,7 @@ class MemberCertListView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class CertEditMixin:
+class CertEditMixin(generic.edit.ModelFormMixin):
     model = Cert
     template_name = 'cert_form.html'
 
@@ -166,7 +166,7 @@ class CertEditMixin:
             fields += ['link']
         else:
             fields += [
-                # TODO: file upload
+                'cert_file',
                 'comment',
             ]
         return modelform_factory(
@@ -181,6 +181,15 @@ class CertEditMixin:
                 'expires_on': widgets.DateInput(attrs={'type': 'date'}),
             },
         )
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if 'cert_file' in self.request.FILES:
+            f = self.request.FILES['cert_file']
+            form.instance.cert_name = f.name
+            form.instance.cert_size = f.size
+            form.instance.cert_content_type = f.content_type
+        return form
 
     def get_initial(self):
         return {'type': self.get_cert_type()}
@@ -280,6 +289,16 @@ class CertListView(LoginRequiredMixin, generic.ListView):
         context = super().get_context_data(**kwargs)
         context['headers'] = [x[1] for x in Cert.TYPES]
         return context
+
+
+@login_required
+def cert_file_download_view(request, cert, **kwargs):
+    c = get_object_or_404(Cert, id=cert)
+    if settings.DEBUG:
+        return redirect(c.cert_file.url)
+    response = HttpResponse()
+    response['X-Accel-Redirect'] = c.cert_file.url
+    return response
 
 
 class AvailableListView(LoginRequiredMixin, generic.ListView):

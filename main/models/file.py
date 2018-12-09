@@ -14,7 +14,7 @@ class DataFile(BaseModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     file = models.FileField(upload_to=file_upload_path_handler,
                             max_length=255, null=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)  # original file name
     extension = models.CharField(max_length=255)
     content_type = models.CharField(max_length=255)
     size = models.IntegerField()
@@ -28,4 +28,6 @@ class DataFile(BaseModel):
             self.file = None
             super(DataFile, self).save(*args, **kwargs)
             self.file = saved_file
-        super(DataFile, self).save(*args, **kwargs)
+            super(DataFile, self).save()
+        else:
+            super(DataFile, self).save(*args, **kwargs)
