@@ -58,8 +58,9 @@ urlpatterns = [
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
     path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
 
-    path('file/upload/', views.DataFileFormView.as_view()),
-    path('file_id/<int:id>/', views.download_data_file_by_id_view),
+    path('file/', views.FileListView.as_view(), name='file_list'),
+    path('file/upload/', views.DataFileFormView.as_view(), name='file_upload'),
+    path('file_id/<int:id>/', views.download_data_file_by_id_view, name='file_download'),
     path('file/<path:name>', views.download_data_file_by_name_view), # used by wiki
 
     path('cert/', views.CertListView.as_view(), name='cert_list'),

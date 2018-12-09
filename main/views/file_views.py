@@ -4,6 +4,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import get_list_or_404, get_object_or_404, redirect
 from django.urls import reverse
+from django.views import generic
 from django.views.generic.edit import CreateView
 
 from main.models import DataFile
@@ -31,10 +32,20 @@ class DataFileFormView(LoginRequiredMixin, CreateView):
         return form
 
     def get_success_url(self, *args, **kwargs):
-        return reverse('home')
+        return reverse('file_list')
+
+
+class FileListView(LoginRequiredMixin, generic.ListView):
+    template_name = 'file_list.html'
+    context_object_name = 'file_list'
+
+    def get_queryset(self):
+        return DataFile.objects.order_by('name')
 
 
 def download_data_file_helper(data_file):
+    data_file.download_count += 1
+    data_file.save()
     if settings.DEBUG:
         return redirect(data_file.file.url)
     response = HttpResponse()
