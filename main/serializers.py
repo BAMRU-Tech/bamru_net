@@ -102,8 +102,8 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
 class EventListSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Event
-        fields = ('id', 'title', 'type', 'leaders', 'description',
-                  'location', 'lat', 'lon', 'start_at', 'finish_at', 'all_day', 'published',)
+        fields = ('id', 'title', 'type', 'leaders', 'description', 'location',
+                  'lat', 'lon', 'start_at', 'finish_at', 'all_day', 'published',)
 
 
 class EventDetailSerializer(EventListSerializer):
@@ -116,7 +116,9 @@ class EventDetailSerializer(EventListSerializer):
 class PeriodParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
-        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+        fields = ('id', 'period', 'member', 'ahc', 'ol',
+                  'en_route_at', 'return_home_at',
+                  'signed_in_at', 'signed_out_at')
 
     def create(self, validated_data):
         """Custom method to filter to avoid duplicates"""
