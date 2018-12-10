@@ -498,10 +498,11 @@ function DeleteOP (tblName, period, position ) {
 
     var ok = confirm('Delete Operational Period (OP' + position + ')?');
 
-    // Should Delete require an empty OP or at least a reconfirmation
-    var cnt = $(tblName).DataTable().rows().count();
-    if (cnt != 0 )
-        ok = confirm('Are you sure?  This period has participants!');
+    if (ok) {
+        var cnt = $(tblName).DataTable().rows().count();
+        if (cnt != 0 )
+            ok = confirm('Are you sure?  This period has participants!');
+    }
 
     if (ok) {
         $.ajax({
