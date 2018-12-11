@@ -158,6 +158,7 @@ $(document).ready( function() {
         columns: [
             { data: 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
+              className: 'noVis'
             },
             { data: 'name', title: 'Name', responsivePriority: 1, type: 'readonly',
               render: function (d, t, r, m) {
@@ -173,48 +174,56 @@ $(document).ready( function() {
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'en_route_time') },
             },
-            { data: 'en_route_time', title: 'at', type: 'time', },
-
+            { data: 'en_route_time', title: 'at', type: 'time',
+              className: 'noVis'
+            },
             { data: 'return_home_date', title: 'Returned', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'return_home_time') },
             },
-            { data: 'return_home_time', title: 'at', type: 'time', },
+            { data: 'return_home_time', title: 'at', type: 'time',
+              className: 'noVis'
+            },
 
             { data: 'signed_in_date', title: 'Signed in', responsivePriority: 3,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_in_time') },
             },
-            { data: 'signed_in_time', title: 'at', type: 'time', },
+            { data: 'signed_in_time', title: 'at', type: 'time',
+              className: 'noVis'
+            },
 
             { data: 'signed_out_date', title: 'Signed out', responsivePriority: 3,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_out_time') },
             },
-            { data: 'signed_out_time', title: 'at', type: 'time', },
+            { data: 'signed_out_time', title: 'at', type: 'time',
+              className: 'noVis'
+            },
 
             { data: 'ahc', title: 'Ahc',
               type: 'select', options: ['false', 'true'],
+              className: 'noVis'
             },
             { data: 'ol', title: 'Ol',
               type: 'select', options: ['false', 'true'],
+              className: 'noVis'
             },
-            { data: 'id', type: ['readonly', 'hidden'] },
-            { data: 'member', type: ['readonly', 'hidden'] },
-            { data: 'period', type: ['readonly', 'hidden'] },
+            { data: 'id', type: ['readonly', 'hidden'],
+              className: 'noVis'
+            },
+            { data: 'member', type: ['readonly', 'hidden'],
+              className: 'noVis'
+            },
+            { data: 'period', type: ['readonly', 'hidden'],
+              className: 'noVis'
+            },
         ],
 
         buttons: [
-            {
-                text: '<i class="fa fa-address-book"></i> Add',
-                action: function () {
-                    var href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
-                    location.href = href;
-                }
-            },
             {
                 text: '<i class="fa fa-bullhorn"></i> Page',
                 extend: 'collection',
@@ -343,6 +352,13 @@ $(document).ready( function() {
                 ]
             },
             {
+                text: '<i class="fa fa-address-book"></i> Add',
+                action: function () {
+                    var href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
+                    location.href = href;
+                }
+            },
+            {
                 extend: 'selected', // Bind to Selected row
                 text: '<i class="fa fa-edit"></i> Edit',
                 name: 'edit'        // do not change name
@@ -359,10 +375,15 @@ $(document).ready( function() {
                 autoClose: true,
                 buttons: [
                     { text: 'Search',
-                      action: function () { $("#dTbl{{period.position}}_filter").toggle() }
+                      action: function () {
+                          $("#dTbl{{period.position}}_filter").toggle() }
                     },
-                    'copy', 'csv', 'excel', 'print', 'colvis'
-                ]
+                    'copy', 'csv', 'excel', 'print',
+                    {
+                        extend: 'colvis',
+                        columns: ':not(.noVis)'
+                    }
+                ],
             }
         ],
 
