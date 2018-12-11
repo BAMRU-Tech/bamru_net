@@ -59,7 +59,8 @@ onEditRow: UpdateRow,
 
 {
     extend: 'selected', // Bind to Selected row
-    text: '<i class="fa fa-edit"></i> Edit',
+    text: '<i class="fa fa-edit"></i>' +
+        '<span class="d-none d-md-inline"> Edit</span>',
     name: 'edit'        // do not change name
 },
 {
@@ -71,11 +72,13 @@ onEditRow: UpdateRow,
     action: ClearAll,
 },
 {
-    text: '<i class="fa fa-caret-square-o-left"></i> Prev',
+    text: '<i class="fa fa-caret-square-o-left"></i>' +
+        '<span class="d-none d-md-inline"> Prev</span>',
     action: PrevQtr
 },
 {
-    text: '<i class="fa fa-caret-square-o-right"></i> Next',
+    text: '<i class="fa fa-caret-square-o-right"></i>' +
+        '<span class="d-none d-md-inline"> Next</span>',
     action: NextQtr
 },
 
