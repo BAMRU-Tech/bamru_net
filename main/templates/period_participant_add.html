@@ -55,7 +55,7 @@ order: [[ 5, 'desc' ]],
 
 columns: [
     { data: 'mark', width: '10px', responsivePriority: 1,
-      orderable: false, className: 'mark-checkbox',
+      orderable: false, className: 'mark-checkbox noVis',
       render: function(data, type, row, meta) {
           if (type == 'display')
               return '<div data-id="' + row.id + '"></div>';
@@ -71,7 +71,7 @@ columns: [
               return data;
       }
     },
-    { data: 'id', visible: false, },
+    { data: 'id', visible: false, className: 'noVis', },
     { data: 'status', title: 'Status', width: '35px', responsivePriority: 2,
       render: function(data, type, row, meta) {
           if (type == 'sort')
@@ -80,7 +80,7 @@ columns: [
               return data;
       }
     },
-    { data: 'status_order', visible: false, },
+    { data: 'status_order', visible: false, className: 'noVis', },
     { data: 'roles', title: 'Roles', responsivePriority: 1,
       render: function(data, type, row, meta) {
            if (type == 'sort') {
@@ -89,7 +89,7 @@ columns: [
               return data;
       }
     },
-    { data: 'role_order', visible: false, },
+    { data: 'role_order', visible: false, className: 'noVis', },
     { data: 'display_phone', title: 'Phone', responsivePriority: 3, },
     { data: 'display_email', title: 'Email', responsivePriority: 4, },
 ],

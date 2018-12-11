@@ -69,7 +69,7 @@ columns: [
               return data;
       },
     },
-    { data: 'id', visible: false, },
+    { data: 'id', visible: false, className: 'noVis', },
     { data: 'status', title: 'Status', width: '35px',
       render: function(data, type, row, meta) {
           if (type == 'sort')
@@ -78,7 +78,7 @@ columns: [
               return data;
       }
     },
-    { data: 'status_order', visible: false, },
+    { data: 'status_order', visible: false, className: 'noVis', },
     { data: 'medical', title: 'Medical',
       render: RenderColor,
     },

@@ -46,7 +46,7 @@ order: [[ 5, 'desc']],
 columns: [
     { data: 'mark', width: '10px', responsivePriority: 1,
       orderable: false,
-      className: 'mark-checkbox',
+      className: 'mark-checkbox noVis',
       type: ['readonly', 'hidden'],
       render: function(data, type, row, meta) {
           return '<div data-id="' + row.id + '"></div>';
@@ -66,7 +66,7 @@ columns: [
     { data: 'cert_name', type: ['read-only', 'hidden'], title: 'Documentation', responsivePriority: 3,
       render: renderCertDocumentation
     },
-    { data: 'link',  visible: false, title: 'Link', },
+    { data: 'link',  visible: false, title: 'Link', className: 'noVis', },
     { data: 'comment', title: 'Comment', responsivePriority: 10 },
     { data: 'expires_on', title: 'Expiration', responsivePriority: 2,
       type: 'date', 
@@ -87,9 +87,15 @@ columns: [
           return data;
       },
     },
-    { data: 'id', type: ['read-only', 'hidden'], visible: false, title: 'Id', },
-    { data: 'is_expired', type: ['read-only', 'hidden'], visible: false, title: 'Expired', },
-    { data: 'color', type: ['read-only', 'hidden'], visible: false, title: 'HiLite', },
+    { data: 'id', type: ['read-only', 'hidden'], visible: false, title: 'Id',
+      className: 'noVis',
+    },
+    { data: 'is_expired', type: ['read-only', 'hidden'], visible: false,
+      title: 'Expired', className: 'noVis',
+    },
+    { data: 'color', type: ['read-only', 'hidden'], visible: false,
+      title: 'HiLite', className: 'noVis',
+    },
 ],
 
 language: { emptyTable: 'No busy periods' },

@@ -24,6 +24,7 @@
       <tr>
         <td><a href="{% url 'file_download' file.id %}">{{ file.name }}</td>
         <td>{{ file.caption }}</td>
+        <td>{{ file.created_at|date:'Y-m-d H:i' }}</td>
         <td>{{ file.size }}</td>
         <td>{{ file.download_count }}</td>
         <td>{{ file.extension }}</td>
@@ -47,10 +48,11 @@ paging: true,
 columns: [
     { data: 'name', title: 'File name', width: '40%', responsivePriority: 1, },
     { data: 'caption', title: 'Description', width: '20%', responsivePriority: 2, },
-    { data: 'size', title: 'Size', responsivePriority: 3, },
-    { data: 'download_count', title: 'Downloads', responsivePriority: 5, },
-    { data: 'extension', title: 'Type', responsivePriority: 6, },
-    { data: 'full_name', title: 'Uploaded By', responsivePriority: 4, },
+    { data: 'created_at', title: 'Updated', responsivePriority: 3, },
+    { data: 'size', title: 'Size', responsivePriority: 4, },
+    { data: 'download_count', title: 'Downloads', responsivePriority: 6, },
+    { data: 'extension', title: 'Type', responsivePriority: 7, },
+    { data: 'full_name', title: 'Uploaded By', responsivePriority: 5, },
 ],
 
 language: { emptyTable: 'No files found' },

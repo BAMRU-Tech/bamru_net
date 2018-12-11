@@ -59,7 +59,12 @@ $(document).ready(function() {
                     { text: 'Search',
                       action: function () { $("#dTbl_filter").toggle() }
                     },
-                    'copy', 'csv', 'excel', 'print', 'colvis'],
+                    'copy', 'csv', 'excel', 'print',
+                    {
+                        extend: 'colvis',
+                        columns: ':not(.noVis)'
+                    }
+                ],
                 attr: { id: 'dTbl-more' },
             }
             {% endblock more_button %}
