@@ -65,7 +65,7 @@ columns: [
     },
     { data: 'full_name', title: 'Name', responsivePriority: 1,
       render: function(data, type, row, meta) {
-          if (type == 'display')
+          if (false && type == 'display')  //FX: add lightweight icon
               return '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
           else
               return data;
