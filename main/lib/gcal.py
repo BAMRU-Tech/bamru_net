@@ -77,11 +77,12 @@ class GcalManager:
             bamru_event.save()
 
     def delete_for_event(self, bamru_event, save=True):
-        self.client.events().delete(
-            calendarId=self.calendar_id,
-            eventId=bamru_event.gcal_id,
-        ).execute()
-        bamru_event.gcal_id = None
+        if bamru_event.gcal_id:
+            self.client.events().delete(
+                calendarId=self.calendar_id,
+                eventId=bamru_event.gcal_id,
+            ).execute()
+            bamru_event.gcal_id = None
        
         if save:
             bamru_event.save()
