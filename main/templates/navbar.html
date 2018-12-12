@@ -33,10 +33,12 @@
             <i class="fa fa-certificate"></i>
             Certifications
           </a>
+{% comment FIXME %}
           <a class="dropdown-item disabled" href="#">
             <i class="fa fa-camera-retro"></i>
             Member photos
           </a>
+{% endcomment %}
           <a class="dropdown-item" href="{% url 'do_list' %}">
             <i class="fa fa-calendar"></i>
             Quarterly DO schedule
@@ -48,10 +50,12 @@
           <i class="fa fa-book"></i> Library
         </a>
         <div class="dropdown-menu">
+{% comment FIXME %}
           <a class="dropdown-item disabled" href="#">
             <i class="fa fa-file"></i>
             SMCSO Contacts
           </a>
+{% endcomment %}
           <a class="dropdown-item" href="{% url 'reports_list' %}">
             <i class="fa fa-file"></i>
             Reports
@@ -79,14 +83,16 @@
             <i class="fa fa-bolt"></i>
             Become DO
           </a>
-          <a class="dropdown-item disabled" href="#">
+          <a class="dropdown-item" href="{% url 'event_add' %}?type=operation">
             <i class="fa fa-bolt"></i>
             Initiate a callout
           </a>
+{% comment FIXME %}
           <a class="dropdown-item disabled" href="#">
             <i class="fa fa-bolt"></i>
             Temporary DO change
           </a>
+{% endcomment %}
           <a class="dropdown-item" href="/admin" target="_blank">
             <i class="fa fa-edit"></i>
             Perform admin tasks
@@ -119,10 +125,12 @@
             <i class="fa fa-certificate"></i>
             Certifications
           </a>
+{% comment FIXME %}
           <a class="dropdown-item disabled" href="#">
             <i class="fa fa-cogs"></i>
             Settings
           </a>
+{% endcomment %}
           <a class="dropdown-item" href="{% url 'logout' %}">
             <i class="fa fa-sign-out"></i>
             Log out

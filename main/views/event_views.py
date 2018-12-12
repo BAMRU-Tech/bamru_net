@@ -136,6 +136,9 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
         form.fields['location'].label = "Location*"
         form.fields['start_at'].label = "Start*"
 
+        type = self.request.GET.get('type')
+        form.fields['type'].initial = type
+
         return form
 
     # Abuse get_success_url to do a calendar update after creating the object.
