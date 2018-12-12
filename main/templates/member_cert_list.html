@@ -17,7 +17,6 @@
     <tbody>
       {% for cert in cert_list %}
       <tr>
-        <td></td>
         <td>{{ cert.get_type_display }}</td>
         <td>{{ cert.description }}</td>
         <td>{{ cert.cert_name }}</td>
@@ -38,35 +37,29 @@
 {# --- Table definition --- #}
 
 {% block table_options %}
+
 select: 'os',
 altEditor: true,
 
 order: [[ 5, 'desc']],
 
 columns: [
-    { data: 'mark', width: '10px', responsivePriority: 1,
-      orderable: false,
-      className: 'mark-checkbox noVis',
-      type: ['readonly', 'hidden'],
-      render: function(data, type, row, meta) {
-          return '<div data-id="' + row.id + '"></div>';
-      },
-    },
-    { data: 'type', type: 'readonly', title: 'Type', responsivePriority: 1,
+    { data: 'type', title: 'Type', responsivePriority: 1,
+      type: 'readonly',
       render: function ( data, type, row, meta ) {
           if (type = 'display' && row.display) {
               // Handle type 'cpr' -> 'CPR'
               data = row.display
           }
-
           return data;
       },
     },
     { data: 'description', title: 'Description', responsivePriority: 3, },
-    { data: 'cert_name', type: ['read-only', 'hidden'], title: 'Documentation', responsivePriority: 3,
+    { data: 'cert_name', title: 'Documentation', responsivePriority: 3,
+      type: ['read-only', 'hidden'],
       render: renderCertDocumentation
     },
-    { data: 'link',  visible: false, title: 'Link', className: 'noVis', },
+    { data: 'link', title: 'Link', visible: false, className: 'noVis', },
     { data: 'comment', title: 'Comment', responsivePriority: 10 },
     { data: 'expires_on', title: 'Expiration', responsivePriority: 2,
       type: 'date', 
@@ -80,21 +73,22 @@ columns: [
                   data = DateFE(data);
               }
           } else {
-              const colorOrder = { white: 1, red: 5, orange: 4, yellow: 3, limegreen: 2 };
+              const colorOrder = {
+                  white: 1, red: 5, orange: 4, yellow: 3, limegreen: 2
+              };
               data = colorOrder[row.color] + data;
           }
-
           return data;
       },
     },
-    { data: 'id', type: ['read-only', 'hidden'], visible: false, title: 'Id',
-      className: 'noVis',
+    { data: 'id', title: 'Id',
+      type: ['read-only', 'hidden'], visible: false, className: 'noVis',
     },
-    { data: 'is_expired', type: ['read-only', 'hidden'], visible: false,
-      title: 'Expired', className: 'noVis',
+    { data: 'is_expired', title: 'Expired',
+      type: ['read-only', 'hidden'], visible: false, className: 'noVis',
     },
-    { data: 'color', type: ['read-only', 'hidden'], visible: false,
-      title: 'HiLite', className: 'noVis',
+    { data: 'color', title: 'HiLite',
+      type: ['read-only', 'hidden'], visible: false, className: 'noVis',
     },
 ],
 
@@ -141,7 +135,7 @@ onEditRow: function (dt, row, success, error) {
 
 {% endblock table_buttons_first %}
 
-{# remove filter button #}
+// remove filter button
 {% block filter_button %}{% endblock %}
 
 {% block functions %}
@@ -203,7 +197,3 @@ function UpdateRow (dt, row, success, error, url, emsg) {
 function UpdateSubheaderBasedOnSettings(table) {}
 
 {% endblock functions %}
-
-{% block ready_functions %}
-    table.on( 'select', MarkRow);
-{% endblock ready_functions %}

@@ -19,7 +19,6 @@
     <tbody>
       {% for busy in availability_list %}
       <tr>
-        <td></td>
         <td>{{ busy.start_on|date:"Y-m-d" }}</td>
         <td>{{ busy.end_on|date:"Y-m-d" }}</td>
         <td>{{ busy.comment }}</td>
@@ -42,14 +41,6 @@ altEditor: true,
 order: [[ 1, 'desc']],
 
 columns: [
-    { data: 'mark', width: '10px', responsivePriority: 1,
-      orderable: false,
-      className: 'mark-checkbox',
-      type: ['readonly', 'hidden'],
-      render: function(data, type, row, meta) {
-          return '<div data-id="'+row.id+'"></div>';
-      },
-    },
     { data: 'start_on', title: 'Start', width: '10%', responsivePriority: 2,
       type: 'date',
       render: function(data, type, row, meta) {
@@ -71,10 +62,7 @@ columns: [
       },
     },
     { data: 'comment', title: 'Comment', responsivePriority: 3, },
-    { data: 'id', title: 'Id',
-      visible: false,
-      type: ['readonly', 'hidden']
-    },
+    { data: 'id', visible: false, type: ['readonly', 'hidden'] },
 ],
 
 language: { emptyTable: 'No busy periods' },
@@ -176,7 +164,3 @@ function UpdateRow (dt, row, success, error) {
 function UpdateSubheaderBasedOnSettings (table) {}
 
 {% endblock functions %}
-
-{% block ready_functions %}
-    table.on( 'select', MarkRow);
-{% endblock ready_functions %}
