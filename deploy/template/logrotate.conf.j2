@@ -1,0 +1,9 @@
+/home/{{ app_user }}/logs/*.log {
+  daily
+  compress
+  copytruncate
+  dateext
+  missingok
+  olddir /home/{{ app_user }}/old_logs
+  rotate 1000
+}

@@ -72,6 +72,21 @@
         name: "{{ app_user }}"
       become: true
 
+    - name: setup logrotate and backup
+      block:
+        - template:
+            src: template/logrotate.conf.j2
+            dest: /etc/logrotate.d/bamru
+        - template:
+            src: template/logrotate.cron.j2
+            dest: /etc/cron.hourly/logrotate
+            mode: ugo+x
+        - template:
+            src: template/db.cron.j2
+            dest: /etc/cron.hourly/db_backup
+            mode: ugo+x
+      become: true
+
     - name: bamru user setup
       block:
         - file:
@@ -85,10 +100,12 @@
           with_items:
           - ~/bin
           - ~/data
-          - ~/logs/django
+          - ~/logs
+          - ~/old_logs
+          - ~/backup
           - ~/run
           - ~/static
-      
+
         - template:
             src: template/dot_env.j2
             dest: ~/.env
