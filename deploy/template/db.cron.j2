@@ -1,0 +1,8 @@
+#!/bin/sh
+
+DATE=`date '+%Y-%m-%d--%H-%M'`
+FILE=/tmp/db-${DATE}.sql.gz
+OUTDIR=/home/{{ app_user }}/backup
+
+sudo -u postgres pg_dump {{ db_name }} --compress=5 --file=$FILE
+mv $FILE $OUTDIR

@@ -18,7 +18,7 @@ export MEDIA_ROOT={{ media_root }}
 {% if use_message_file %}
 export MESSAGE_FILE_PATH=/home/{{ app_user }}/logs/message
 {% endif %}
-export LOG_ROOT=/home/{{ app_user }}/logs/django
+export LOG_ROOT=/home/{{ app_user }}/logs
 
 {% if use_raven %}
 export USE_RAVEN=True
