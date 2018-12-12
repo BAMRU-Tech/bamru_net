@@ -71,5 +71,14 @@ language: { emptyTable: 'No messages' },
 {% block filter_button %}{% endblock %}
 
 {% block functions %}
-  function UpdateSubheaderBasedOnSettings(table) {}
+function UpdateSubheaderBasedOnSettings(table) {}
+
+//FIXME: Pretty brute force, look at just updating the table
+//FIXME: Add button to enable/disable auto-refresh
+function timedRefresh(timeoutPeriod) {
+	setTimeout("location.reload(true);",timeoutPeriod);
+}
+
+window.onload = timedRefresh(15000);
+
 {% endblock functions %}
