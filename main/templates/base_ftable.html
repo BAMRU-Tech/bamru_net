@@ -183,39 +183,10 @@ function RemoveRows(table, values)
     table.draw().columns.adjust().responsive.recalc();//FX
 }
 
-//Used by mem_cert_lst, mem_avail_lst, mem_do_avail_lst
-function MarkRow ( e, dt, type, indices ) {
-        var allMarked = true;
-        var numRows = indices.length;
-        if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
-                // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
-            })
-        }
-        dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
-                if (numRows > 1) {
-                    if (allMarked)
-                        $(this.node()).children().first().removeClass('marked');
-                    else
-                        $(this.node()).children().first().addClass('marked');
-                } else {
-                    if ($(this.node()).children().first().hasClass('marked')) {
-                        $(this.node()).children().first().removeClass('marked');
-                        this.deselect();
-                    } else
-                        $(this.node()).children().first().addClass('marked');
-                }
-            });
-}
-
 //Used by mem_cert_lst and mem_avail_lst
 function DeleteRow ( e, dt, node, config, type, api ) {
-    var rows = [];
-    $.each($('td.mark-checkbox.marked'), function (i, el) {
-        rows.push($(this.firstChild).data().id)
-    });
+
+    var rows = dt.rows('.selected').data()
 
     if (rows.length == 0) {
         alert('Select ' + type + ' before deleting them');
@@ -229,7 +200,7 @@ function DeleteRow ( e, dt, node, config, type, api ) {
             $.ajax({
                 method: 'DELETE',
                 contentType: 'application/json',
-                url: '/api/' + api + '/' + rows[i] + '/',
+                url: '/api/' + api + '/' + rows[i].id + '/',
                 success: function () {
                     location.reload(true);
                 },
