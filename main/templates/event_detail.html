@@ -264,17 +264,18 @@ $(document).ready( function() {
                         action: function ( e, dt, node, config ) {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
-                            else
+                            else {
                                 var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                '&OP={{ period.position }}' +
-                                '&period={{ period.id }}' +
-                                '&page_format=leave';
-                            Sentry.withScope(scope => {
-                                scope.setLevel('info');
-                                Sentry.captureMessage("Paging Left",
+                                    '&OP={{ period.position }}' +
+                                    '&period={{ period.id }}' +
+                                    '&page_format=leave';
+                                Sentry.withScope(scope => {
+                                    scope.setLevel('info');
+                                    Sentry.captureMessage("Paging Left",
                                                       { extra: { page: href } });
-                            });
-                            location.href = href;
+                                });
+                                location.href = href;
+                            }
                         }
                     },
                     {
@@ -282,17 +283,18 @@ $(document).ready( function() {
                         action: function ( e, dt, node, config ) {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
-                            else
+                            else {
                                 var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                '&OP={{ period.position }}' +
-                                '&period={{ period.id }}' +
-                                '&page_format=return';
-                            Sentry.withScope(scope => {
-                                scope.setLevel('info');
-                                Sentry.captureMessage("Paging Returned",
-                                                      { extra: { page: href } });
-                            });
-                            location.href = href;
+                                    '&OP={{ period.position }}' +
+                                    '&period={{ period.id }}' +
+                                    '&page_format=return';
+                                Sentry.withScope(scope => {
+                                    scope.setLevel('info');
+                                    Sentry.captureMessage("Paging Returned",
+                                                          { extra: { page: href } });
+                                });
+                                location.href = href;
+                            }
                         }
                     },
                     {
@@ -300,26 +302,24 @@ $(document).ready( function() {
                         action: function ( e, dt, node, config ) {
                             if (dt.rows().count() == 0)
                                 alert('Add members to period before paging them');
-                            else
+                            else {
                                 var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                '&OP={{ period.position }}' +
-                                '&period={{ period.id }}' +
-                                '&page_format=info';
-                            Sentry.withScope(scope => {
-                                scope.setLevel('info');
-                                Sentry.captureMessage("Paging Info",
-                                                      { extra: { page: href } });
-                            });
-                            location.href = href;
+                                    '&OP={{ period.position }}' +
+                                    '&period={{ period.id }}' +
+                                    '&page_format=info';
+                                Sentry.withScope(scope => {
+                                    scope.setLevel('info');
+                                    Sentry.captureMessage("Paging Info",
+                                                          { extra: { page: href } });
+                                });
+                                location.href = href;
+                            }
                         }
                     },
                     {
                         text: '<i class="fa fa-wrench"></i> Broadcast (unit)',
                         action: function ( e, dt, node, config ) {
-                            if (dt.rows().count() == 0)
-                                alert('Add members to period before paging them');
-                            else
-                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
+                            var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=broadcast';
@@ -336,17 +336,18 @@ $(document).ready( function() {
                         action: function ( e, dt, node, config ) {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
-                            else
+                            else {
                                 var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                '&OP={{ period.position }}' +
-                                '&period={{ period.id }}' +
-                                '&page_format=test';
-                            Sentry.withScope(scope => {
-                                scope.setLevel('info');
-                                Sentry.captureMessage("Paging Test",
-                                                      { extra: { page: href } });
-                            });
-                            location.href = href;
+                                    '&OP={{ period.position }}' +
+                                    '&period={{ period.id }}' +
+                                    '&page_format=test';
+                                Sentry.withScope(scope => {
+                                    scope.setLevel('info');
+                                    Sentry.captureMessage("Paging Test",
+                                                          { extra: { page: href } });
+                                });
+                                location.href = href;
+                            }
                         }
                     },
                 ]
@@ -354,7 +355,10 @@ $(document).ready( function() {
             {
                 text: '<i class="fa fa-address-book"></i> Add',
                 action: function () {
-                    var href='{% url "period_participant_add" period.id %}?et={{period.event.title}} OP{{period.position}}&eid={{event.id}}&pn={{period.position}}&pid={{period.id}}';
+                    var href='{% url "period_participant_add" period.id %}?' +
+                        'et={{period.event.title}} OP{{period.position}}&' +
+                        'eid={{event.id}}&pn={{period.position}}&' +
+                        'pid={{period.id}}';
                     location.href = href;
                 }
             },
