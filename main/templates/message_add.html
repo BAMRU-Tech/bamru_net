@@ -20,19 +20,22 @@
   </div>
   <div class="form-group">
     <div class="form-check">
-      <input type="checkbox" name="email" class="form-check-input" id="id_email" checked />
+      <input type="checkbox" name="email" class="form-check-input"
+             id="id_email" checked />
       <label class="form-check-label" for="id_email">Email</label>
     </div>
   </div>
   <div class="form-group">
     <div class="form-check">
-      <input type="checkbox" name="sms" class="form-check-input" id="id_sms" checked />
+      <input type="checkbox" name="sms" class="form-check-input"
+             id="id_sms" checked />
       <label class="form-check-label" for="id_sms">Sms</label>
     </div>
   </div>
 
   <div id="show-filter" style="display: none">
-    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
+    <select id="filter-status" multiple="multiple"
+            selectableHeader="Display status">
       <option value="TM">Technical Member</option>
       <option value="FM">Field Member</option>
       <option value="T">Trainee</option>
@@ -52,7 +55,9 @@
       <tr>
         <td data-id={{ member.id }}></td>
         <td>
-          <a href="{% url 'member_detail' member.id %}?returnx=ml">{{ member.full_name }}</a>
+          <a href="{% url 'member_detail' member.id %}?returnx=ml">
+            {{ member.full_name }}
+          </a>
         </td>
         <td>{{ member.status }}</td>
         <td>{{ member.status_order }}</td>
@@ -119,13 +124,17 @@ language: { emptyTable: 'No participants selected' },
 {% endblock table_buttons_first %}
 
 {% block initComplete %}
-SetMemberFilter (table, 'invite broadcast'.includes(pageFormat));
+
+SetMemberFilter (table,
+                 'headsUp available broadcast'.includes(pageFormat));
+
 EnableMarkSelection(table);
+
 {% endblock initComplete %}
 
 {% block ready_functions %}
 
-if (!'headsUp available'.includes(pageFormat))
+//if (!'headsUp available'.includes(pageFormat))  //FIXME: correct policy?
     table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
         // Pre-select participants
         $(this.node()).children().first().addClass('marked');
