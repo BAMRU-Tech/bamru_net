@@ -138,6 +138,7 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
 
         type = self.request.GET.get('type')
         form.fields['type'].initial = type
+        form.fields['description'].widget.attrs = { 'rows':4 }
 
         return form
 
