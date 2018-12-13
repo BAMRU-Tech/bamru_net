@@ -98,7 +98,15 @@ const colDefs = [
       }
     },
     { data: 'role_order', visible: false, className: 'noVis', },
-    { data: 'display_phone', title: 'Phone', width: '75px', responsivePriority: 2, },
+    { data: 'display_phone', title: 'Phone', width: '75px',
+      responsivePriority: 2,
+      render: function (data, type, row, meta) {
+          if (type == 'display')
+              return '<a href="tel:' + data + '">' + data + '</a>';
+          else
+              return data;
+      }
+    },
     { data: 'display_email', title: 'eMail', responsivePriority: 2, },
 ];
 
