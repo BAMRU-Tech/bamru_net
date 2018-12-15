@@ -118,6 +118,7 @@ language: { emptyTable: 'No participants selected' },
 {% block table_buttons_first %}
 
 { text: '<i class="fa fa-address-book"></i> Send Page', action: SendPage, },
+{ text: '<i class="fa fa-window-close"></i> Cancel', action: CancelPage, },
 { text: 'Select All', action: SelectAll, },
 { text: 'Clear All', action: ClearAll, },
 
@@ -257,6 +258,11 @@ function UpdateSubheaderBasedOnSettings (table) {
     table.draw().columns.adjust().responsive.recalc(); //FX
 
 }
+
+function CancelPage ( e, dt, node, config ) {
+    location.href = '/event/' + eventId + '/#OP' + periodPosition
+}
+
 
 $.fn.dataTable.ext.search.push(
     // Custom filter data is an array not an object, change this if cols reordered
