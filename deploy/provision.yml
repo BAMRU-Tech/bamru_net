@@ -21,6 +21,8 @@
       block:
         - apt_repository:
             repo: ppa:certbot/certbot
+        - apt_repository:
+            repo: ppa:duplicity-team/ppa
         - apt:
             name: "{{ packages }}"
             update_cache: yes
@@ -32,6 +34,7 @@
               - postgresql
               - postgresql-client
               - python
+              - python-pip
               - python-certbot-nginx
               - python3-pip
               - python3-psycopg2
@@ -40,6 +43,10 @@
               - rabbitmq-server
               - supervisor
               - virtualenv
+              - duplicity
+        - pip:
+            executable: pip2
+            name: dropbox
       become: yes
       when: install_packages
 
@@ -84,6 +91,10 @@
         - template:
             src: template/db.cron.j2
             dest: /etc/cron.hourly/db_backup
+            mode: ugo+x
+        - template:
+            src: template/duplicity.cron.j2
+            dest: /etc/cron.hourly/zz_duplicity
             mode: ugo+x
       become: true
 
