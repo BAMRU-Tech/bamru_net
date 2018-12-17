@@ -70,7 +70,7 @@ SetMemberFilter (table);
 
 {% block functions %}
 const colDefs = [
-    { data: 'full_name', title: 'Name', responsivePriority: 1,
+    { data: 'full_name', title: 'Name', width: '35%', responsivePriority: 1,
       render: function(data, type, row, meta) {
           if (type == 'display')
               return '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
