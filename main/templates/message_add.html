@@ -53,7 +53,7 @@
       {% for member in member_list %}
       {% spaceless %}
       <tr>
-        <td data-id={{ member.id }}></td>
+        <td></td>
         <td>
           <a href="{% url 'member_detail' member.id %}?returnx=ml">
             {{ member.full_name }}
@@ -65,6 +65,7 @@
         <td>{{ member.role_order }}</td>
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
+        <td>{{ member.id }}</td>
       </tr>
       {% endspaceless %}
       {% endfor %}
@@ -108,7 +109,8 @@ columns: [
     },
     { data: 'role_order', visible: false, className: 'noVis', },
     { data: 'display_phone', title: 'Phone', responsivePriority: 2, },
-    { data: 'display_email', title: 'Email', responsivePriority: 3, }
+    { data: 'display_email', title: 'Email', responsivePriority: 3, },
+    { data: 'id', visible: false, className: 'noVis', },
 ],
 
 language: { emptyTable: 'No participants selected' },
@@ -159,7 +161,7 @@ var showStatus = [];
 function SendPage ( e, dt, node, config ) {
     var members = [];
     $('td.mark-checkbox.marked').each(function (i, el) {
-        members.push($(this).data('id'))
+        members.push( dt.row(this.parentElement).data().id )
     });
     
     if (members.length == 0) {
