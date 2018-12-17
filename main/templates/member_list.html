@@ -113,10 +113,8 @@ const colDefs = [
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected status based on filter
     var showStatus = [];
-    $('#filter-status option').each(function() {
-        if (!this.selected) {
-            showStatus.push(this.value);
-        }
+    $('#filter-status option').each( function() {
+        if (!this.selected) showStatus.push(this.value);
     })
 
     $('#subhdr')[0].innerHTML = 'Members (' + showStatus.join(', ') + ')';
