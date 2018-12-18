@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+
+REMOTE_DIR={{ gdrive_remote_dir }}
+GDRIVE=/usr/local/bin/gdrive
+
+${GDRIVE} -c /home/{{ app_user }}/.gdrive sync upload /home/{{ app_user }} ${REMOTE_DIR}
