@@ -47,6 +47,10 @@
         - pip:
             executable: pip2
             name: dropbox
+        - copy:
+            src: "{{ data_dir }}/gdrive"
+            dest: /usr/local/bin/gdrive
+            mode: 0755
       become: yes
       when: install_packages
 
@@ -93,8 +97,8 @@
             dest: /etc/cron.hourly/db_backup
             mode: ugo+x
         - template:
-            src: template/duplicity.cron.j2
-            dest: /etc/cron.hourly/zz_duplicity
+            src: template/gdrive.cron.j2
+            dest: /etc/cron.hourly/zz_gdrive
             mode: ugo+x
       become: true
 
@@ -109,6 +113,7 @@
             path: "{{ item }}"
             state: directory
           with_items:
+          - ~/.gdrive
           - ~/bin
           - ~/data
           - ~/logs
@@ -120,7 +125,11 @@
         - template:
             src: template/dot_env.j2
             dest: ~/.env
-            
+
+        - template:
+            src: template/gdriveignore.j2
+            dest: ~/.gdriveignore
+
         - template:
             src: template/gunicorn_start.j2
             dest: ~/bin/gunicorn_start
@@ -130,6 +139,12 @@
           copy:
             src: "{{ data_dir }}/access_key_rsa"
             dest: ~/.ssh/id_rsa
+            mode: 0600
+
+        - name: copy gdrive key
+          copy:
+            src: "{{ data_dir }}/gdrive_token_v2.json"
+            dest: ~/.gdrive/token_v2.json
             mode: 0600
 
         - name: write google oauth token file

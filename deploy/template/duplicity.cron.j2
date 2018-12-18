@@ -15,7 +15,7 @@ set -a
 # Remove files older than 60 days from Dropbox
 duplicity remove-older-than 60D --force dpbx://${DROPBOX_FOLDER}
 # Sync everything to Dropbox
-duplicity --include=${ROOT_FOLDER}/backup --include=${ROOT_FOLDER}/logs --include=${ROOT_FOLDER}/old_logs --include=${ROOT_FOLDER}/system --exclude='**' ${ROOT_FOLDER} dpbx://${DROPBOX_FOLDER}
+duplicity --include=${ROOT_FOLDER}/logs --include=${ROOT_FOLDER}/old_logs --include=${ROOT_FOLDER}/system --exclude='**' ${ROOT_FOLDER} dpbx://${DROPBOX_FOLDER}
 # Cleanup failures
 duplicity cleanup --force dpbx://${DROPBOX_FOLDER}
 
