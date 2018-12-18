@@ -6,9 +6,9 @@
     # Install system packages
     install_packages: true
     # Completely wipe the database and re-import
-    update_database: true
+    update_database: false
     # upload initial file dump
-    upload_files: true
+    upload_files: false
 
   tasks:
     - name: Include vars from user vault or default vault
