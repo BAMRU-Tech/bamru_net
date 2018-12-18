@@ -69,7 +69,7 @@ six==1.11.0
 stylus==0.1.2
 twilio==6.14.3
 uritemplate==3.0.0
-urllib3==1.22
+urllib3==1.23
 vine==1.1.4
 vobject==0.9.6.1
 yapf==0.22.0
