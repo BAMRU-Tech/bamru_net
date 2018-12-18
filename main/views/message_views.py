@@ -297,7 +297,8 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
         do = self.request.user
         context['title'] = "Page DO transition"
 
-        context['period_format'] = 'info'
+        context['format'] = 'page'
+        context['period_format'] = 'broadcast'
         # text box canned message
         start = datetime.now()
         # set end to next Tuesday
