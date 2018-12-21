@@ -21,8 +21,6 @@
       block:
         - apt_repository:
             repo: ppa:certbot/certbot
-        - apt_repository:
-            repo: ppa:duplicity-team/ppa
         - apt:
             name: "{{ packages }}"
             update_cache: yes
@@ -34,7 +32,6 @@
               - postgresql
               - postgresql-client
               - python
-              - python-pip
               - python-certbot-nginx
               - python3-pip
               - python3-psycopg2
@@ -43,10 +40,6 @@
               - rabbitmq-server
               - supervisor
               - virtualenv
-              - duplicity
-        - pip:
-            executable: pip2
-            name: dropbox
         - copy:
             src: "{{ data_dir }}/gdrive"
             dest: /usr/local/bin/gdrive
