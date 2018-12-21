@@ -2,6 +2,15 @@
 set -e
 
 REMOTE_DIR={{ gdrive_remote_dir }}
-GDRIVE=/usr/local/bin/gdrive
+RCLONE="/usr/local/bin/rclone --config /home/{{ app_user }}/.rclone.conf"
 
-${GDRIVE} -c /home/{{ app_user }}/.gdrive sync upload /home/{{ app_user }} ${REMOTE_DIR}
+function rclone_copy {
+    ${RCLONE} copy /home/{{ app_user }}/$1 gdrive:${REMOTE_DIR}/$1
+}
+
+{
+    rclone_copy backup
+    rclone_copy logs
+    rclone_copy old_logs
+    rclone_copy system
+} 2>&1 >> /var/log/backup.log
