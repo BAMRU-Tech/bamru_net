@@ -41,8 +41,8 @@
               - supervisor
               - virtualenv
         - copy:
-            src: "{{ data_dir }}/gdrive"
-            dest: /usr/local/bin/gdrive
+            src: "{{ data_dir }}/rclone"
+            dest: /usr/local/bin/rclone
             mode: 0755
       become: yes
       when: install_packages
@@ -106,7 +106,6 @@
             path: "{{ item }}"
             state: directory
           with_items:
-          - ~/.gdrive
           - ~/bin
           - ~/data
           - ~/logs
@@ -118,10 +117,6 @@
         - template:
             src: template/dot_env.j2
             dest: ~/.env
-
-        - template:
-            src: template/gdriveignore.j2
-            dest: ~/.gdriveignore
 
         - template:
             src: template/gunicorn_start.j2
@@ -136,8 +131,8 @@
 
         - name: copy gdrive key
           copy:
-            src: "{{ data_dir }}/gdrive_token_v2.json"
-            dest: ~/.gdrive/token_v2.json
+            src: "{{ data_dir }}/rclone.conf"
+            dest: ~/.rclone.conf
             mode: 0600
 
         - name: write google oauth token file
