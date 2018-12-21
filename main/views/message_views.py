@@ -165,6 +165,7 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
     if not distribution.rsvp_answer:
         return 'Response no to {} received.'.format(distribution.message.period)
 
+    # Everything following here is a 'yes'
     p = Participant.objects.filter(**participant_filter).first()
     if p:
         if distribution.message.period_format == 'leave':
@@ -176,8 +177,8 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
             p.save()
             return 'Return time recorded for {}.'.format(distribution.message.period)
         else:
-            return ('Unknown response for {} page for {}.'
-                    .format(distribution.message.period_format, distribution.message.period))
+            return ('Response yes to {} received.'
+                    .format(distribution.message.period))
 
     logger.error('Participant not found for: ' + str(request.body))
     return ('Error: You were not found as a participant for {}.'
@@ -236,7 +237,7 @@ def sms(request):
         logger.error('No matching OutboundSms from: {} to: {} body: {}'.format(
             twilio_request.from_, twilio_request.to, twilio_request.body))
         response.message(
-            'BAMRU.net Warning: not sure what to do with your message. Maybe it was too long ago.')
+            'BAMRU.net Warning: response ignored. No RSVP question in the past 24 hours.')
         return response
 
     yn = twilio_request.body[0].lower()
