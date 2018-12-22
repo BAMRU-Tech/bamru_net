@@ -91,7 +91,7 @@
             mode: ugo+x
         - template:
             src: template/gdrive.cron.j2
-            dest: /etc/cron.hourly/zz_gdrive
+            dest: /etc/cron.daily/zz_gdrive
             mode: ugo+x
       become: true
 

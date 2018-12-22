@@ -9,8 +9,6 @@ function rclone_copy {
 }
 
 {
-    rclone_copy backup && \
-    rclone_copy logs && \
     rclone_copy old_logs && \
     rclone_copy system && \
     wget -q {{ gdrive_backup_status_webhook }} -O /dev/null

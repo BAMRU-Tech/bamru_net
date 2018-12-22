@@ -1,8 +1,12 @@
 #!/bin/sh
+set -e
 
 DATE=`date '+%Y-%m-%d--%H-%M'`
-FILE=/tmp/db-${DATE}.sql.gz
+FILENAME=db-${DATE}.sql.gz
+FILE=/tmp/$FILENAME
 OUTDIR=/home/{{ app_user }}/backup
 
 sudo -u postgres pg_dump {{ db_name }} --compress=5 --file=$FILE
 mv $FILE $OUTDIR
+/usr/local/bin/rclone --config /home/{{ app_user }}/.rclone.conf copy ${OUTDIR}/$FILENAME gdrive:{{ gdrive_remote_dir }}/backup
+wget -q {{ db_backup_status_webhook }} -O /dev/null
