@@ -52,7 +52,8 @@ class EventPublishedListView(generic.ListView):
 
     def get_queryset(self):
         f = EventFilter(self.request.GET,
-                        queryset=Event.objects.filter(published=True))
+                        queryset=Event.objects.filter(
+                            published=True).order_by('start_at'))
         return f.qs
 
 
