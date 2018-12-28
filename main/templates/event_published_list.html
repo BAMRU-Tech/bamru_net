@@ -153,3 +153,19 @@
 
 {% endif %}
 {% endfor %}
+
+<p>&nbsp;</p>
+<p><span class="capsblue"><a name="COMMUNITY"></a>COMMUNITY EVENTS</span></p>
+
+{% for event in event_list %}
+{% if event.type == community %}
+      <p/>
+      <span class="caps"><a id='e{{event.id}}'></a><span class="nav3">
+      {{ event.title }}</span></span><br/>
+      <span class="news10"> <font color="#888888">{{ event.location }}<br>
+          2018-07-13 - 2018-07-15<br>      Leaders: {{event.leaders }}<br><br></font></span>
+      {{ event.description | linebreaks }}
+      <font class="caps"><img src="images/assets/dots.gif" width="134" height="10"></font></p>
+
+{% endif %}
+{% endfor %}
