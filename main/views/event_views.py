@@ -14,6 +14,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from main.lib.gcal import get_gcal_manager
 from main.models import Member, Event, Participant, Period
+from main.views.api_views import EventFilter
 
 from datetime import timedelta
 import datetime
@@ -41,6 +42,18 @@ class EventListView(LoginRequiredMixin, generic.ListView):
         # Add column sort for datatable (zero origin)
         #context['sortOrder'] = '4, "asc"'
         #return context
+
+
+# Explicitly does NOT include LoginRequiredMixin since this is public
+# DO NOT COPY THE LINE BELOW FOR OTHER USES!
+class EventPublishedListView(generic.ListView):
+    template_name = 'event_published_list.html'
+    context_object_name = 'event_list'
+
+    def get_queryset(self):
+        f = EventFilter(self.request.GET,
+                        queryset=Event.objects.filter(published=True))
+        return f.qs
 
 
 class EventDetailView(LoginRequiredMixin, generic.DetailView):

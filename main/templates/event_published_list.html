@@ -1,0 +1,155 @@
+
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=ISO-8859-1">
+  <title>BAMRU Calendar</title>
+  <link rel='stylesheet' type='text/css' href='http://bamru.org/stylesheets/style.css'>
+</head>
+<body bgcolor="#FFFFFF" leftmargin="0" marginwidth="0" topmargin="0" marginheight="0">
+
+<table cellpadding="1" cellspacing=0 bgcolor="#FFFFFF" width="406"><tr bgcolor="#FFFFFF">
+  <td width=296 valign="top"><font class=summary><br>
+    &nbsp; <b>Meetings</b>&nbsp; <span class="news10"><font color="#888888">7:30-9:30 PM</font></span>
+    <br><br></font></td>
+  <td width=75 valign="top"></td>
+  <td width=35 valign="top"></td>
+</tr>
+  
+{% for event in event_list %}
+{% if event.type == 'meeting' %}
+<tr bgcolor="{% cycle '#EEEEE' '#FFFFF' %}">
+  <td valign="top" class=summary>&nbsp;
+    <a href="#GENERAL" class=summary>
+      {{ event.title }}
+    </a>
+    <span class=copy>
+      {{ event.location }}
+    </span>
+  </td>
+  <td valign="top" NOWRAP class=summary>
+    {{ event.start_at | date:"M j" }}
+  </td>
+  <td valign="top" NOWRAP class=summary>
+    {{ event.leaders }}
+  </td>
+</tr>
+{% endif %}
+{% endfor %}
+
+
+  <tr bgcolor="#FFFFFF">
+    <td width=296 valign="top"><font class=summary><br>
+      &nbsp; <b>Trainings</b>      <br><br></font></td>
+    <td width=75 valign="top"></td>
+    <td width=35 valign="top"></td>
+  </tr>
+
+{% for event in event_list %}
+{% if event.type == 'training' %}
+<tr bgcolor="{% cycle '#EEEEE' '#FFFFF' %}">
+  <td valign="top" class=summary>&nbsp;
+    <a href="#e{{ event.id }}" class=summary>
+      {{ event.title }}
+    </a>
+    <span class=copy>
+      {{ event.location }}
+    </span>
+  </td>
+  <td valign="top" NOWRAP class=summary>
+    {{ event.start_at | date:"M j" }}
+  </td>
+  <td valign="top" NOWRAP class=summary>
+    {{ event.leaders }}
+  </td>
+</tr>
+{% endif %}
+{% endfor %}
+
+
+  <tr>
+      <td colspan=3 style='text-align: center;' align='center'>
+        <i>Asterisks * mark the core program for first-year trainees</i><br/>
+        <i>'G' marks events that are open to Guests</i>
+      </td>
+  </tr>
+
+  <tr bgcolor="#FFFFFF">
+    <td width=296 valign="top"><font class=summary><br>
+      &nbsp; <b>Community Events</b>      <br><br></font></td>
+    <td width=75 valign="top"></td>
+    <td width=35 valign="top"></td>
+  </tr>
+
+{% for event in event_list %}
+{% if event.type == community %}
+<tr bgcolor="{% cycle '#EEEEE' '#FFFFF' %}">
+  <td valign="top" class=summary>&nbsp;
+    <a href="#e{{ event.id }}" class=summary>
+      {{ event.title }}
+    </a>
+    <span class=copy>
+      {{ event.location }}
+    </span>
+  </td>
+  <td valign="top" NOWRAP class=summary>
+    {{ event.start_at | date:"M j" }}
+  </td>
+  <td valign="top" NOWRAP class=summary>
+    {{ event.leaders }}
+  </td>
+</tr>
+{% endif %}
+{% endfor %}
+
+
+</table>
+
+
+ <br><p><span class="capsblue"><a name="MEETINGS"></a>MEETINGS</span></p>
+<p><span class="caps"><a id="GENERAL"></a><span class="nav3">
+      General Meetings</span></span><br>
+      <span class="news10"><font color="#888888">
+        7:30-9:30 PM, see calendar for location<br><br>
+      </font></span>
+  Our monthly general meetings are open to the public,
+  generally on the third Monday of the month (except where that falls on
+  a holiday).&nbsp; Note there are two locations at which we alternate having meetings,
+  <a href="meeting_locations" class="navover">Redwood City</a>
+  and <a href="meeting_locations#EastBayMeeting" class="navover">Castro Valley</a>.&nbsp;
+  Check the calendar for specific months.&nbsp; During our recruitment season, we'll be having informal Open
+  House presentations at 7:00 PM before meetings.&nbsp;<br>
+<p><font class="caps"><a id="BOD"></a><span class="nav3">
+      Board of Directors Meetings</span></font><br>
+      <span class="news10"> <font color="#888888">7:30-9:00 PM, Redwood City<br>
+        <br></font></span>
+  Board meetings are open to BAMRU trainees and members only.<br>
+<p><font class="caps"><a id="BASARC"></a><span class="nav3">
+      BASARC Meetings</span></font><br>
+      <span class="news10"> <font color="#888888">Times and locations vary<br>
+        <br></font></span>
+  BAMRU is a member of the <a href="http://www.basarc.org/" target="_blank" class="navover">
+  Bay Area Search and Rescue Council</a>.<br>
+<p><font class="caps"><a id="CRMRA"></a><span class="nav3">
+      Regional Meetings of the Mountain Rescue Association</span></font><br>
+      <span class="news10"> <font color="#888888">Times and locations vary<br>
+        <br></font></span>
+  The quarterly meeting of the <a href="http://www.crmra.org/" target="_blank" class="navover">
+  California Region</a> of the <a href="http://www.mra.org/" target="_blank" class="navover">
+  Mountain Rescue Association</a>.&nbsp; These meetings are open to members and
+  trainees of CRMRA teams.<br>
+<p>&nbsp;</p>
+  
+<p><span class="capsblue"><a name="TRAININGS"></a>TRAININGS</span></p>
+
+{% for event in event_list %}
+{% if event.type == 'training' %}
+      <p/>
+      <span class="caps"><a id='e{{event.id}}'></a><span class="nav3">
+      {{ event.title }}</span></span><br/>
+      <span class="news10"> <font color="#888888">{{ event.location }}<br>
+          2018-07-13 - 2018-07-15<br>      Leaders: {{event.leaders }}<br><br></font></span>
+      {{ event.description | linebreaks }}
+      <font class="caps"><img src="images/assets/dots.gif" width="134" height="10"></font></p>
+
+{% endif %}
+{% endfor %}
