@@ -26,6 +26,9 @@ class RoleInline(InlineDefaults):
 class OtherInfoInline(InlineDefaults):
     model = OtherInfo
 
+class CertInline(InlineDefaults):
+    model=Cert
+
 class MemberUserAdmin(UserAdmin):
     """Override broken defaults from UserAdmin"""
     fieldsets = None
@@ -43,6 +46,7 @@ class MemberAdmin(MemberUserAdmin):
         EmergencyContactInline,
         RoleInline,
         OtherInfoInline,
+        CertInline,
         ]
 
 
