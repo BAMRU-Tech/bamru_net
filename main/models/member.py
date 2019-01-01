@@ -377,7 +377,7 @@ class Cert(BasePositionModel):
                                  max_length=255, blank=True, null=True)
     cert_name = models.CharField(max_length=255, blank=True, null=True)  # original file name
     cert_content_type = models.CharField(max_length=255, blank=True, null=True)
-    cert_size = models.TextField(blank=True, null=True)
+    cert_size = models.IntegerField(blank=True, null=True)
     ninety_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     thirty_day_notice_sent_at = models.DateTimeField(blank=True, null=True)
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
