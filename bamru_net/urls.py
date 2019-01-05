@@ -63,6 +63,7 @@ urlpatterns = [
     path('file/upload/', views.DataFileFormView.as_view(), name='file_upload'),
     path('file_id/<int:id>/', views.download_data_file_by_id_view, name='file_download'),
     path('file/<path:name>', views.download_data_file_by_name_view), # used by wiki
+    path('files/<path:name>', views.download_data_file_by_name_view), # used by wiki
 
     path('cert/', views.CertListView.as_view(), name='cert_list'),
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
