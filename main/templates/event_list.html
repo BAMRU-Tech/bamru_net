@@ -94,7 +94,8 @@
 
 {% block table_options %}
 
-order: [[ 6, 'desc' ]],
+// Create More events table
+order: [[ 6, 'asc' ]],
 autoWidth: false,
 
 columns: colDefs,
@@ -114,7 +115,7 @@ language: { emptyTable: 'No events selected' },
 {% block ready_functions %}
 
 $(document).ready(function() {
-    // Create Upcoming events table
+    // Create Current events table
     var tableUpcoming = $('#Upcoming').DataTable( {
         dom: 'Bfrtip',
         ajax: { url: ComputeUpcoming(), dataSrc: '', },
