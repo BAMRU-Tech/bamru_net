@@ -59,7 +59,30 @@ $(document).ready(function() {
                     { text: 'Search',
                       action: function () { $("#dTbl_filter").toggle() }
                     },
-                    'copy', 'csv', 'excel', 'print',
+                    {
+                        extend: 'copy',
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                    {
+                        extend: 'csv',
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                    {
+                        extend: 'excel',
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
+                    {
+                        extend: 'print',
+                        exportOptions: {
+                            columns: ':visible'
+                        }
+                    },
                     {
                         extend: 'colvis',
                         columns: ':not(.noVis)'
