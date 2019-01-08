@@ -17,7 +17,7 @@
 {% endblock subheader %}
 
 {% block content %}
-<main role="main" class="container">
+<main role="main" class="container-fluid">
   {% if member.is_current_do %}
     <p style="color:red">CURRENT DO until</p>
   {% endif %}
@@ -62,7 +62,15 @@
 
   <p></p>
   {% if member.id != request.user.id %}
+  <nav class="navbar navbar-expand-sm text-primary subhead">
   <strong>Certifications:</strong>
+  {% if Editor %}
+  <a class="ml-auto" href="{% url 'member_cert_list' member.id %}">
+    <i class="fa fa-certificate"></i>
+    Edit Certifications
+  </a>
+  {% endif %}
+  </nav>
   <table id="dTbl" class="display table-bordered compact"
          cellpadding="0" cellspacing="0" style="width:100%">
   </table>

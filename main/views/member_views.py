@@ -41,6 +41,14 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_detail.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['Editor'] = (
+            self.request.user.is_staff or
+            self.request.user.role_set.filter(role='SEC').count() == 1
+        )
+        return context
+
 
 class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
     template_name = 'member_edit.html'
