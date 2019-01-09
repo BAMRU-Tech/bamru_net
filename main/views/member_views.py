@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch
+from django import forms
 from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
@@ -43,10 +44,6 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['Editor'] = (
-            self.request.user.is_staff or
-            self.request.user.role_set.filter(role='SEC').count() == 1
-        )
         return context
 
 
@@ -142,6 +139,39 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
         context['member'] = member
         context.update(self.get_forms(member))
         return context
+
+
+class MemberAddForm(forms.Form):
+    first_name = forms.CharField()
+    last_name = forms.CharField()
+    email = forms.CharField()
+    phone = forms.CharField()
+
+
+class MemberAddView(LoginRequiredMixin, generic.edit.FormView):
+    """Intended to add guests for trainings.
+    Later they can transition to Trainee.
+    """
+    template_name = 'member_add.html'
+    form_class = MemberAddForm
+
+    def form_valid(self, form):
+        m, created = Member.objects.get_or_create(
+            first_name = form.cleaned_data['first_name'],
+            last_name = form.cleaned_data['last_name'],
+            defaults={
+                'username': '{} {}'.format(
+                    form.cleaned_data['first_name'],
+                    form.cleaned_data['last_name']).lower(),
+                'status': 'G',
+                'is_active': False,
+            })
+        if created:
+            Email.objects.create(member=m, pagable=False,
+                                 address=form.cleaned_data['email'])
+            Phone.objects.create(member=m, pagable=False,
+                                 number=form.cleaned_data['phone'])
+        return HttpResponseRedirect(m.get_absolute_url())
 
 
 class MemberCertListView(LoginRequiredMixin, generic.ListView):
