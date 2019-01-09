@@ -85,6 +85,7 @@
           <tr>
             <td></td>
             <td data-id={{ p.id }}>{{ p.member }}</td>
+            <td>{{ p.member.status }}</td>
             <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
             <td>
               {% if p.en_route_at|date:"H:i" != '00:00' %}
@@ -151,16 +152,13 @@ $(document).ready( function() {
         info:     false,
         order: [[ 1, 'asc' ]],
 
-        columnDefs: [
-            { visible: false, targets: [3, 5, 7, 9, 10, 11, 12, 13, 14]},
-        ],
-
         columns: [
             { data: 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
               className: 'noVis'
             },
-            { data: 'name', title: 'Name', responsivePriority: 1, type: 'readonly',
+            { data: 'name', title: 'Name', responsivePriority: 1,
+              type: 'readonly',
               render: function (d, t, r, m) {
                   if (t == 'display') {
                       if (r.ahc == 'true') d += '(AHC)';
@@ -169,13 +167,15 @@ $(document).ready( function() {
                   return d;
               }
             },
+            { data: 'status', title: 'Status', width: '35px',
+              type: 'readonly', responsivePriority: 3, },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'en_route_time') },
             },
             { data: 'en_route_time', title: 'at', type: 'time',
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
             { data: 'return_home_date', title: 'Returned', responsivePriority: 2,
               type: 'date',
@@ -183,43 +183,43 @@ $(document).ready( function() {
                   return RenderDateTime(d, t, r, m, 'return_home_time') },
             },
             { data: 'return_home_time', title: 'at', type: 'time',
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
 
-            { data: 'signed_in_date', title: 'Signed in', responsivePriority: 3,
-              type: 'date',
+            { data: 'signed_in_date', title: 'Signed in', responsivePriority: 4,
+              type: 'date', visible: false,
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_in_time') },
             },
             { data: 'signed_in_time', title: 'at', type: 'time',
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
 
-            { data: 'signed_out_date', title: 'Signed out', responsivePriority: 3,
-              type: 'date',
+            { data: 'signed_out_date', title: 'Signed out', responsivePriority: 4,
+              type: 'date', visible: false,
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_out_time') },
             },
             { data: 'signed_out_time', title: 'at', type: 'time',
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
 
             { data: 'ahc', title: 'Ahc',
               type: 'select', options: ['false', 'true'],
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
             { data: 'ol', title: 'Ol',
               type: 'select', options: ['false', 'true'],
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
             { data: 'id', type: ['readonly', 'hidden'],
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
             { data: 'member', type: ['readonly', 'hidden'],
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
             { data: 'period', type: ['readonly', 'hidden'],
-              className: 'noVis'
+              visible: false, className: 'noVis'
             },
         ],
 
