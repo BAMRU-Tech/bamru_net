@@ -119,6 +119,7 @@
           {% endfor %}
         </tbody>
       </table>
+      <div id="dTblFoot{{period.position}}"></div>
     </details>
     {% endfor %}
   </div>
@@ -143,6 +144,9 @@
 'use strict'
 $(document).ready( function() {
     {% for period in event.period_set.all %}
+    //FIXME: Move this constant
+    window.summary{{period.position}} = { TM: 0, FM: 0, T: 0,
+                                          R: 0, S: 0, A: 0, G:0 };
     var table{{period.position}} = $('#dTbl{{period.position}}').DataTable( {
         dom: 'Bfrtip',
         responsive: true,
@@ -151,6 +155,23 @@ $(document).ready( function() {
         paging:   false,
         info:     false,
         order: [[ 1, 'asc' ]],
+
+        drawCallback: function( settings ) {
+            var summary = '';
+            var d = window.summary{{period.position}};
+            var attendees = 0;
+
+            for (var k in d)
+                if (d[k] != 0) {
+                    summary += ',&nbsp;' + k + ':&nbsp;' + d[k]
+                    attendees +=  d[k]
+                }
+
+            $('#dTblFoot{{period.position}}').html(
+                attendees + '&nbsp;attendees:&nbsp;' + summary.substring(1)
+            )
+
+        },
 
         columns: [
             { data: 'mark', width: '10px', responsivePriority: 1,
@@ -168,7 +189,12 @@ $(document).ready( function() {
               }
             },
             { data: 'status', title: 'Status', width: '35px',
-              type: 'readonly', responsivePriority: 3, },
+              type: 'readonly', responsivePriority: 3,
+              render: function (d, t, r, m) {
+                  if (t == 'filter')
+                      window.summary{{period.position}}[d] += 1;
+                  return d; }
+            },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
