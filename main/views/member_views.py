@@ -51,7 +51,7 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
     template_name = 'member_edit.html'
 
     MemberForm = modelform_factory(Member,
-            fields=['first_name', 'last_name', 'ham', 'v9', 'dl'])
+            fields=['ham', 'v9', 'dl'])
     PhonesForm = inlineformset_factory(Member, Phone,
             fields=['type', 'number', 'pagable', 'position'],
             widgets={
