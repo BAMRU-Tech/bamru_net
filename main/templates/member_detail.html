@@ -64,7 +64,7 @@
   {% if member.id != request.user.id %}
   <nav class="navbar navbar-expand-sm text-primary subhead">
   <strong>Certifications:</strong>
-  {% if Editor %}
+  {% if isEditor %}
   <a class="ml-auto" href="{% url 'member_cert_list' member.id %}">
     <i class="fa fa-certificate"></i>
     Edit Certifications

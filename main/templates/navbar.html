@@ -43,6 +43,12 @@
             <i class="fa fa-calendar"></i>
             Quarterly DO schedule
           </a>
+{% if isEditor %}
+          <a class="dropdown-item" href="{% url 'member_add' %}">
+            <i class="fa fa-address-book"></i>
+            Add a new Member (Guest)
+          </a>
+{% endif %}
         </div>
       </li>
       <li class="nav-item dropdown">

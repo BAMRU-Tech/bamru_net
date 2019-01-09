@@ -227,7 +227,7 @@ class Email(BasePositionModel):
         ('Other', 'Other'),
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    type = models.CharField(choices=TYPES, max_length=255)
+    type = models.CharField(choices=TYPES, max_length=255, default='Personal')
     pagable = models.BooleanField(default=True)
     address = models.CharField(max_length=255)
 
@@ -241,7 +241,7 @@ class Phone(BasePositionModel):
         ('Other', 'Other'),
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
-    type = models.CharField(choices=TYPES, max_length=255)
+    type = models.CharField(choices=TYPES, max_length=255, default='Mobile')
     number = models.CharField(max_length=255)
     pagable = models.BooleanField(default=True)
     sms_email = models.CharField(max_length=255, blank=True, null=True)

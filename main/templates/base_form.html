@@ -3,6 +3,7 @@
 
 {% block content %}
 <main role="main" class="container-fluid">
+  {% block pre_content %}{% endblock pre_content %}
   <div id="content">
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
