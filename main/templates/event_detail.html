@@ -142,11 +142,13 @@
 {{ block.super }}
 <script>
 'use strict'
+//FX: Where should this list come from?
+const STATUSES = { TM: 0, FM: 0, T: 0, R: 0, S: 0, A: 0, G: 0, MA: 0 };
+window.summary = [];
+
 $(document).ready( function() {
     {% for period in event.period_set.all %}
-    //FIXME: Move this constant
-    window.summary{{period.position}} = { TM: 0, FM: 0, T: 0,
-                                          R: 0, S: 0, A: 0, G:0 };
+    window.summary['dTbl{{period.position}}'] = Object.assign({}, STATUSES);
     var table{{period.position}} = $('#dTbl{{period.position}}').DataTable( {
         dom: 'Bfrtip',
         responsive: true,
@@ -158,7 +160,7 @@ $(document).ready( function() {
 
         drawCallback: function( settings ) {
             var summary = '';
-            var d = window.summary{{period.position}};
+            var d = window.summary['dTbl{{period.position}}'];
             var attendees = 0;
 
             for (var k in d)
@@ -193,7 +195,7 @@ $(document).ready( function() {
               type: 'readonly', responsivePriority: 3,
               render: function (d, t, r, m) {
                   if (t == 'filter')
-                      window.summary{{period.position}}[d] += 1;
+                      window.summary['dTbl{{period.position}}'][d] += 1;
                   return d; }
             },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
@@ -446,6 +448,9 @@ function UpdatePeriodRow(dt, row, success, error) {
     
     var memberName = row.name;
     var memberStatus = row.status;
+    // Remove from summary, it is readded on display
+    window.summary[row.tblId][memberStatus] -= 1;
+
 
     function ReturnData (data) {
         // Create closure with memberName and Status
