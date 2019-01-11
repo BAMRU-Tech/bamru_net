@@ -185,6 +185,7 @@ $(document).ready( function() {
                       if (r.ahc == 'true') d += '(AHC)';
                       if (r.ol == 'true') d += '(OL)';
                   }
+                  d = '<a href="/member/' + r.member + '">' + d + '</a>';
                   return d;
               }
             },
@@ -444,9 +445,10 @@ function RenderDateTime(data, type, row, meta, time) {
 function UpdatePeriodRow(dt, row, success, error) {
     
     var memberName = row.name;
+    var memberStatus = row.status;
 
     function ReturnData (data) {
-        // Create closure with memberName
+        // Create closure with memberName and Status
 
         function UncombineDateTime (ref) {
             // Separate date and time into _date and _time columns
@@ -464,6 +466,7 @@ function UpdatePeriodRow(dt, row, success, error) {
         }
 
         data.name = memberName;
+        data.status = memberStatus;
         // Create additional rows for editing
         UncombineDateTime('en_route');
         UncombineDateTime('return_home');
