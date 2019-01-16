@@ -154,6 +154,12 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         "Returns the short name for the user."
         return self.first_name
 
+    @property
+    def is_editor(self):
+        return (self.is_staff or
+                self.role_set.filter(role='SEC').exists() or
+                self.role_set.filter(role='RO').exists())
+
     @models.permalink
     def get_absolute_url(self):
         return ('member_detail', [str(self.id)])
