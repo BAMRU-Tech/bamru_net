@@ -89,14 +89,14 @@ class Message(BaseModel):
     text = models.TextField()
     format = models.CharField(choices=FORMATS, max_length=255)
     linked_rsvp = models.ForeignKey(
-        'self', on_delete=models.CASCADE, blank=True, null=True)
+        'self', on_delete=models.SET_NULL, blank=True, null=True)
     ancestry = models.CharField(max_length=255, blank=True, null=True)
     period = models.ForeignKey(
-        Period, on_delete=models.CASCADE, blank=True, null=True)
+        Period, on_delete=models.SET_NULL, blank=True, null=True)
     period_format = models.CharField(
         choices=PERIOD_FORMATS, max_length=255, blank=True, null=True)
     rsvp_template = models.ForeignKey(
-        RsvpTemplate, on_delete=models.CASCADE, blank=True, null=True)
+        RsvpTemplate, on_delete=models.SET_NULL, blank=True, null=True)
 
     @models.permalink
     def get_absolute_url(self):
@@ -254,7 +254,7 @@ class OutboundMessage(BaseModel):
 
 
 class OutboundSms(OutboundMessage):
-    phone = models.ForeignKey(Phone, on_delete=models.CASCADE)
+    phone = models.ForeignKey(Phone, on_delete=models.SET_NULL, null=True)
     error_code = models.IntegerField(blank=True, null=True)
     source = models.CharField(max_length=255, blank=True)
 
@@ -337,7 +337,7 @@ class InboundSms(BaseModel):
 
 
 class OutboundEmail(OutboundMessage):
-    email = models.ForeignKey(Email, on_delete=models.CASCADE)
+    email = models.ForeignKey(Email, on_delete=models.SET_NULL, null=True)
     opened = models.BooleanField(default=False)
 
     @property
