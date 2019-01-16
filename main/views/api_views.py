@@ -74,7 +74,7 @@ class CertViewSet(BaseViewSet):
 
 
 class MemberCertViewSet(BaseViewSet):
-    queryset = Member.members.prefetch_related('cert_set')
+    queryset = Member.objects.prefetch_related('cert_set')
     serializer_class = MemberCertSerializer
     filter_fields = ('status', )
     search_fields = ('username',  )
