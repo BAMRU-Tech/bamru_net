@@ -114,8 +114,8 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
         return self.forms
 
     def post(self, *args, **kwargs):
-        if self.kwargs['pk'] != self.request.user.id:
-            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
+        if ((self.kwargs['pk'] != self.request.user.id) and
+            not self.request.user.is_editor):
             raise PermissionDenied
 
         member = Member.objects.get(id=self.kwargs['pk'])
@@ -235,17 +235,19 @@ class CertEditMixin(generic.edit.ModelFormMixin):
         return {'type': self.get_cert_type()}
 
     def form_valid(self, form):
-        if self.kwargs['member'] != self.request.user.id:
-            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
+        if ((self.kwargs['member'] != self.request.user.id) and
+            not self.request.user.is_editor):
             raise PermissionDenied
 
         cert = form.save(commit=False)
 
-        if cert.member_id and cert.member_id != self.request.user.id:
-            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
-            raise PermissionDenied
+        if cert.member_id:
+            if ((cert.member_id != self.request.user.id) and
+                not self.request.user.is_editor):
+                raise PermissionDenied
+        else:
+            cert.member_id = self.kwargs['member']
 
-        cert.member = self.request.user
         cert.save()
         return HttpResponseRedirect(reverse('member_cert_list', args=[cert.member.id]))
 
