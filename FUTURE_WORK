@@ -1,0 +1,6 @@
+Future Work for BAMRU.net - Ideas, features, etc
+
+* Move DB to a hosted model #214
+* Oauth support for API #179
+  - The API is fairly comprehensive; it would be great to support external access
+  via OAuth tokens (rather than by copying a session cookie from the browser).
