@@ -109,6 +109,35 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
     model = Message
     template_name = 'message_detail.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        message = self.object
+        sent = 0
+        delivered = 0
+        rsvp = 0
+        rsvp_yes = 0
+        rsvp_no = 0
+        for d in message.distribution_set.all():
+            sent += 1
+            if d.rsvp:
+                rsvp += 1
+                if d.rsvp_answer:
+                    rsvp_yes += 1
+                else:
+                    rsvp_no += 1
+            this_delivered = False
+            for m in d.outboundsms_set.all():
+                this_delivered |= m.delivered
+            for m in d.outboundemail_set.all():
+                this_delivered |= m.delivered
+            if this_delivered:
+                delivered += 1
+        context['stats'] = "{} sent, {} delivered, {} RSVPed".format(
+            sent, delivered, rsvp)
+        context['rsvp'] = "{} yes, {} no, {} unresponded".format(
+            rsvp_yes, rsvp_no, sent - rsvp_yes - rsvp_no)
+        return context
+
 
 class MessageListView(LoginRequiredMixin, generic.ListView):
     template_name = 'message_list.html'
