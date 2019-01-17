@@ -76,9 +76,9 @@
 {# --- Table definition --- #}
 
 {% block table_options %}
-order: [[ 0, 'asc' ]],
+order: [[ 1, 'asc' ], [0, 'asc']],
 
-columnDefs: [
+columnDefs: [  //FIXME: Convert to std column format
     { responsivePriority: 1, targets: 0 },
     { responsivePriority: 2, targets: [ 3, 4, 5, 6, 8] },
     { responsivePriority: 3, targets: 7 },
@@ -98,10 +98,10 @@ columnDefs: [
 
     },
     {
+        type: 'num',
         render: function(data, type, row, meta) {
             if (type == 'sort') {
-                // order: asc and role_order doesn't work
-                return 99 - row[2]; //FX?
+                return row[2];
             } else
                 return data;
         }, targets: 1,

@@ -81,7 +81,7 @@
 {% block table_options %}
 select: 'os',
 
-order: [[ 4, 'desc' ]],
+order: [[ 4, 'asc' ], [1, 'asc']],
 
 columns: [
     { data: 'mark', responsivePriority: 1,
@@ -99,10 +99,10 @@ columns: [
       }
     },
     { data: 'status_order', visible: false, className: 'noVis', },
-    { data: 'roles', title: 'Roles', responsivePriority: 4,
+    { data: 'roles', title: 'Roles', responsivePriority: 4, type: 'num',
       render: function(data, type, row, meta) {
            if (type == 'sort') {
-               return 99 - row.role_order; //FX?
+               return row.role_order;
            } else
               return data;
       }

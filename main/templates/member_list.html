@@ -56,7 +56,7 @@
 {# --- Table definition --- #}
 
 {% block table_options %}
-order: [[ 4, 'desc' ]],
+order: [[ 4, 'asc' ], [0, 'asc']],
 
 columns: colDefs,
 
@@ -88,11 +88,10 @@ const colDefs = [
       }
     },
     { data: 'status_order', visible: false, className: 'noVis', },
-    { data: 'roles', title: 'Roles', width: '50px', responsivePriority: 3,
+    { data: 'roles', title: 'Roles', width: '50px', responsivePriority: 3, type: 'num',
       render: function(data, type, row, meta) {
            if (type == 'sort') {
-               // order: asc and role_order doesn't work
-               return 99 - row.role_order; //FX?
+               return row.role_order;
            } else
               return data;
       }
