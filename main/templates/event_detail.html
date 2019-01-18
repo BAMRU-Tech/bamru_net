@@ -84,8 +84,9 @@
           {% for p in period.participant_set.all %}
           <tr>
             <td></td>
-            <td data-id={{ p.id }}>{{ p.member }}</td>
+            <td>{{ p.member }}</td>
             <td>{{ p.member.status }}</td>
+            <td>{{ p.member.status_order }}</td>
             <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
             <td>
               {% if p.en_route_at|date:"H:i" != '00:00' %}
@@ -156,7 +157,7 @@ $(document).ready( function() {
         altEditor: true,
         paging:   false,
         info:     false,
-        order: [[ 1, 'asc' ]],
+        order: [[2, 'asc'], [1, 'asc']],
 
         drawCallback: function( settings ) {
             var summary = '';
@@ -182,22 +183,29 @@ $(document).ready( function() {
             },
             { data: 'name', title: 'Name', responsivePriority: 1,
               type: 'readonly',
-              render: function (d, t, r, m) {
-                  if (t == 'display') {
-                      if (r.ahc == 'true') d += '(AHC)';
-                      if (r.ol == 'true') d += '(OL)';
+              render: function(data, type, row, meta) {
+                  if (type == 'display') {
+                      if (row.ahc == 'true') data += '(AHC)';
+                      if (row.ol == 'true') data += '(OL)';
+                      data = '<a href="/member/' + row.member + '">' + data + '</a>';
                   }
-                  d = '<a href="/member/' + r.member + '">' + d + '</a>';
-                  return d;
+                  return data;
               }
             },
             { data: 'status', title: 'Status', width: '35px',
-              type: 'readonly', responsivePriority: 3,
-              render: function (d, t, r, m) {
-                  if (t == 'filter')
-                      window.summary['dTbl{{period.position}}'][d] += 1;
-                  return d; }
+              type: ['num', 'readonly'], responsivePriority: 3,
+              render: function(data, type, row, meta) {
+                  if (type == 'filter')
+                      // Summarize the status for all member in the OP
+                      window.summary['dTbl{{period.position}}'][data] += 1;
+                  else if (type == 'sort')
+                      return row.status_order;
+                  else
+                      ;
+                  return data;
+              }
             },
+            { data: 'status_order', visible: false, className: 'noVis', },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date',
               render: function (d, t, r, m) {
@@ -448,6 +456,7 @@ function UpdatePeriodRow(dt, row, success, error) {
     
     var memberName = row.name;
     var memberStatus = row.status;
+    var memberStatusOrder = row.status_order;
     // Remove from summary, it is readded on display
     window.summary[row.tblId][memberStatus] -= 1;
 
@@ -472,6 +481,7 @@ function UpdatePeriodRow(dt, row, success, error) {
 
         data.name = memberName;
         data.status = memberStatus;
+        data.status_order = memberStatusOrder;
         // Create additional rows for editing
         UncombineDateTime('en_route');
         UncombineDateTime('return_home');
