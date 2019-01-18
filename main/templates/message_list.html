@@ -24,7 +24,7 @@
             {{ message.text|truncatechars:50 }}</a></td>
         <td>{{ message.author }}</td>
         <td data-sort="{{ event.created_order }}">
-          {{ message.created_at|date:"Y-m-d\TH:m" }}</td>
+          {{ message.created_at|date:"Y-m-d\TH:m:s" }}</td>
         <td>{{ message.format }}</td>
         <td>{{ message.period_format }}</td>
         <td>
