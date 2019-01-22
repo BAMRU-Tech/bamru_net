@@ -177,12 +177,12 @@ $(document).ready( function() {
         },
 
         columns: [
-            { data: 'mark', width: '10px', responsivePriority: 1,
+            { data: 'mark', width: '5%', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
               className: 'noVis'
             },
             { data: 'name', title: 'Name', responsivePriority: 1,
-              type: 'readonly',
+              type: 'readonly', width: '35%',
               render: function(data, type, row, meta) {
                   if (type == 'display') {
                       if (row.ahc == 'true') data += '(AHC)';
@@ -192,7 +192,7 @@ $(document).ready( function() {
                   return data;
               }
             },
-            { data: 'status', title: 'Status', width: '35px',
+            { data: 'status', title: 'Status', width: '10%',
               type: ['num', 'readonly'], responsivePriority: 3,
               render: function(data, type, row, meta) {
                   if (type == 'filter')
@@ -207,7 +207,7 @@ $(document).ready( function() {
             },
             { data: 'status_order', visible: false, className: 'noVis', },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
-              type: 'date',
+              type: 'date', width: '25%',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'en_route_time') },
             },
@@ -215,7 +215,7 @@ $(document).ready( function() {
               visible: false, className: 'noVis'
             },
             { data: 'return_home_date', title: 'Returned', responsivePriority: 2,
-              type: 'date',
+              type: 'date', width: '25%',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'return_home_time') },
             },
@@ -592,10 +592,10 @@ function DeleteOP (tblName, period, position ) {
 
 function DeleteParticipants ( e, dt, node, config ) {
     var members = [];
-    $('td.marked').each(function (i, el) {
-        members.push($(el).next().data().id)
-    });
-    console.log(members);
+    dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+        if (this.nodes().to$().children().first().hasClass('marked'))
+            members.push(this.data().id)
+    })
     
     if (members.length == 0) {
         alert('Select members before deleting them');
@@ -630,7 +630,7 @@ function MarkRow ( e, dt, type, indices ) {
         if (numRows > 1) {
             dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
                 // For multi select - unmark only when every row is marked
-                allMarked = allMarked && $(this.nodes()).children().first().hasClass('marked');
+                allMarked = allMarked && this.nodes().to$().children().first().hasClass('marked');
             })
         }
         dt.rows(indices)
