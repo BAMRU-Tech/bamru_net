@@ -1,3 +1,4 @@
+import base64
 import logging
 import uuid
 import twilio
@@ -191,6 +192,12 @@ class Distribution(BaseModel):
     def html(self):
         return self.message.html(self.unauth_rsvp_token)
 
+    @property
+    def time_slug(self):
+        timestamp = int(self.created_at.timestamp())
+        timeb = timestamp.to_bytes((timestamp.bit_length() // 8) + 1, 'big')
+        return base64.b85encode(timeb).decode()
+
     def queue(self, sms_from):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
         self.save()
@@ -358,7 +365,8 @@ class OutboundEmail(OutboundMessage):
         html_body = self.distribution.html
         try:
             message = AnymailMessage(
-                subject="BAMRU.net page [{}]".format(uuid.uuid4().hex),
+                subject="BAMRU.net page [{}]".format(
+                    self.distribution.time_slug),
                 body=body,
                 to=[self.destination],
                 from_email=settings.MAILGUN_EMAIL_FROM,
