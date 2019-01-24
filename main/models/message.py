@@ -26,7 +26,7 @@ def format_e164(number):
         phonenumbers.parse(number, 'US'),
         phonenumbers.PhoneNumberFormat.E164)
 
-def get_next_sms_from(increment=True):
+def get_next_sms_from_index(increment=True):
     """Gets the next SMS_FROM number from settings.  If increment,
     following messages will come from a new number. This is used when
     a RSVP response is expected in case the next text asks another
@@ -40,12 +40,12 @@ def get_next_sms_from(increment=True):
         index = 0
     if index >= len(settings.TWILIO_SMS_FROM):
         index = 0
-    sms_from = settings.TWILIO_SMS_FROM[index]
+    sms_from_index = index
     if increment:
         index += 1
     obj.value = str(index)
     obj.save()
-    return format_e164(sms_from)
+    return sms_from_index
 
 class RsvpTemplate(BasePositionModel):
     name = models.CharField(max_length=255, blank=True, null=True)
@@ -135,9 +135,17 @@ class Message(BaseModel):
         """
         increment = ((self.rsvp_template is not None) and
                      (self.distribution_set.filter(send_sms=True).count() > 0))
-        sms_from = get_next_sms_from(increment)
-        logger.info('sending {} from {}'.format(str(self), sms_from))
+        sms_from_index = get_next_sms_from_index(increment)
+        logger.info('sending {} from index {}'.format(str(self), sms_from_index))
         for d in self.distribution_set.all():
+            # Use member id to rotate index in order to reduce the
+            # number of SMS messages from the same number. Too many
+            # was causing messages to be dropped.
+            member_index = ((sms_from_index + d.member.id) %
+                            len(settings.TWILIO_SMS_FROM))
+            sms_from = format_e164(settings.TWILIO_SMS_FROM[member_index])
+            logger.debug('member {} from index {} => {}'.format(
+                d.member.id, member_index, sms_from))
             d.queue(sms_from)
 
     # TODO: Do not repage unavailable on invite
