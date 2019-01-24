@@ -167,9 +167,9 @@ class MemberAddView(LoginRequiredMixin, generic.edit.FormView):
                 'is_active': False,
             })
         if created:
-            Email.objects.create(member=m, pagable=False,
+            Email.objects.create(member=m, pagable=True,
                                  address=form.cleaned_data['email'])
-            Phone.objects.create(member=m, pagable=False,
+            Phone.objects.create(member=m, pagable=True,
                                  number=form.cleaned_data['phone'])
         return HttpResponseRedirect(m.get_absolute_url())
 
