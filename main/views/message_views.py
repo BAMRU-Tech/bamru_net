@@ -189,25 +189,35 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
         if p:
             p.delete()
             return 'Canceled RSVP to {}.'.format(distribution.message.period)
+        return 'RSVP no to {} recorded.'.format(distribution.message.period)
 
-    # Answered no to anything but invite = nothing to do
-    if not distribution.rsvp_answer:
-        return 'Response no to {} received.'.format(distribution.message.period)
-
-    # Everything following here is a 'yes'
     p = Participant.objects.filter(**participant_filter).first()
     if p:
+        response = None
         if distribution.message.period_format == 'leave':
-            p.en_route_at = timezone.now()
-            p.save()
-            return 'Departure time recorded for {}.'.format(distribution.message.period)
+            if distribution.rsvp_answer:
+                p.en_route_at = timezone.now()
+                p.save()
+                response = 'Departure time recorded for {}.'
+            else:
+                p.en_route_at = None
+                p.save()
+                response = 'Departure time cleared for {}.'
         elif distribution.message.period_format == 'return':
-            p.return_home_at = timezone.now()
-            p.save()
-            return 'Return time recorded for {}.'.format(distribution.message.period)
+            if distribution.rsvp_answer:
+                p.return_home_at = timezone.now()
+                p.save()
+                response = 'Return time recorded for {}.'
+            else:
+                p.return_home_at = None
+                p.save()
+                response = 'Return time cleared for {}.'
         else:
-            return ('Response yes to {} received.'
-                    .format(distribution.message.period))
+            if distribution.rsvp_answer:
+                response = 'Response yes to {} received.'
+            else:
+                response = 'Response no to {} received.'
+        return response.format(distribution.message.period)
 
     logger.error('Participant not found for: ' + str(request.body))
     return ('Error: You were not found as a participant for {}.'
