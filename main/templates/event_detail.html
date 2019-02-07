@@ -113,7 +113,7 @@
             </td>
 	        <td>{{ p.ahc|lower }}</td>
 	        <td>{{ p.ol|lower }}</td>
-	        <td>{{ p.id }}</td>
+	        <td>{{ p.id }}</td> {# participant id #}
 	        <td>{{ p.member.id }}</td>
 	        <td>{{ p.period.id }}</td>
           </tr>
@@ -273,6 +273,7 @@ $(document).ready( function() {
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=headsUp';
+
                             Sentry.withScope(scope => {
                                 scope.setLevel('info');
                                 Sentry.captureMessage("Paging HeadsUp",
