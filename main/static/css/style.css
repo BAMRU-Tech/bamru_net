@@ -7,6 +7,11 @@ body {
   padding-bottom: 4px;
 }
 
+.subhead li.nav-item {
+    margin-right: 2px;
+    margin-left: 2px;
+}
+
 table.dataTable.list { table-layout: fixed; }
 table.dataTable.list td { text-overflow: ellipsis; }
 table.dataTable.list th, table.dataTable.list td {padding: 5px 3px;font-size: 13px;overflow: hidden; }

@@ -37,7 +37,6 @@ ALLOWED_HOSTS = os.environ['DJANGO_ALLOWED_HOST'].split(',') + ['localhost', ]
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -52,6 +51,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'main',
     'main.templatetags.filters',
+    'django.contrib.admin',  # Must be after main for templates
 ]
 
 MIDDLEWARE = [
@@ -159,6 +159,7 @@ MEDIA_URL = '/system/'
 MEDIA_ROOT = os.environ.get('MEDIA_ROOT', 'system/')
 
 LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 
 # Raven config for Sentry.io logging
