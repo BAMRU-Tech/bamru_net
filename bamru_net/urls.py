@@ -100,6 +100,9 @@ urlpatterns = [
     url(r'^accounts/login/$', auth_views.login, name='login'),
     url(r'^accounts/logout/$', auth_views.logout, {'next_page': '/'}, name='logout'),
 
+    path('password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
+    path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+
     path('reports/', views.ReportListView.as_view(), name='reports_list'),
     path('reports/roster/BAMRU-roster.csv', views.ReportRosterCsvView.as_view()),
     path('reports/roster/BAMRU-roster.vcf', views.ReportRosterVcfView.as_view()),
