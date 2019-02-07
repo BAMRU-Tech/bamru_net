@@ -205,7 +205,8 @@ $(document).ready( function() {
                   return data;
               }
             },
-            { data: 'status_order', visible: false, className: 'noVis', },
+            { data: 'status_order', type: ['readonly', 'hidden'],
+              visible: false, className: 'noVis', },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date', width: '25%',
               render: function (d, t, r, m) {
