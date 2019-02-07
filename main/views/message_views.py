@@ -30,6 +30,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
     model = Message
     template_name = 'message_add.html'
     context_object_name = 'member_list'
+    page_format = None  # to override in urls
 
     #def get_success_url(self): FIXME
     #    return self.object.get_absolute_url()
@@ -46,11 +47,25 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                           }
         initial = {}
         initial['author'] = self.request.user.pk
+        initial['type'] = "std_page"
+        initial['format'] = 'page'
         members = None
         period_id = self.request.GET.get('period')
-        page_format = self.request.GET.get('page_format')
+        page_format = self.request.GET.get('page_format', self.page_format)
         period_format = format_convert[page_format][0]
         rsvp_name = format_convert[page_format][1]
+        rsvp_template = None
+        if rsvp_name is not None:
+            try:
+                rsvp_template = RsvpTemplate.objects.get(name=rsvp_name)
+                initial['rsvp_template'] = rsvp_template
+            except RsvpTemplate.DoesNotExist:
+                logger.error('RsvpTemplate {} not found for format: {}'.format(
+                    rsvp_name, page_format))
+        if page_format == 'test':
+            initial['type'] = "test"
+            initial['input'] = datetime.now().strftime("Test page: %A, %d. %B %Y %I:%M%p")
+            members = Member.members.filter(id=self.request.user.pk)
         if period_id:
             try:
                 period = Period.objects.get(pk=period_id)
@@ -58,7 +73,6 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                 logger.error('Period not found for: ' + period_id)
                 raise Http404(
                     'Period {} specified, but does not exist'.format(period_id))
-            initial['format'] = 'page'
             initial['period_id'] = period_id
             initial['period_format'] = period_format
             initial['period'] = str(period)
@@ -79,24 +93,12 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             else:
                 logger.error('Period format {} not found for: {}'.format(
                 period_format, self.request.body))
+            if (rsvp_template != None):
+                initial['input'] = "{}: {}".format(str(period), rsvp_template.text)
+            else:
+                initial['input'] = "{}: ".format(str(period))
 
-            rsvp_template = None
-            if rsvp_name is not None:
-                try:
-                    rsvp_template = RsvpTemplate.objects.get(name=rsvp_name)
-                    initial['rsvp_template'] = rsvp_template
-                except RsvpTemplate.DoesNotExist:
-                    logger.error('RsvpTemplate {} not found for period: {}'.format(
-                        rsvp_name, period_id))
-
-            self.initial = initial
-
-        initial['type'] = "std_page"
-        if (rsvp_template != None):
-            initial['input'] = "{}: {}".format(str(period), rsvp_template.text)
-        else:
-            initial['input'] = "{}: ".format(str(period))
-
+        self.initial = initial
         return members
 
     def get_context_data(self, **kwargs):
