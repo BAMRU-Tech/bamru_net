@@ -253,6 +253,10 @@ function UpdateSubheaderBasedOnSettings (table) {
         var sh = "Page DO transition";
         $('#subhdr-sm')[0].innerHTML = sh;
         $('#subhdr')[0].innerHTML = sh;
+    } else if ('{{ type }}' == 'test') {
+        var sh = "Test page";
+        $('#subhdr-sm')[0].innerHTML = sh;
+        $('#subhdr')[0].innerHTML = sh;
     } else {
         //FIXME: error
     }

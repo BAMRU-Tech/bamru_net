@@ -6,8 +6,16 @@
 <strong id='subhdr'></strong>
 {% if isEditor or member.id == request.user.id %}
 <ul class="navbar-nav ml-auto">
+  {% if member.id == request.user.id %}
   <li class="nav-item dropdown">
-    <a href={% url 'member_edit' member.id %}>
+    <a class="nav-link" href={% url 'password_change' %}>
+      <i class="fa fa-key"></i>
+      Change password
+    </a>
+  </li>
+  {% endif %}
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'member_edit' member.id %}>
       <i class="fa fa-pencil"></i>
       Edit
     </a>

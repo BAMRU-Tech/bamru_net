@@ -80,6 +80,7 @@ urlpatterns = [
     path('message/', views.MessageListView.as_view(), name='message_list'),
     path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(), name='message_inbox'),
     path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
+    path('message/test/', views.MessageCreateView.as_view(page_format='test'), name='message_test'),
 
     path('action/become_do/', views.ActionBecomeDo.as_view(), name='action_become_do'),
 
@@ -99,6 +100,9 @@ urlpatterns = [
 
     url(r'^accounts/login/$', auth_views.login, name='login'),
     url(r'^accounts/logout/$', auth_views.logout, {'next_page': '/'}, name='logout'),
+    
+    path('password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
+    path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
 
     path('accounts/password_reset/', auth_views.PasswordResetView.as_view(form_class=views.PasswordResetForm), name='password_reset'),
     path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),

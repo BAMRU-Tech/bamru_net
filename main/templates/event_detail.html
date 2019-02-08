@@ -113,7 +113,7 @@
             </td>
 	        <td>{{ p.ahc|lower }}</td>
 	        <td>{{ p.ol|lower }}</td>
-	        <td>{{ p.id }}</td>
+	        <td>{{ p.id }}</td> {# participant id #}
 	        <td>{{ p.member.id }}</td>
 	        <td>{{ p.period.id }}</td>
           </tr>
@@ -205,7 +205,8 @@ $(document).ready( function() {
                   return data;
               }
             },
-            { data: 'status_order', visible: false, className: 'noVis', },
+            { data: 'status_order', type: ['readonly', 'hidden'],
+              visible: false, className: 'noVis', },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
               type: 'date', width: '25%',
               render: function (d, t, r, m) {
@@ -273,6 +274,7 @@ $(document).ready( function() {
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
                                 '&page_format=headsUp';
+
                             Sentry.withScope(scope => {
                                 scope.setLevel('info');
                                 Sentry.captureMessage("Paging HeadsUp",
