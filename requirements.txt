@@ -11,7 +11,7 @@ chardet==3.0.4
 CoffeeScript==2.0.3
 coreapi==2.3.3
 coreschema==0.0.4
-Django==2.0.8
+Django==2.0.10
 django-anymail==3.0
 django-bootstrap4==0.0.7
 django-datatables-view==1.16.0
