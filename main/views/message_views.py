@@ -53,6 +53,7 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
         period_id = self.request.GET.get('period')
         page_format = self.request.GET.get('page_format', self.page_format)
         period_format = format_convert[page_format][0]
+        initial['period_format'] = period_format
         rsvp_name = format_convert[page_format][1]
         rsvp_template = None
         if rsvp_name is not None:
@@ -74,7 +75,6 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                 raise Http404(
                     'Period {} specified, but does not exist'.format(period_id))
             initial['period_id'] = period_id
-            initial['period_format'] = period_format
             initial['period'] = str(period)
 
             if period_format == 'invite':
@@ -180,6 +180,9 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
     distribution.rsvp = True
     distribution.rsvp_answer = rsvp
     distribution.save()
+
+    if distribution.message.period_format == 'test':
+        return 'Test message response received.'
 
     participant_filter = {'period': distribution.message.period,
                           'member': distribution.member}
