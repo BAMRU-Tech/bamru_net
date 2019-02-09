@@ -8,10 +8,10 @@ jobs:
     docker:
       # specify the version you desire here
       # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      - image: circleci/python:3.5
+      - image: circleci/python:3.5-browsers
         environment:
           POSTGRES_PASSWORD: postgres
-      
+
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
       # documented at https://circleci.com/docs/2.0/circleci-images/
@@ -28,7 +28,6 @@ jobs:
           - v1-dependencies-{{ checksum "requirements.txt" }}
           # fallback to using the latest cache if no exact match is found
           #- v1-dependencies-
-
       - run:
           name: install dependencies
           command: |
@@ -81,7 +80,11 @@ jobs:
             WIKI_SSH_DEST: ''
             WIKI_SSH_KEY: ''
             WIKI_AUTH_DIR: ''
-
+      - run:
+          name: run selenium tests
+          command: |
+            . venv/bin/activate
+            python -m pytest main/tests/selenium_tests/test_poc.py -s
 
       - store_artifacts:
           path: test-reports

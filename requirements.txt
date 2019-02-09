@@ -73,3 +73,5 @@ urllib3==1.23
 vine==1.1.4
 vobject==0.9.6.1
 yapf==0.22.0
+pytest==4.1.1
+selenium==3.141.0
