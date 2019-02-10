@@ -74,6 +74,8 @@ class DoPlanView(DoAbstractView, generic.base.TemplateView):
             if x.assigned:
                 members[x.member]['assigned'] = True
                 week_info[x.week-1]['assigned'] = True
+        for m in members.keys():
+            members[m]['shifts'] = m.do_shifts_in_past_year(self.year, self.quarter)
         context['members'] = members.items()
         context['week_info'] = week_info
         return context

@@ -154,6 +154,16 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         "Returns the short name for the user."
         return self.first_name
 
+    def do_shifts_in_past_year(self, plan_year, plan_quarter):
+        """Number of DO shifts assigned to this member in the 4 quarters prior
+        to the one being planned."""
+        return (DoAvailable.objects.filter(
+            assigned=True, member=self,
+            year=plan_year - 1, quarter__gte=plan_quarter).count() +
+                DoAvailable.objects.filter(
+            assigned=True, member=self,
+            year=plan_year, quarter__lt=plan_quarter).count())
+
     @property
     def is_editor(self):
         return (self.is_staff or
