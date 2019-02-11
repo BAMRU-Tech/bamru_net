@@ -286,7 +286,12 @@ const colDefs = [
     { data: 'leaders', title: 'Leaders', width: '17%', responsivePriority: 4, },
     { data: 'start_at', title: 'Start', width: '20%', responsivePriority: 2,
       type: 'date', render: rDate, },
-    { data: 'type', title: 'Type', width: '40px', responsivePriority: 5, },
+    { data: 'type', title: 'Type', width: '40px', responsivePriority: 5,
+      render: function(data, type, row, meta) {
+          if (type == 'display' && row.published) data = '<b>' + data + '</b>';
+          return data;
+      }
+    },
     { data: 'finish_at', title: 'Finish', visible: false,
       responsivePriority: 99, className: 'noVis', type: 'date', },
     { data: 'all_day', title: 'All day', visible: false,
