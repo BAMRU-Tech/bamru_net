@@ -10,6 +10,7 @@
     <thead>
       <tr>
         <th>Name</th>
+        <th>Shifts in<br>past year</th>
         {% for w in week_info %}
         <th data-week="{{w.week}}" class="{% if not w.assigned %}unassigned-week{% endif %}">
           Wk {{ w.week }}
@@ -22,6 +23,7 @@
       {% for m, x in members %}
       <tr>
         <td class="{% if not x.assigned %}unassigned-member{% endif %}">{{ m }}</td>
+        <td>{{ x.shifts }}</td>
         {% for w in x.weeks %}
         {% if w %}
         <td data-id="{{w.id}}"
