@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 import logging
 logger = logging.getLogger(__name__)
 
+
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
@@ -23,6 +24,7 @@ class MemberSerializer(serializers.HyperlinkedModelSerializer):
 
 class UnavailableSerializer(serializers.HyperlinkedModelSerializer):
     member = MemberSerializer()
+
     class Meta:
         model = Unavailable
         fields = ('id', 'member', 'start_on', 'end_on', 'comment', )
@@ -36,10 +38,12 @@ class BareUnavailableSerializer(serializers.ModelSerializer):
 
 class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
     def __init__(self, *args, **kwargs):
-        self._unavailable_filter_kwargs = kwargs.pop('unavailable_filter_kwargs', {})
+        self._unavailable_filter_kwargs = kwargs.pop(
+            'unavailable_filter_kwargs', {})
         super().__init__(*args, **kwargs)
 
     busy = serializers.SerializerMethodField()
+
     def get_busy(self, member):
         busy = member.unavailable_set.all()
         busy = busy.filter(**self._unavailable_filter_kwargs)
@@ -52,21 +56,25 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class CertSerializer(serializers.ModelSerializer):
-        
+
     class Meta:
         model = Cert
         read_only_fields = ('is_expired', 'color', 'display', 'cert_name',)
-        fields = ('id', 'member', 'type', 'expires_on', 'description', 'comment', 'link', ) + read_only_fields
+        fields = ('id', 'member', 'type', 'expires_on',
+                  'description', 'comment', 'link', ) + read_only_fields
 
 
 class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
     certs = serializers.SerializerMethodField()
+
     def get_certs(self, member):
         ordered_certs = member.cert_set.all().order_by('-expires_on', '-id')
         grouped_certs = defaultdict(list)
         for c in ordered_certs:
-            grouped_certs[c.type].append(CertSerializer(c, context=self.context).data)
+            grouped_certs[c.type].append(
+                CertSerializer(c, context=self.context).data)
         return [grouped_certs[t[0]] for t in Cert.TYPES]
+
     class Meta:
         model = Member
         read_only_fields = ('full_name', 'status', 'status_order')
@@ -79,36 +87,42 @@ class DoSerializer(serializers.ModelSerializer):
         fields = ('id', 'year', 'quarter', 'week', 'available', 'assigned',
                   'comment', 'member')
 
-        
+
 class BareParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
-        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at',
+                  'return_home_at', 'signed_in_at', 'signed_out_at')
 
 
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
     member = MemberSerializer()
+
     class Meta:
         model = Participant
-        fields = ('id', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+        fields = ('id', 'member', 'ahc', 'ol', 'en_route_at',
+                  'return_home_at', 'signed_in_at', 'signed_out_at')
 
 
 class PeriodSerializer(serializers.HyperlinkedModelSerializer):
     participant_set = ParticipantSerializer(many=True, read_only=True)
+
     class Meta:
         model = Period
-        fields = ('id', 'position', 'start_at', 'finish_at', 'participant_set',)
+        fields = ('id', 'position', 'start_at',
+                  'finish_at', 'participant_set',)
 
 
 class EventListSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Event
-        fields = ('id', 'title', 'type', 'leaders', 'description',
-                  'location', 'lat', 'lon', 'start_at', 'finish_at', 'all_day', 'published',)
+        fields = ('id', 'title', 'type', 'leaders', 'description', 'location',
+                  'lat', 'lon', 'start_at', 'finish_at', 'all_day', 'published',)
 
 
 class EventDetailSerializer(EventListSerializer):
     period_set = PeriodSerializer(many=True, read_only=True)
+
     class Meta(EventListSerializer.Meta):
         model = Event
         fields = EventListSerializer.Meta.fields + ('period_set',)
@@ -117,7 +131,8 @@ class EventDetailSerializer(EventListSerializer):
 class PeriodParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
-        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at',
+                  'return_home_at', 'signed_in_at', 'signed_out_at')
 
     def create(self, validated_data):
         """Custom method to filter to avoid duplicates"""
@@ -138,14 +153,17 @@ class DistributionSerializer(serializers.ModelSerializer):
 # This version currently requires a period. Future uses can change this.
 class MessageListSerializer(serializers.ModelSerializer):
     rsvp_template = serializers.CharField(allow_null=True)
+
     class Meta:
         model = Message
         read_only_fields = ('author', 'created_at',)
-        fields = ('id', 'author', 'text', 'format', 'period', 'period_format', 'rsvp_template', 'created_at',)
+        fields = ('id', 'author', 'text', 'format', 'period',
+                  'period_format', 'rsvp_template', 'created_at',)
 
 
 class MessageDetailSerializer(MessageListSerializer):
     distribution_set = DistributionSerializer(many=True, required=False)
+
     class Meta(MessageListSerializer.Meta):
         model = Message
         fields = MessageListSerializer.Meta.fields + ('distribution_set',)
