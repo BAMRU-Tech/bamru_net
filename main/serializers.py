@@ -14,7 +14,8 @@ class MemberSerializer(serializers.HyperlinkedModelSerializer):
         model = Member
         read_only_fields = ('full_name', 'status', 'status_order',
                             'roles', 'role_order',
-                            'display_email', 'display_phone', 'short_name',)
+                            'display_email', 'display_phone', 'short_name',
+                            'is_unavailable',)
         fields = ('id', 'username', 'dl', 'ham', 'v9', 'is_staff',
                   'is_current_do',
                   'is_superuser', 'last_login',) + read_only_fields
@@ -102,8 +103,8 @@ class PeriodSerializer(serializers.HyperlinkedModelSerializer):
 class EventListSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Event
-        fields = ('id', 'title', 'type', 'leaders', 'description', 'location',
-                  'lat', 'lon', 'start_at', 'finish_at', 'all_day', 'published',)
+        fields = ('id', 'title', 'type', 'leaders', 'description',
+                  'location', 'lat', 'lon', 'start_at', 'finish_at', 'all_day', 'published',)
 
 
 class EventDetailSerializer(EventListSerializer):
@@ -116,9 +117,7 @@ class EventDetailSerializer(EventListSerializer):
 class PeriodParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Participant
-        fields = ('id', 'period', 'member', 'ahc', 'ol',
-                  'en_route_at', 'return_home_at',
-                  'signed_in_at', 'signed_out_at')
+        fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
 
     def create(self, validated_data):
         """Custom method to filter to avoid duplicates"""

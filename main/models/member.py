@@ -165,6 +165,12 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
             year=plan_year, quarter__lt=plan_quarter).count())
 
     @property
+    def is_unavailable(self):
+        today = timezone.now().today().date()
+        return self.unavailable_set.filter(
+            start_on__lte=today, end_on__gte=today).count() > 0
+
+    @property
     def is_editor(self):
         return (self.is_staff or
                 self.role_set.filter(role='SEC').exists() or
