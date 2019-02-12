@@ -66,6 +66,7 @@
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
         <td>{{ member.id }}</td>
+        <td>{{ member.is_unavailable }}</td>
       </tr>
       {% endspaceless %}
       {% endfor %}
@@ -89,7 +90,12 @@ columns: [
       orderable: false,
       className: 'mark-checkbox noVis',
     },
-    { data: 'full_name', title: 'Name', responsivePriority: 1, },
+    { data: 'full_name', title: 'Name', responsivePriority: 1, 
+      render: function(data, type, row, meta) {
+          if (type == 'display' && row.is_unavailable == 'True') data = '<i>' + data + '</i>';
+          return data;
+      }
+    },
     { data: 'status', title: 'Status', responsivePriority: 5,
       render: function(data, type, row, meta) {
           if (type == 'sort')
@@ -111,6 +117,7 @@ columns: [
     { data: 'display_phone', title: 'Phone', responsivePriority: 2, },
     { data: 'display_email', title: 'Email', responsivePriority: 3, },
     { data: 'id', visible: false, className: 'noVis', },
+    { data: 'is_unavailable', visible: false, className: 'noVis', },
 ],
 
 language: { emptyTable: 'No participants selected' },
