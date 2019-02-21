@@ -156,36 +156,6 @@ class Message(BaseModel):
                 d.member.id, member_index, sms_from))
             d.queue(sms_from)
 
-    def repage(self, author=None):
-        from main.tasks import message_send  # Here to avoid circular dependency
-        old_id = self.pk
-        if self.rsvp_template is None:
-            logger.error('Error: trying to repage a non-rsvp message.')
-        dist = self.distribution_set.filter(rsvp=False)
-        message = self
-        message.pk = None
-        message.text = 'Repage: ' + message.text
-        if author:
-            message.author = author
-        message.linked_rsvp_id = old_id
-        if message.ancestry:
-            message.ancestry = '{}, {}'.format(message.ancestry, old_id)
-        else:
-            message.ancestry = str(old_id)
-        message.save()
-        logger.info('Repaging {} as {}'.format(old_id, message.pk))
-        for d in dist:
-            if d.message.period_format == 'invite' and d.member.is_unavailable():
-                logger.info('Skipping unavailable member ' + member)
-            else:
-                message.distribution_set.create(
-                    member_id=d.member.id,
-                    send_email=d.send_email,
-                    send_sms=d.send_sms)
-        message.queue()
-        message_send.delay(message.pk)
-        return message
-
 
 class Distribution(BaseModel):
     message = models.ForeignKey(Message, on_delete=models.CASCADE)
