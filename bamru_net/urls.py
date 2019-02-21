@@ -77,10 +77,11 @@ urlpatterns = [
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
 
     path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
+    path('message/<int:pk>/repage/', views.MessageRepageCreateView.as_view(), name='message_repage'),
     path('message/', views.MessageListView.as_view(), name='message_list'),
     path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(), name='message_inbox'),
     path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
-    path('message/test/', views.MessageCreateView.as_view(page_format='test'), name='message_test'),
+    path('message/test/', views.MessageTestCreateView.as_view(), name='message_test'),
 
     path('action/become_do/', views.ActionBecomeDo.as_view(), name='action_become_do'),
 

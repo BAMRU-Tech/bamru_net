@@ -103,6 +103,14 @@ class Message(BaseModel):
     def get_absolute_url(self):
         return ('message_detail', [str(self.id)])
 
+    def ancestry_links(self):
+        links = []
+        for a in self.ancestry.split(','):
+            m = Message.objects.get(id=a.strip())
+            links.append('<a href="{}">{}</a>'.format(
+                m.get_absolute_url(), m.id))
+        return ", ".join(links)
+
     @property
     def expanded_text(self):
         if APPEND_RSVP_TEMPLATE and self.rsvp_template:
@@ -148,7 +156,6 @@ class Message(BaseModel):
                 d.member.id, member_index, sms_from))
             d.queue(sms_from)
 
-    # TODO: Do not repage unavailable on invite
     def repage(self, author=None):
         from main.tasks import message_send  # Here to avoid circular dependency
         old_id = self.pk
@@ -166,12 +173,15 @@ class Message(BaseModel):
         else:
             message.ancestry = str(old_id)
         message.save()
-        for d in dist:
-            message.distribution_set.create(
-                member_id=d.member.id,
-                send_email=d.send_email,
-                send_sms=d.send_sms)
         logger.info('Repaging {} as {}'.format(old_id, message.pk))
+        for d in dist:
+            if d.message.period_format == 'invite' and d.member.is_unavailable():
+                logger.info('Skipping unavailable member ' + member)
+            else:
+                message.distribution_set.create(
+                    member_id=d.member.id,
+                    send_email=d.send_email,
+                    send_sms=d.send_sms)
         message.queue()
         message_send.delay(message.pk)
         return message

@@ -142,7 +142,7 @@ class MessageListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         read_only_fields = ('author', 'created_at',)
-        fields = ('id', 'author', 'text', 'format', 'period', 'period_format', 'rsvp_template', 'created_at',)
+        fields = ('id', 'author', 'text', 'format', 'period', 'period_format', 'rsvp_template', 'created_at', 'ancestry',)
 
 
 class MessageDetailSerializer(MessageListSerializer):

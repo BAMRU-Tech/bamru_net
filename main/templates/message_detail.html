@@ -18,6 +18,12 @@
 <p><strong>From: </strong>
   <a href="{{ message.author.get_absolute_url }}">{{ message.author }}</a></p>
 <p><strong>Message: </strong>{{ message.text }}</p>
+{% if message.ancestry %}
+<p><strong>Repage of: </strong>{{ message.ancestry_links|safe }}</p>
+{% endif %}
+{% if message.rsvp_template %}
+<p><strong>Repage link: </strong><a href="{% url 'message_repage' message.id %}">Repage this message</a></p>
+{% endif %}
 {% if message.period %}
 <p><strong>Operation period: </strong>
   <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a></p>
