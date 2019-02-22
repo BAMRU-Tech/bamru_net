@@ -40,6 +40,7 @@
     {% for d in message.distribution_set.all %}
     <tr>
       <td>{{ d.member }}</td>
+      <td>{{ d.member.is_unavailable }}</td>
       <td>{{ d.rsvp_display }}</td>
       <td>
         {% for m in d.outboundsms_set.all %}
@@ -66,7 +67,13 @@
 order: [[ 0, 'asc' ]],
 
 columns: [
-    { data: 'name', title: 'Name', responsivePriority: 1, },
+    { data: 'name', title: 'Name', responsivePriority: 1, 
+      render: function(data, type, row, meta) {
+          if (type == 'display' && row.is_unavailable == 'True') data = '<i>' + data + '</i>';
+          return data;
+      }
+    },
+    { data: 'is_unavailable', title: 'Unavailable', visible: false, },
     { data: 'RSVP', title: 'RSVP', responsivePriority: 2, },
     { data: 'sms_status', title: 'Sms status', responsivePriority: 3, },
     { data: 'email_status', title: 'Email status', responsivePriority: 4, },
