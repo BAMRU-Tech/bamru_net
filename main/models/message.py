@@ -104,6 +104,8 @@ class Message(BaseModel):
         return ('message_detail', [str(self.id)])
 
     def ancestry_messages(self):
+        if not self.ancestry:
+            return []
         messages = []
         for a in self.ancestry.split(','):
             try:
