@@ -226,6 +226,17 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
     distribution.rsvp_answer = rsvp
     distribution.save()
 
+    # Mark the RSVP in ancestors too
+    for a in distribution.message.ancestry_messages():
+        try:
+            d = a.distribution_set.get(member=distribution.member)
+        except Distribution.DoesNotExist:
+            logger.error()
+        else:
+            d.rsvp = True
+            d.rsvp_answer = rsvp
+            d.save()
+
     if distribution.message.period_format == 'test':
         return 'Test message response received.'
 

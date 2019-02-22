@@ -103,13 +103,19 @@ class Message(BaseModel):
     def get_absolute_url(self):
         return ('message_detail', [str(self.id)])
 
-    def ancestry_links(self):
-        links = []
+    def ancestry_messages(self):
+        messages = []
         for a in self.ancestry.split(','):
-            m = Message.objects.get(id=a.strip())
-            links.append('<a href="{}">{}</a>'.format(
-                m.get_absolute_url(), m.id))
-        return ", ".join(links)
+            try:
+                messages.append(Message.objects.get(id=a.strip()))
+            except Message.DoesNotExist:
+                logger.error('Ancestor {} not found for {}'.format(a, self.id))
+        return messages
+
+    def ancestry_links(self):
+        return ", ".join([
+            '<a href="{}">{}</a>'.format(m.get_absolute_url(), m.id)
+            for m in self.ancestry_messages()])
 
     @property
     def expanded_text(self):
