@@ -26,14 +26,11 @@ from main.tasks import message_send
 logger = logging.getLogger(__name__)
 
 
-class MessageCreateView(LoginRequiredMixin, generic.ListView):
+class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
     model = Message
     template_name = 'message_add.html'
     context_object_name = 'member_list'
     page_format = None  # to override in urls
-
-    #def get_success_url(self): FIXME
-    #    return self.object.get_absolute_url()
 
     def get_queryset(self):
         """Return context for standard paging."""
@@ -50,23 +47,80 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
         initial['type'] = "std_page"
         initial['format'] = 'page'
         members = None
-        period_id = self.request.GET.get('period')
         page_format = self.request.GET.get('page_format', self.page_format)
         period_format = format_convert[page_format][0]
         initial['period_format'] = period_format
         rsvp_name = format_convert[page_format][1]
-        rsvp_template = None
+        self.rsvp_template = None
         if rsvp_name is not None:
             try:
-                rsvp_template = RsvpTemplate.objects.get(name=rsvp_name)
-                initial['rsvp_template'] = rsvp_template
+                self.rsvp_template = RsvpTemplate.objects.get(name=rsvp_name)
+                initial['rsvp_template'] = self.rsvp_template
             except RsvpTemplate.DoesNotExist:
                 logger.error('RsvpTemplate {} not found for format: {}'.format(
                     rsvp_name, page_format))
-        if page_format == 'test':
-            initial['type'] = "test"
-            initial['input'] = datetime.now().strftime("Test page: %A, %d. %B %Y %I:%M%p")
-            members = Member.members.filter(id=self.request.user.pk)
+        self.initial = initial
+        return members
+
+    def get_context_data(self, **kwargs):
+        '''Add additional useful information.'''
+        context = super().get_context_data(**kwargs)
+        if self.rsvp_template:
+            self.initial['input'] = '{} {}'.format(self.initial['input'],
+                                                   self.rsvp_template.text)
+        return {**context, **self.initial}
+
+
+class MessageTestCreateView(MessageCreateBaseView):
+    page_format = 'test'
+    def get_queryset(self):
+        super().get_queryset()
+        self.initial['type'] = "test"
+        self.initial['input'] = datetime.now().strftime("Test page: %A, %d. %B %Y %I:%M%p")
+        return Member.members.filter(id=self.request.user.pk)
+
+
+class MessageRepageCreateView(MessageCreateBaseView):
+    def get_queryset(self):
+        message_id = self.kwargs['pk']
+        message = None
+        try:
+            message = Message.objects.get(pk=message_id)
+        except Message.DoesNotExist:
+            logger.error('Message not found for: ' + message_id)
+            raise Http404(
+                'Message {} specified, but does not exist'.format(message_id))
+        initial = {}
+        initial['author'] = self.request.user.pk
+        initial['type'] = "repage"
+        initial['period_id'] = message.period.id
+        initial['format'] = message.format
+        initial['period_format'] = message.period_format
+        initial['rsvp_template'] = message.rsvp_template
+        self.rsvp_template = message.rsvp_template
+        initial['input'] = 'Repage: ' + message.text
+        initial['linked_rsvp_id'] = message.id
+        if message.ancestry:
+            initial['ancestry'] = '{}, {}'.format(
+                message.ancestry, message_id)
+        else:
+            initial['ancestry'] = str(message_id)
+        self.initial = initial
+        members = []
+        for d in message.distribution_set.filter(rsvp=False):
+            if d.message.period_format == 'invite' and d.member.is_unavailable():
+                logger.info('Skipping unavailable member ' + member)
+            else:
+                members.append(d.member.id)
+        return Member.objects.filter(id__in=members)
+
+
+class MessageCreateView(MessageCreateBaseView):
+    def get_queryset(self):
+        super().get_queryset()
+        period_id = self.request.GET.get('period')
+        period_format = self.initial['period_format']
+        members = None
         if period_id:
             try:
                 period = Period.objects.get(pk=period_id)
@@ -74,8 +128,8 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
                 logger.error('Period not found for: ' + period_id)
                 raise Http404(
                     'Period {} specified, but does not exist'.format(period_id))
-            initial['period_id'] = period_id
-            initial['period'] = str(period)
+            self.initial['period_id'] = period_id
+            self.initial['period'] = str(period)
 
             if period_format == 'invite':
                 members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
@@ -85,7 +139,8 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             elif period_format == 'return':
                 members = period.members_for_returned_page()
             elif period_format == 'info':
-                members = Member.members.filter(participant__period=period_id)
+                # Use .objects to allow info to guests
+                members = Member.objects.filter(participant__period=period_id)
             elif period_format == 'broadcast':
                 members = Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
             elif period_format == 'test':
@@ -93,18 +148,8 @@ class MessageCreateView(LoginRequiredMixin, generic.ListView):
             else:
                 logger.error('Period format {} not found for: {}'.format(
                 period_format, self.request.body))
-            if (rsvp_template != None):
-                initial['input'] = "{}: {}".format(str(period), rsvp_template.text)
-            else:
-                initial['input'] = "{}: ".format(str(period))
-
-        self.initial = initial
+            self.initial['input'] = "{}:".format(str(period))
         return members
-
-    def get_context_data(self, **kwargs):
-        '''Add additional useful information.'''
-        context = super().get_context_data(**kwargs)
-        return {**context, **self.initial}
 
 
 class MessageDetailView(LoginRequiredMixin, generic.DetailView):
@@ -180,6 +225,17 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
     distribution.rsvp = True
     distribution.rsvp_answer = rsvp
     distribution.save()
+
+    # Mark the RSVP in ancestors too
+    for a in distribution.message.ancestry_messages():
+        try:
+            d = a.distribution_set.get(member=distribution.member)
+        except Distribution.DoesNotExist:
+            logger.error()
+        else:
+            d.rsvp = True
+            d.rsvp_answer = rsvp
+            d.save()
 
     if distribution.message.period_format == 'test':
         return 'Test message response received.'

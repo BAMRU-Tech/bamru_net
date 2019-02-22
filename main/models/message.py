@@ -103,6 +103,22 @@ class Message(BaseModel):
     def get_absolute_url(self):
         return ('message_detail', [str(self.id)])
 
+    def ancestry_messages(self):
+        if not self.ancestry:
+            return []
+        messages = []
+        for a in self.ancestry.split(','):
+            try:
+                messages.append(Message.objects.get(id=a.strip()))
+            except Message.DoesNotExist:
+                logger.error('Ancestor {} not found for {}'.format(a, self.id))
+        return messages
+
+    def ancestry_links(self):
+        return ", ".join([
+            '<a href="{}">{}</a>'.format(m.get_absolute_url(), m.id)
+            for m in self.ancestry_messages()])
+
     @property
     def expanded_text(self):
         if APPEND_RSVP_TEMPLATE and self.rsvp_template:
@@ -147,34 +163,6 @@ class Message(BaseModel):
             logger.debug('member {} from index {} => {}'.format(
                 d.member.id, member_index, sms_from))
             d.queue(sms_from)
-
-    # TODO: Do not repage unavailable on invite
-    def repage(self, author=None):
-        from main.tasks import message_send  # Here to avoid circular dependency
-        old_id = self.pk
-        if self.rsvp_template is None:
-            logger.error('Error: trying to repage a non-rsvp message.')
-        dist = self.distribution_set.filter(rsvp=False)
-        message = self
-        message.pk = None
-        message.text = 'Repage: ' + message.text
-        if author:
-            message.author = author
-        message.linked_rsvp_id = old_id
-        if message.ancestry:
-            message.ancestry = '{}, {}'.format(message.ancestry, old_id)
-        else:
-            message.ancestry = str(old_id)
-        message.save()
-        for d in dist:
-            message.distribution_set.create(
-                member_id=d.member.id,
-                send_email=d.send_email,
-                send_sms=d.send_sms)
-        logger.info('Repaging {} as {}'.format(old_id, message.pk))
-        message.queue()
-        message_send.delay(message.pk)
-        return message
 
 
 class Distribution(BaseModel):
