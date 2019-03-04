@@ -115,5 +115,4 @@ urlpatterns = [
     path('reports/roster/BAMRU-roster.vcf', views.ReportRosterVcfView.as_view()),
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
 
-    path('home/wiki', views.LegacyWikiSsoView.as_view()),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
