@@ -109,7 +109,7 @@ class MessageRepageCreateView(MessageCreateBaseView):
         members = []
         for d in message.distribution_set.filter(rsvp=False):
             if d.message.period_format == 'invite' and d.member.is_unavailable:
-                logger.info('Skipping unavailable member ' + member)
+                logger.info('Skipping unavailable member ' + d.member)
             else:
                 members.append(d.member.id)
         return Member.objects.filter(id__in=members)
