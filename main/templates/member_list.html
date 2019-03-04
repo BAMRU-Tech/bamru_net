@@ -1,3 +1,4 @@
+
 {% extends 'base_ftable.html' %}
 
 {# --- Page definition --- #}
@@ -44,6 +45,7 @@
         <td>{{ member.role_order }}</td>
         <td>{{ member.display_phone }}</td>
         <td>{{ member.display_email }}</td>
+        <td>{{ member.is_unavailable }}</td>
       </tr>
       {% endspaceless %}
       {% endfor %}
@@ -72,10 +74,11 @@ SetMemberFilter (table);
 const colDefs = [
     { data: 'full_name', title: 'Name', width: '35%', responsivePriority: 1,
       render: function(data, type, row, meta) {
-          if (type == 'display')
-              return '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
-          else
-              return data;
+          if (type == 'display') {
+              data = '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
+              if (row.is_unavailable == 'True') data = '<i>' + data + '</i>';
+          }
+          return data;
       }
     },
     { data: 'id', visible: false, className: 'noVis', },
@@ -107,6 +110,7 @@ const colDefs = [
       }
     },
     { data: 'display_email', title: 'E-Mail', responsivePriority: 2, },
+    { data: 'is_unavailable', visible: false, className: 'noVis', },
 ];
 
 function UpdateSubheaderBasedOnSettings(table) {

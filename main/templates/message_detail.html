@@ -9,12 +9,19 @@
   {% if message.period %}
   <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a> &gt;
   {% endif %}
-  Message Detail
+  Detail
 </strong>
 {% endblock subheader %}
 
 {% block content %}
 <p></p>
+<div class="float-right">
+  Auto Refresh
+  <label class="switch">
+    <input id="refresh" type="checkbox" onchange="AutoRefresh()">
+    <span class="slider round"></span>
+  </label>
+</div>
 <p><strong>From: </strong>
   <a href="{{ message.author.get_absolute_url }}">{{ message.author }}</a></p>
 <p><strong>Message: </strong>{{ message.text }}</p>
@@ -83,18 +90,38 @@ language: { emptyTable: 'No messages' },
 
 {% endblock table_options %}
 
-{# remove filter button #}
-{% block filter_button %}{% endblock %}
+{% block filter_button %}{# remove filter button #}{% endblock %}
 
 {% block functions %}
-function UpdateSubheaderBasedOnSettings(table) {}
 
-//FIXME: Pretty brute force, look at just updating the table
-//FIXME: Add button to enable/disable auto-refresh
-function timedRefresh(timeoutPeriod) {
-	setTimeout("location.reload(true);",timeoutPeriod);
+function UpdateSubheaderBasedOnSettings(table) {} // Fixed subheader
+
+// Define constants based on input params
+const defaultTimeout = 15;
+const url = new URL(window.location.href);
+const autoRefresh = url.searchParams.get('refresh');
+
+function AutoRefresh() {
+    var timeout = autoRefresh == null || isNaN(autoRefresh) ? defaultTimeout : autoRefresh;
+    var base_url = url.href.split('?')[0];
+    var rurl;
+
+    if ($('#refresh').prop('checked'))
+        rurl = base_url + '?refresh=' + timeout;
+    else
+        rurl = base_url;
+
+    //FIXME: Pretty brute force, look at just updating the table
+    window.location.replace(rurl)
 }
 
-window.onload = timedRefresh(15000);
+function SetAutoRefresh() {
+    if (!isNaN(autoRefresh) && autoRefresh > 0) {
+        window.refreshTimer = setTimeout(AutoRefresh, autoRefresh * 1000);
+        $('#refresh').prop('checked', true)
+    }
+}
+
+SetAutoRefresh();
 
 {% endblock functions %}

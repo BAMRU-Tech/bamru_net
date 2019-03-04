@@ -93,29 +93,30 @@
               {{ p.en_route_at|date:"H:i" }}
               {% endif %}
             </td>
-	        <td>{{ p.return_home_at|date:"Y-m-d" }}</td>
-	        <td>
+            <td>{{ p.return_home_at|date:"Y-m-d" }}</td>
+            <td>
               {% if p.return_home_at|date:"H:i" != '00:00' %}
               {{ p.return_home_at|date:"H:i" }}
               {% endif %}
             </td>
-	        <td>{{ p.signed_in_at|date:"Y-m-d" }}</td>
-	        <td>
+            <td>{{ p.signed_in_at|date:"Y-m-d" }}</td>
+            <td>
               {% if p.signed_in_at|date:"H:i" != '00:00' %}
               {{ p.signed_in_at|date:"H:i" }}
               {% endif %}
             </td>
-	        <td>{{ p.signed_out_at|date:"Y-m-d" }}</td>
-	        <td>
+            <td>{{ p.signed_out_at|date:"Y-m-d" }}</td>
+            <td>
               {% if p.signed_out_at|date:"H:i" != '00:00' %}
               {{ p.signed_out_at|date:"H:i" }}
               {% endif %}
             </td>
-	        <td>{{ p.ahc|lower }}</td>
-	        <td>{{ p.ol|lower }}</td>
-	        <td>{{ p.id }}</td> {# participant id #}
-	        <td>{{ p.member.id }}</td>
-	        <td>{{ p.period.id }}</td>
+            <td>{{ p.ahc|lower }}</td>
+            <td>{{ p.ol|lower }}</td>
+            <td>{{ p.id }}</td> {# participant id #}
+            <td>{{ p.member.id }}</td>
+            <td>{{ p.period.id }}</td>
+            <td>{{ p.member.is_unavailable }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -188,6 +189,14 @@ $(document).ready( function() {
                       if (row.ahc == 'true') data += '(AHC)';
                       if (row.ol == 'true') data += '(OL)';
                       data = '<a href="/member/' + row.member + '">' + data + '</a>';
+                      if (row.is_unavailable == 'True') {
+                          var event_start = new Date('{{ event.start_at|date:'M j, Y' }}');
+                          var event_end = new Date('{{ event.finish_at|date:'M j, Y' }}');
+                          var current_date = new Date;
+
+                          if (event_start <= current_date && event_end >= current_date)
+                              data = '<i>' + data + '</i>';
+                      }
                   }
                   return data;
               }
@@ -259,6 +268,8 @@ $(document).ready( function() {
             { data: 'period', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis'
             },
+            { data: 'is_unavailable', type: ['readonly', 'hidden'],
+              visible: false, className: 'noVis', },
         ],
 
         buttons: [

@@ -66,12 +66,18 @@ columns: [
     },
     { data: 'full_name', title: 'Name', responsivePriority: 1,
       render: function(data, type, row, meta) {
-          if (false && type == 'display')  //FX: add lightweight icon
-              return '<a href="/member/' + row.id + '?returnx=pp">' +
-                  (row.is_unavailable=='True' ? ('<i>' + data + '</i>') : data) +
-                  '</a>';
-          else
-              return data;
+          if (type == 'display') {  //FX: add lightweight icon
+              data = '<a href="/member/' + row.id + '?returnx=pp">' + data + '</a>';
+              if (row.is_unavailable=='True') {
+                  var event_start = new Date('{{ event.start_at|date:'M j, Y' }}');
+                  var event_end = new Date('{{ event.finish_at|date:'M j, Y' }}');
+                  var current_date = new Date;
+                  //FX: Add date logic, need event data
+                  //FX: Should only apply to current events
+                  data = '<i>' + data + '</i>';
+              }
+          }
+          return data;
       }
     },
     { data: 'id', visible: false, className: 'noVis', },
