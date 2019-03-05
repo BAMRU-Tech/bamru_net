@@ -39,7 +39,7 @@
             Member photos
           </a>
 {% endcomment %}
-          <a class="dropdown-item" href="{% url 'do_list' %}">
+          <a class="dropdown-item" href="{% url 'do_sched' %}">
             <i class="fa fa-calendar"></i>
             Quarterly DO schedule
           </a>
@@ -123,7 +123,7 @@
             <i class="fa fa-inbox"></i>
             Inbox (n)
           </a>
-          <a class="dropdown-item" href="{% url 'member_availability_list'  request.user.id %}">
+          <a class="dropdown-item" href="{% url 'member_availability_list' request.user.id %}">
             <i class="fa fa-calendar-times-o"></i>
             Availability
           </a>
