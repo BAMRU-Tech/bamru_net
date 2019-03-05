@@ -343,7 +343,8 @@ def sms(request):
 
     yn = twilio_request.body[0].lower()
     if yn != 'y' and yn != 'n':
-        logger.error('Unable to parse y/n message: ' + str(request.body))
+        logger.error('Unable to parse y/n message {} from {}: '.format(
+            sms.body, outbound.distribution.member, str(request.body)))
         response.message('Could not parse yes/no in your message. Start your message with y or n.')
         return response
 
