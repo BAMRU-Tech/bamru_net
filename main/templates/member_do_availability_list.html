@@ -180,7 +180,8 @@ function InitializeData() {
             else
                 var data = { week: i, available: false, comment: '',
                              id: 0, assigned: false,
-                             member: '{{ request.user.id }}', }
+                             start: '0000-00-00', end: '0000-00-00',
+                             member: '{{ member.id }}', }
 
             table.row.add(data);
         }
