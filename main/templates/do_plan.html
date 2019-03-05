@@ -63,13 +63,13 @@ $(document).ready(function() {
             {
                 text: '<i class="fa fa-caret-square-o-left"></i> Prev',
                 action: function ( e, dt, node, config ) {
-                    location.href="{{ request.path }}{{ query_prev }}";
+                    location.href="{{ request.path }}{{ query_prev|safe }}";
                 }
             },
             {
                 text: '<i class="fa fa-caret-square-o-right"></i> Next',
                 action: function ( e, dt, node, config ) {
-                    location.href="{{ request.path }}{{ query_next }}";
+                    location.href="{{ request.path }}{{ query_next|safe }}";
                 },
             }
         ],
