@@ -34,6 +34,18 @@ columns: [
     { data: 'week', title: 'Week', width: '10%',
       type: ['readonly'], className: 'dt-center',
     },
+    { data: 'start', title: 'Start', width: '12%',
+      type: ['readonly', 'hidden'], className: 'noVis',
+      render: function(data, type, row, meta) {
+          return (type == 'display') ? DateFE(data) : data
+      }
+    },
+    { data: 'end', title: 'End', width: '12%',
+      type: ['readonly', 'hidden'], className: 'noVis',
+      render: function(data, type, row, meta) {
+          return (type == 'display') ? DateFE(data) : data
+      }
+    },
     { data: 'available', title: 'Available', width: '10%', responsivePriority: 1,
       type: 'select', options: [false, true], className: 'dt-center',
     },
@@ -151,7 +163,7 @@ function WeeksPerQtr() {
 function InitializeData() {
     // Add rows based on date range
     const apiUrlDoAvailEvent =
-          '/api/do/?member={{ request.user.id }}' +
+          '/api/do/?member={{ member.id }}' +
           '&year=' + currentPeriod.year + '&quarter=' + currentPeriod.quarter;
     var url = apiUrlDoAvailEvent;
     
@@ -229,8 +241,11 @@ function UpdateSubheaderBasedOnSettings(table) {
 
 {% endblock functions %}
 
+
 {% block ready_functions %}
+
 InitializeData();
+
 {% endblock ready_functions %}
 
 
