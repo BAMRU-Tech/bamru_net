@@ -71,7 +71,7 @@
 
 {% block table_options %}
 
-order: [[ 0, 'asc' ]],
+order: tableOrder,
 
 columns: [
     { data: 'name', title: 'Name', responsivePriority: 1, 
@@ -100,16 +100,21 @@ function UpdateSubheaderBasedOnSettings(table) {} // Fixed subheader
 const defaultTimeout = 15;
 const url = new URL(window.location.href);
 const autoRefresh = url.searchParams.get('refresh');
+const defaultOrder = [[ 0, 'asc' ]];
+var tableOrder = url.searchParams.get('O');
+tableOrder = (tableOrder != null) ? JSON.parse(tableOrder) : defaultOrder;
 
 function AutoRefresh() {
     var timeout = autoRefresh == null || isNaN(autoRefresh) ? defaultTimeout : autoRefresh;
     var base_url = url.href.split('?')[0];
     var rurl;
 
-    if ($('#refresh').prop('checked'))
-        rurl = base_url + '?refresh=' + timeout;
-    else
+    if ($('#refresh').prop('checked')) {
+        var order = JSON.stringify(table.order());
+        rurl = base_url + '?refresh=' + timeout + '&O=' + order;
+    } else {
         rurl = base_url;
+    }
 
     //FIXME: Pretty brute force, look at just updating the table
     window.location.replace(rurl)
