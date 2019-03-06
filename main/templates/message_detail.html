@@ -110,7 +110,15 @@ const defaultOrder = [[ 0, 'asc' ]];
 var tableOrder = url.searchParams.get('O');
 tableOrder = (tableOrder != null) ? JSON.parse(tableOrder) : defaultOrder;
 
-function Repage() { window.location.href="{% url 'message_repage' message.id %}" }
+function Repage() {
+    var stats = '{{ stats }}'.match(/^(\d+) sent, (\d+) delivered, (\d+) RSVPed/)
+    //FX: Hack using stats string rather than individual values for sent and RSVPed
+    if (stats == null || stats[1] != stats[3]) {
+        alert('No members to repage based on stats')
+        return
+    }
+    window.location.href="{% url 'message_repage' message.id %}"
+}
 
 function AutoRefresh() {
     var timeout = autoRefresh == null || isNaN(autoRefresh) ? defaultTimeout : autoRefresh;
