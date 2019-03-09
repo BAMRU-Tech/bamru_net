@@ -141,3 +141,13 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+#logo {
+  width: 24px;
+  height:24px;
+  margin: 5px 3px 10px 0px;
+}
+
+#logo:hover {
+  box-shadow: 0 0 2px 1px rgba(0, 140, 186, 0.5);
+}
