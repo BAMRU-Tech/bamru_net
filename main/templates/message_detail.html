@@ -113,7 +113,7 @@ tableOrder = (tableOrder != null) ? JSON.parse(tableOrder) : defaultOrder;
 function Repage() {
     var stats = '{{ stats }}'.match(/^(\d+) sent, (\d+) delivered, (\d+) RSVPed/)
     //FX: Hack using stats string rather than individual values for sent and RSVPed
-    if (stats == null || stats[1] != stats[3]) {
+    if (stats != null && stats[1] == stats[3]) {
         alert('No members to repage based on stats')
         return
     }
