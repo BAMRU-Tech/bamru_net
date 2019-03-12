@@ -104,19 +104,19 @@ onEditRow: UpdateRow,
 
 function SetAll ( e, dt, node, config ) {
     dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-        var data = this.data();
+        var row = this;
+        var data = row.data();
         data.available = true;
-        this.data(data);
-        UpdateRow(table, data);
+        UpdateRow(table, data, function (r, s, m) { row.data(r) });
     } )
 }
 
 function ClearAll ( e, dt, node, config ) {
     dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-        var data = this.data();
+        var row = this;
+        var data = row.data();
         data.available = false;
-        this.data(data);
-        UpdateRow(table, data);
+        UpdateRow(table, data, function (r, s, m) { row.data(r) });
     } )
 }
 
