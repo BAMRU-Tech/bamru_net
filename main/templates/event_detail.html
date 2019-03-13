@@ -470,6 +470,7 @@ function UpdatePeriodRow(dt, row, success, error) {
     var memberName = row.name;
     var memberStatus = row.status;
     var memberStatusOrder = row.status_order;
+    var memberUnavailable = row.is_unavailable;
     // Remove from summary, it is readded on display
     window.summary[row.tblId][memberStatus] -= 1;
 
@@ -495,6 +496,7 @@ function UpdatePeriodRow(dt, row, success, error) {
         data.name = memberName;
         data.status = memberStatus;
         data.status_order = memberStatusOrder;
+        data.is_unavailable = memberUnavailable;
         // Create additional rows for editing
         UncombineDateTime('en_route');
         UncombineDateTime('return_home');
