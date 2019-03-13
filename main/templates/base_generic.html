@@ -131,7 +131,10 @@
         if (typeof date !== 'object')
             throw('DateBE: Bad date format, expected date object');
 
-        if (offset) date.setDate(date.getDate() + offset);
+        if (offset) {
+            date = new Date(date);
+            date.setDate(date.getDate() + offset);
+        }
 
         return date.getFullYear() +
             '-' + pad(date.getMonth()+1) +
