@@ -165,14 +165,11 @@ class DoViewSet(BaseViewSet):
         # create all the objects for that quarter
         #import pdb; pdb.set_trace()
         if member is not None and year is not None and quarter is not None:
-            # Use the first object to compute number of weeks in the quarter
-            avail1, created = DoAvailable.objects.get_or_create(
-                member=member, year=year, quarter=quarter, week=1)
-            for week in avail1.weeks(year, quarter):
-                availn, created = DoAvailable.objects.get_or_create(
+            for week in DoAvailable.weeks(year, quarter):
+                availability, created = DoAvailable.objects.get_or_create(
                     member=member, year=year, quarter=quarter, week=week)
                 if created:
-                    availn.save()
+                    availability.save()
 
         return super(DoViewSet, self).list(self, request, *args, **kwargs)
 
