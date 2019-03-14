@@ -132,26 +132,34 @@ class DoViewSet(BaseViewSet):
 
     def list(self, request, *args, **kwargs):
         id = request.query_params.get('member', None)
-        try:
-            member = Member.objects.filter(id=id)[0]
-        except:
-            content = {'Bad param': 'Invalid member id'}
-            return Response(content, status=status.HTTP_404_NOT_FOUND)
-        try:
-            year = int(request.query_params.get('year', None))
-            if year < 2010 or year > 2030:
-                raise
-        except:
-            content = {'Bad param': 'Invalid year'}
-            return Response(content, status=status.HTTP_404_NOT_FOUND)
+        if id is not None:
+            try:
+                member = Member.objects.filter(id=id)[0]
+            except:
+                content = {'Bad param': 'Invalid member id'}
+                return Response(content, status=status.HTTP_404_NOT_FOUND)
+        else:
+            member = None
 
-        try:
-            quarter = int(request.query_params.get('quarter', None))
-            if quarter < 1 or quarter > 4:
-                raise
-        except:
-            content = {'Bad param': 'Invalid quarter'}
-            return Response(content, status=status.HTTP_404_NOT_FOUND)
+        year = request.query_params.get('year', None)
+        if year is not None:
+            try:
+                year = int(year)
+                if year < 2010 or year > 2030:
+                    raise
+            except:
+                content = {'Bad param': 'Invalid year'}
+                return Response(content, status=status.HTTP_404_NOT_FOUND)
+
+        quarter = request.query_params.get('quarter', None)
+        if quarter is not None:
+            try:
+                quarter = int(quarter)
+                if quarter < 1 or quarter > 4:
+                    raise
+            except:
+                content = {'Bad param': 'Invalid quarter'}
+                return Response(content, status=status.HTTP_404_NOT_FOUND)
 
         # If the request is a member and a specific quarter,
         # create all the objects for that quarter
