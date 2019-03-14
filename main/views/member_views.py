@@ -412,7 +412,7 @@ class MemberAvailabilityListView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class DoMemberListView(LoginRequiredMixin, generic.DetailView):
+class DoMemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_do_availability_list.html'
     

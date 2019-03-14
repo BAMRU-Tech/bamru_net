@@ -35,13 +35,13 @@ columns: [
       type: ['readonly'], className: 'dt-center',
     },
     { data: 'start', title: 'Start', width: '12%',
-      type: ['readonly', 'hidden'], className: 'noVis',
+      type: ['readonly'],
       render: function(data, type, row, meta) {
           return (type == 'display') ? DateFE(data) : data
       }
     },
     { data: 'end', title: 'End', width: '12%',
-      type: ['readonly', 'hidden'], className: 'noVis',
+      type: ['readonly'],
       render: function(data, type, row, meta) {
           return (type == 'display') ? DateFE(data) : data
       }
@@ -116,11 +116,10 @@ function ClearAll ( e, dt, node, config ) {
         var row = this;
         var data = row.data();
         data.available = false;
+        data.comment = '';
         UpdateRow(table, data, function (r, s, m) { row.data(r) });
     } )
 }
-
-var currentPeriod = GetPeriod();
 
 function PrevQtr ( e, dt, node, config ) {
     currentPeriod.quarter -= 1;
@@ -150,15 +149,7 @@ function GetPeriod(d) {
              year: d.getFullYear() };
 }
 
-function WeeksPerQtr() {
-    if (currentPeriod.quarter == 4) {
-        var date = new Date(currentPeriod.year, 11, 1) // Dec 1st
-        // If Dec start on Sun, Mon, Tues
-        if ([0, 1, 2].includes(date.getDay())) return 14
-    }
-
-    return 13;
-}
+var currentPeriod = GetPeriod();
 
 function InitializeData() {
     // Add rows based on date range
@@ -170,21 +161,7 @@ function InitializeData() {
     table.clear();
 
     $.getJSON(url, null, function( json ) {
-        
-        var w = WeeksPerQtr()
-        for (var i=1; i<=w; i++)
-        {
-            if (json[0] && json[0].week == i)
-                // assumes an ordered list
-                var data = json.shift();
-            else
-                var data = { week: i, available: false, comment: '',
-                             id: 0, assigned: false,
-                             start: '0000-00-00', end: '0000-00-00',
-                             member: '{{ member.id }}', }
-
-            table.row.add(data);
-        }
+        table.rows.add(json);
         table.draw().columns.adjust().responsive.recalc();
     })
 }
@@ -196,27 +173,6 @@ function UpdateRow (dt, row,
     var data = row;
 
     var id = data.id;
-    if (id == 0) {
-        // Create new availability
-        data.year = currentPeriod.year;
-        data.quarter = currentPeriod.quarter;
-        data = JSON.stringify(data);
-        $.ajax({
-            method: 'POST',
-            contentType: 'application/json',
-            url: '/api/do/',
-            data: data,
-            success: function (r, s, m) {
-                return success(r, s, m);
-            },
-            error: function (xhr) {
-                console.log('availability create failed');
-                console.log(xhr);
-                alert(xhr.responseText);
-                return false;
-            }
-        })
-    } else {
     data = JSON.stringify(data);
         $.ajax({
             method: 'PATCH',
@@ -231,7 +187,6 @@ function UpdateRow (dt, row,
                 return false;
             }
         })
-    }
 }
 
 

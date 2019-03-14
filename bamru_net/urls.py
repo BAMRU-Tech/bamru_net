@@ -73,7 +73,7 @@ urlpatterns = [
     path('member/<int:member>/certs/<int:cert>/download/<path:name>', views.cert_file_download_view, name='member_cert_download'),
 
     path('do/schedule/', views.DoListView.as_view(), name='do_sched'),
-    path('do/availability/<int:pk>', views.DoMemberListView.as_view(),
+    path('do/availability/<int:pk>', views.DoMemberDetailView.as_view(),
          name='do_availability_list'),
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
 
