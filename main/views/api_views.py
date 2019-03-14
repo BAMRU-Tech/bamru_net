@@ -5,6 +5,8 @@ from main.serializers import *
 from django import forms
 from rest_framework import generics, mixins, parsers, permissions, response, views, viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
 from django_filters import rest_framework as filters
 
 
@@ -127,6 +129,44 @@ class DoViewSet(BaseViewSet):
     filter_fields = ('year', 'quarter', 'week', 'available', 'assigned',
                      'comment', 'member', )
     search_fields = ('member__username',)
+
+    def list(self, request, *args, **kwargs):
+        id = request.query_params.get('member', None)
+        try:
+            member = Member.objects.filter(id=id)[0]
+        except:
+            content = {'Bad param': 'Invalid member id'}
+            return Response(content, status=status.HTTP_404_NOT_FOUND)
+        try:
+            year = int(request.query_params.get('year', None))
+            if year < 2010 or year > 2030:
+                raise
+        except:
+            content = {'Bad param': 'Invalid year'}
+            return Response(content, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            quarter = int(request.query_params.get('quarter', None))
+            if quarter < 1 or quarter > 4:
+                raise
+        except:
+            content = {'Bad param': 'Invalid quarter'}
+            return Response(content, status=status.HTTP_404_NOT_FOUND)
+
+        # If the request is a member and a specific quarter,
+        # create all the objects for that quarter
+        #import pdb; pdb.set_trace()
+        if member is not None and year is not None and quarter is not None:
+            # Use the first object to compute number of weeks in the quarter
+            avail1, created = DoAvailable.objects.get_or_create(
+                member=member, year=year, quarter=quarter, week=1)
+            for week in avail1.weeks(year, quarter):
+                availn, created = DoAvailable.objects.get_or_create(
+                    member=member, year=year, quarter=quarter, week=week)
+                if created:
+                    availn.save()
+
+        return super(DoViewSet, self).list(self, request, *args, **kwargs)
 
 
 class MessageFilter(filters.FilterSet):
