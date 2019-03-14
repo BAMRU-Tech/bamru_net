@@ -31,7 +31,6 @@ class LoginPage():
         username_element = helpers.find_element(self._log_in_field)
         password_element = helpers.find_element(self._password_field)
         helpers.fill_in(username_element, username)
-        print(username)
         helpers.fill_in(password_element, password)
         submit_btn = helpers.click_element(self._log_in_btn)
         helpers.find_element({"by": By.CLASS_NAME, "value": "btn-group-vertical"})
