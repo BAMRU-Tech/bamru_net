@@ -417,7 +417,7 @@ class DoMemberDetailView(LoginRequiredMixin, generic.DetailView):
     template_name = 'member_do_availability_list.html'
     
 
-class DoMemberDoMyAvailabilityView(LoginRequiredMixin, generic.DetailView):
+class DoMyAvailabilityView(LoginRequiredMixin, generic.DetailView):
     template_name = 'member_do_availability_list.html'
 
     def get_object(self):
