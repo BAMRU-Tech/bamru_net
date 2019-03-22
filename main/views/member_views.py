@@ -416,3 +416,14 @@ class DoMemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_do_availability_list.html'
     
+
+class DoMemberDoMyAvailabilityView(LoginRequiredMixin, generic.DetailView):
+    template_name = 'member_do_availability_list.html'
+
+    def get_object(self):
+        return get_object_or_404(Member, pk=self.request.user.id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['member'].direct = True
+        return context

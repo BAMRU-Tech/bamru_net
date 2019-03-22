@@ -132,24 +132,32 @@ function PrevQtr ( e, dt, node, config ) {
     UpdateSubheaderBasedOnSettings(dt)
 }
 
-function NextQtr ( e, dt, node, config ) {
+function IncrementQtr () {
     currentPeriod.quarter += 1;
     if (currentPeriod.quarter > 4) {
         currentPeriod.quarter = 1;
         currentPeriod.year += 1;
     }
+}
 
+function NextQtr ( e, dt, node, config ) {
+    IncrementQtr();
     InitializeData()
     UpdateSubheaderBasedOnSettings(dt)
 }
 
-function GetPeriod(d) {
-    d = d || new Date(); // If no date supplied, use today
-    return { quarter: Math.floor((d.getMonth() + 3) / 3),
-             year: d.getFullYear() };
+function GetStartingPeriod() {
+    var d = new Date();
+
+    currentPeriod =  { quarter: Math.floor((d.getMonth() + 3) / 3),
+                       year: d.getFullYear() };
+
+    if ('{{ member.direct }}') IncrementQtr();
 }
 
-var currentPeriod = GetPeriod();
+
+var currentPeriod;
+GetStartingPeriod();
 
 function InitializeData() {
     // Add rows based on date range
