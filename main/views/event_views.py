@@ -183,8 +183,10 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(
-            status__in=Member.AVAILABLE_MEMBERS).order_by('id')
+        period_id = self.kwargs.get('period')
+        members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
+                   .exclude(participant__period=period_id))
+        return members
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()
