@@ -48,6 +48,15 @@ columns: [
     },
     { data: 'available', title: 'Available', width: '10%', responsivePriority: 1,
       type: 'select', options: [false, true], className: 'dt-center',
+      render: function(data, type, row, meta) {
+          if (type == 'display') {
+              var ck = (data) ? ' checked' : '';
+              data = '<input type="checkbox"' + ck +
+                  ' onclick="ToggleAvailability(this,' + meta.row + ')">';
+          }
+
+          return data;
+      }
     },
     { data: 'comment', title: 'Comment' },
     { data: 'id', visible: false, type: ['readonly', 'hidden'],
@@ -172,6 +181,12 @@ function InitializeData() {
         table.rows.add(json);
         table.draw().columns.adjust().responsive.recalc();
     })
+}
+
+function ToggleAvailability(input, row) {
+    var data = table.row(row).data();
+    data.available = input.checked;
+    UpdateRow(table, data);
 }
 
 function UpdateRow (dt, row,
