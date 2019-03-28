@@ -51,7 +51,7 @@ columns: [
       render: function(data, type, row, meta) {
           if (type == 'display') {
               var ck = (data) ? ' checked' : '';
-              data = '<input type="checkbox"' + ck +
+              Data = '<input type="checkbox"' + ck +
                   ' onclick="ToggleAvailability(this,' + meta.row + ')">';
           }
 
@@ -79,7 +79,7 @@ onEditRow: UpdateRow,
 {% block table_buttons_first %}
 
 {
-    extend: 'selected', // Bind to Selected row
+    extend: 'selected',
     text: '<i class="fa fa-edit"></i>' +
         '<span class="d-none d-md-inline"> Edit</span>',
     name: 'edit'        // do not change name
