@@ -178,12 +178,12 @@ $(document).ready( function() {
         },
 
         columns: [
-            { data: 'mark', width: '5%', responsivePriority: 1,
+            { data: 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
               className: 'noVis'
             },
             { data: 'name', title: 'Name', responsivePriority: 1,
-              type: 'readonly', width: '35%',
+              type: 'readonly', width: '45%',
               render: function(data, type, row, meta) {
                   if (type == 'display') {
                       if (row.ahc == 'true') data += '(AHC)';
@@ -201,7 +201,7 @@ $(document).ready( function() {
                   return data;
               }
             },
-            { data: 'status', title: 'Status', width: '10%',
+            { data: 'status', title: 'Status', width: '20px',
               type: ['num', 'readonly'], responsivePriority: 3,
               render: function(data, type, row, meta) {
                   if (type == 'filter')
