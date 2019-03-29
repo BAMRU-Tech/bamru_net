@@ -35,6 +35,10 @@
     <p><strong>Description:</strong> {{ event.description }}</p>
     {% endif %}
     <p><strong>Location:</strong> {{ event.location }}
+      <a target="_blank"
+         href="https:/google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
+        <i class="fa fa-map-marker"></i>
+      </a>
       <p>
       {% if event.lat != None %}
       <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
