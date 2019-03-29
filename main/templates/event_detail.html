@@ -43,7 +43,16 @@
       <strong>Lon:</strong> {{ event.lon|floatformat:8 }}
       {% endif %}
       </p></p>
-    <p><strong>Leaders:</strong> {{ event.leaders }}</p>
+    <p><strong>Leaders:</strong>
+      {%for leader in leaders %}
+      {% if leader.id != 0 %}
+      <a href="{% url 'member_detail' leader.id %}">
+        {{ leader.name }}</a>{% if not forloop.last %}, {% endif %}
+      {% else %}
+        {{ leader.name }}{% if not forloop.last %}, {% endif %}
+      {% endif %}
+      {% endfor %}
+    </p>
     <p>
       <strong>Start:</strong>
       {% if event.all_day %}
