@@ -66,6 +66,21 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         obj.add_period(True)
         return obj
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        result = []
+        try:
+            for leader in context['event'].leaders.split(','):
+                try:
+                    id = Member.objects.filter(username=leader.strip().lower()).first().id
+                except:
+                    id = 0
+                result.append({ 'name': leader, 'id': id })
+        except:
+            result.append({ 'name': 'TBD', 'id': 0})
+
+        context['leaders'] = result
+        return context
 
 class EventForm(ModelForm):
     class Meta:

@@ -43,7 +43,16 @@
       <strong>Lon:</strong> {{ event.lon|floatformat:8 }}
       {% endif %}
       </p></p>
-    <p><strong>Leaders:</strong> {{ event.leaders }}</p>
+    <p><strong>Leaders:</strong>
+      {%for leader in leaders %}
+      {% if leader.id != 0 %}
+      <a href="{% url 'member_detail' leader.id %}">
+        {{ leader.name }}</a>{% if not forloop.last %}, {% endif %}
+      {% else %}
+        {{ leader.name }}{% if not forloop.last %}, {% endif %}
+      {% endif %}
+      {% endfor %}
+    </p>
     <p>
       <strong>Start:</strong>
       {% if event.all_day %}
@@ -178,12 +187,12 @@ $(document).ready( function() {
         },
 
         columns: [
-            { data: 'mark', width: '5%', responsivePriority: 1,
+            { data: 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
               className: 'noVis'
             },
             { data: 'name', title: 'Name', responsivePriority: 1,
-              type: 'readonly', width: '35%',
+              type: 'readonly', width: '45%',
               render: function(data, type, row, meta) {
                   if (type == 'display') {
                       if (row.ahc == 'true') data += '(AHC)';
@@ -201,7 +210,7 @@ $(document).ready( function() {
                   return data;
               }
             },
-            { data: 'status', title: 'Status', width: '10%',
+            { data: 'status', title: 'Status', width: '20px',
               type: ['num', 'readonly'], responsivePriority: 3,
               render: function(data, type, row, meta) {
                   if (type == 'filter')
