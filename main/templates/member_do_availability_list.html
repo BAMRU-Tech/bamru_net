@@ -51,7 +51,7 @@ columns: [
       render: function(data, type, row, meta) {
           if (type == 'display') {
               var ck = (data) ? ' checked' : '';
-              Data = '<input type="checkbox"' + ck +
+              data = '<input type="checkbox"' + ck +
                   ' onclick="ToggleAvailability(this,' + meta.row + ')">';
           }
 
