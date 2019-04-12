@@ -26,6 +26,8 @@
 
 {% block content %}
 <main role="main" class="container-fluid">
+<div class="row">
+  <div class="col-sm-8">
   {% if member.is_current_do %}
     <p style="color:red">CURRENT DO until</p>
   {% endif %}
@@ -67,6 +69,13 @@
   <strong> Privileges:</strong>
     {% if member.is_active %}Login{% endif %}
     {% if member.is_staff %}Staff{% endif %}
+</div>
+<div class="col-sm-4">
+ {% for p in member.photofile_set.all %}
+   <a href="{% url 'photo_download' p.id p.name %}" class="d-inline-block mx-1 my-2"><img src="{% url 'photo_download' p.id p.name %}" style="max-height: 150px" /></a>
+ {% endfor %}
+</div>
+</div>
 
   <p></p>
   <nav class="navbar navbar-expand-sm text-primary subhead">

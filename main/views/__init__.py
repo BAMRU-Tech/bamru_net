@@ -6,4 +6,5 @@ from .file_views import *
 from .main_views import *
 from .member_views import *
 from .message_views import *
+from .photo_views import *
 from .report_views import *
