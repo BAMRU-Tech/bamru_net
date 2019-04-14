@@ -104,7 +104,7 @@ const colDefs = [
       responsivePriority: 2,
       render: function (data, type, row, meta) {
           if (type == 'display')
-              return '<a href="tel:' + data + '">' + data + '</a>';
+              return '<a href="tel:+1-' + data + '">' + data + '</a>';
           else
               return data;
       }
