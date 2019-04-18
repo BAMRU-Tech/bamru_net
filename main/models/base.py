@@ -14,12 +14,18 @@ class BaseModel(models.Model):
         return self.created_at.timestamp()
 
 
-class BasePositionModel(BaseModel):
+class BasePositionMixin(models.Model):
     """Common handling for user-sorted items."""
     position = models.IntegerField(default=1, null=True) #TODO: old data has nulls
-    class Meta(BaseModel.Meta):
+    class Meta:
         abstract = True
         ordering = ['position',]
+
+
+class BasePositionModel(BasePositionMixin, BaseModel):
+    class Meta(BasePositionMixin.Meta):
+        abstract = True
+
 
 class Configuration(BaseModel):
     key = models.CharField(max_length=255, unique=True)

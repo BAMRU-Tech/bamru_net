@@ -12,13 +12,13 @@ from main.models import DataFile
 import logging
 logger = logging.getLogger(__name__)
 
-class DataFileFormView(LoginRequiredMixin, CreateView):
+class BaseFileFormView(LoginRequiredMixin, CreateView):
     template_name = 'base_form.html'
-    model = DataFile
-    fields = ('file', 'caption', )
+    model = None  # Must be filled in by sub-class
+    fields = ('file', )
 
     def get_form(self, form_class=None):
-        form = super(DataFileFormView, self).get_form(form_class)
+        form = super(BaseFileFormView, self).get_form(form_class)
         form.instance.member = self.request.user
         if 'file' in self.request.FILES:
             f = self.request.FILES['file']
@@ -29,6 +29,10 @@ class DataFileFormView(LoginRequiredMixin, CreateView):
                 form.instance.extension = f.name.split('.')[-1]
         return form
 
+
+class DataFileFormView(BaseFileFormView):
+    model = DataFile
+    fields = ('file', 'caption', )
     def get_success_url(self, *args, **kwargs):
         return reverse('file_list')
 
@@ -53,9 +57,10 @@ def download_file_helper(url, filename='', download=False):
             filename)
     return response
 
-def download_data_file_helper(data_file):
-    data_file.download_count += 1
-    data_file.save()
+def download_data_file_helper(data_file, increment=True):
+    if increment:
+        data_file.download_count += 1
+        data_file.save()
     return download_file_helper(data_file.file.url, data_file.name, False)
 
 @login_required
