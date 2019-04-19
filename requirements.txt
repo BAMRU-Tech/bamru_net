@@ -22,7 +22,6 @@ django-tables2==1.21.2
 django-twilio==0.9.0
 djangorestframework==3.8.2
 docutils==0.14
-elpy==1.21.0
 flake8==3.5.0
 future==0.17.1
 google-api-python-client==1.7.4
