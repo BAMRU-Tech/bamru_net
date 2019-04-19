@@ -1,0 +1,32 @@
+{% extends 'base_generic.html' %}
+
+{% block subheader %}
+<strong>
+  Member Photos
+</strong>
+{% endblock %}
+
+{% block content %}
+<main role="main" class="container-fluid">
+<div style="display: grid; grid-template-columns: repeat( auto-fit, minmax(150px, 1fr) ); grid-gap: 20px; margin-top: 20px; margin-bottom: 20px">
+{% for m in member_list %}
+  {% if m.photofile_set.count > 0 %}
+    {% with p=m.photofile_set.first %}
+      <div style="height: 220px; background-color: #e7e7e7; display: grid; grid-template-rows: 150px 70px">
+        <div style="display: flex; justify-content: center; align-items: center">
+          <a href="{% url 'member_detail' m.id %}">
+            <img src="{% url 'photo_download' p.id p.name %}" style="max-width: 112px; max-height: 112px;" class="mt-2"/><br/>
+          </a>
+        </div>
+        <div style="display: flex; justify-content: center; align-items: center">
+          <a href="{% url 'member_detail' p.member.id %}" style="text-align: center" class="mx-2 mb-3">
+            {{ p.member.full_name }}
+          </a>
+        </div>
+      </div>
+    {% endwith %}
+  {% endif %}
+{% endfor %}
+</div>
+</main>
+{% endblock %}

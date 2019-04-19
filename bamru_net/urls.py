@@ -69,6 +69,7 @@ urlpatterns = [
     path('file/<path:name>', views.download_data_file_by_name_view), # used by wiki
     path('files/<path:name>', views.download_data_file_by_name_view), # used by wiki
 
+    path('photos/', views.PhotoDirectoryView.as_view(), name='photo_directory'),
     path('photo/<int:id>/original/<path:name>', views.download_photo_file_by_id_view, name='photo_download'),
 
     path('cert/', views.CertListView.as_view(), name='cert_list'),

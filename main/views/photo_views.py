@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.views import generic
 from django.views.generic.edit import CreateView
 
-from main.models import PhotoFile
+from main.models import Member, PhotoFile
 
 import logging
 logger = logging.getLogger(__name__)
@@ -20,3 +20,9 @@ def download_photo_file_by_id_view(request, id, name):
     response['X-Accel-Redirect'] = f.file.url
     logger.info(response)
     return response
+
+
+class PhotoDirectoryView(LoginRequiredMixin, generic.ListView):
+    template_name = 'photo_grid.html'
+    queryset = Member.members.order_by('first_name', 'last_name')
+    context_object_name = 'member_list'
