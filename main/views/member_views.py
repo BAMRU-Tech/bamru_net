@@ -178,6 +178,11 @@ class MemberAddView(LoginRequiredMixin, generic.edit.FormView):
         return HttpResponseRedirect(m.get_absolute_url())
 
 
+class MemberPhotoView(LoginRequiredMixin, generic.DetailView):
+    model = Member
+    template_name = 'member_photos.html'
+
+
 class MemberCertListView(LoginRequiredMixin, generic.ListView):
     template_name = 'member_cert_list.html'
     context_object_name = 'cert_list'

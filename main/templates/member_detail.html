@@ -20,6 +20,12 @@
       Edit
     </a>
   </li>
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'member_photos' member.id %}>
+      <i class="fa fa-camera-retro"></i>
+      Edit photos
+    </a>
+  </li>
 </ul>
 {% endif %}
 {% endblock subheader %}

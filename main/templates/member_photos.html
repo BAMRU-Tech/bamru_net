@@ -1,0 +1,165 @@
+{% extends 'base_generic.html' %}
+
+{% block subheader %}
+<strong>
+  <a href="{% url 'member_detail' member.id %}?returnx=ml">{{member.full_name }} ({{ member.status }})</a>
+  &gt; Edit Photos
+</strong>
+{% endblock subheader %}
+
+{% block content %}
+<main role="main" class="container-fluid">
+
+
+<div class="sortable" style="display: flex; flex-flow: start; align-items: flex-start; flex-wrap: wrap">
+  {% for p in member.memberphoto_set.all %}
+    <div class="d-inline-block mx-1 my-2 photo-item" data-photo-id="{{p.id}}" style="position: relative">
+      <img src="{% url 'member_photo_download' p.id 'medium' %}" style="max-height: 150px" class="photo sort-handle"/><br/>
+      <button type="button" class="btn btn-light btn-sm delete-photo" style="position: absolute; top: 5px; left: 5px; opacity: 0.7" aria-label="Delete photo">
+        <i class="fa fa-trash" aria-hidden="true"></i>
+      </button>
+    </div>
+  {% endfor %}
+  <div class="d-inline-block mx-1 my-2 no-sort">
+    <button class="btn btn-dark" data-toggle="modal" data-target="#add-photo-modal" style="width: 150px; height: 150px" aria-label="Add photo">
+      <i class="fa fa-plus-circle" aria-hidden="true" style="color: #fff; font-size: 50px"></i>
+    </button>
+  </div>
+</div>
+
+</main>
+
+<div id="add-photo-modal" class="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Photo</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <input type="file" id="photo" />
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="submit-photo" disabled>Add photo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loading-modal" class="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div style="display: flex; justify-content: center; align-items: center; font-size: 50px">
+          <div>
+          <i class="fa fa-refresh spin" aria-hidden="true"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="error-modal" class="modal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        Something went wrong!
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="data" class="d-none" data-member-id="{{member.id}}" />
+{% endblock %}
+
+{% block js %}
+  {{ block.super }}
+  <!-- there's a newer version available, but https://github.com/RubaXa/Sortable/issues/1052 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.4.2/Sortable.min.js" integrity="sha256-3jMcJ+64WZszWMWQ9rF5uS3m/9JgLypNpjtYs4wc3j8=" crossorigin="anonymous"></script>
+  <script>
+$(document).on('click', '.delete-photo', function(e) {
+    var id = $(this).parent().data('photo-id');
+
+    if (confirm("Really delete photo?")) {
+        $.ajax({
+            url: '/api/photos/'+id+'/',
+            method: "DELETE",
+        }).done(function(){
+            location.reload();
+        }).fail(function(){
+            $("#loading-modal").modal('hide');
+            $("#error-modal").modal('show');
+        });
+        $("#loading-modal").modal('show');
+    }
+});
+
+$(document).on('change', '#photo', function(e) {
+    $("#submit-photo").prop('disabled', !$("#photo").val());
+});
+
+$(document).on('click', '#submit-photo', function(e) {
+    var files = $('#photo')[0].files;
+    var data = new FormData();
+    data.append('member', $("#data").data('member-id'));
+    data.append('position', $(".photo").length + 1);
+    data.append('file', files[0]);
+    $.ajax({
+        url: '/api/photos/',
+        data: data,
+        cache: false,
+        contentType: false,
+        processData: false,
+        method: 'POST',
+    }).done(function(){
+        location.reload();
+    }).fail(function(){
+        $("#loading-modal").modal('hide');
+        $("#error-modal").modal('show');
+    });
+    $("#add-photo-modal").modal('hide');
+    $("#loading-modal").modal('show');
+});
+
+
+$(function(){
+    function savePositions(evt) {
+        var outstanding = $('.photo-item').length;
+        $('.photo-item').each(function(i, elem) {
+            var id = $(elem).data('photo-id');
+            $.ajax({
+                url: '/api/photos/'+id+'/',
+                method: 'PATCH',
+                data: {id: id, position: i},
+            }).done(function(){
+                outstanding--;
+                if (outstanding == 0) {
+                    $('#loading-modal').modal('hide');
+                }
+            }).fail(function(){
+                $('#loading-modal').modal('hide');
+                $('#error-modal').modal('show');
+            });
+        });
+        $('#loading-modal').modal('show');
+    }
+
+    $('.sortable').each(function(){
+        Sortable.create(this, {
+            'animate': 150,
+            'handle': '.sort-handle',
+            'filter': '.no-sort',
+            'onMove': function(evt) {
+                return evt.related.className.indexOf('no-sort') === -1;
+            },
+            'onEnd': savePositions,
+        });
+    });
+});
+  </script>
+{% endblock %}
