@@ -3,11 +3,20 @@ from main.models import *
 from main.serializers import *
 
 from django import forms
-from rest_framework import generics, mixins, parsers, permissions, response, views, viewsets
+from rest_framework import exceptions, generics, mixins, parsers, permissions, response, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 from django_filters import rest_framework as filters
+
+
+class OnlyEditSelfPermission(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        self_attr = getattr(view, 'self_attr')
+        return getattr(obj, self_attr) == request.user
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -189,3 +198,17 @@ class MessageViewSet(BaseViewSet):
         if getattr(self, 'action', None) == 'list':
             return MessageListSerializer
         return MessageDetailSerializer
+
+
+class PhotoViewSet(BaseViewSet):
+    permission_classes = BaseViewSet.permission_classes + (OnlyEditSelfPermission,)
+    self_attr = 'member'
+    queryset = PhotoFile.objects.all()
+    serializer_class = PhotoSerializer
+    filter_fields = ('member', )
+    search_fields = ('member__username', )
+
+    def perform_create(self, serializer):
+        if serializer.validated_data['member'] != self.request.user:
+            raise exceptions.PermissionDenied
+        super().perform_create(serializer)

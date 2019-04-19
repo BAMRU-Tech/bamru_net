@@ -1,10 +1,10 @@
 from .models import *
 from .tasks import message_send
+from django.core.files.base import ContentFile
+from django.urls import reverse
 from rest_framework import serializers
 from collections import defaultdict
-import logging
-
-logger = logging.getLogger(__name__)
+from base64 import b64encode, b64decode
 
 import logging
 logger = logging.getLogger(__name__)
@@ -195,3 +195,26 @@ class MessageDetailSerializer(MessageListSerializer):
         message_send.delay(message.pk)
         logger.debug('MessageSerializer.create done')
         return message
+
+
+class PhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PhotoFile
+        fields = ('id', 'url', 'member', 'position', 'created_at', 'updated_at', 'file', 'file_url', 'size')
+
+    file = serializers.ImageField(write_only=True)
+    file_url = serializers.SerializerMethodField()
+
+    def get_file_url(self, obj):
+        url = reverse('photo_download', args=[obj.id, obj.name])
+        return self.context['request'].build_absolute_uri(url)
+
+    def validate_member(self, value):
+        if self.instance and self.instance.member != value:
+            raise serializers.ValidationError("May not modify field")
+        return value
+
+    def validate_file(self, value):
+        if self.instance and self.instance.file != value:
+            raise serializers.ValidationError("May not modify field")
+        return value
