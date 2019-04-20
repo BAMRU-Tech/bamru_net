@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from imagekit.models import ImageSpecField
+from imagekit.processors import SmartResize, ResizeToFill, ResizeToFit
 
 from .base import BaseModel, BasePositionMixin
 from .member import Member
@@ -40,4 +42,26 @@ class DataFile(BaseFileModel):
 
     def upload_path(self, filename):
         return "data/{id}/original/{name}".format(
+            id=self.pk, name=filename)
+
+
+class MemberPhoto(BasePositionMixin, BaseFileModel):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    file = models.ImageField(upload_to=file_upload_path_handler,
+                             max_length=255)
+    thumbnail = ImageSpecField(source='file',
+                               processors=[SmartResize(100, 100)],
+                               format='JPEG',
+                               options={'quality': 60})
+    medium = ImageSpecField(source='file',
+                            processors=[ResizeToFit(250, 250)],
+                            format='JPEG',
+                            options={'quality': 75})
+    gallery_thumb = ImageSpecField(source='file',
+                               processors=[SmartResize(50, 50)],
+                               format='JPEG',
+                               options={'quality': 60})
+
+    def upload_path(self, filename):
+        return "images/{id}/original/{name}".format(
             id=self.pk, name=filename)

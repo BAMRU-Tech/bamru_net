@@ -68,7 +68,17 @@
     {% if member.is_active %}Login{% endif %}
     {% if member.is_staff %}Staff{% endif %}
 
-  <p></p>
+  <p>
+  {% for photo in member.memberphoto_set.all %}
+  <a href="{{ photo.file.url }}"><img src="{{ photo.thumbnail.url }}" /></a>
+  {% endfor %}
+  </p>
+  <p>
+  {% for photo in member.memberphoto_set.all %}
+  <a href="{{ photo.file.url }}"><img src="{{ photo.medium.url }}" /></a>
+  {% endfor %}
+  </p>
+
   <nav class="navbar navbar-expand-sm text-primary subhead">
   <strong>Certifications</strong>
   {% if isEditor or member.id == request.user.id %}

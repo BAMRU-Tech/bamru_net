@@ -61,6 +61,10 @@ urlpatterns = [
     path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(),
          name='member_availability_list'),
 
+    path('member/photo/gallery/', views.MemberPhotoGalleryView.as_view(), name='member_photo_gallery'),
+    path('member/photo/upload/', views.MemberPhotoFormView.as_view(), name='member_photo_upload'),
+    path('member/photo/<int:id>/', views.member_photo_by_id_view, name='member_photo_download'),
+
     path('file/', views.FileListView.as_view(), name='file_list'),
     path('file/upload/', views.DataFileFormView.as_view(), name='file_upload'),
     path('file_id/<int:id>/', views.download_data_file_by_id_view, name='file_download'),

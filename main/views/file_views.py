@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.views import generic
 from django.views.generic.edit import CreateView
 
-from main.models import DataFile
+from main.models import DataFile, MemberPhoto
 
 import logging
 logger = logging.getLogger(__name__)
@@ -35,6 +35,12 @@ class DataFileFormView(BaseFileFormView):
     fields = ('file', 'caption', )
     def get_success_url(self, *args, **kwargs):
         return reverse('file_list')
+
+
+class MemberPhotoFormView(BaseFileFormView):
+    model = MemberPhoto
+    def get_success_url(self, *args, **kwargs):
+        return reverse('member_detail', args=(self.object.member.id,))
 
 
 class FileListView(LoginRequiredMixin, generic.ListView):
@@ -73,3 +79,8 @@ def download_data_file_by_name_view(request, name):
     files = get_list_or_404(DataFile, name=name)
     f = files[0]  # TODO: Do we prefer the oldest or most recent?
     return download_data_file_helper(f)
+
+@login_required
+def member_photo_by_id_view(request, id):
+    f = get_object_or_404(MemberPhoto, id=id)
+    return download_data_file_helper(f, False)
