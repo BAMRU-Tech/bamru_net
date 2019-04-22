@@ -212,6 +212,9 @@ WIKI_SSH_DEST = os.environ.get('WIKI_SSH_DEST', '')
 WIKI_SSH_KEY = os.environ.get('WIKI_SSH_KEY', '')
 WIKI_AUTH_DIR = os.environ.get('WIKI_AUTH_DIR', '')
 
+if os.environ.get('PROXY_HTTPS'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']
