@@ -215,6 +215,12 @@ WIKI_AUTH_DIR = os.environ.get('WIKI_AUTH_DIR', '')
 if os.environ.get('PROXY_HTTPS'):
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+ENABLE_ACCEL_REDIRECT = (
+    strtobool(os.environ['ENABLE_ACCEL_REDIRECT'])
+    if 'ENABLE_ACCEL_REDIRECT' in os.environ
+    else not DEBUG
+)
+
 
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']
