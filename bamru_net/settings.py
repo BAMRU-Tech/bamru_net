@@ -221,6 +221,8 @@ ENABLE_ACCEL_REDIRECT = (
     else not DEBUG
 )
 
+ICON_SET = os.environ.get('ICON_SET', 'original')
+
 
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']
