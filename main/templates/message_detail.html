@@ -28,9 +28,6 @@
 {% if message.ancestry %}
 <p><strong>Repage of: </strong>{{ message.ancestry_links|safe }}</p>
 {% endif %}
-{% if message.rsvp_template %}
-<p><strong>Repage link: </strong><a href="{% url 'message_repage' message.id %}">Repage this message</a></p>
-{% endif %}
 {% if message.period %}
 <p><strong>Operation period: </strong>
   <a href="{{ message.period.event.get_absolute_url }}">{{ message.period }}</a></p>
@@ -71,7 +68,7 @@
 
 {% block table_options %}
 
-order: [[ 0, 'asc' ]],
+order: tableOrder,
 
 columns: [
     { data: 'name', title: 'Name', responsivePriority: 1, 
@@ -90,6 +87,15 @@ language: { emptyTable: 'No messages' },
 
 {% endblock table_options %}
 
+{% if message.rsvp_template %}
+  {% block table_buttons_first %}
+    {
+        text: 'Repage',
+        action: Repage,
+    },
+  {% endblock %}
+{% endif %}
+
 {% block filter_button %}{# remove filter button #}{% endblock %}
 
 {% block functions %}
@@ -100,16 +106,31 @@ function UpdateSubheaderBasedOnSettings(table) {} // Fixed subheader
 const defaultTimeout = 15;
 const url = new URL(window.location.href);
 const autoRefresh = url.searchParams.get('refresh');
+const defaultOrder = [[ 0, 'asc' ]];
+var tableOrder = url.searchParams.get('O');
+tableOrder = (tableOrder != null) ? JSON.parse(tableOrder) : defaultOrder;
+
+function Repage() {
+    var stats = '{{ stats }}'.match(/^(\d+) sent, (\d+) delivered, (\d+) RSVPed/)
+    //FX: Hack using stats string rather than individual values for sent and RSVPed
+    if (stats != null && stats[1] == stats[3]) {
+        alert('No members to repage based on stats')
+        return
+    }
+    window.location.href="{% url 'message_repage' message.id %}"
+}
 
 function AutoRefresh() {
     var timeout = autoRefresh == null || isNaN(autoRefresh) ? defaultTimeout : autoRefresh;
     var base_url = url.href.split('?')[0];
     var rurl;
 
-    if ($('#refresh').prop('checked'))
-        rurl = base_url + '?refresh=' + timeout;
-    else
+    if ($('#refresh').prop('checked')) {
+        var order = JSON.stringify(table.order());
+        rurl = base_url + '?refresh=' + timeout + '&O=' + order;
+    } else {
         rurl = base_url;
+    }
 
     //FIXME: Pretty brute force, look at just updating the table
     window.location.replace(rurl)

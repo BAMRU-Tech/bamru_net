@@ -1,6 +1,7 @@
 <nav class="navbar navbar-expand-md navbar-light bg-light fixed-top">
 
-  <a class="navbar-brand" href="/"><i class="fa fa-area-chart"></i> BAMRU.net</a>
+  <a class="navbar-brand" href="/">
+    <img id="logo" src="/static/bamru.png" alt="Logo">BAMRU.net</a>
 
   {# Hamburger icon for collapsed menu #}
   <button class="navbar-toggler" type="button"
@@ -33,22 +34,14 @@
             <i class="fa fa-certificate"></i>
             Certifications
           </a>
-{% comment FIXME %}
-          <a class="dropdown-item disabled" href="#">
+          <a class="dropdown-item" href="{% url 'member_photo_gallery' %}">
             <i class="fa fa-camera-retro"></i>
             Member photos
           </a>
-{% endcomment %}
-          <a class="dropdown-item" href="{% url 'do_list' %}">
+          <a class="dropdown-item" href="{% url 'do_sched' %}">
             <i class="fa fa-calendar"></i>
             Quarterly DO schedule
           </a>
-{% if isEditor %}
-          <a class="dropdown-item" href="{% url 'member_add' %}">
-            <i class="fa fa-address-book"></i>
-            Add a new Member (Guest)
-          </a>
-{% endif %}
         </div>
       </li>
       <li class="nav-item dropdown">
@@ -103,6 +96,12 @@
             Temporary DO change
           </a>
 {% endcomment %}
+{% if isEditor %}
+          <a class="dropdown-item" href="{% url 'member_add' %}">
+            <i class="fa fa-address-book"></i>
+            Add a new Member (Guest)
+          </a>
+{% endif %}
           <a class="dropdown-item" href="/admin" target="_blank">
             <i class="fa fa-edit"></i>
             Perform admin tasks
@@ -123,7 +122,7 @@
             <i class="fa fa-inbox"></i>
             Inbox (n)
           </a>
-          <a class="dropdown-item" href="{% url 'member_availability_list'  request.user.id %}">
+          <a class="dropdown-item" href="{% url 'member_availability_list' request.user.id %}">
             <i class="fa fa-calendar-times-o"></i>
             Availability
           </a>

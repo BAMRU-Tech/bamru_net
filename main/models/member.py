@@ -161,8 +161,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
             assigned=True, member=self,
             year=plan_year - 1, quarter__gte=plan_quarter).count() +
                 DoAvailable.objects.filter(
-            assigned=True, member=self,
-            year=plan_year, quarter__lt=plan_quarter).count())
+                    assigned=True, member=self,
+                    year=plan_year, quarter__lt=plan_quarter).count())
 
     @property
     def is_unavailable(self):

@@ -78,7 +78,7 @@
 {% block table_options %}
 order: [[ 1, 'asc' ], [0, 'asc']],
 
-columnDefs: [  //FIXME: Convert to std column format
+columnDefs: [  // Uses columns defs because columns titles aren't fixed
     { responsivePriority: 1, targets: 0 },
     { responsivePriority: 2, targets: [ 3, 4, 5, 6, 8] },
     { responsivePriority: 3, targets: 7 },
@@ -107,7 +107,7 @@ columnDefs: [  //FIXME: Convert to std column format
         }, targets: 1,
     },
       
-    { visible: false, targets: 2 },
+    { visible: false, type: 'hidden', className: 'noVis', targets: 2 },
 ],
 
 language: { emptyTable: 'No members selected' },
@@ -136,11 +136,11 @@ language: { emptyTable: 'No members selected' },
         selectableHeader: '<div class="custom-header">Show</div>',
         selectionHeader: '<div class="custom-header">Hide</div>',
         afterSelect: function(values){
-            RemoveRows(table,values);
+            RemoveAvailRows(table,values);
             UpdateSubheaderBasedOnSettings(table);
         },
         afterDeselect: function(values){
-            AddRows(table,values);
+            AddAvailRows(table,values);
             UpdateSubheaderBasedOnSettings(table);
         }
     })
@@ -171,7 +171,7 @@ function SetBusy(busy, start, end, comment) {
 
 const apiUrlMemberAvail = '/api/member_availability/?status=';
 
-function AddRows(table, values) {
+function AddAvailRows(table, values) {
     //
     // Add rows based on status
     //
@@ -218,7 +218,7 @@ function AddRows(table, values) {
     })
 }
 
-function RemoveRows(table, values) {
+function RemoveAvailRows(table, values) {
     // Remove rows based on status
     table.rows(
         function ( idx, data, node ) {

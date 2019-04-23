@@ -34,8 +34,29 @@ columns: [
     { data: 'week', title: 'Week', width: '10%',
       type: ['readonly'], className: 'dt-center',
     },
+    { data: 'start', title: 'Start', width: '12%',
+      type: ['readonly'],
+      render: function(data, type, row, meta) {
+          return (type == 'display') ? DateFE(data) : data
+      }
+    },
+    { data: 'end', title: 'End', width: '12%',
+      type: ['readonly'],
+      render: function(data, type, row, meta) {
+          return (type == 'display') ? DateFE(data) : data
+      }
+    },
     { data: 'available', title: 'Available', width: '10%', responsivePriority: 1,
       type: 'select', options: [false, true], className: 'dt-center',
+      render: function(data, type, row, meta) {
+          if (type == 'display') {
+              var ck = (data) ? ' checked' : '';
+              data = '<input type="checkbox"' + ck +
+                  ' onclick="ToggleAvailability(this,' + meta.row + ')">';
+          }
+
+          return data;
+      }
     },
     { data: 'comment', title: 'Comment' },
     { data: 'id', visible: false, type: ['readonly', 'hidden'],
@@ -58,7 +79,7 @@ onEditRow: UpdateRow,
 {% block table_buttons_first %}
 
 {
-    extend: 'selected', // Bind to Selected row
+    extend: 'selected',
     text: '<i class="fa fa-edit"></i>' +
         '<span class="d-none d-md-inline"> Edit</span>',
     name: 'edit'        // do not change name
@@ -92,23 +113,22 @@ onEditRow: UpdateRow,
 
 function SetAll ( e, dt, node, config ) {
     dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-        var data = this.data();
+        var row = this;
+        var data = row.data();
         data.available = true;
-        this.data(data);
-        UpdateRow(table, data);
+        UpdateRow(table, data, function (r, s, m) { row.data(r) });
     } )
 }
 
 function ClearAll ( e, dt, node, config ) {
     dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
-        var data = this.data();
+        var row = this;
+        var data = row.data();
         data.available = false;
-        this.data(data);
-        UpdateRow(table, data);
+        data.comment = '';
+        UpdateRow(table, data, function (r, s, m) { row.data(r) });
     } )
 }
-
-var currentPeriod = GetPeriod();
 
 function PrevQtr ( e, dt, node, config ) {
     currentPeriod.quarter -= 1;
@@ -121,59 +141,52 @@ function PrevQtr ( e, dt, node, config ) {
     UpdateSubheaderBasedOnSettings(dt)
 }
 
-function NextQtr ( e, dt, node, config ) {
+function IncrementQtr () {
     currentPeriod.quarter += 1;
     if (currentPeriod.quarter > 4) {
         currentPeriod.quarter = 1;
         currentPeriod.year += 1;
     }
+}
 
+function NextQtr ( e, dt, node, config ) {
+    IncrementQtr();
     InitializeData()
     UpdateSubheaderBasedOnSettings(dt)
 }
 
-function GetPeriod(d) {
-    d = d || new Date(); // If no date supplied, use today
-    return { quarter: Math.floor((d.getMonth() + 3) / 3),
-             year: d.getFullYear() };
+function GetStartingPeriod() {
+    var d = new Date();
+
+    currentPeriod =  { quarter: Math.floor((d.getMonth() + 3) / 3),
+                       year: d.getFullYear() };
+
+    if ('{{ member.direct }}') IncrementQtr();
 }
 
-function WeeksPerQtr() {
-    if (currentPeriod.quarter == 4) {
-        var date = new Date(currentPeriod.year, 11, 1) // Dec 1st
-        // If Dec start on Sun, Mon, Tues
-        if ([0, 1, 2].includes(date.getDay())) return 14
-    }
 
-    return 13;
-}
+var currentPeriod;
+GetStartingPeriod();
 
 function InitializeData() {
     // Add rows based on date range
     const apiUrlDoAvailEvent =
-          '/api/do/?member={{ request.user.id }}' +
+          '/api/do/?member={{ member.id }}' +
           '&year=' + currentPeriod.year + '&quarter=' + currentPeriod.quarter;
     var url = apiUrlDoAvailEvent;
     
     table.clear();
 
     $.getJSON(url, null, function( json ) {
-        
-        var w = WeeksPerQtr()
-        for (var i=1; i<=w; i++)
-        {
-            if (json[0] && json[0].week == i)
-                // assumes an ordered list
-                var data = json.shift();
-            else
-                var data = { week: i, available: false, comment: '',
-                             id: 0, assigned: false,
-                             member: '{{ request.user.id }}', }
-
-            table.row.add(data);
-        }
+        table.rows.add(json);
         table.draw().columns.adjust().responsive.recalc();
     })
+}
+
+function ToggleAvailability(input, row) {
+    var data = table.row(row).data();
+    data.available = input.checked;
+    UpdateRow(table, data);
 }
 
 function UpdateRow (dt, row,
@@ -183,27 +196,6 @@ function UpdateRow (dt, row,
     var data = row;
 
     var id = data.id;
-    if (id == 0) {
-        // Create new availability
-        data.year = currentPeriod.year;
-        data.quarter = currentPeriod.quarter;
-        data = JSON.stringify(data);
-        $.ajax({
-            method: 'POST',
-            contentType: 'application/json',
-            url: '/api/do/',
-            data: data,
-            success: function (r, s, m) {
-                return success(r, s, m);
-            },
-            error: function (xhr) {
-                console.log('availability create failed');
-                console.log(xhr);
-                alert(xhr.responseText);
-                return false;
-            }
-        })
-    } else {
     data = JSON.stringify(data);
         $.ajax({
             method: 'PATCH',
@@ -218,7 +210,6 @@ function UpdateRow (dt, row,
                 return false;
             }
         })
-    }
 }
 
 
@@ -229,8 +220,11 @@ function UpdateSubheaderBasedOnSettings(table) {
 
 {% endblock functions %}
 
+
 {% block ready_functions %}
+
 InitializeData();
+
 {% endblock ready_functions %}
 
 

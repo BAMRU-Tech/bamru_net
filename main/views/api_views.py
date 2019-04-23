@@ -3,9 +3,20 @@ from main.models import *
 from main.serializers import *
 
 from django import forms
-from rest_framework import generics, mixins, parsers, permissions, response, views, viewsets
+from rest_framework import exceptions, generics, mixins, parsers, permissions, response, views, viewsets
 from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework import status
 from django_filters import rest_framework as filters
+
+
+class OnlyEditSelfPermission(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        self_attr = getattr(view, 'self_attr')
+        return getattr(obj, self_attr) == request.user
 
 
 class BaseViewSet(viewsets.ModelViewSet):
@@ -128,6 +139,49 @@ class DoViewSet(BaseViewSet):
                      'comment', 'member', )
     search_fields = ('member__username',)
 
+    def list(self, request, *args, **kwargs):
+        id = request.query_params.get('member', None)
+        if id is not None:
+            try:
+                member = Member.objects.filter(id=id)[0]
+            except:
+                content = {'Bad param': 'Invalid member id'}
+                return Response(content, status=status.HTTP_404_NOT_FOUND)
+        else:
+            member = None
+
+        year = request.query_params.get('year', None)
+        if year is not None:
+            try:
+                year = int(year)
+                if year < 2010 or year > 2030:
+                    raise
+            except:
+                content = {'Bad param': 'Invalid year'}
+                return Response(content, status=status.HTTP_404_NOT_FOUND)
+
+        quarter = request.query_params.get('quarter', None)
+        if quarter is not None:
+            try:
+                quarter = int(quarter)
+                if quarter < 1 or quarter > 4:
+                    raise
+            except:
+                content = {'Bad param': 'Invalid quarter'}
+                return Response(content, status=status.HTTP_404_NOT_FOUND)
+
+        # If the request is a member and a specific quarter,
+        # create all the objects for that quarter
+        #import pdb; pdb.set_trace()
+        if member is not None and year is not None and quarter is not None:
+            for week in DoAvailable.weeks(year, quarter):
+                availability, created = DoAvailable.objects.get_or_create(
+                    member=member, year=year, quarter=quarter, week=week)
+                if created:
+                    availability.save()
+
+        return super(DoViewSet, self).list(self, request, *args, **kwargs)
+
 
 class MessageFilter(filters.FilterSet):
     created_at = filters.DateFromToRangeFilter()
@@ -144,3 +198,17 @@ class MessageViewSet(BaseViewSet):
         if getattr(self, 'action', None) == 'list':
             return MessageListSerializer
         return MessageDetailSerializer
+
+
+class MemberPhotoViewSet(BaseViewSet):
+    permission_classes = BaseViewSet.permission_classes + (OnlyEditSelfPermission,)
+    self_attr = 'member'
+    queryset = MemberPhoto.objects.all()
+    serializer_class = MemberPhotoSerializer
+    filter_fields = ('member', )
+    search_fields = ('member__username', )
+
+    def perform_create(self, serializer):
+        if serializer.validated_data['member'] != self.request.user:
+            raise exceptions.PermissionDenied
+        super().perform_create(serializer)

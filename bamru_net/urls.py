@@ -35,6 +35,7 @@ router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
+router.register(r'photos', views.MemberPhotoViewSet)
 router.register(r'messages', views.MessageViewSet)
 
 
@@ -55,10 +56,12 @@ urlpatterns = [
     path('member/', views.MemberListView.as_view(), name='member_list'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('member/<int:pk>/edit', views.MemberEditView.as_view(), name='member_edit'),
+    path('member/<int:pk>/photos', views.MemberPhotoView.as_view(), name='member_photos'),
     path('member/add/', views.MemberAddView.as_view(), name='member_add'),
 
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
-    path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(), name='member_availability_list'),
+    path('member/<int:pk>/availability/', views.MemberAvailabilityListView.as_view(),
+         name='member_availability_list'),
 
     path('file/', views.FileListView.as_view(), name='file_list'),
     path('file/upload/', views.DataFileFormView.as_view(), name='file_upload'),
@@ -66,20 +69,32 @@ urlpatterns = [
     path('file/<path:name>', views.download_data_file_by_name_view), # used by wiki
     path('files/<path:name>', views.download_data_file_by_name_view), # used by wiki
 
-    path('cert/', views.CertListView.as_view(), name='cert_list'),
-    path('member/<int:pk>/certs/', views.MemberCertListView.as_view(), name='member_cert_list'),
-    path('member/<int:member>/certs/new', views.CertCreateView.as_view(), name='member_cert_new'),
-    path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(), name='member_cert_delete'),
-    path('member/<int:member>/certs/<int:cert>/download/<path:name>', views.cert_file_download_view, name='member_cert_download'),
+    path('photos/', views.MemberPhotoGalleryView.as_view(), name='member_photo_gallery'),
+    path('photos/<int:id>/<str:format>/', views.member_photo_by_id_view, name='member_photo_download'),
 
-    path('do/', views.DoListView.as_view(), name='do_list'),
-    path('do/<int:pk>/', views.DoMemberListView.as_view(), name='do_availability_list'),
+    path('cert/', views.CertListView.as_view(), name='cert_list'),
+    path('member/<int:pk>/certs/', views.MemberCertListView.as_view(),
+         name='member_cert_list'),
+    path('member/<int:member>/certs/new', views.CertCreateView.as_view(),
+         name='member_cert_new'),
+    path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(),
+         name='member_cert_delete'),
+    path('member/<int:member>/certs/<int:cert>/download/<path:name>',
+         views.cert_file_download_view, name='member_cert_download'),
+
+    path('do/schedule/', views.DoListView.as_view(), name='do_sched'),
+    path('do/availability/<int:pk>', views.DoMemberDetailView.as_view(),
+         name='do_availability_list'),
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
+    path('do/my_availability/', views.DoMyAvailabilityView.as_view(),
+         name='my_availabilty'),
 
     path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
-    path('message/<int:pk>/repage/', views.MessageRepageCreateView.as_view(), name='message_repage'),
+    path('message/<int:pk>/repage/', views.MessageRepageCreateView.as_view(),
+         name='message_repage'),
     path('message/', views.MessageListView.as_view(), name='message_list'),
-    path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(), name='message_inbox'),
+    path('message/inbox/<int:member_id>/', views.MessageInboxView.as_view(),
+         name='message_inbox'),
     path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
     path('message/test/', views.MessageTestCreateView.as_view(), name='message_test'),
 
@@ -102,13 +117,21 @@ urlpatterns = [
     url(r'^accounts/login/$', auth_views.login, name='login'),
     url(r'^accounts/logout/$', auth_views.logout, {'next_page': '/'}, name='logout'),
     
-    path('accounts/password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
-    path('accounts/password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+    path('accounts/password_change/', auth_views.PasswordChangeView.as_view(),
+         name='password_change'),
+    path('accounts/password_change/done/', auth_views.PasswordChangeDoneView.as_view(),
+         name='password_change_done'),
 
-    path('accounts/password_reset/', auth_views.PasswordResetView.as_view(form_class=views.PasswordResetForm), name='password_reset'),
-    path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
-    path('accounts/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    path('accounts/password_reset/',
+         auth_views.PasswordResetView.as_view(form_class=views.PasswordResetForm),
+         name='password_reset'),
+    path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(),
+         name='password_reset_done'),
+    path('accounts/reset/<uidb64>/<token>/',
+         auth_views.PasswordResetConfirmView.as_view(),
+         name='password_reset_confirm'),
+    path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(),
+         name='password_reset_complete'),
 
     path('reports/', views.ReportListView.as_view(), name='reports_list'),
     path('reports/roster/BAMRU-roster.csv', views.ReportRosterCsvView.as_view()),

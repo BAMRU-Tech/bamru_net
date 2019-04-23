@@ -1,10 +1,10 @@
 from .models import *
 from .tasks import message_send
+from django.core.files.base import ContentFile
+from django.urls import reverse
 from rest_framework import serializers
 from collections import defaultdict
-import logging
-
-logger = logging.getLogger(__name__)
+from base64 import b64encode, b64decode
 
 import logging
 logger = logging.getLogger(__name__)
@@ -84,8 +84,9 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
 class DoSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoAvailable
+        read_only_fields = ('start', 'end')
         fields = ('id', 'year', 'quarter', 'week', 'available', 'assigned',
-                  'comment', 'member')
+                  'comment', 'member') + read_only_fields
 
 
 class BareParticipantSerializer(serializers.ModelSerializer):
@@ -194,3 +195,44 @@ class MessageDetailSerializer(MessageListSerializer):
         message_send.delay(message.pk)
         logger.debug('MessageSerializer.create done')
         return message
+
+
+class MemberPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MemberPhoto
+        read_only_fields = ('name', 'extension', 'size', 'content_type')
+        fields = ('id', 'url', 'file', 'member', 'position', 'created_at', 'updated_at', 'name', 'extension', 'size', 'content_type', 'original_url', 'medium_url', 'thumbnail_url', 'gallery_thumb_url')
+
+    file = serializers.ImageField(write_only=True)
+
+    original_url = serializers.SerializerMethodField()
+    medium_url = serializers.SerializerMethodField()
+    thumbnail_url = serializers.SerializerMethodField()
+    gallery_thumb_url = serializers.SerializerMethodField()
+
+    def get_original_url(self, obj): return self.get_photo_url(obj, 'original')
+    def get_medium_url(self, obj): return self.get_photo_url(obj, 'medium')
+    def get_thumbnail_url(self, obj): return self.get_photo_url(obj, 'thumbnail')
+    def get_gallery_thumb_url(self, obj): return self.get_photo_url(obj, 'gallery_thumb')
+
+    def get_photo_url(self, obj, format):
+        url = reverse('member_photo_download', args=[obj.id, format])
+        return self.context['request'].build_absolute_uri(url)
+
+    def validate_member(self, value):
+        if self.instance and self.instance.member != value:
+            raise serializers.ValidationError("May not modify field")
+        return value
+
+    def validate_file(self, value):
+        if self.instance and self.instance.file != value:
+            raise serializers.ValidationError("May not modify field")
+        return value
+
+    def create(self, validated_data):
+        validated_data['size'] = validated_data['file'].size
+        validated_data['name'] = validated_data['file'].name
+        if '.' in validated_data['file'].name:
+            validated_data['extension'] = validated_data['file'].name.split('.')[-1]
+        validated_data['content_type'] = validated_data['file'].content_type
+        return super().create(validated_data)

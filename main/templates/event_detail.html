@@ -35,6 +35,10 @@
     <p><strong>Description:</strong> {{ event.description }}</p>
     {% endif %}
     <p><strong>Location:</strong> {{ event.location }}
+      <a target="_blank"
+         href="https://google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
+        <i class="fa fa-map-marker"></i>
+      </a>
       <p>
       {% if event.lat != None %}
       <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
@@ -43,7 +47,16 @@
       <strong>Lon:</strong> {{ event.lon|floatformat:8 }}
       {% endif %}
       </p></p>
-    <p><strong>Leaders:</strong> {{ event.leaders }}</p>
+    <p><strong>Leaders:</strong>
+      {%for leader in leaders %}
+      {% if leader.id != 0 %}
+      <a href="{% url 'member_detail' leader.id %}">
+        {{ leader.name }}</a>{% if not forloop.last %}, {% endif %}
+      {% else %}
+        {{ leader.name }}{% if not forloop.last %}, {% endif %}
+      {% endif %}
+      {% endfor %}
+    </p>
     <p>
       <strong>Start:</strong>
       {% if event.all_day %}
@@ -178,12 +191,12 @@ $(document).ready( function() {
         },
 
         columns: [
-            { data: 'mark', width: '5%', responsivePriority: 1,
+            { data: 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
               className: 'noVis'
             },
             { data: 'name', title: 'Name', responsivePriority: 1,
-              type: 'readonly', width: '35%',
+              type: 'readonly', width: '45%',
               render: function(data, type, row, meta) {
                   if (type == 'display') {
                       if (row.ahc == 'true') data += '(AHC)';
@@ -201,7 +214,7 @@ $(document).ready( function() {
                   return data;
               }
             },
-            { data: 'status', title: 'Status', width: '10%',
+            { data: 'status', title: 'Status', width: '20px',
               type: ['num', 'readonly'], responsivePriority: 3,
               render: function(data, type, row, meta) {
                   if (type == 'filter')
@@ -413,7 +426,7 @@ $(document).ready( function() {
                 }
             },
             {
-                extend: 'selected', // Bind to Selected row
+                extend: 'selected',
                 text: '<i class="fa fa-edit"></i> Edit',
                 name: 'edit'        // do not change name
             },
@@ -432,6 +445,33 @@ $(document).ready( function() {
                       action: function () {
                           $("#dTbl{{period.position}}_filter").toggle() }
                     },
+                    { text: 'Set times',
+                      extend: 'collection',
+                      autoClose: true,
+                      buttons: [
+                          { text: 'Left now',
+                            extend: 'selected',
+                            ref_field: 'en_route',
+                            action: UpdateNow,
+                          },
+                          { text: 'Returned now',
+                            extend: 'selected',
+                            ref_field: 'return_home',
+                            action: UpdateNow,
+                          },
+                          { text: 'Signed-in now',
+                            extend: 'selected',
+                            ref_field: 'signed_in',
+                            action: UpdateNow,
+                          },
+                          { text: 'Signed-out now',
+                            extend: 'selected',
+                            ref_field: 'signed_out',
+                            action: UpdateNow,
+                          },
+                      ]
+                    },
+
                     'copy', 'csv', 'excel', 'print',
                     {
                         extend: 'colvis',
@@ -453,6 +493,22 @@ $(document).ready( function() {
 
 })
 
+function UpdateNow ( e, dt, node, config ) {
+    dt.cells('.marked').every(
+        function ( idx, tableLoop, rowLoop ) {
+            var row = this.row(this.index().row);
+            var data = row.data();
+            var d = new Date;
+            data.tblId = this.table().node().id;
+            data[config.ref_field + '_date'] = DateBE(d);
+            data[config.ref_field + '_time'] = d.getHours() + ':' +
+                d.getMinutes().toString().padStart(2, 0);
+            row.data(data);
+            UpdatePeriodRow(dt, data, function (data) { return data })
+        }
+    )
+}
+
 function RenderDateTime(data, type, row, meta, time) {
     // Display date and time
     if ( data && type == 'display' ) {
@@ -470,6 +526,7 @@ function UpdatePeriodRow(dt, row, success, error) {
     var memberName = row.name;
     var memberStatus = row.status;
     var memberStatusOrder = row.status_order;
+    var memberUnavailable = row.is_unavailable;
     // Remove from summary, it is readded on display
     window.summary[row.tblId][memberStatus] -= 1;
 
@@ -495,6 +552,7 @@ function UpdatePeriodRow(dt, row, success, error) {
         data.name = memberName;
         data.status = memberStatus;
         data.status_order = memberStatusOrder;
+        data.is_unavailable = memberUnavailable;
         // Create additional rows for editing
         UncombineDateTime('en_route');
         UncombineDateTime('return_home');
@@ -508,7 +566,9 @@ function UpdatePeriodRow(dt, row, success, error) {
         data.mark = ''
 
         // Clear marks
+        //FX: Is this the right place for this, only needs to be called once per operation
         $('td.marked').removeClass('marked');
+        $('tr.selected').removeClass('selected');
         return success(data);
     }
 

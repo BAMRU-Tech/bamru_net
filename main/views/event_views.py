@@ -66,6 +66,21 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         obj.add_period(True)
         return obj
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        result = []
+        try:
+            for leader in context['event'].leaders.split(','):
+                try:
+                    id = Member.objects.filter(username=leader.strip().lower()).first().id
+                except:
+                    id = 0
+                result.append({ 'name': leader, 'id': id })
+        except:
+            result.append({ 'name': 'TBD', 'id': 0})
+
+        context['leaders'] = result
+        return context
 
 class EventForm(ModelForm):
     class Meta:
@@ -183,8 +198,10 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(
-            status__in=Member.AVAILABLE_MEMBERS).order_by('id')
+        period_id = self.kwargs.get('period')
+        members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
+                   .exclude(participant__period=period_id))
+        return members
 
     def get_success_url(self):
         return self.object.period.event.get_absolute_url()

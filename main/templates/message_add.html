@@ -85,8 +85,7 @@ select: 'os',
 order: [[ 4, 'asc' ], [1, 'asc']],
 
 columns: [
-    { data: 'mark', responsivePriority: 1,
-      width: '10px',
+    { data: 'mark', width: '10px', responsivePriority: 1,
       orderable: false,
       className: 'mark-checkbox noVis',
     },
@@ -187,7 +186,8 @@ function SendPage ( e, dt, node, config ) {
     } else if (viaSms) {
         via = '(sms)';
     } else {
-        via = '()';
+        alert('Select email or sms before sending a page');
+        return;
     }
     var text = $('#id_text').val();
     var ok = confirm('{{ confirm_prologue }}Page via ' + via + ' '
