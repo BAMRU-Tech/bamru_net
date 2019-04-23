@@ -203,6 +203,15 @@ class MessageListView(LoginRequiredMixin, generic.ListView):
         context['sortOrder'] = '2, "dsc"'
         return context
 
+class InboundSmsListView(LoginRequiredMixin, generic.ListView):
+    template_name = 'inbound_list.html'
+    context_object_name = 'inbound_list'
+
+    def get_queryset(self):
+        qs = InboundSms.objects.all()
+        qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=31))
+        return qs.order_by('-created_at')
+
 
 class MessageInboxView(LoginRequiredMixin, generic.ListView):
     template_name = 'message_list.html'
@@ -327,29 +336,22 @@ def sms(request):
         response.message('BAMRU.net Error: unable to parse your message.')
         return response
 
-    date_from = timezone.now() - timedelta(hours=12)
-    outbound = (OutboundSms.objects
-                .filter(destination=twilio_request.from_,
-                        source=twilio_request.to,
-                        distribution__message__rsvp_template__isnull=False,
-                        created_at__gte=date_from)
-                .order_by('-pk').first())
-    if (not outbound) or (not outbound.distribution):
+    sms.process()
+    if not sms.outbound:
         logger.error('No matching OutboundSms from: {} to: {} body: {}'.format(
             twilio_request.from_, twilio_request.to, twilio_request.body))
         response.message(
             'BAMRU.net Warning: response ignored. No RSVP question in the past 24 hours.')
         return response
 
-    yn = twilio_request.body[0].lower()
-    if yn != 'y' and yn != 'n':
+    if not (sms.yes or sms.no):
         logger.error('Unable to parse y/n message {} from {}: '.format(
-            sms.body, outbound.distribution.member, str(request.body)))
+            sms.body, sms.member, str(request.body)))
         response.message('Could not parse yes/no in your message. Start your message with y or n.')
         return response
 
     response.message(handle_distribution_rsvp(
-        request, outbound.distribution, (yn == 'y')))
+        request, outbound.distribution, sms.yes))
     return response
 
 

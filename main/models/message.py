@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 import uuid
 import twilio
 from argparse import Namespace
@@ -337,6 +338,44 @@ class InboundSms(BaseModel):
     from_number = models.CharField(max_length=255, blank=True, null=True)
     to_number = models.CharField(max_length=255, blank=True, null=True)
     body = models.CharField(max_length=255, blank=True, null=True)
+    member = models.ForeignKey(Member, null=True, on_delete=models.SET_NULL)
+    outbound = models.ForeignKey(OutboundSms, null=True, on_delete=models.SET_NULL)
+    yes = models.BooleanField(default=False)
+    no = models.BooleanField(default=False)
+    extra_info = models.BooleanField(default=False)
+
+
+    def process(self):
+        """Calculate member and outbound using from/to."""
+        hours = 24
+        date_from = self.created_at - timedelta(hours=hours)
+        qs = OutboundSms.objects.filter(
+            destination=self.from_number,
+            source=self.to_number,
+            created_at__gte=date_from)
+        self.outbound = (qs.filter(distribution__message__rsvp_template__isnull=False)
+                         .order_by('-pk').first())
+        if self.outbound:
+            self.member = self.outbound.distribution.member
+        else:
+            out2 = qs.order_by('-pk').first()
+            if out2:
+                self.member = out2.distribution.member
+
+        yn = self.body[0].lower()
+        self.yes = (yn == 'y')
+        self.no = (yn == 'n')
+
+        # Match the common yes/no variants (allow period & whitespace at end).
+        # There is an actual message if this regex does not match.
+        self.extra_info = (re.compile(r"""(
+                                           (y(es)?)|
+                                           (no?(pe)?)
+                                          )[.]?\s*$""",
+                                     re.IGNORECASE | re.VERBOSE)
+                           .match(self.body) is None)
+
+        self.save()
 
 
 class OutboundEmail(OutboundMessage):

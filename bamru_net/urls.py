@@ -97,6 +97,7 @@ urlpatterns = [
          name='message_inbox'),
     path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
     path('message/test/', views.MessageTestCreateView.as_view(), name='message_test'),
+    path('message/inbound/', views.InboundSmsListView.as_view(), name='inbound_list'),
 
     path('action/become_do/', views.ActionBecomeDo.as_view(), name='action_become_do'),
 
