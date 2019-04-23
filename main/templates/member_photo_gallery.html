@@ -1,0 +1,53 @@
+{% extends 'base_generic.html' %}
+
+{% block title %}Member Photo Gallery{% endblock title %}
+
+{% block subheader %}
+<strong>
+  <a href="{% url 'member_list' %}">Members</a>
+  &gt; Photo Gallery
+</strong>
+{% endblock subheader %}
+
+{% block content %}
+<main role="main" class="row px-3">
+  {% for member in member_list %}
+  {% if member.memberphoto_set.all.count %}
+  {% with photoset=member.memberphoto_set.all %}{% with p1=photoset.first %}
+  <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6"><div class="card my-2 shadow-sm">
+    <div class="card-header">
+      <a href="{% url 'member_detail' member.id %}?returnx=ml">
+        {{ member.full_name }}
+      </a>
+      <span class="float-right">{{ member.status }}</span>
+    </div>
+    
+    <div class="card-body">
+      <div id="carousel{{ member.pk }}" class="carousel slide" data-interval=0>
+        <div class="carousel-inner">
+          {% for photo in photoset %}
+          <div class="carousel-item {% if forloop.first %}active{% endif %}">
+            <a href="{% url 'member_detail' member.id %}">
+              <img class="d-block w-100" src="{% url 'member_photo_download' photo.id 'medium' %}" />
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    
+    <div class="card-footer">
+      {% for photo in photoset %}
+        {% spaceless %}
+          <a href="#" onclick="$('#carousel{{ member.pk }}').carousel({{ forloop.counter0 }});return false;">
+            <img src="{% url 'member_photo_download' photo.id 'gallery_thumb' %}" class="img-thumbnail" />
+          </a>
+        {% endspaceless %}
+      {% endfor %}
+    </div>
+  </div></div>
+  {% endwith %}{% endwith %}
+  {% endif %}
+  {% endfor %}
+</main>
+{% endblock content %}

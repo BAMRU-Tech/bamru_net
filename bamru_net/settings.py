@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'anymail',
     'bootstrap4',
     'django_filters',
+    'imagekit',
     'oidc_provider',
     'raven.contrib.django.raven_compat',
     'rest_framework',

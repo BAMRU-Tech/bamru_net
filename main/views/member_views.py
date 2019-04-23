@@ -35,7 +35,7 @@ class MemberListView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(status__in=Member.CURRENT_MEMBERS).order_by('id')
+        return Member.objects.filter(status__in=Member.CURRENT_MEMBERS).order_by('last_name', 'first_name')
 
 
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
@@ -45,6 +45,10 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         return context
+
+
+class MemberPhotoGalleryView(MemberListView):
+    template_name = 'member_photo_gallery.html'
 
 
 class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
@@ -172,6 +176,11 @@ class MemberAddView(LoginRequiredMixin, generic.edit.FormView):
             Phone.objects.create(member=m, pagable=True,
                                  number=form.cleaned_data['phone'])
         return HttpResponseRedirect(m.get_absolute_url())
+
+
+class MemberPhotoView(LoginRequiredMixin, generic.DetailView):
+    model = Member
+    template_name = 'member_photos.html'
 
 
 class MemberCertListView(LoginRequiredMixin, generic.ListView):

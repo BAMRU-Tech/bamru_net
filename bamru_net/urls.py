@@ -35,6 +35,7 @@ router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
+router.register(r'photos', views.MemberPhotoViewSet)
 router.register(r'messages', views.MessageViewSet)
 
 
@@ -55,6 +56,7 @@ urlpatterns = [
     path('member/', views.MemberListView.as_view(), name='member_list'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('member/<int:pk>/edit', views.MemberEditView.as_view(), name='member_edit'),
+    path('member/<int:pk>/photos', views.MemberPhotoView.as_view(), name='member_photos'),
     path('member/add/', views.MemberAddView.as_view(), name='member_add'),
 
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
@@ -66,6 +68,9 @@ urlpatterns = [
     path('file_id/<int:id>/', views.download_data_file_by_id_view, name='file_download'),
     path('file/<path:name>', views.download_data_file_by_name_view), # used by wiki
     path('files/<path:name>', views.download_data_file_by_name_view), # used by wiki
+
+    path('photos/', views.MemberPhotoGalleryView.as_view(), name='member_photo_gallery'),
+    path('photos/<int:id>/<str:format>/', views.member_photo_by_id_view, name='member_photo_download'),
 
     path('cert/', views.CertListView.as_view(), name='cert_list'),
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(),
