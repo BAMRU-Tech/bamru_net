@@ -15,15 +15,15 @@
   </li>
   {% endif %}
   <li class="nav-item dropdown">
-    <a class="nav-link" href={% url 'member_edit' member.id %}>
-      <i class="fa fa-pencil"></i>
-      Edit
-    </a>
-  </li>
-  <li class="nav-item dropdown">
     <a class="nav-link" href={% url 'member_photos' member.id %}>
       <i class="fa fa-camera-retro"></i>
       Edit photos
+    </a>
+  </li>
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'member_edit' member.id %}>
+      <i class="fa fa-pencil"></i>
+      Edit
     </a>
   </li>
 </ul>
