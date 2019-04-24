@@ -344,7 +344,6 @@ class InboundSms(BaseModel):
     no = models.BooleanField(default=False)
     extra_info = models.BooleanField(default=False)
 
-
     def process(self):
         """Calculate member and outbound using from/to."""
         hours = 24

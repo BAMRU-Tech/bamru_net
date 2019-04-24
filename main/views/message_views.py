@@ -351,7 +351,7 @@ def sms(request):
         return response
 
     response.message(handle_distribution_rsvp(
-        request, outbound.distribution, sms.yes))
+        request, sms.outbound.distribution, sms.yes))
     return response
 
 

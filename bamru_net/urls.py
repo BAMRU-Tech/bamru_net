@@ -37,6 +37,7 @@ router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
 router.register(r'photos', views.MemberPhotoViewSet)
 router.register(r'messages', views.MessageViewSet)
+router.register(r'inbound_sms', views.InboundSmsViewSet)
 
 
 urlpatterns = [
