@@ -50,6 +50,8 @@ urlpatterns = [
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),
     path('event/<int:pk>/period/add/',
          views.EventPeriodAddView.as_view(), name='event_period_add'),
+    path('event/<int:event_id>/messages/', views.MessageEventView.as_view(),
+         name='message_event'),
 
     path('event/participant/add/<int:period>/',
          views.PeriodParticipantCreateView.as_view(), name='period_participant_add'),

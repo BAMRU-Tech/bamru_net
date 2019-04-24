@@ -227,6 +227,18 @@ class MessageInboxView(LoginRequiredMixin, generic.ListView):
         return qs.order_by('-created_at')
 
 
+class MessageEventView(LoginRequiredMixin, generic.ListView):
+    template_name = 'message_list.html'
+    context_object_name = 'message_list'
+
+    def get_queryset(self):
+        event_id = self.kwargs.get('event_id', None)
+        qs = Message.objects.all()
+        if event_id:
+            qs = qs.filter(period__event__id=event_id)
+        return qs.order_by('-created_at')
+
+
 def handle_distribution_rsvp(request, distribution, rsvp=False):
     """Helper function to process a RSVP response.
     distribution -- A Distribution object
