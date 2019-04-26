@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render, render_to_resp
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
+from rules.contrib.views import PermissionRequiredMixin
 
 from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Unavailable
 from main.views.file_views import download_file_helper
@@ -51,8 +52,9 @@ class MemberPhotoGalleryView(MemberListView):
     template_name = 'member_photo_gallery.html'
 
 
-class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
+class MemberEditView(PermissionRequiredMixin, generic.base.TemplateView):
     template_name = 'member_edit.html'
+    permission_required = 'main.change_member'
 
     MemberForm = modelform_factory(Member,
             fields=['ham', 'v9', 'dl'])
@@ -117,12 +119,11 @@ class MemberEditView(LoginRequiredMixin, generic.base.TemplateView):
             self.forms = forms
         return self.forms
 
-    def post(self, *args, **kwargs):
-        if ((self.kwargs['pk'] != self.request.user.id) and
-            not self.request.user.is_editor):
-            raise PermissionDenied
+    def get_object(self):
+        return Member.objects.get(id=self.kwargs['pk'])
 
-        member = Member.objects.get(id=self.kwargs['pk'])
+    def post(self, *args, **kwargs):
+        member = self.get_object()
 
         forms = self.get_forms(member)
         for f in forms.values():
@@ -152,12 +153,13 @@ class MemberAddForm(forms.Form):
     phone = forms.CharField()
 
 
-class MemberAddView(LoginRequiredMixin, generic.edit.FormView):
+class MemberAddView(PermissionRequiredMixin, generic.edit.FormView):
     """Intended to add guests for trainings.
     Later they can transition to Trainee.
     """
     template_name = 'member_add.html'
     form_class = MemberAddForm
+    permission_required = 'main.add_member'
 
     def form_valid(self, form):
         m, created = Member.objects.get_or_create(
@@ -199,9 +201,10 @@ class MemberCertListView(LoginRequiredMixin, generic.ListView):
         return context
 
 
-class CertEditMixin(generic.edit.ModelFormMixin):
+class CertEditMixin(PermissionRequiredMixin, generic.edit.ModelFormMixin):
     model = Cert
     template_name = 'cert_form.html'
+    permission_required = 'main.change_cert'
 
     def get_cert_type(self):
         # subclasses must implement
@@ -244,18 +247,14 @@ class CertEditMixin(generic.edit.ModelFormMixin):
         return {'type': self.get_cert_type()}
 
     def form_valid(self, form):
-        if ((self.kwargs['member'] != self.request.user.id) and
-            not self.request.user.is_editor):
-            raise PermissionDenied
-
         cert = form.save(commit=False)
 
-        if cert.member_id:
-            if ((cert.member_id != self.request.user.id) and
-                not self.request.user.is_editor):
-                raise PermissionDenied
-        else:
+        if not cert.member_id:
             cert.member_id = self.kwargs['member']
+
+        # Check here for the add case
+        if not self.request.user.has_perm('main.change_cert', cert):
+            raise PermissionDenied
 
         cert.save()
         return HttpResponseRedirect(reverse('member_cert_list', args=[cert.member.id]))
@@ -267,6 +266,7 @@ class CertEditMixin(generic.edit.ModelFormMixin):
 
 
 class CertCreateView(LoginRequiredMixin, CertEditMixin, generic.edit.CreateView):
+    permission_required = 'main.add_cert'
     def get_cert_type(self):
         if self.request.method == 'POST':
             return self.request.POST['type']
@@ -277,31 +277,6 @@ class CertCreateView(LoginRequiredMixin, CertEditMixin, generic.edit.CreateView)
         context = super().get_context_data(**kwargs)
         context['new'] = True
         context['cert'] = Cert(type=self.get_cert_type())
-        return context
-
-
-class CertDeleteView(LoginRequiredMixin, generic.base.TemplateView):
-    template_name = 'cert_delete.html'
-
-    def post(self, *args, **kwargs):
-        if self.kwargs['member'] != self.request.user.id:
-            # TODO: more sophisticated permissions (e.g. allow secretary to edit).
-            raise PermissionDenied
-
-        cert = Cert.objects.get(id=self.kwargs['cert'])
-        member_id = cert.member.id
-
-        if self.kwargs['member'] != cert.member.id:
-            return HttpResponseBadRequest()
-
-        cert.delete()
-        return HttpResponseRedirect(reverse('member_certs', args=[member_id]))
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        cert = Cert.objects.get(id=self.kwargs['cert'])
-        context['cert'] = cert
-        context['member'] = cert.member
         return context
 
 

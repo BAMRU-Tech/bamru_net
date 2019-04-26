@@ -170,12 +170,6 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return self.unavailable_set.filter(
             start_on__lte=today, end_on__gte=today).count() > 0
 
-    @property
-    def is_editor(self):
-        return (self.is_staff or
-                self.role_set.filter(role='SEC').exists() or
-                self.role_set.filter(role='RO').exists())
-
     @models.permalink
     def get_absolute_url(self):
         return ('member_detail', [str(self.id)])

@@ -20,7 +20,7 @@ class OnlyEditSelfPermission(permissions.BasePermission):
 
 
 class BaseViewSet(viewsets.ModelViewSet):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.DjangoObjectPermissions,)
 
 # From https://stackoverflow.com/a/40253309
 class CreateListModelMixin(object):

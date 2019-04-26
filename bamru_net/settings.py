@@ -42,17 +42,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_twilio',
     'anymail',
     'bootstrap4',
     'django_filters',
+    'django_twilio',
     'imagekit',
     'oidc_provider',
     'raven.contrib.django.raven_compat',
     'rest_framework',
+    'rules.apps.AutodiscoverRulesConfig',
     'main',
     'main.templatetags.filters',
     'django.contrib.admin',  # Must be after main for templates
+]
+
+AUTHENTICATION_BACKENDS = [
+    'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 MIDDLEWARE = [
@@ -66,11 +72,14 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
-    )
+    ),
 }
 
 ROOT_URLCONF = 'bamru_net.urls'
