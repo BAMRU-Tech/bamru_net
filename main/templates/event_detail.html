@@ -12,6 +12,10 @@
   <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }} ({{ event.type }})
 </strong>
 <ul class="navbar-nav ml-auto">
+  <li class="nav-item ml-auto">
+    <a href="{% url 'message_event' event.id %}">
+      <i class="fa fa-list"></i> Messages</a>
+  </li>
   <li class="nav-item">
     <a class="" href="{% url 'event_update' event.id %}">
       <span>&nbsp;</span> {#FX: shouldn't be necessary #}

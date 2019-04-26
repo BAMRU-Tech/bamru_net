@@ -197,6 +197,13 @@ class MessageDetailSerializer(MessageListSerializer):
         return message
 
 
+class InboundSmsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InboundSms
+        read_only_fields = ('sid', 'from_number', 'to_number', 'body', 'member', 'outbound', 'yes', 'no', 'extra_info', )
+        fields = read_only_fields
+
+
 class MemberPhotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = MemberPhoto

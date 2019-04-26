@@ -200,6 +200,13 @@ class MessageViewSet(BaseViewSet):
         return MessageDetailSerializer
 
 
+class InboundSmsViewSet(BaseViewSet):
+    queryset = InboundSms.objects.all()
+    serializer_class = InboundSmsSerializer
+    filter_fields = ('member', 'outbound', 'outbound__distribution__message__period')
+    search_fields = ('member__username', )
+
+
 class MemberPhotoViewSet(BaseViewSet):
     permission_classes = BaseViewSet.permission_classes + (OnlyEditSelfPermission,)
     self_attr = 'member'

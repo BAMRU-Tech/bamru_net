@@ -2,14 +2,14 @@
 
 {# --- Page definition --- #}
 
-{% block title %}Messages{% endblock title %}
+{% block title %}Inbound Messages{% endblock title %}
 
 {% block subheader %}
-  <strong>Outbound Message Log</strong>
+  <strong>Inbound Message Log</strong>
   <ul class="navbar-nav ml-auto">
     <li class="nav-item ml-auto">
-      <a href="{% url 'inbound_list' %}">
-        <i class="fa fa-list"></i> Inbound message log</a>
+      <a href="{% url 'message_list' %}">
+        <i class="fa fa-list"></i> Outbound Message Log</a>
     </li>
   </ul>
 {% endblock subheader %}
@@ -18,23 +18,20 @@
 <main role="main">
   <table id="dTbl" class="display table-bordered compact nowrap" style="width:100%">
     <tbody>
-      {% for message in message_list %}
+      {% for inbound in inbound_list %}
       <tr>
-        <td><a href="{% url 'message_detail' message.id %}">
-            {{ message.text|truncatechars:50 }}</a></td>
-        <td>{{ message.author }}</td>
+        <td>{{ inbound.body }}</a></td>
+        <td>{{ inbound.member }}</td>
         <td data-sort="{{ event.created_order }}">
-          {{ message.created_at|date:"Y-m-d\TH:i:s" }}</td>
-        <td>{{ message.format }}</td>
-        <td>{{ message.period_format }}</td>
-        <td>
-          {% if message.period %}
-          <a href="{% url 'event_detail' message.period.event.pk %}">
-            {{ message.period.event|truncatechars:10 }}</a>
-          {% else %}
-          {{ message.period.event|truncatechars:10 }}
-          {% endif %}
+          {{ inbound.created_at|date:"Y-m-d\TH:i:s" }}</td>
+        <td>{{ inbound.from_number }}</td>
+        <td>{{ inbound.to_number }}</td>
+        <td>{% with inbound.outbound.distribution.message as message %}
+          <a href="{% url 'message_detail' message.id %}">
+            {{ message.text|truncatechars:20 }}</a
+          {% endwith %}
         </td>
+        <td>{{ inbound.extra_info }}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -54,7 +51,7 @@ paging: true,
 columns: [
     {data: 'text', title: 'Message', responsivePriority: 1, },
     {data: 'author', title: 'From', responsivePriority: 3, },
-    {data: 'sent_at', title: 'Sent', responsivePriority: 2,
+    {data: 'sent_at', title: 'Received', responsivePriority: 2,
      render: function (data, type, row, meta) {
          if (type == 'display') {
              var d = data.split('T');
@@ -62,9 +59,10 @@ columns: [
          } else
              return data;
      }},
-    {data: 'type', visible: false, className: 'noVis', responsivePriority: 6,
-    {data: 'period_type', title: 'Type', responsivePriority: 4, },
-    {data: 'event', title: 'Event', responsivePriority: 5, },
+    {data: 'from', title: 'From number', responsivePriority: 3, },
+    {data: 'to', title: 'To number', responsivePriority: 3, },
+    {data: 'outbound', title: 'Outbound', responsivePriority: 5, },
+    {data: 'extra_info', title: 'Extra Info', visible: false, responsivePriority: 5, },
 ],
 
 language: { emptyTable: 'No messages' },

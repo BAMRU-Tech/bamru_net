@@ -37,6 +37,7 @@ router.register(r'do', views.DoViewSet)
 router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
 router.register(r'photos', views.MemberPhotoViewSet)
 router.register(r'messages', views.MessageViewSet)
+router.register(r'inbound_sms', views.InboundSmsViewSet)
 
 
 urlpatterns = [
@@ -49,6 +50,8 @@ urlpatterns = [
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),
     path('event/<int:pk>/period/add/',
          views.EventPeriodAddView.as_view(), name='event_period_add'),
+    path('event/<int:event_id>/messages/', views.MessageEventView.as_view(),
+         name='message_event'),
 
     path('event/participant/add/<int:period>/',
          views.PeriodParticipantCreateView.as_view(), name='period_participant_add'),
@@ -97,6 +100,7 @@ urlpatterns = [
          name='message_inbox'),
     path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
     path('message/test/', views.MessageTestCreateView.as_view(), name='message_test'),
+    path('message/inbound/', views.InboundSmsListView.as_view(), name='inbound_list'),
 
     path('action/become_do/', views.ActionBecomeDo.as_view(), name='action_become_do'),
 
