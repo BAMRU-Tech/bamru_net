@@ -29,6 +29,10 @@ def is_member_editor(user):
 def is_cert_editor(user):
     return user.role_set.filter(role__in=['SEC', 'OO',]).exists()
 
+@rules.predicate
+def is_do_planner(user):
+    return user.role_set.filter(role__in=['TODO_ADD_ROLE',]).exists()
+
 
 # Permissions are used in views and templates. Follow the Django
 # naming scheme where possible: add_X, view_X, change_X, delete_X
@@ -49,8 +53,14 @@ rules.add_perm('main.delete_cert', is_owner | is_cert_editor)
 for model in ['message', 'inboundsms',]:
     rules.add_perm('main.view_%s' % model, rules.is_authenticated)
 
+# Plan the DO calendar
+rules.add_perm('main.add_doavailable', rules.is_authenticated)
+rules.add_perm('main.view_doavailable', rules.is_authenticated)
+rules.add_perm('main.change_doavailable', is_owner | is_do_planner)
+rules.add_perm('main.change_assigned_for_doavailable', is_do_planner)
+
 # Simple owner models
-for model in ['unavailable', 'doavailable', 'memberphoto', ]:
+for model in ['unavailable', 'memberphoto', ]:
     rules.add_perm('main.add_%s' % model, rules.is_authenticated)
     rules.add_perm('main.view_%s' % model, rules.is_authenticated)
     rules.add_perm('main.change_%s' % model, is_owner)

@@ -3,11 +3,26 @@ from .tasks import message_send
 from django.core.files.base import ContentFile
 from django.urls import reverse
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 from collections import defaultdict
 from base64 import b64encode, b64decode
 
 import logging
 logger = logging.getLogger(__name__)
+
+class WriteOnceMixin:
+    """Supports Meta list: write_once_fields = ('a','b')"""
+    def get_extra_kwargs(self):
+        extra_kwargs = super().get_extra_kwargs()
+
+        # Mark fields as read only on PUT/PATCH ('update')
+        if 'update' in getattr(self.context.get('view'), 'action', ''):
+            for field_name in getattr(self.Meta, 'write_once_fields', None):
+                kwargs = extra_kwargs.get(field_name, {})
+                kwargs['read_only'] = True
+                extra_kwargs[field_name] = kwargs
+
+        return extra_kwargs
 
 
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
@@ -81,12 +96,24 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'certs') + read_only_fields
 
 
-class DoSerializer(serializers.ModelSerializer):
+class DoSerializer(WriteOnceMixin, serializers.ModelSerializer):
     class Meta:
         model = DoAvailable
         read_only_fields = ('start', 'end')
-        fields = ('id', 'year', 'quarter', 'week', 'available', 'assigned',
-                  'comment', 'member') + read_only_fields
+        write_once_fields = ('id', 'year', 'quarter', 'week', 'member')
+        fields = ('available', 'assigned', 'comment', ) + read_only_fields + write_once_fields
+        validators = [
+            UniqueTogetherValidator(
+                queryset=DoAvailable.objects.all(),
+                fields=('year', 'quarter', 'week', 'member')
+            )
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # only the DO planner can assign shifts
+        if not self._context.get('request').user.has_perm('main.change_assigned_for_doavailable'):
+            self.fields.get('assigned').read_only = True
 
 
 class BareParticipantSerializer(serializers.ModelSerializer):
