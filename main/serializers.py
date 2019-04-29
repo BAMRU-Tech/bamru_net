@@ -28,26 +28,18 @@ class WriteOnceMixin:
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
-        read_only_fields = ('full_name', 'status', 'status_order',
+        read_only_fields = ('username', 'full_name', 'status', 'status_order',
                             'roles', 'role_order',
                             'display_email', 'display_phone', 'short_name',
-                            'is_unavailable',)
-        fields = ('id', 'username', 'dl', 'ham', 'v9', 'is_staff',
-                  'is_current_do',
-                  'is_superuser', 'last_login',) + read_only_fields
+                            'is_unavailable', 'is_staff', 'is_superuser',)
+        fields = ('id', 'dl', 'ham', 'v9', 'is_current_do',
+                  'last_login',) + read_only_fields
 
 
-class UnavailableSerializer(serializers.HyperlinkedModelSerializer):
-    member = MemberSerializer()
-
+class BareUnavailableSerializer(WriteOnceMixin, serializers.ModelSerializer):
     class Meta:
         model = Unavailable
-        fields = ('id', 'member', 'start_on', 'end_on', 'comment', )
-
-
-class BareUnavailableSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Unavailable
+        write_once_fields = ('member',)
         fields = ('id', 'member', 'start_on', 'end_on', 'comment', )
 
 
@@ -70,13 +62,14 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'busy') + read_only_fields
 
 
-class CertSerializer(serializers.ModelSerializer):
+class CertSerializer(WriteOnceMixin, serializers.ModelSerializer):
 
     class Meta:
         model = Cert
         read_only_fields = ('is_expired', 'color', 'display', 'cert_name',)
-        fields = ('id', 'member', 'type', 'expires_on',
-                  'description', 'comment', 'link', ) + read_only_fields
+        write_once_fields = ('member', 'type', )
+        fields = ('id', 'expires_on', 'description', 'comment', 'link',
+                 ) + read_only_fields + write_once_fields
 
 
 class MemberCertSerializer(serializers.HyperlinkedModelSerializer):

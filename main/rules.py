@@ -19,19 +19,23 @@ def is_owner(user, obj):  # For models with a member field
 
 @rules.predicate
 def can_add_member(user):
-    return user.role_set.filter(role__in=['RO',]).exists()
+    return (user.is_authenticated and
+            user.role_set.filter(role__in=['RO',]).exists())
 
 @rules.predicate
 def is_member_editor(user):
-    return user.role_set.filter(role__in=['SEC', 'OO', 'RO',]).exists()
+    return (user.is_authenticated and
+            user.role_set.filter(role__in=['SEC', 'OO', 'RO',]).exists())
 
 @rules.predicate
 def is_cert_editor(user):
-    return user.role_set.filter(role__in=['SEC', 'OO',]).exists()
+    return (user.is_authenticated and
+            user.role_set.filter(role__in=['SEC', 'OO',]).exists())
 
 @rules.predicate
 def is_do_planner(user):
-    return user.role_set.filter(role__in=['TODO_ADD_ROLE',]).exists()
+    return (user.is_authenticated and
+            user.role_set.filter(role__in=['TODO_ADD_ROLE',]).exists())
 
 
 # Permissions are used in views and templates. Follow the Django
