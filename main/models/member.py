@@ -187,7 +187,7 @@ class Role(BaseModel):
         ('TRS', 'Treasurer'),
         ('OL', 'Operators Leader'),
         ('WEB', 'Web Master'),
-        ('REG', 'Registar'),
+        ('DOS', 'DO Scheduler'),
         ('TM', 'Active Technical Member'),
         ('FM', 'Active Field Member'),
         ('T', 'Active Trainee'),

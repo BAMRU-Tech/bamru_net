@@ -35,7 +35,7 @@ def is_cert_editor(user):
 @rules.predicate
 def is_do_planner(user):
     return (user.is_authenticated and
-            user.role_set.filter(role__in=['TODO_ADD_ROLE',]).exists())
+            user.role_set.filter(role__in=['DOS',]).exists())
 
 
 # Permissions are used in views and templates. Follow the Django
