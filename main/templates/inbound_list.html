@@ -27,8 +27,10 @@
         <td>{{ inbound.from_number }}</td>
         <td>{{ inbound.to_number }}</td>
         <td>{% with inbound.outbound.distribution.message as message %}
+          {% if message %}
           <a href="{% url 'message_detail' message.id %}">
             {{ message.text|truncatechars:20 }}</a
+          {% endif %}
           {% endwith %}
         </td>
         <td>{{ inbound.extra_info }}</td>
