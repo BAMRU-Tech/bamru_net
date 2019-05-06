@@ -196,9 +196,3 @@ class MemberPhotoViewSet(BaseViewSet):
     serializer_class = MemberPhotoSerializer
     filter_fields = ('member', )
     search_fields = ('member__username', )
-
-    def perform_create(self, serializer):
-        # Members can only add their own photos
-        if serializer.validated_data['member'] != self.request.user:
-            raise exceptions.PermissionDenied
-        super().perform_create(serializer)

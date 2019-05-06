@@ -2,7 +2,7 @@ from .models import *
 from .tasks import message_send
 from django.core.files.base import ContentFile
 from django.urls import reverse
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 from rest_framework.validators import UniqueTogetherValidator
 from collections import defaultdict
 from base64 import b64encode, b64decode
@@ -23,6 +23,18 @@ class WriteOnceMixin:
                 extra_kwargs[field_name] = kwargs
 
         return extra_kwargs
+
+
+class CreatePermModelSerializer(serializers.ModelSerializer):
+    """Check object permissions on create."""
+    def create(self, validated_data):
+        obj = self.Meta.model(**validated_data)
+        view = self._context['view']
+        request = self._context['request']
+        for permission in view.get_permissions():
+            if not permission.has_object_permission(request, view, obj):
+                raise exceptions.PermissionDenied
+        return super(CreatePermModelSerializer, self).create(validated_data)
 
 
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
@@ -62,8 +74,7 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'busy') + read_only_fields
 
 
-class CertSerializer(WriteOnceMixin, serializers.ModelSerializer):
-
+class CertSerializer(WriteOnceMixin, CreatePermModelSerializer):
     class Meta:
         model = Cert
         read_only_fields = ('is_expired', 'color', 'display', 'cert_name',)
@@ -154,14 +165,12 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
         model = Participant
         fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at',
                   'return_home_at', 'signed_in_at', 'signed_out_at')
-
-    def create(self, validated_data):
-        """Custom method to filter to avoid duplicates"""
-        try:
-            return Participant.objects.get(period=validated_data.get('period'),
-                                           member=validated_data.get('member'))
-        except Participant.DoesNotExist:
-            return Participant.objects.create(**validated_data)
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Participant.objects.all(),
+                fields=('period', 'member')
+            )
+        ]
 
 
 class DistributionSerializer(serializers.ModelSerializer):
@@ -224,10 +233,11 @@ class InboundSmsSerializer(serializers.ModelSerializer):
         fields = read_only_fields
 
 
-class MemberPhotoSerializer(serializers.ModelSerializer):
+class MemberPhotoSerializer(WriteOnceMixin, CreatePermModelSerializer):
     class Meta:
         model = MemberPhoto
         read_only_fields = ('name', 'extension', 'size', 'content_type')
+        write_once_fields = ('member', 'file')
         fields = ('id', 'url', 'file', 'member', 'position', 'created_at', 'updated_at', 'name', 'extension', 'size', 'content_type', 'original_url', 'medium_url', 'thumbnail_url', 'gallery_thumb_url')
 
     file = serializers.ImageField(write_only=True)
@@ -245,16 +255,6 @@ class MemberPhotoSerializer(serializers.ModelSerializer):
     def get_photo_url(self, obj, format):
         url = reverse('member_photo_download', args=[obj.id, format])
         return self.context['request'].build_absolute_uri(url)
-
-    def validate_member(self, value):
-        if self.instance and self.instance.member != value:
-            raise serializers.ValidationError("May not modify field")
-        return value
-
-    def validate_file(self, value):
-        if self.instance and self.instance.file != value:
-            raise serializers.ValidationError("May not modify field")
-        return value
 
     def create(self, validated_data):
         validated_data['size'] = validated_data['file'].size

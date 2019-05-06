@@ -11,6 +11,8 @@ def is_member_self(user, member): # only for Member
 
 @rules.predicate
 def is_owner(user, obj):  # For models with a member field
+    if not user.is_authenticated:
+        return False
     if obj is None: # If non-object permission, we accept it
         return True
     if not hasattr(obj, 'member'):
@@ -48,11 +50,6 @@ rules.add_perm('main.view_member', rules.is_authenticated)
 rules.add_perm('main.change_member', is_member_self | is_member_editor)
 rules.add_perm('main.change_certs_for_member', is_member_self | is_cert_editor)
 
-rules.add_perm('main.add_cert', rules.is_authenticated)
-rules.add_perm('main.view_cert', rules.is_authenticated)
-rules.add_perm('main.change_cert', is_owner | is_cert_editor)
-rules.add_perm('main.delete_cert', is_owner | is_cert_editor)
-
 # View only models - creation handled in backend
 for model in ['message', 'inboundsms',]:
     rules.add_perm('main.view_%s' % model, rules.is_authenticated)
@@ -63,8 +60,21 @@ rules.add_perm('main.view_doavailable', rules.is_authenticated)
 rules.add_perm('main.change_doavailable', is_owner | is_do_planner)
 rules.add_perm('main.change_assigned_for_doavailable', is_do_planner)
 
+# Need owner to create. These need CreatePermModelSerializer
+for model in ['memberphoto', ]:
+    rules.add_perm('main.add_%s' % model, is_owner)
+    rules.add_perm('main.view_%s' % model, rules.is_authenticated)
+    rules.add_perm('main.change_%s' % model, is_owner)
+    rules.add_perm('main.delete_%s' % model, is_owner)
+
+rules.add_perm('main.add_cert', is_owner | is_cert_editor)
+rules.add_perm('main.view_cert', rules.is_authenticated)
+rules.add_perm('main.change_cert', is_owner | is_cert_editor)
+rules.add_perm('main.delete_cert', is_owner | is_cert_editor)
+
+
 # Simple owner models
-for model in ['unavailable', 'memberphoto', ]:
+for model in ['unavailable', ]:
     rules.add_perm('main.add_%s' % model, rules.is_authenticated)
     rules.add_perm('main.view_%s' % model, rules.is_authenticated)
     rules.add_perm('main.change_%s' % model, is_owner)
