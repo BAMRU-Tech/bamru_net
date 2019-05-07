@@ -10,17 +10,8 @@ from rest_framework import status
 from django_filters import rest_framework as filters
 
 
-class OnlyEditSelfPermission(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        self_attr = getattr(view, 'self_attr')
-        return getattr(obj, self_attr) == request.user
-
-
 class BaseViewSet(viewsets.ModelViewSet):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.DjangoObjectPermissions,)
 
 # From https://stackoverflow.com/a/40253309
 class CreateListModelMixin(object):
@@ -43,13 +34,6 @@ class UnavailableFilter(filters.FilterSet):
     class Meta:
         model = Unavailable
         fields = ('member__status', 'start_on', )
-
-
-class UnavailableViewSet(BaseViewSet):
-    queryset = Unavailable.objects.all()
-    serializer_class = UnavailableSerializer
-    filterset_class = UnavailableFilter
-    search_fields = ('member__username', )
 
 
 class ApiUnavailableViewSet(BaseViewSet):
@@ -208,14 +192,7 @@ class InboundSmsViewSet(BaseViewSet):
 
 
 class MemberPhotoViewSet(BaseViewSet):
-    permission_classes = BaseViewSet.permission_classes + (OnlyEditSelfPermission,)
-    self_attr = 'member'
     queryset = MemberPhoto.objects.all()
     serializer_class = MemberPhotoSerializer
     filter_fields = ('member', )
     search_fields = ('member__username', )
-
-    def perform_create(self, serializer):
-        if serializer.validated_data['member'] != self.request.user:
-            raise exceptions.PermissionDenied
-        super().perform_create(serializer)

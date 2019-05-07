@@ -96,7 +96,9 @@
             Temporary DO change
           </a>
 {% endcomment %}
-{% if isEditor %}
+{% load rules %}
+{% has_perm 'main.add_member' request.user as can_add_member %}
+{% if can_add_member %}
           <a class="dropdown-item" href="{% url 'member_add' %}">
             <i class="fa fa-address-book"></i>
             Add a new Member (Guest)

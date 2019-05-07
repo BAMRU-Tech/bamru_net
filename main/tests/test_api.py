@@ -12,8 +12,10 @@ class TestApiRoot(APITestCase):
         )
 
     def test_access(self):
+        self.client.force_login(self.user)
         response = self.client.get(self.uri)
         self.assertEqual(response.status_code, 200)
+        self.client.logout()
         for endpoint in response.json().values():
             response = self.client.get(endpoint)
             self.assertEqual(

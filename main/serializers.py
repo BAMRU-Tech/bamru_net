@@ -2,37 +2,56 @@ from .models import *
 from .tasks import message_send
 from django.core.files.base import ContentFile
 from django.urls import reverse
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
+from rest_framework.validators import UniqueTogetherValidator
 from collections import defaultdict
 from base64 import b64encode, b64decode
 
 import logging
 logger = logging.getLogger(__name__)
 
+class WriteOnceMixin:
+    """Supports Meta list: write_once_fields = ('a','b')"""
+    def get_extra_kwargs(self):
+        extra_kwargs = super().get_extra_kwargs()
+
+        # Mark fields as read only on PUT/PATCH ('update')
+        if 'update' in getattr(self.context.get('view'), 'action', ''):
+            for field_name in getattr(self.Meta, 'write_once_fields', None):
+                kwargs = extra_kwargs.get(field_name, {})
+                kwargs['read_only'] = True
+                extra_kwargs[field_name] = kwargs
+
+        return extra_kwargs
+
+
+class CreatePermModelSerializer(serializers.ModelSerializer):
+    """Check object permissions on create."""
+    def create(self, validated_data):
+        obj = self.Meta.model(**validated_data)
+        view = self._context['view']
+        request = self._context['request']
+        for permission in view.get_permissions():
+            if not permission.has_object_permission(request, view, obj):
+                raise exceptions.PermissionDenied
+        return super(CreatePermModelSerializer, self).create(validated_data)
+
 
 class MemberSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Member
-        read_only_fields = ('full_name', 'status', 'status_order',
+        read_only_fields = ('username', 'full_name', 'status', 'status_order',
                             'roles', 'role_order',
                             'display_email', 'display_phone', 'short_name',
-                            'is_unavailable',)
-        fields = ('id', 'username', 'dl', 'ham', 'v9', 'is_staff',
-                  'is_current_do',
-                  'is_superuser', 'last_login',) + read_only_fields
+                            'is_unavailable', 'is_staff', 'is_superuser',)
+        fields = ('id', 'dl', 'ham', 'v9', 'is_current_do',
+                  'last_login',) + read_only_fields
 
 
-class UnavailableSerializer(serializers.HyperlinkedModelSerializer):
-    member = MemberSerializer()
-
+class BareUnavailableSerializer(WriteOnceMixin, serializers.ModelSerializer):
     class Meta:
         model = Unavailable
-        fields = ('id', 'member', 'start_on', 'end_on', 'comment', )
-
-
-class BareUnavailableSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Unavailable
+        write_once_fields = ('member',)
         fields = ('id', 'member', 'start_on', 'end_on', 'comment', )
 
 
@@ -55,13 +74,13 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'busy') + read_only_fields
 
 
-class CertSerializer(serializers.ModelSerializer):
-
+class CertSerializer(WriteOnceMixin, CreatePermModelSerializer):
     class Meta:
         model = Cert
         read_only_fields = ('is_expired', 'color', 'display', 'cert_name',)
-        fields = ('id', 'member', 'type', 'expires_on',
-                  'description', 'comment', 'link', ) + read_only_fields
+        write_once_fields = ('member', 'type', )
+        fields = ('id', 'expires_on', 'description', 'comment', 'link',
+                 ) + read_only_fields + write_once_fields
 
 
 class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
@@ -81,12 +100,24 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('id', 'certs') + read_only_fields
 
 
-class DoSerializer(serializers.ModelSerializer):
+class DoSerializer(WriteOnceMixin, serializers.ModelSerializer):
     class Meta:
         model = DoAvailable
         read_only_fields = ('start', 'end')
-        fields = ('id', 'year', 'quarter', 'week', 'available', 'assigned',
-                  'comment', 'member') + read_only_fields
+        write_once_fields = ('id', 'year', 'quarter', 'week', 'member')
+        fields = ('available', 'assigned', 'comment', ) + read_only_fields + write_once_fields
+        validators = [
+            UniqueTogetherValidator(
+                queryset=DoAvailable.objects.all(),
+                fields=('year', 'quarter', 'week', 'member')
+            )
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # only the DO planner can assign shifts
+        if not self._context.get('request').user.has_perm('main.change_assigned_for_doavailable'):
+            self.fields.get('assigned').read_only = True
 
 
 class BareParticipantSerializer(serializers.ModelSerializer):
@@ -134,14 +165,12 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
         model = Participant
         fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at',
                   'return_home_at', 'signed_in_at', 'signed_out_at')
-
-    def create(self, validated_data):
-        """Custom method to filter to avoid duplicates"""
-        try:
-            return Participant.objects.get(period=validated_data.get('period'),
-                                           member=validated_data.get('member'))
-        except Participant.DoesNotExist:
-            return Participant.objects.create(**validated_data)
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Participant.objects.all(),
+                fields=('period', 'member')
+            )
+        ]
 
 
 class DistributionSerializer(serializers.ModelSerializer):
@@ -204,10 +233,11 @@ class InboundSmsSerializer(serializers.ModelSerializer):
         fields = read_only_fields
 
 
-class MemberPhotoSerializer(serializers.ModelSerializer):
+class MemberPhotoSerializer(WriteOnceMixin, CreatePermModelSerializer):
     class Meta:
         model = MemberPhoto
         read_only_fields = ('name', 'extension', 'size', 'content_type')
+        write_once_fields = ('member', 'file')
         fields = ('id', 'url', 'file', 'member', 'position', 'created_at', 'updated_at', 'name', 'extension', 'size', 'content_type', 'original_url', 'medium_url', 'thumbnail_url', 'gallery_thumb_url')
 
     file = serializers.ImageField(write_only=True)
@@ -225,16 +255,6 @@ class MemberPhotoSerializer(serializers.ModelSerializer):
     def get_photo_url(self, obj, format):
         url = reverse('member_photo_download', args=[obj.id, format])
         return self.context['request'].build_absolute_uri(url)
-
-    def validate_member(self, value):
-        if self.instance and self.instance.member != value:
-            raise serializers.ValidationError("May not modify field")
-        return value
-
-    def validate_file(self, value):
-        if self.instance and self.instance.file != value:
-            raise serializers.ValidationError("May not modify field")
-        return value
 
     def create(self, validated_data):
         validated_data['size'] = validated_data['file'].size

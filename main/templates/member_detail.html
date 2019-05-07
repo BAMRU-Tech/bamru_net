@@ -1,10 +1,12 @@
 {% extends 'base_table.html' %}
+{% load rules %}
 
 {% block title %}Member - {{member.username}}{% endblock title %}
 
 {% block subheader %}
 <strong id='subhdr'></strong>
-{% if isEditor or member.id == request.user.id %}
+{% has_perm 'main.change_member' request.user member as can_edit_member %}
+{% if can_edit_member %}
 <ul class="navbar-nav ml-auto">
   {% if member.id == request.user.id %}
   <li class="nav-item dropdown">
@@ -88,7 +90,8 @@
   <p></p>
   <nav class="navbar navbar-expand-sm text-primary subhead">
   <strong>Certifications</strong>
-  {% if isEditor or member.id == request.user.id %}
+  {% has_perm 'main.change_certs_for_member' request.user member as can_edit_member_certs %}
+  {% if can_edit_member_certs %}
   <a class="ml-auto" href="{% url 'member_cert_list' member.id %}">
     <i class="fa fa-certificate"></i>
     Edit Certifications
