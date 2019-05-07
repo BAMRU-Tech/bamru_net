@@ -37,7 +37,7 @@ class MemberUserAdmin(UserAdmin):
 @admin.register(Member)
 class MemberAdmin(MemberUserAdmin):
     list_display = ('last_name', 'first_name', 'status')
-#xxx    list_filter = ('status', )
+    list_filter = ('status', 'is_staff', 'is_superuser', 'is_active', 'groups')
     search_fields = ['last_name', 'first_name', 'username',]
     inlines = [
         AddressInline,
