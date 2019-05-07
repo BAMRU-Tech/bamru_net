@@ -50,7 +50,8 @@ rules.add_perm('main.view_member', rules.is_authenticated)
 rules.add_perm('main.change_member', is_member_self | is_member_editor)
 rules.add_perm('main.change_certs_for_member', is_member_self | is_cert_editor)
 
-# View only models - creation handled in backend
+# Message models - anyone can send, backend does receive
+rules.add_perm('main.add_message', rules.is_authenticated)
 for model in ['message', 'inboundsms',]:
     rules.add_perm('main.view_%s' % model, rules.is_authenticated)
 
