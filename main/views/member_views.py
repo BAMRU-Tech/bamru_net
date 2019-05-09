@@ -56,8 +56,22 @@ class MemberEditView(PermissionRequiredMixin, generic.base.TemplateView):
     template_name = 'member_edit.html'
     permission_required = 'main.change_member'
 
-    MemberForm = modelform_factory(Member,
-            fields=['ham', 'v9', 'dl'])
+    class MemberForm(forms.ModelForm):
+        class Meta:
+            model = Member
+            fields = ('status', 'ham', 'v9', 'dl')
+        def __init__(self, user, *args, **kwargs):
+            self.user = user
+            super().__init__(*args, **kwargs)
+        def clean_status(self):
+            new_status = self.cleaned_data['status']
+            if new_status != self.instance.status:
+                logger.info("{} is changing {} to {}.".format(
+                    str(self.user), str(self.instance), new_status))
+                if not self.user.has_perm('main.change_status_for_member',
+                                          self.instance):
+                    raise forms.ValidationError("Permission Denied")
+            return new_status
     PhonesForm = inlineformset_factory(Member, Phone,
             fields=['type', 'number', 'pagable', 'position'],
             widgets={
@@ -101,7 +115,7 @@ class MemberEditView(PermissionRequiredMixin, generic.base.TemplateView):
             else:
                 args = []
             forms = {}
-            forms['member_form'] = self.MemberForm(*args, prefix='member', instance=member)
+            forms['member_form'] = self.MemberForm(self.request.user, *args, prefix='member', instance=member)
             forms['phones_form'] = self.PhonesForm(*args, prefix='phones', instance=member)
             forms['emails_form'] = self.EmailsForm(*args, prefix='emails', instance=member)
             forms['addresses_form'] = self.AddressesForm(*args, prefix='addresses', instance=member)
