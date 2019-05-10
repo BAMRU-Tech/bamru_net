@@ -48,6 +48,7 @@ rules.add_perm('main', rules.is_authenticated)
 rules.add_perm('main.add_member', can_add_member)
 rules.add_perm('main.view_member', rules.is_authenticated)
 rules.add_perm('main.change_member', is_member_self | is_member_editor)
+rules.add_perm('main.change_status_for_member', is_member_editor)
 rules.add_perm('main.change_certs_for_member', is_member_self | is_cert_editor)
 
 # Message models - anyone can send, backend does receive
