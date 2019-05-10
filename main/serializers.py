@@ -116,7 +116,9 @@ class DoSerializer(WriteOnceMixin, serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # only the DO planner can assign shifts
-        if not self._context.get('request').user.has_perm('main.change_assigned_for_doavailable'):
+        user = getattr(self._context.get('request'), 'user', None)
+        if (user is None or
+            not user.has_perm('main.change_assigned_for_doavailable')):
             self.fields.get('assigned').read_only = True
 
 
