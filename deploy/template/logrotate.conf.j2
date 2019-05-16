@@ -1,6 +1,8 @@
 /home/{{ app_user }}/logs/*.log {
   daily
+  delaycompress
   compress
+  nocreate
   copytruncate
   dateext
   missingok
