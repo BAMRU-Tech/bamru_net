@@ -22,7 +22,7 @@ django-oidc-provider==0.7.0
 django-phonenumber-field==2.0.0
 django-tables2==1.21.2
 django-twilio==0.9.0
-djangorestframework==3.8.2
+djangorestframework==3.9.4
 docutils==0.14
 flake8==3.5.0
 future==0.17.1
