@@ -1,0 +1,91 @@
+{% load filters %}
+{% load humanize %}
+<html>
+<head>
+<style type="text/css">
+
+@page {
+    margin: 1.5cm;
+}
+body { font-family: sans-serif }
+table { page-break-inside:auto }
+tr    { page-break-inside:avoid; page-break-after:auto }
+thead { display:table-header-group }
+tfoot { display:table-footer-group }
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+table, td, th {
+  border: 1px solid black;
+}
+thead tr {
+    background-color: #ccc;
+}
+tr.member:nth-child(even) {
+    background-color: #eee;
+}
+tr.total {
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+<div align="center">
+  <h2>Bay Area Mountain Rescue Unit</h2>
+  <h1>Member Activity - {{ start|date:"N j Y" }} to {{ end|date:"N j Y" }}</h1>
+  <p>CONFIDENTIAL - BAMRU Members Only</p>
+</div>
+<table>
+  <thead><tr><th colspan=4>Unit-wide Summary</th></tr></thead>
+  {% for t in types %}
+  {% with x=unit_type_totals|lookup:t.0 %}
+  <tr>
+    <td><a href="{% url 'report_activity' 'detail' %}?type={{ t.0 }}">{{ t.1 }}</a></td>
+    <td>{{ event_type_count|lookup:t.0 }} events</td>
+    <td>{{ x.0 }} participants</td>
+    <td>{{ x.1|floatformat:0|intcomma }} hours</td>
+  </tr>
+  {% endwith %}
+  {% endfor %}
+  <tr class="total">
+    <td><a href="{% url 'report_activity' 'detail' %}">Total</a></td>
+    <td>{{ event_total_count }} events</td>
+    <td>{{ unit_totals.0 }} participants</td>
+    <td>{{ unit_totals.1|floatformat:0|intcomma }} hours</td>
+  </tr>
+</table>
+
+<p></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Member</th>
+      {% for t in types %}
+      <th>{{ t.1 }}</th>
+      {% endfor %}
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for member in members|dictsortreversed:"total_hours" %}
+    <tr class="member">
+      <td>{{ member.full_name }}</td>
+      {% for t in types %}
+      <td>
+        {% with x=member.type_totals|lookup:t.0 %}
+        {{x.0}} / {{x.1|floatformat:0}} hours
+        {% endwith %}
+      </td>
+      {% endfor %}
+      <td>{{ member.total_events }} / {{member.total_hours|floatformat:0 }} hours</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+      
+</body>
+</html>

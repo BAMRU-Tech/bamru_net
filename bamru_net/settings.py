@@ -39,6 +39,7 @@ ALLOWED_HOSTS = os.environ['DJANGO_ALLOWED_HOST'].split(',') + ['localhost', ]
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django.contrib.humanize',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
