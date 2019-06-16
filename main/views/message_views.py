@@ -93,7 +93,8 @@ class MessageRepageCreateView(MessageCreateBaseView):
         initial = {}
         initial['author'] = self.request.user.pk
         initial['type'] = "repage"
-        initial['period_id'] = message.period.id
+        if message.period is not None:
+            initial['period_id'] = message.period.id
         initial['format'] = message.format
         initial['period_format'] = message.period_format
         initial['rsvp_template'] = message.rsvp_template
