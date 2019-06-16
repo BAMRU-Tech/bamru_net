@@ -3,7 +3,7 @@
 #
 from django.db import models
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from .base import BaseModel, BasePositionModel
 from .member import Member, Role
@@ -90,3 +90,14 @@ class Participant(BaseModel):
     def __str__(self):
         return "{} ({})".format(self.member, self.period)
 
+    @property
+    def timedelta(self):
+        if self.en_route_at is not None and self.return_home_at is not None:
+            return self.return_home_at - self.en_route_at
+        if self.signed_in_at is not None and self.signed_out_at is not None:
+            return self.signed_out_at - self.signed_in_at
+        return timedelta()
+
+    @property
+    def hours(self):
+        return self.timedelta.total_seconds() / 3600

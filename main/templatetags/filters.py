@@ -10,3 +10,7 @@ def define(val=None):
 def rangearray(v):
     """Generate an array, useful in for loops"""
     return range(v)
+
+@register.filter
+def lookup(d, key):
+    return d[key]
