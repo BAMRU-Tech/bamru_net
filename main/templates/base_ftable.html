@@ -59,34 +59,11 @@ $(document).ready(function() {
                     { text: 'Search',
                       action: function () { $("#dTbl_filter").toggle() }
                     },
-                    {
-                        extend: 'copy',
-                        exportOptions: {
-                            columns: ':visible'
-                        }
-                    },
-                    {
-                        extend: 'csv',
-                        exportOptions: {
-                            columns: ':visible'
-                        }
-                    },
-                    {
-                        extend: 'excel',
-                        exportOptions: {
-                            columns: ':visible'
-                        }
-                    },
-                    {
-                        extend: 'print',
-                        exportOptions: {
-                            columns: ':visible'
-                        }
-                    },
-                    {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)'
-                    }
+                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'excel', exportOptions: { columns: ':visible' }},
+                    { extend: 'csv', exportOptions: { columns: ':visible' }},
+                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
                 attr: { id: 'dTbl-more' },
             }
