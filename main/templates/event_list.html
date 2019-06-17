@@ -149,11 +149,11 @@ $(document).ready(function() {
                     { text: 'Search',
                       action: function () { $("#Upcoming_filter").toggle() }
                     },
-                    'copy', 'csv', 'excel', 'print',
-                    {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)'
-                    }
+                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'excel', exportOptions: { columns: ':visible' }},
+                    { extend: 'csv', exportOptions: { columns: ':visible' }},
+                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
                 attr: { id: 'Upcoming-more' },
             },
@@ -209,11 +209,11 @@ $(document).ready(function() {
                     { text: 'Search',
                       action: function () { $("#Recent_filter").toggle() }
                     },
-                    'copy', 'csv', 'excel', 'print',
-                    {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)'
-                    }
+                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'excel', exportOptions: { columns: ':visible' }},
+                    { extend: 'csv', exportOptions: { columns: ':visible' }},
+                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
                 attr: { id: 'Recent-more' },
             }

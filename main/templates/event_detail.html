@@ -146,7 +146,7 @@
   <p></p>
   <div class="row">
     <a href="#" class="btn navbar-btn"
-            onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
+       onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
       <i class="fa fa-plus-square-o"></i> OP Next
     </a>
   </div>
@@ -154,16 +154,16 @@
 </main>
 {% endblock content %}
 
-  
+
 {# --- Table definition --- #}
 
 {% block js %}
 {{ block.super }}
 <script>
-'use strict'
-//FX: Where should this list come from?
-const STATUSES = { TM: 0, FM: 0, T: 0, R: 0, S: 0, A: 0, G: 0, MA: 0 };
-window.summary = [];
+  'use strict'
+  //FX: Where should this list come from?
+  const STATUSES = { TM: 0, FM: 0, T: 0, R: 0, S: 0, A: 0, G: 0, MA: 0 };
+  window.summary = [];
 
 $(document).ready( function() {
     {% for period in event.period_set.all %}
@@ -420,14 +420,32 @@ $(document).ready( function() {
                 ]
             },
             {
-                text: '<i class="fa fa-address-book"></i> Add',
+                text: '<i class="fa fa-address-book"></i> Attend',
                 action: function () {
-                    var href='{% url "period_participant_add" period.id %}?' +
-                        'et={{period.event.title}} OP{{period.position}}&' +
-                        'eid={{event.id}}&pn={{period.position}}&' +
-                        'pid={{period.id}}';
-                    location.href = href;
+                    AddMeToOP({{period.id}});
                 }
+            },
+            { text: '<i class="fa fa-clock-o"></i> Set times',
+              extend: 'collection',
+              autoClose: true,
+              buttons: [
+                  { text: 'Left now',
+                    ref_field: 'en_route',
+                    action: UpdateNow,
+                  },
+                  { text: 'Returned now',
+                    ref_field: 'return_home',
+                    action: UpdateNow,
+                  },
+                  { text: 'Signed-in now',
+                    ref_field: 'signed_in',
+                    action: UpdateNow,
+                  },
+                  { text: 'Signed-out now',
+                    ref_field: 'signed_out',
+                    action: UpdateNow,
+                  },
+              ]
             },
             {
                 extend: 'selected',
@@ -435,6 +453,7 @@ $(document).ready( function() {
                 name: 'edit'        // do not change name
             },
             {
+                extend: 'selected',
                 autoClose: true,
                 text: '<i class="fa fa-user"></i> Delete',
                 action: DeleteParticipants,
@@ -449,38 +468,21 @@ $(document).ready( function() {
                       action: function () {
                           $("#dTbl{{period.position}}_filter").toggle() }
                     },
-                    { text: 'Set times',
-                      extend: 'collection',
-                      autoClose: true,
-                      buttons: [
-                          { text: 'Left now',
-                            extend: 'selected',
-                            ref_field: 'en_route',
-                            action: UpdateNow,
-                          },
-                          { text: 'Returned now',
-                            extend: 'selected',
-                            ref_field: 'return_home',
-                            action: UpdateNow,
-                          },
-                          { text: 'Signed-in now',
-                            extend: 'selected',
-                            ref_field: 'signed_in',
-                            action: UpdateNow,
-                          },
-                          { text: 'Signed-out now',
-                            extend: 'selected',
-                            ref_field: 'signed_out',
-                            action: UpdateNow,
-                          },
-                      ]
-                    },
-
-                    'copy', 'csv', 'excel', 'print',
                     {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)'
-                    }
+                        text: 'Add participants',
+                        action: function () {
+                            var href='{% url "period_participant_add" period.id %}?' +
+                                'et={{period.event.title}} OP{{period.position}}&' +
+                                'eid={{event.id}}&pn={{period.position}}&' +
+                                'pid={{period.id}}';
+                            location.href = href;
+                        }
+                    },
+                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'excel', exportOptions: { columns: ':visible' }},
+                    { extend: 'csv', exportOptions: { columns: ':visible' }},
+                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
             }
         ],
@@ -498,6 +500,7 @@ $(document).ready( function() {
 })
 
 function UpdateNow ( e, dt, node, config ) {
+    var num = 0
     dt.cells('.marked').every(
         function ( idx, tableLoop, rowLoop ) {
             var row = this.row(this.index().row);
@@ -508,9 +511,11 @@ function UpdateNow ( e, dt, node, config ) {
             data[config.ref_field + '_time'] = d.getHours() + ':' +
                 d.getMinutes().toString().padStart(2, 0);
             row.data(data);
-            UpdatePeriodRow(dt, data, function (data) { return data })
+            UpdatePeriodRow(dt, data, function (data) { return data });
+            num++;
         }
     )
+    if (num == 0) alert('Select members before setting time');
 }
 
 function RenderDateTime(data, type, row, meta, time) {
@@ -613,6 +618,26 @@ function UpdatePeriodRow(dt, row, success, error) {
         success: ReturnData,
         error: function (xhr) {
             console.log('member edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
+}
+
+function AddMeToOP (period) {
+    var data = '[ { "period": ' + period + ', "member": {{request.user.id}} } ]';
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/participants/',
+        data: data,
+            success: function (response) {
+                console.log('Period add: signed-in user ');
+                location.reload();
+            },
+        error: function (xhr) {
+            console.log('Period add failed');
             console.log(xhr);
             alert(xhr.responseText);
             return false;
