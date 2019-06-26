@@ -361,7 +361,7 @@ class InboundSms(BaseModel):
             if out2:
                 self.member = out2.distribution.member
 
-        yn = self.body[0].lower()
+        yn = self.body.strip()[0].lower()
         self.yes = (yn == 'y')
         self.no = (yn == 'n')
 
