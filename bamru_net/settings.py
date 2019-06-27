@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'anymail',
     'bootstrap4',
+    'celerybeat_status',
+    'django_celery_beat',
     'django_filters',
     'django_twilio',
     'imagekit',

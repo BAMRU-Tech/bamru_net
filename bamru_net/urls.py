@@ -114,6 +114,8 @@ urlpatterns = [
     url(r'^api-docs/', include_docs_urls(title='BAMRU API')),
 
     path('admin/', admin.site.urls),
+    url(r'^admin/statuscheck/', include('celerybeat_status.urls')),
+
     url(r'^openid/', include('oidc_provider.urls', namespace='oidc_provider')),
 
     url(r'^accounts/login/$', auth_views.login, name='login'),
