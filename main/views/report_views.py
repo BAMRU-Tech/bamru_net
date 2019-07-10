@@ -8,6 +8,7 @@ from main.models import Member, Event, Period
 
 import collections
 import csv
+import dateutil.parser
 import io
 import os
 import tempfile
@@ -42,13 +43,20 @@ class BaseReportView(View):
         else:
             raise Http404
 
+def get_datetime_from_text(text, default):
+    try:
+        return timezone.make_aware(dateutil.parser.parse(text))
+    except (TypeError, ValueError):
+        return default
 
 class ReportEventView(LoginRequiredMixin, BaseReportView):
     def get(self, request, **kwargs):
         type = request.GET.get('type', None)
 
-        start = timezone.now() - timedelta(days=365)
-        end = timezone.now()
+        end = get_datetime_from_text(request.GET.get('end', None),
+                                     timezone.now())
+        start = get_datetime_from_text(request.GET.get('start', None),
+                                       end - timedelta(days=365))
 
         members = Member.members.all()
         events = (Event.objects
