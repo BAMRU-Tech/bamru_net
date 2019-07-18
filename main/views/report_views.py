@@ -4,10 +4,11 @@ from django.template import loader
 from django.utils import timezone
 from django.views import generic, View
 
-from main.models import Member, Event, Period
+from main.models import Member, Event, Participant, Period
 
 import collections
 import csv
+import dateutil.parser
 import io
 import os
 import tempfile
@@ -42,13 +43,20 @@ class BaseReportView(View):
         else:
             raise Http404
 
+def get_datetime_from_text(text, default):
+    try:
+        return timezone.make_aware(dateutil.parser.parse(text))
+    except (TypeError, ValueError):
+        return default
 
 class ReportEventView(LoginRequiredMixin, BaseReportView):
     def get(self, request, **kwargs):
         type = request.GET.get('type', None)
 
-        start = timezone.now() - timedelta(days=365)
-        end = timezone.now()
+        end = get_datetime_from_text(request.GET.get('end', None),
+                                     timezone.now())
+        start = get_datetime_from_text(request.GET.get('start', None),
+                                       end - timedelta(days=365))
 
         members = Member.members.all()
         events = (Event.objects
@@ -127,6 +135,21 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
 
         report_filename = 'activity-{}.html'.format(kwargs['activity_type'])
         return self.render(report_filename, context)
+
+
+class ReportEventMemberView(LoginRequiredMixin, generic.DetailView):
+    model = Member
+    template_name = 'reports/activity-member.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        events = {}
+        for t in Event.TYPES:
+            events[t] = (Participant.objects
+                         .filter(member__id=self.kwargs['pk'], period__event__type=t[0])
+                         .order_by('period__event__start_at', 'period__position'))
+        context['events'] = events
+        return context
 
 
 class ReportRosterView(LoginRequiredMixin, BaseReportView):

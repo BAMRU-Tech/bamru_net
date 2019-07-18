@@ -63,7 +63,8 @@ table, td, th {
     <tbody>
       {% for member in members|dictsortreversed:"total_hours" %}
       <tr>
-        <td>{{member.full_name}}</td>
+        <td><a href="{% url 'report_activity_member' member.id %}">
+            {{member.full_name}}</a></td>
         {% for x in member_table|lookup:member.id %}
         <td>{% if x %}{{x|floatformat:1}}{% endif %}</td>
         {% endfor %}
