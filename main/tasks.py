@@ -1,9 +1,10 @@
+from django.conf import settings
 from django.utils import timezone
 
 import logging
 from datetime import timedelta
 
-from .models import Cert, Distribution, Message, OutboundEmail, OutboundSms, Role
+from .models import Cert, Configuration, Distribution, Message, OutboundEmail, OutboundSms, Role
 
 from celery import shared_task
 
@@ -39,6 +40,10 @@ def send_cert_notice(cert, text, author, cc=[]):
 
 @shared_task
 def cert_notice_check():
+    key = 'cert_notice_{}'.format(settings.HOSTNAME)
+    if not Configuration.objects.filter(key=key).first():
+        logger.info('Skiping cert notice check ({})'.format(key))
+        return
     now = timezone.now()
     date30 = now + timedelta(days=30)
     date90 = now + timedelta(days=90)
