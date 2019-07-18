@@ -5,9 +5,13 @@
 
 {% block subheader %}
 <strong id='subhdr'></strong>
-{% has_perm 'main.change_member' request.user member as can_edit_member %}
-{% if can_edit_member %}
 <ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'report_activity_member' member.id %}>
+      <i class="fa fa-file"></i>
+      Activity report
+    </a>
+  </li>
   {% if member.id == request.user.id %}
   <li class="nav-item dropdown">
     <a class="nav-link" href={% url 'password_change' %}>
@@ -16,6 +20,8 @@
     </a>
   </li>
   {% endif %}
+  {% has_perm 'main.change_member' request.user member as can_edit_member %}
+  {% if can_edit_member %}
   <li class="nav-item dropdown">
     <a class="nav-link" href={% url 'member_photos' member.id %}>
       <i class="fa fa-camera-retro"></i>
@@ -28,8 +34,8 @@
       Edit
     </a>
   </li>
+  {% endif %}
 </ul>
-{% endif %}
 {% endblock subheader %}
 
 {% block content %}
