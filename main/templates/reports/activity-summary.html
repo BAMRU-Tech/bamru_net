@@ -63,6 +63,7 @@ tr.total {
   <thead>
     <tr>
       <th>Member</th>
+      <th>Status</th>
       {% for t in types %}
       <th>{{ t.1 }}</th>
       {% endfor %}
@@ -72,7 +73,9 @@ tr.total {
   <tbody>
     {% for member in members|dictsortreversed:"total_hours" %}
     <tr class="member">
-      <td>{{ member.full_name }}</td>
+      <td><a href="{% url 'report_activity_member' member.id %}">
+          {{ member.full_name }}</a></td>
+      <td>{{ member.status }}</td>
       {% for t in types %}
       <td>
         {% with x=member.type_totals|lookup:t.0 %}
@@ -86,6 +89,6 @@ tr.total {
   </tbody>
 </table>
 
-      
+
 </body>
 </html>
