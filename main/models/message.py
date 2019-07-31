@@ -120,6 +120,12 @@ class Message(BaseModel):
             '<a href="{}">{}</a>'.format(m.get_absolute_url(), m.id)
             for m in self.ancestry_messages()])
 
+    def descendant_messages(self):
+        return Message.objects.filter(ancestry__contains=self.id)
+
+    def associated_messages(self):
+        return list(self.descendant_messages()) + self.ancestry_messages()
+
     @property
     def expanded_text(self):
         if APPEND_RSVP_TEMPLATE and self.rsvp_template:

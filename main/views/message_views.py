@@ -256,7 +256,7 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
     distribution.handle_rsvp(rsvp)
 
     # Mark the RSVP in ancestors too
-    for a in distribution.message.ancestry_messages():
+    for a in distribution.message.associated_messages():
         try:
             d = a.distribution_set.get(member=distribution.member)
         except Distribution.DoesNotExist:
