@@ -139,6 +139,7 @@ urlpatterns = [
     path('reports/roster/BAMRU-roster.csv', views.ReportRosterCsvView.as_view()),
     path('reports/roster/BAMRU-roster.vcf', views.ReportRosterVcfView.as_view()),
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
+    path('reports/activity-member/<int:pk>/', views.ReportEventMemberView.as_view(), name='report_activity_member'),
     path('reports/activity-<str:activity_type>/', views.ReportEventView.as_view(), name='report_activity'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
