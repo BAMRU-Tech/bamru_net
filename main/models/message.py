@@ -208,6 +208,14 @@ class Distribution(BaseModel):
                 email, created = OutboundEmail.objects.get_or_create(
                     distribution=self, email=e)
 
+    def handle_rsvp(self, rsvp):
+        self.rsvp = True
+        self.rsvp_answer = rsvp
+        if not self.response_seconds:
+            delta = timezone.now() - self.created_at
+            self.response_seconds = delta.total_seconds()
+        self.save()
+
     def rsvp_display(self):
         if self.rsvp:
             if self.rsvp_answer:
