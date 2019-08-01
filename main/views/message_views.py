@@ -161,6 +161,8 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         message = self.object
+        duration_minutes = [15, 30, 60]
+        rsvp_durations = [0 for d in duration_minutes]
         sent = 0
         delivered = 0
         rsvp = 0
@@ -181,10 +183,16 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
                 this_delivered |= m.delivered
             if this_delivered:
                 delivered += 1
+            for i, minutes in enumerate(duration_minutes):
+                if d.response_seconds and d.response_seconds < minutes * 60:
+                    rsvp_durations[i] += 1
         context['stats'] = "{} sent, {} delivered, {} RSVPed".format(
             sent, delivered, rsvp)
         context['rsvp'] = "{} yes, {} no, {} unresponded".format(
             rsvp_yes, rsvp_no, sent - rsvp_yes - rsvp_no)
+        context['response_times'] = ", ".join(
+            ["{:0.0%} in {} min".format(rsvp_durations[i] / sent, m)
+             for i, m in enumerate(duration_minutes)])
         return context
 
 
@@ -245,20 +253,16 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
     distribution -- A Distribution object
     rsvp -- boolean RSVP response
     """
-    distribution.rsvp = True
-    distribution.rsvp_answer = rsvp
-    distribution.save()
+    distribution.handle_rsvp(rsvp)
 
     # Mark the RSVP in ancestors too
-    for a in distribution.message.ancestry_messages():
+    for a in distribution.message.associated_messages():
         try:
             d = a.distribution_set.get(member=distribution.member)
         except Distribution.DoesNotExist:
             logger.error()
         else:
-            d.rsvp = True
-            d.rsvp_answer = rsvp
-            d.save()
+            d.handle_rsvp(rsvp)
 
     if distribution.message.period_format == 'test':
         return 'Test message response received.'

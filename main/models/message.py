@@ -120,6 +120,12 @@ class Message(BaseModel):
             '<a href="{}">{}</a>'.format(m.get_absolute_url(), m.id)
             for m in self.ancestry_messages()])
 
+    def descendant_messages(self):
+        return Message.objects.filter(ancestry__contains=self.id)
+
+    def associated_messages(self):
+        return list(self.descendant_messages()) + self.ancestry_messages()
+
     @property
     def expanded_text(self):
         if APPEND_RSVP_TEMPLATE and self.rsvp_template:
@@ -207,6 +213,14 @@ class Distribution(BaseModel):
             for e in self.member.email_set.filter(pagable=True):
                 email, created = OutboundEmail.objects.get_or_create(
                     distribution=self, email=e)
+
+    def handle_rsvp(self, rsvp):
+        self.rsvp = True
+        self.rsvp_answer = rsvp
+        if not self.response_seconds:
+            delta = timezone.now() - self.created_at
+            self.response_seconds = delta.total_seconds()
+        self.save()
 
     def rsvp_display(self):
         if self.rsvp:
