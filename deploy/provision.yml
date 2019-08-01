@@ -236,6 +236,9 @@
             src: template/supervisor_celery.conf.j2
             dest: /etc/supervisor/conf.d/celery.conf
         - template:
+            src: template/supervisor_celery_beat.conf.j2
+            dest: /etc/supervisor/conf.d/celery_beat.conf
+        - template:
             src: template/nginx.j2
             dest: /etc/nginx/sites-available/bamru_net
         - file:

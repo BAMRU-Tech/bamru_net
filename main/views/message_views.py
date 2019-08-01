@@ -21,7 +21,6 @@ from main.models import Member, Participant, Period
 
 from main.models import (Distribution, InboundSms, Message, OutboundEmail,
                          OutboundSms, RsvpTemplate)
-from main.tasks import message_send
 
 logger = logging.getLogger(__name__)
 

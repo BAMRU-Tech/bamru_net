@@ -86,3 +86,8 @@ class MessageAdmin(admin.ModelAdmin):
     inlines = [
         DistributionInline,
     ]
+
+
+@admin.register(Configuration)
+class ConfigurationAdmin(admin.ModelAdmin):
+    list_display = ('key', 'value')
