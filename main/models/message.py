@@ -187,6 +187,10 @@ class Distribution(BaseModel):
         max_length=255, unique=True, null=True, default=uuid.uuid4, editable=False)
     unauth_rsvp_expires_at = models.DateTimeField(blank=True, null=True)
 
+    def __str__(self):
+        return 'Message {} to {}'.format(
+            self.message.id, self.member)
+
     @property
     def text(self):
         return self.message.expanded_text

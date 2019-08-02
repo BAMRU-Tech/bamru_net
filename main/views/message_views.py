@@ -259,7 +259,8 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
         try:
             d = a.distribution_set.get(member=distribution.member)
         except Distribution.DoesNotExist:
-            logger.error()
+            logger.info('{} not in distribution {} (related to {})'.format(
+                distribution.member, a, distribution))
         else:
             d.handle_rsvp(rsvp)
 
