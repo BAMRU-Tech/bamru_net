@@ -73,25 +73,28 @@
       // Needed for IOS
       $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
 
-      Sentry.init({
-          dsn: '{{JAVASCRIPT_DSN}}',
-          release: '{{RELEASE}}',
-      });
-      Sentry.configureScope((scope) => {
-          scope.setUser({"username": "{{ request.user }}"});
-      });
-      $(document).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
-          Sentry.captureMessage(thrownError || jqXHR.statusText, {
-              extra: {
-                  type: ajaxSettings.type,
-                  url: ajaxSettings.url,
-                  data: ajaxSettings.data,
-                  status: jqXHR.status,
-                  error: thrownError || jqXHR.statusText,
-                  response: jqXHR.responseText.substring(0, 100)
-              }
+      var SentryLoaded = typeof Sentry !== 'undefined';
+      if (SentryLoaded) {
+          Sentry.init({
+              dsn: '{{JAVASCRIPT_DSN}}',
+              release: '{{RELEASE}}',
           });
-      });
+          Sentry.configureScope((scope) => {
+              scope.setUser({"username": "{{ request.user }}"});
+          });
+          $(document).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
+              Sentry.captureMessage(thrownError || jqXHR.statusText, {
+                  extra: {
+                      type: ajaxSettings.type,
+                      url: ajaxSettings.url,
+                      data: ajaxSettings.data,
+                      status: jqXHR.status,
+                      error: thrownError || jqXHR.statusText,
+                      response: jqXHR.responseText.substring(0, 100)
+                  }
+              });
+          });
+      }
     </script>
 
     <script>
