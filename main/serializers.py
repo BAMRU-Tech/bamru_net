@@ -219,7 +219,6 @@ class MessageDetailSerializer(MessageListSerializer):
             **validated_data)
         for distribution_data in ds_data:
             d = message.distribution_set.create(**distribution_data)
-            logger.info(d)
         logger.info('Calling message.queue {}'.format(message.pk))
         message.queue()
         logger.info('Calling message_send {}'.format(message.pk))
