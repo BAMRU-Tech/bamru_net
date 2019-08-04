@@ -500,7 +500,8 @@ $(document).ready( function() {
     });
     
     table{{period.position}}.on( 'select', MarkRow);
-    $("#dTbl{{period.position}}_filter").hide();
+    if (window.screen.width < 900)
+        $("#dTbl{{period.position}}_filter").hide();
 
     {% endfor %}
 
