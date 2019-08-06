@@ -70,7 +70,7 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Member
-        read_only_fields = ('full_name', 'status', 'status_order')
+        read_only_fields = ('full_name', 'status', 'status_order', 'roles', 'role_order')
         fields = ('id', 'busy') + read_only_fields
 
 
