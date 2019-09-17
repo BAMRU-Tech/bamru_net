@@ -21,6 +21,7 @@ from main.models import Member, Participant, Period
 
 from main.models import (Distribution, InboundSms, Message, OutboundEmail,
                          OutboundSms, RsvpTemplate)
+from main.tasks import message_send
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         '''Add additional useful information.'''
         context = super().get_context_data(**kwargs)
-        if self.rsvp_template:
+        if self.rsvp_template and (self.initial['type'] != "repage"):
             self.initial['input'] = '{} {}'.format(self.initial['input'],
                                                    self.rsvp_template.text)
         return {**context, **self.initial}
@@ -189,9 +190,10 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
             sent, delivered, rsvp)
         context['rsvp'] = "{} yes, {} no, {} unresponded".format(
             rsvp_yes, rsvp_no, sent - rsvp_yes - rsvp_no)
-        context['response_times'] = ", ".join(
-            ["{:0.0%} in {} min".format(rsvp_durations[i] / sent, m)
-             for i, m in enumerate(duration_minutes)])
+        if sent > 0:
+            context['response_times'] = ", ".join(
+                ["{:0.0%} in {} min".format(rsvp_durations[i] / sent, m)
+                 for i, m in enumerate(duration_minutes)])
         return context
 
 
