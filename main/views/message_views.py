@@ -143,8 +143,9 @@ class MessageCreateView(MessageCreateBaseView):
             self.initial['period'] = str(period)
 
             if period_format == 'invite':
-                members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
-                .exclude(participant__period=period_id))
+                # Invite all, even those who are already in the event (#443).
+                # To exclude them add .exclude(participant__period=period_id)
+                members = Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
             elif period_format == 'leave':
                 members = period.members_for_left_page()
             elif period_format == 'return':
