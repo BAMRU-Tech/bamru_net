@@ -71,8 +71,8 @@ class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
             'invite': 'Page the team to invite them to the OP. Members already signed up will not get a page.',
             'info': 'Send an informational page to people signed up for the OP. No response expected.',
             'broadcast': 'Send an informational page to the whole team. No response expected.',
-            'leave': 'Transit page to people signed up for the event.',
-            'return': 'Transit page to people signed up for the event.',
+            'leave': 'Transit page to people signed up for the event. Responses will mark the participant as departed.',
+            'return': 'Transit page to people signed up for the event. Responses will mark the participant as returned home.',
             'test': 'Test page. DO NOT USE IN A REAL CALLOUT.',
         }
         self.initial['instructions'] = instructions.get(
