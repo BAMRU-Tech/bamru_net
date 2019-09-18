@@ -67,6 +67,16 @@ class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
         if self.rsvp_template and (self.initial['type'] != "repage"):
             self.initial['input'] = '{} {}'.format(self.initial['input'],
                                                    self.rsvp_template.text)
+        instructions = {
+            'invite': 'Page the team to invite them to the OP. Members already signed up will not get a page.',
+            'info': 'Send an informational page to people signed up for the OP. No response expected.',
+            'broadcast': 'Send an informational page to the whole team. No response expected.',
+            'leave': 'Transit page to people signed up for the event. Responses will mark the participant as departed.',
+            'return': 'Transit page to people signed up for the event. Responses will mark the participant as returned home.',
+            'test': 'Test page. DO NOT USE IN A REAL CALLOUT.',
+        }
+        self.initial['instructions'] = instructions.get(
+            self.initial['period_format'], 'WARNING: Unknown period_format')
         return {**context, **self.initial}
 
 
