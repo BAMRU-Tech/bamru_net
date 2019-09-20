@@ -68,7 +68,7 @@ class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
             self.initial['input'] = '{} {}'.format(self.initial['input'],
                                                    self.rsvp_template.text)
         instructions = {
-            'invite': 'Page the team to invite them to the OP. Members already signed up will not get a page.',
+            'invite': 'Page the team to invite them to the OP. Members already signed up still get a page.',
             'info': 'Send an informational page to people signed up for the OP. No response expected.',
             'broadcast': 'Send an informational page to the whole team. No response expected.',
             'leave': 'Transit page to people signed up for the event. Responses will mark the participant as departed.',
