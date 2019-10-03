@@ -4,7 +4,7 @@ from django.utils import timezone
 import logging
 from datetime import timedelta
 
-from .models import Cert, Configuration, Distribution, Message, OutboundEmail, OutboundSms, Role
+from .models import Cert, Configuration, Distribution, Member, Message, OutboundEmail, OutboundSms, Role
 
 from celery import shared_task
 
@@ -30,6 +30,10 @@ def message_send(message_id):
         email.send()
 
 def send_cert_notice(cert, text, author, cc=[]):
+    if cert.member.status not in Member.CURRENT_MEMBERS:
+        logger.info('Skipping sending cert expiration notice to {}: {}'
+                    .format(cert.member, text))
+        return
     logger.info('Sending cert expiration notice: {}'.format(text))
     message = Message.objects.create(
         author=author, text=text, format='cert_notice')
