@@ -331,6 +331,7 @@ def unauth_rsvp(request, token):
     else:
         rsvp = request.GET.get('rsvp')[0].lower() == 'y'
         response_text = handle_distribution_rsvp(request, d, rsvp)
+    logger.info('Sending HTTP response to {}: {}'.format(d.member, response_text))
     return HttpResponse(response_text)  # TODO template
 
 
@@ -379,8 +380,9 @@ def sms(request):
         response.message('Could not parse yes/no in your message. Start your message with y or n.')
         return response
 
-    response.message(handle_distribution_rsvp(
-        request, sms.outbound.distribution, sms.yes))
+    text = handle_distribution_rsvp(request, sms.outbound.distribution, sms.yes)
+    logger.info('Sending SMS response to {}: {}'.format(sms.member, text))
+    response.message(text)
     return response
 
 
