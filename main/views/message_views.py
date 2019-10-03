@@ -68,7 +68,7 @@ class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
             self.initial['input'] = '{} {}'.format(self.initial['input'],
                                                    self.rsvp_template.text)
         instructions = {
-            'invite': 'Page the team to invite them to the OP. Members already signed up will not get a page.',
+            'invite': 'Page the team to invite them to the OP. Members already signed up still get a page.',
             'info': 'Send an informational page to people signed up for the OP. No response expected.',
             'broadcast': 'Send an informational page to the whole team. No response expected.',
             'leave': 'Transit page to people signed up for the event. Responses will mark the participant as departed.',
@@ -143,8 +143,9 @@ class MessageCreateView(MessageCreateBaseView):
             self.initial['period'] = str(period)
 
             if period_format == 'invite':
-                members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
-                .exclude(participant__period=period_id))
+                # Invite all, even those who are already in the event (#443).
+                # To exclude them add .exclude(participant__period=period_id)
+                members = Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
             elif period_format == 'leave':
                 members = period.members_for_left_page()
             elif period_format == 'return':
