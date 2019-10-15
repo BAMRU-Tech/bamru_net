@@ -143,5 +143,6 @@ urlpatterns = [
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
     path('reports/activity-member/<int:pk>/', views.ReportEventMemberView.as_view(), name='report_activity_member'),
     path('reports/activity-<str:activity_type>/', views.ReportEventView.as_view(), name='report_activity'),
+    path('reports/event/errors/', views.ReportEventErrorsView.as_view(), name='report_event_errors'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
