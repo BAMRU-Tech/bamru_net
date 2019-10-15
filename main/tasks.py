@@ -4,7 +4,7 @@ from django.utils import timezone
 import logging
 from datetime import timedelta
 
-from .models import Cert, Configuration, Distribution, Member, Message, OutboundEmail, OutboundSms, Role
+from .models import Cert, Configuration, Distribution, Member, Message, OutboundEmail, OutboundSms, Participant, Role
 
 from celery import shared_task
 
@@ -83,3 +83,21 @@ def cert_notice_check():
 
     if cert90.count() + cert30.count() + cert0.count() > 0:
         message_send.delay('certs')
+
+
+@shared_task
+def meeting_sign_in_update():
+    participants = Participant.objects.filter(
+        en_route_at__isnull=True,
+        return_home_at__isnull=True,
+        signed_in_at__isnull=True,
+        signed_out_at__isnull=True,
+        period__event__type='meeting',
+        period__event__all_day=False,
+        period__event__finish_at__lt=timezone.now()
+    )
+    for p in participants:
+        logger.info('Auto sign in {} for {}'.format(p.member, p.period.event))
+        p.signed_in_at = p.period.event.start_at
+        p.signed_out_at = p.period.event.finish_at
+        p.save()
