@@ -40,5 +40,11 @@ End: <input type="date" id="end" value="{{ end|date:"Y-m-d" }}">
          onclick="javascript:return goDate('{% url 'report_activity' 'detail' %}');">
       Activity Detail - All Events</a></li>
 </ul>
+
+<h4>Diagnostic Reports</h4>
+<ul>
+  <li><a href="{% url 'report_event_errors' %}">Event errors and warnings</li>
+</ul>
+
 </main>
 {% endblock %}
