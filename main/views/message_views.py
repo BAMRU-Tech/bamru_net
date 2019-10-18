@@ -64,9 +64,19 @@ class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         '''Add additional useful information.'''
         context = super().get_context_data(**kwargs)
-        if self.rsvp_template:
+        if self.rsvp_template and (self.initial['type'] != "repage"):
             self.initial['input'] = '{} {}'.format(self.initial['input'],
                                                    self.rsvp_template.text)
+        instructions = {
+            'invite': 'Page the team to invite them to the OP. Members already signed up still get a page.',
+            'info': 'Send an informational page to people signed up for the OP. No response expected.',
+            'broadcast': 'Send an informational page to the whole team. No response expected.',
+            'leave': 'Transit page to people signed up for the event. Responses will mark the participant as departed.',
+            'return': 'Transit page to people signed up for the event. Responses will mark the participant as returned home.',
+            'test': 'Test page. DO NOT USE IN A REAL CALLOUT.',
+        }
+        self.initial['instructions'] = instructions.get(
+            self.initial['period_format'], 'WARNING: Unknown period_format')
         return {**context, **self.initial}
 
 
@@ -133,8 +143,9 @@ class MessageCreateView(MessageCreateBaseView):
             self.initial['period'] = str(period)
 
             if period_format == 'invite':
-                members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
-                .exclude(participant__period=period_id))
+                # Invite all, even those who are already in the event (#443).
+                # To exclude them add .exclude(participant__period=period_id)
+                members = Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
             elif period_format == 'leave':
                 members = period.members_for_left_page()
             elif period_format == 'return':
@@ -189,9 +200,10 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
             sent, delivered, rsvp)
         context['rsvp'] = "{} yes, {} no, {} unresponded".format(
             rsvp_yes, rsvp_no, sent - rsvp_yes - rsvp_no)
-        context['response_times'] = ", ".join(
-            ["{:0.0%} in {} min".format(rsvp_durations[i] / sent, m)
-             for i, m in enumerate(duration_minutes)])
+        if sent > 0:
+            context['response_times'] = ", ".join(
+                ["{:0.0%} in {} min".format(rsvp_durations[i] / sent, m)
+                 for i, m in enumerate(duration_minutes)])
         return context
 
 
@@ -319,6 +331,7 @@ def unauth_rsvp(request, token):
     else:
         rsvp = request.GET.get('rsvp')[0].lower() == 'y'
         response_text = handle_distribution_rsvp(request, d, rsvp)
+    logger.info('Sending HTTP response to {}: {}'.format(d.member, response_text))
     return HttpResponse(response_text)  # TODO template
 
 
@@ -367,8 +380,9 @@ def sms(request):
         response.message('Could not parse yes/no in your message. Start your message with y or n.')
         return response
 
-    response.message(handle_distribution_rsvp(
-        request, sms.outbound.distribution, sms.yes))
+    text = handle_distribution_rsvp(request, sms.outbound.distribution, sms.yes)
+    logger.info('Sending SMS response to {}: {}'.format(sms.member, text))
+    response.message(text)
     return response
 
 

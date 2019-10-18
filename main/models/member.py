@@ -9,6 +9,7 @@ from django.utils import timezone
 from .base import BaseModel, BasePositionModel
 
 from datetime import date, datetime, timedelta
+import math
 
 class CustomUserManager(BaseUserManager):
     """Allows username to be case insensitive."""
@@ -318,7 +319,7 @@ class DoAvailable(BaseModel):  # was AvailDos
 
     @staticmethod
     def current_quarter():
-        return int(timezone.now().month/4)+1
+        return int(math.ceil(timezone.now().month / 3.))
 
     @classmethod
     def num_weeks_in_quarter(cls, year, quarter):

@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import F
 from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
@@ -23,6 +24,12 @@ logger = logging.getLogger(__name__)
 
 class ReportListView(generic.base.TemplateView):
     template_name = 'reports/index.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['start'] = timezone.now() - timedelta(days=365)
+        context['end'] = timezone.now()
+        return context
 
 
 class BaseReportView(View):
@@ -288,3 +295,59 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
         if member.v9:
             card.add('note').value = "V9 - {}".format(member.v9)
         return card
+
+
+class ReportEventErrorsView(LoginRequiredMixin, View):
+    def errors(self, participants, message):
+        return self.messages('Error', participants, message)
+
+    def warnings(self, participants, message):
+        return self.messages('Warning', participants, message)
+
+    def messages(self, severity, participants, message):
+        return ['{} - {} in {} {} for {}: {}'.format(
+            p.period.event.start_at, severity, p.period.event.type,
+            p.period, p.member, message)
+                for p in participants]
+
+    def get(self, request, *args, **kwargs):
+        max_hours = 48
+        errors = []
+        participants = Participant.objects.filter(
+            period__event__finish_at__lt=timezone.now(),
+            period__event__start_at__gt=timezone.now() - timedelta(days=400),
+        )
+        errors += self.errors(participants.filter(
+            en_route_at__isnull=True,
+            return_home_at__isnull=False,
+            ), 'No departure time')
+        errors += self.errors(participants.filter(
+            en_route_at__isnull=False,
+            return_home_at__isnull=True,
+            ), 'No return time')
+        errors += self.errors(participants.filter(
+            signed_in_at__isnull=True,
+            signed_out_at__isnull=False,
+            ), 'No sign in time')
+        errors += self.errors(participants.filter(
+            signed_in_at__isnull=False,
+            signed_out_at__isnull=True,
+            ), 'No sign out time')
+        errors += self.errors(participants.filter(
+            en_route_at__gt=F('return_home_at'),
+            ), 'Departed home after returned home')
+        errors += self.errors(participants.filter(
+            signed_in_at__gt=F('signed_out_at'),
+            ), 'Sign in after sign out')
+        errors += self.warnings(participants.filter(
+            en_route_at__isnull=True,
+            return_home_at__isnull=True,
+            signed_in_at__isnull=True,
+            signed_out_at__isnull=True,
+            ), 'No times recorded')
+        errors += self.warnings(participants.filter(
+            return_home_at__gt=F('en_route_at') + timedelta(hours=max_hours),
+            ), 'Departure-to-return duration > {} hours'.format(max_hours))
+        response = '<h1>Event errors:</h1>'
+        response += '<br>\n'.join(sorted(errors, reverse=True))
+        return HttpResponse(response)
