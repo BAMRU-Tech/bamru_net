@@ -50,7 +50,7 @@ parso==0.2.1
 pbr==4.2.0
 phonenumberslite==8.9.7
 pilkit==2.0
-Pillow==6.0.0
+Pillow==6.2.0
 Plim==0.9.12
 psycopg2-binary==2.7.4
 pyasn1==0.4.4
