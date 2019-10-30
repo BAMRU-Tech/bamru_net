@@ -235,6 +235,20 @@ class Distribution(BaseModel):
         else:
             return 'PENDING'
 
+    def response_time_display(self):
+        day = self.created_at.date()
+        if self.member.unavailable_set.filter(
+            start_on__lte=day, end_on__gte=day).count() > 0:
+            return 'unavail'
+        s = self.response_seconds
+        if s is None:
+            return '-'
+        if s < 60:
+            return '{} s'.format(s)
+        if s < 3600:
+            return '{} m'.format(s / 60)
+        return '{} hr'.format(s / 3600)
+
 
 class OutboundMessageManager(models.Manager):
     def get_queryset(self):
