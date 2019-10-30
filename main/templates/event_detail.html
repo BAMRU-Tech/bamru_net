@@ -478,10 +478,7 @@ $(document).ready( function() {
                     {
                         text: 'Add participants',
                         action: function () {
-                            var href='{% url "period_participant_add" period.id %}?' +
-                                'et={{period.event.title}} OP{{period.position}}&' +
-                                'eid={{event.id}}&pn={{period.position}}&' +
-                                'pid={{period.id}}';
+                            var href='{% url "period_participant_add" period.id %}';
                             location.href = href;
                         }
                     },

@@ -211,3 +211,13 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
         return {
             'period':period,
         }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        pid = self.kwargs.get('period')
+        period = Period.objects.filter(id=pid)[0]
+        context['title'] = str(period)
+        context['period_id'] = pid
+        context['period_position'] = period.position
+        context['event_id'] = period.event.id
+        return context
