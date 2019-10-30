@@ -57,6 +57,7 @@
         {{ m.display|linebreaks }}
         {% endfor %}
       </td>
+      <td>{{ d.response_time_display }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -82,6 +83,7 @@ columns: [
     { data: 'RSVP', title: 'RSVP', responsivePriority: 2, },
     { data: 'sms_status', title: 'Sms status', responsivePriority: 3, },
     { data: 'email_status', title: 'Email status', responsivePriority: 4, },
+    { data: 'response_time', title: 'Response Time', responsivePriority: 5, },
 ],
 
 language: { emptyTable: 'No messages' },
