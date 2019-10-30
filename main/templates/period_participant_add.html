@@ -124,10 +124,6 @@ EnableMarkSelection(table);
 {% block functions %}
 
 const url = new URL(window.location.href);
-const event_name = url.searchParams.get('et');
-const event_id = url.searchParams.get('eid');
-const period_num = url.searchParams.get('pn');
-const period_id = url.searchParams.get('pid');
 
 function AddParticipant ( e, dt, node, config ) {
         var members = [];
@@ -144,7 +140,7 @@ function AddParticipant ( e, dt, node, config ) {
 
         var data = [];
         for (var i = 0; i < members.length; i++) {
-            data.push({ 'period': period_id, 'member': members[i] });
+            data.push({ 'period': {{ period_id }}, 'member': members[i] });
         }
         data = JSON.stringify(data);
         $.ajax({
@@ -154,7 +150,7 @@ function AddParticipant ( e, dt, node, config ) {
             data: data,
             success: function (response) {
                 console.log('Period add ' + response.length + ' members');
-                location.href='/event/' + event_id + '#OP' + period_num;
+                location.href='/event/{{ event_id }}/#OP{{ period_position }}';
             },
             error: function (xhr) {
                 console.log('Period add failed');
@@ -174,10 +170,6 @@ function ClearAll ( e, dt, node, config ) {
     table.rows().deselect();
 }
 
-const eventId = url.searchParams.get('eid');
-const eventTitle = url.searchParams.get('et');
-const periodPosition = url.searchParams.get('pn');
-
 function UpdateSubheaderBasedOnSettings(table) {
     // Extract currently selected status based on filter
     var showStatus = [];
@@ -187,12 +179,12 @@ function UpdateSubheaderBasedOnSettings(table) {
         }
     });
 
-    var sh = '<a href="/event/' + eventId + '/#OP' + periodPosition + '">' +
-            eventTitle + '</a>';
-    $('#subhdr')[0].innerHTML = sh + ' > Add Participants (' +
+    var shdr = '<a href="/event/{{ event_id }}/#OP{{ period_position }}">' +
+            '{{ title|escapejs }}' + '</a>';
+    $('#subhdr')[0].innerHTML = shdr + ' > Add Participants (' +
         showStatus.join(', ') + ')';
-    $('#subhdr-sm')[0].innerHTML = sh + ' > Add Participants';
-    document.title = 'Participant Add - ' + event_name;
+    $('#subhdr-sm')[0].innerHTML = shdr + ' > Add Participants';
+    document.title = 'Participant Add - {{ title|escapejs }}';
 
 }
 
