@@ -283,7 +283,7 @@ $(document).ready( function() {
             { data: 'member', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis'
             },
-            { data: 'email', title: 'EMail', type: ['readonly', 'hidden'],
+            { data: 'email', type: ['readonly', 'hidden'],
               visible: false, className: ['noVis', 'copyEmail']
             },
             { data: 'period', type: ['readonly', 'hidden'],
@@ -487,7 +487,7 @@ $(document).ready( function() {
                         }
                     },
                     { extend: 'copy', exportOptions: { columns: ':visible' }},
-                    { extend: 'copy', text: 'Copy email',
+                    { extend: 'copy', text: 'Copy email', header: false, title: '',
                       exportOptions: { columns: '.copyEmail' }},
                     { extend: 'excel', exportOptions: { columns: ':visible' }},
                     { extend: 'csv', exportOptions: { columns: ':visible' }},
