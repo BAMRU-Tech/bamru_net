@@ -132,6 +132,7 @@
             <td>{{ p.ol|lower }}</td>
             <td>{{ p.id }}</td> {# participant id #}
             <td>{{ p.member.id }}</td>
+            <td>{{ p.member.display_email }}</td>
             <td>{{ p.period.id }}</td>
             <td>{{ p.member.is_unavailable }}</td>
           </tr>
@@ -281,6 +282,9 @@ $(document).ready( function() {
             },
             { data: 'member', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis'
+            },
+            { data: 'email', title: 'EMail', type: ['readonly', 'hidden'],
+              visible: false, className: ['noVis', 'copyEmail']
             },
             { data: 'period', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis'
@@ -483,6 +487,8 @@ $(document).ready( function() {
                         }
                     },
                     { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'copy', text: 'Copy email',
+                      exportOptions: { columns: '.copyEmail' }},
                     { extend: 'excel', exportOptions: { columns: ':visible' }},
                     { extend: 'csv', exportOptions: { columns: ':visible' }},
                     { extend: 'print', exportOptions: { columns: ':visible' }},
