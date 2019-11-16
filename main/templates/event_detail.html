@@ -543,12 +543,16 @@ function RenderDateTime(data, type, row, meta, time) {
 
 function UpdatePeriodRow(dt, row, success, error) {
     
-    var memberName = row.name;
-    var memberStatus = row.status;
-    var memberStatusOrder = row.status_order;
-    var memberUnavailable = row.is_unavailable;
+    // Remember select values for ReturnData
+    var memberData = {}
+    memberData['name'] = row.name;
+    memberData['status'] = row.status;
+    memberData['status_order'] = row.status_order;
+    memberData['email'] = row.email;
+    memberData['is_unavailable'] = row.is_unavailable;
+
     // Remove from summary, it is readded on display
-    window.summary[row.tblId][memberStatus] -= 1;
+    window.summary[row.tblId][row.status] -= 1;
 
 
     function ReturnData (data) {
@@ -569,11 +573,9 @@ function UpdatePeriodRow(dt, row, success, error) {
             data[ref + '_time'] = t;
         }
 
-        data.name = memberName;
-        data.status = memberStatus;
-        data.status_order = memberStatusOrder;
-        data.is_unavailable = memberUnavailable;
-        // Create additional rows for editing
+        Object.assign(data, memberData);
+
+        // Separate date and time for editing
         UncombineDateTime('en_route');
         UncombineDateTime('return_home');
         UncombineDateTime('signed_in');
