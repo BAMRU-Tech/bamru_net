@@ -136,8 +136,7 @@ language: { emptyTable: 'No participants selected' },
 
 {% block initComplete %}
 
-SetMemberFilter (table,
-                 'headsUp available broadcast'.includes(pageFormat));
+SetMemberFilter(table, 'headsUp available broadcast'.includes(pageFormat));
 
 EnableMarkSelection(table);
 
