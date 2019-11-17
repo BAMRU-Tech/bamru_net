@@ -74,6 +74,15 @@ language: { emptyTable: 'No DO periods' },
 
 onEditRow: UpdateRow,
 
+drawCallback: function( settings ) {
+    $('#dTbl input:checkbox').each(
+        function (index) {
+            if (table.cell(index, 3).data() == null)
+                this.indeterminate = true
+        }
+    )
+},
+
 {% endblock table_options %}
 
 {% block table_buttons_first %}
@@ -116,7 +125,7 @@ function SetAll ( e, dt, node, config ) {
         var row = this;
         var data = row.data();
         data.available = true;
-        UpdateRow(table, data, function (r, s, m) { row.data(r) });
+        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
     } )
 }
 
@@ -126,7 +135,7 @@ function ClearAll ( e, dt, node, config ) {
         var data = row.data();
         data.available = false;
         data.comment = '';
-        UpdateRow(table, data, function (r, s, m) { row.data(r) });
+        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
     } )
 }
 
