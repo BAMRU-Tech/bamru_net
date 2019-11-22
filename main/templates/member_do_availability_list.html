@@ -125,7 +125,9 @@ function SetAll ( e, dt, node, config ) {
         var row = this;
         var data = row.data();
         data.available = true;
-        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        sleep(100 * rowLoop).then(() => { //FX: remmove when #469 is fixed
+            UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        })
     } )
 }
 
@@ -135,7 +137,9 @@ function ClearAll ( e, dt, node, config ) {
         var data = row.data();
         data.available = false;
         data.comment = '';
-        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        sleep(100 * rowLoop).then(() => { //FX: remmove when #469 is fixed
+            UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        })
     } )
 }
 
@@ -206,19 +210,19 @@ function UpdateRow (dt, row,
 
     var id = data.id;
     data = JSON.stringify(data);
-        $.ajax({
-            method: 'PATCH',
-            contentType: 'application/json',
-            url: '/api/do/' + id + '/',
-            data: data,
-            success: success,
-            error: function (xhr) {
-                console.log('availability edit failed');
-                console.log(xhr);
-                alert(xhr.responseText);
-                return false;
-            }
-        })
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/do/' + id + '/',
+        data: data,
+        success: success,
+        error: function (xhr) {
+            console.log('availability edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
 }
 
 

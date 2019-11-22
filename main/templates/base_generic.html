@@ -160,6 +160,10 @@
             '-'+pad(date.getDate());
     }
 
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     function Truncate(string, length) {
         return string.substr(0, length)
     }
