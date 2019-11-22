@@ -29,7 +29,7 @@
         <td data-id="{{w.id}}"
             data-week="{{w.week}}" title="{{ w.comment }}"
             class="assignment-cell {% if not w.assigned %}un{% endif %}assigned">
-          {% if w.available %}A{% else %}-{% endif %}
+          {{ w.available|yesno:"A, ,-" }}
           {% if w.comment %}*{% endif %}
           <span class="assignment"></span>
           <button class="add-assignment">+</button>
