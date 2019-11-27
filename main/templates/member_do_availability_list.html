@@ -84,6 +84,11 @@ onEditRow: UpdateRow,
 drawCallback: function( settings ) {
     $('#dTbl input:checkbox').each(
         function (index) {
+            var comment = table.cell(index, 4);
+            var w = $('#dTbl thead th:eq('+4+')').width();
+                comment.node().innerHTML =
+                '<input type="text" onfocusout="UpdateComment(this)" data-row="' +  index +
+                '" value="' + comment.data() + '" size="60" maxsize=255>';
             if (table.cell(index, 3).data() == null)
                 this.indeterminate = true
         }
@@ -124,15 +129,26 @@ drawCallback: function( settings ) {
 {# remove filter button #}
 {% block filter_button %}{% endblock %}
 
-
 {% block functions %}
+
+function UpdateComment(input) {
+    var index = input.getAttribute('data-row');
+    var data = table.row(index).data();
+    if (data.comment != input.value) {
+        data.comment = input.value;
+        UpdateRow (table, table.row(index).data());
+        console.log(input.value);
+    }
+}
 
 function SetAll ( e, dt, node, config ) {
     dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
         var row = this;
         var data = row.data();
         data.available = true;
-        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        sleep(100 * rowLoop).then(() => { //FX: remmove when #469 is fixed
+            UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        })
     } )
 }
 
@@ -142,7 +158,9 @@ function ClearAll ( e, dt, node, config ) {
         var data = row.data();
         data.available = false;
         data.comment = '';
-        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        sleep(100 * rowLoop).then(() => { //FX: remmove when #469 is fixed
+            UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
+        })
     } )
 }
 
@@ -213,19 +231,19 @@ function UpdateRow (dt, row,
 
     var id = data.id;
     data = JSON.stringify(data);
-        $.ajax({
-            method: 'PATCH',
-            contentType: 'application/json',
-            url: '/api/do/' + id + '/',
-            data: data,
-            success: success,
-            error: function (xhr) {
-                console.log('availability edit failed');
-                console.log(xhr);
-                alert(xhr.responseText);
-                return false;
-            }
-        })
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/do/' + id + '/',
+        data: data,
+        success: success,
+        error: function (xhr) {
+            console.log('availability edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
 }
 
 
