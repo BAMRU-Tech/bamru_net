@@ -77,6 +77,11 @@ onEditRow: UpdateRow,
 drawCallback: function( settings ) {
     $('#dTbl input:checkbox').each(
         function (index) {
+            var comment = table.cell(index, 4);
+            var w = $('#dTbl thead th:eq('+4+')').width();
+                comment.node().innerHTML =
+                '<input type="text" onfocusout="UpdateComment(this)" data-row="' +  index +
+                '" value="' + comment.data() + '" size="60" maxsize=255>';
             if (table.cell(index, 3).data() == null)
                 this.indeterminate = true
         }
@@ -117,8 +122,17 @@ drawCallback: function( settings ) {
 {# remove filter button #}
 {% block filter_button %}{% endblock %}
 
-
 {% block functions %}
+
+function UpdateComment(input) {
+    var index = input.getAttribute('data-row');
+    var data = table.row(index).data();
+    if (data.comment != input.value) {
+        data.comment = input.value;
+        UpdateRow (table, table.row(index).data());
+        console.log(input.value);
+    }
+}
 
 function SetAll ( e, dt, node, config ) {
     dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
