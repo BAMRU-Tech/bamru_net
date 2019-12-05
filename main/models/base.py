@@ -1,6 +1,7 @@
 #
 #           Base Model
 #
+from django.conf import settings
 from django.db import models
 
 class BaseModel(models.Model):
@@ -33,3 +34,12 @@ class Configuration(BaseModel):
 
     def __str__(self):
         return '{}: {}'.format(self.key, self.value)
+
+    @classmethod
+    def get_host_key(cls, key):
+        key = '{}_{}'.format(key, settings.HOSTNAME)
+        object = cls.objects.filter(key=key).first()
+        if object:
+            return object.value
+        else:
+            return None

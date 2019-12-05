@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.utils import timezone
 
 import logging
@@ -44,8 +43,7 @@ def send_cert_notice(cert, text, author, cc=[]):
 
 @shared_task
 def cert_notice_check():
-    key = 'cert_notice_{}'.format(settings.HOSTNAME)
-    if not Configuration.objects.filter(key=key).first():
+    if not Configuration.get_host_key('cert_notice'):
         logger.info('Skiping cert notice check ({})'.format(key))
         return
     now = timezone.now()
