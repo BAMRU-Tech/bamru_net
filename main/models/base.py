@@ -36,9 +36,23 @@ class Configuration(BaseModel):
         return '{}: {}'.format(self.key, self.value)
 
     @classmethod
-    def get_host_key(cls, key):
+    def _format_key(cls, key):
+        return '{}_{}'.format(key, settings.HOSTNAME)
+
+    @classmethod
+    def set_host_key(cls, key, value):
+        return cls.objects.update_or_create(
+            key=cls._format_key(key),
+            defaults={'value': value})
+
+    @classmethod
+    def get_host_key_object(cls, key):
         key = '{}_{}'.format(key, settings.HOSTNAME)
-        object = cls.objects.filter(key=key).first()
+        return cls.objects.filter(key=key).first()
+
+    @classmethod
+    def get_host_key(cls, key):
+        object = cls.get_host_key_object(key)
         if object:
             return object.value
         else:

@@ -21,7 +21,7 @@ class NoopGoogleGroup:
     def insert(self, email):
         return ''
 
-    def remove(self, email):
+    def delete(self, email):
         return ''
 
 
@@ -29,6 +29,8 @@ class GoogleGroup(NoopGoogleGroup):
     def __new__(cls, name):
         instance = super(GoogleGroup, cls).__new__(cls)
         c = main.lib.oauth.get_credentials()
+        if not c:
+            return NoopGoogleGroup()
         admin = googleapiclient.discovery.build(
             'admin', 'directory_v1', credentials=c)
         if not name or not admin:
