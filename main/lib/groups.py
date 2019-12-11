@@ -41,7 +41,7 @@ class GoogleGroup(NoopGoogleGroup):
     def __init__(self, name):
         self.name = name
 
-    def list(self):
+    def list(self, filter=['MEMBER']):
         """Returns a list of user objects that are members of the group.
         Example:
         {'email': 'a@example.com',
@@ -57,7 +57,10 @@ class GoogleGroup(NoopGoogleGroup):
         except googleapiclient.errors.HttpError as e:
             logger.error(str(e))
             return []
-        return response.get('members')
+        result = response.get('members')
+        if filter:
+            result = [a for a in result if a.get('role') in filter]
+        return result
 
     def insert(self, email):
         # Catches googleapiclient.errors.HttpError on duplicate.

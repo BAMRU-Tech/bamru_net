@@ -140,6 +140,7 @@ class DoAhcStatusView(DoAbstractView, generic.base.TemplateView):
 
         context['current_dos'] = Member.objects.filter(is_current_do=True)
         context['do_email_list'] = groups.get_do_group().list_emails()
+        context['do_email_list_name'] = groups.get_do_group().name
         context['current_scheduled_do'] = DoAvailable.current_scheduled_do()
 
         return context
