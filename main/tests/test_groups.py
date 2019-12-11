@@ -1,5 +1,7 @@
 import time
+import unittest
 
+from django.conf import settings
 from django.test import Client, TestCase
 
 from main.lib import groups
@@ -16,10 +18,12 @@ class GroupTestCase(TestCase):
         Configuration.set_host_key('do_group', GROUP)
         self.group = groups.get_do_group()
 
+    @unittest.skipUnless(settings.GOOGLE_TOKEN_FILE, 'missing config')
     def test_group(self):
         self.assertTrue(type(self.group) is groups.GoogleGroup)
         self.assertEquals(self.group.name, GROUP)
 
+    @unittest.skipUnless(settings.GOOGLE_TOKEN_FILE, 'missing config')
     def test_add_remove(self):
         address = ADDRESS
         # Ensure setup in consistent state
