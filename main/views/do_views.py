@@ -2,7 +2,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms.models import modelformset_factory
 from django.views import generic
 
-from main.models import DoAvailable
+from main.lib import groups
+from main.models import DoAvailable, Member
 
 from collections import defaultdict
 
@@ -127,4 +128,17 @@ class DoEditView(DoAbstractView, generic.base.TemplateView):
                 queryset=DoAvailable.objects.none(),
                 initial=initial)
         context['formset'] = formset
+        return context
+
+
+class DoAhcStatusView(DoAbstractView, generic.base.TemplateView):
+    template_name = 'do_ahc_status.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['current_dos'] = Member.objects.filter(is_current_do=True)
+        context['do_email_list'] = groups.get_do_group().list_emails()
+        context['current_scheduled_do'] = DoAvailable.current_scheduled_do()
+
         return context

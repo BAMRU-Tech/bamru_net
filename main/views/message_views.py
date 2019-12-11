@@ -415,13 +415,11 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
         """Return context for become DO"""
         context = super().get_context_data(**kwargs)
 
-        context['type'] = "become_do"
-
         # DO PII
         do = self.request.user
         context['title'] = "Page DO transition"
 
-        context['format'] = 'page'
+        context['format'] = 'do_shift_starting'
         context['period_format'] = 'broadcast'
         # text box canned message
         start = datetime.now()

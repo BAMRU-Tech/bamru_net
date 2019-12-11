@@ -1,0 +1,36 @@
+{% extends 'base_generic.html' %}
+{% load filters %}
+
+{% block subheader %}
+<strong>
+  DO / AHC Status
+</strong>
+{% endblock subheader %}
+
+{% block content %}
+<main role="main" class="container-fluid">
+
+  <p>
+    You are {% if not request.user.is_current_do %}not{% endif %}
+    a current DO or AHC.
+  </p>
+
+  <p>Currently scheduled DO is {{ current_scheduled_do|member_full }}.</p>
+
+  <p>Active DO/AHCs:</p>
+  <table class="display table-bordered dataTable">
+    {% for member in current_dos %}
+    <tr><td>{{ member|member_full }}</td></tr>
+    {% endfor %}
+  </table>
+  <p/>
+  <p>DO email list:</p>
+  <table class="display table-bordered dataTable">
+    {% for email in do_email_list %}
+    <tr><td>{{ email }}</td></tr>
+    {% endfor %}
+  </table>
+  
+</main>
+
+{% endblock %}
