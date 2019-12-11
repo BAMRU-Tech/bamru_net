@@ -20,7 +20,13 @@
   <p>Active DO/AHCs:</p>
   <table class="display table-bordered dataTable">
     {% for member in current_dos %}
-    <tr><td>{{ member|member_full }}</td></tr>
+    <tr>
+      <td>{{ member|member_full }}</td>
+      <td>
+        <a href='' onclick='javascript:return do_remove({{ member.id }})'>
+          Remove</a>
+      </td>
+    </tr>
     {% endfor %}
   </table>
   <p/>
@@ -32,5 +38,22 @@
   </table>
   
 </main>
+
+{% csrf_token %}
+
+<script type="text/javascript">
+  function do_remove(id) {
+  var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
+  var postdata = {
+    'id': id,
+    'csrfmiddlewaretoken': csrftoken
+  };
+  $.post('', postdata);
+  sleep(1000).then(() => {
+    location.reload();
+  })
+  return false;
+}
+</script>
 
 {% endblock %}

@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponse
 from django.forms.models import modelformset_factory
 from django.views import generic
 
@@ -142,3 +143,10 @@ class DoAhcStatusView(DoAbstractView, generic.base.TemplateView):
         context['current_scheduled_do'] = DoAvailable.current_scheduled_do()
 
         return context
+
+    def post(self, request, *args, **kwargs):
+        id = request.POST.get('id', None)
+        if id:
+            m = Member.objects.get(id=int(id))
+            m.set_do(False)
+            return HttpResponse('removed')
