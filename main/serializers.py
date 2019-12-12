@@ -167,12 +167,13 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
         model = Participant
         fields = ('id', 'period', 'member', 'ahc', 'ol', 'en_route_at',
                   'return_home_at', 'signed_in_at', 'signed_out_at')
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Participant.objects.all(),
-                fields=('period', 'member')
-            )
-        ]
+        # FIXME: Restore after #469 is fixed
+        # validators = [
+        #     UniqueTogetherValidator(
+        #         queryset=Participant.objects.all(),
+        #         fields=('period', 'member')
+        #     )
+        # ]
 
 
 class DistributionSerializer(serializers.ModelSerializer):

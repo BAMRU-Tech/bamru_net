@@ -21,7 +21,7 @@
     <li>blank for unavailable</li>
     <li>checked for available</li>
   </ul>
-  <p>Feel free to add a comment on conflicts or which weeks you prefer. To do this, select a week, then click 'Edit.'</p>
+  <p>Feel free to add a comment on conflicts or which weeks you prefer.</p>
   <table id="dTbl" class="display table-bordered compact" style="width:100%">
   </table>
 </main>
@@ -65,7 +65,7 @@ columns: [
           return data;
       }
     },
-    { data: 'comment', title: 'Comment' },
+    { data: 'comment', title: 'Comment', width: '50%' },
     { data: 'id', visible: false, type: ['readonly', 'hidden'],
       className: 'noVis'
     },
@@ -82,13 +82,17 @@ language: { emptyTable: 'No DO periods' },
 onEditRow: UpdateRow,
 
 drawCallback: function( settings ) {
+    //FIXME: Match input size to parent
+    var size = Math.trunc($('#dTbl thead th:eq(' + 4 + ')').width() / 7);
+    // 7 is a best guess on font size
     $('#dTbl input:checkbox').each(
         function (index) {
             var comment = table.cell(index, 4);
-            var w = $('#dTbl thead th:eq('+4+')').width();
-                comment.node().innerHTML =
+            // replace comment field with text input 
+            comment.node().innerHTML =
                 '<input type="text" onfocusout="UpdateComment(this)" data-row="' +  index +
-                '" value="' + comment.data() + '" size="60" maxsize=255>';
+                '" value="' + comment.data() + '" size="' + size + '" maxsize=255>';
+            // mark indeterminate as appropiate
             if (table.cell(index, 3).data() == null)
                 this.indeterminate = true
         }
