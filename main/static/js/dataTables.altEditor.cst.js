@@ -270,12 +270,14 @@
 
                 // Building edit-form
                 var data = "";
-
+                var multiSelect = this.s.dt.rows({selected: true})[0].length > 1;
                 data += "<form name='altEditor-form' role='form'>";
                 data += '<input type="hidden" id="tblId" value="' + dt.table().node().id +'">';
                 for (var j in columnDefs) {
                     // handle hidden fields
-                    if (columnDefs[j].type.includes("hidden")) {
+                    if (columnDefs[j].type.includes("hidden")
+                        || (multiSelect && !columnDefs[j].type.includes("allowMultiSelect")))
+                    {
                         data += "<input type='hidden' id='" + columnDefs[j].name + "' value='" + adata.data()[0][columnDefs[j].name] + "'>";
                     }
                     else {
@@ -310,7 +312,7 @@
                                 + "'"
                                 + (columnDefs[j].maxLength == false ? "" : " maxlength='" + columnDefs[j].maxLength + "'")
                                 + " style='overflow:hidden'  class='form-control  form-control-sm' value='"
-                                + that._quoteattr(adata.data()[0][columnDefs[j].name]) + "'>";
+                                + (!multiSelect ? that._quoteattr(adata.data()[0][columnDefs[j].name]) : '') + "'>";
                             data += "<label id='" + columnDefs[j].name + "label"
                                 + "' class='errorLabel'></label>";
                         }
@@ -337,7 +339,7 @@
                                 + "' placeholder='"
                                 + columnDefs[j].title
                                 + "' style='overflow:hidden'  class='form-control  form-control-sm' value='"
-                                + adata.data()[0][columnDefs[j].name] + "'>";
+                                + (!multiSelect ? adata.data()[0][columnDefs[j].name] : '') + "'>";
                         }
 
                         // Adding time-fields
@@ -350,7 +352,7 @@
                                 + "' placeholder='"
                                 + columnDefs[j].title
                                 + "' style='overflow:hidden'  class='form-control  form-control-sm' value='"
-                                + adata.data()[0][columnDefs[j].name] + "'>";
+                                + (!multiSelect ? adata.data()[0][columnDefs[j].name] : '') + "'>";
                         }
 
                         // Adding select-fields
@@ -781,7 +783,7 @@
                 }, 1000);
                 
                 this.s.dt.row({ selected : true }).data(data);
-                this.s.dt.row({ selected : true }).deselect();
+                this.s.dt.rows({ selected : true }).deselect();
                 this.s.dt.draw();
                 
                 // Disabling submit button
@@ -908,7 +910,7 @@
      * @static
      * @type String
      */
-    altEditor.version = '2.0';
+    altEditor.version = '2.0.1';
 
     /**
      * altEditor defaults
