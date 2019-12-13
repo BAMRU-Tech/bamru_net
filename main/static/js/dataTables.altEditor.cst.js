@@ -270,7 +270,8 @@
 
                 // Building edit-form
                 var data = "";
-                var multiSelect = this.s.dt.rows({selected: true})[0].length > 1;
+                //FIXME: This should be a callback to determine multi select
+                var multiSelect = this.s.dt.cells('.marked').count() > 1;
                 data += "<form name='altEditor-form' role='form'>";
                 data += '<input type="hidden" id="tblId" value="' + dt.table().node().id +'">';
                 for (var j in columnDefs) {
@@ -782,7 +783,9 @@
                     $('#altEditor-modal').modal('hide');
                 }, 1000);
                 
-                this.s.dt.row({ selected : true }).data(data);
+                //FIXME: This should be a callback to determine multi select
+                var multiSelect = this.s.dt.cells('.marked').count() > 1;
+                if (!multiSelect) this.s.dt.row({ selected : true }).data(data);
                 this.s.dt.rows({ selected : true }).deselect();
                 this.s.dt.draw();
                 
