@@ -580,10 +580,7 @@ function RenderDateTime(data, type, row, meta, time) {
 
 function RowEditHandler(dt, row, success, error) {
     // HACK: The editor has a limited understanding of multi-select (limits visible fields)
-    // Data from the first row is passed to the editor, during the callback the edited data
-    // is copied into the other selected rows, after the callback the editor updates the
-    // first row (this also handes the case of a single selected row)
-    var firstRow = null;
+    // and assumes empty values for all multiSelect fields
     dt.s.dt.cells('.marked').every(
         function ( idx, tableLoop, rowLoop ) {
             var thisrow = this.row(this.index().row); // get selected row
@@ -605,18 +602,13 @@ function RowEditHandler(dt, row, success, error) {
             // store update in the DB
             UpdatePeriodRow(dt, data); //FX: handle async errors
 
-            if (firstRow == null) {
-                // remember for callback return
-                firstRow = data;
-            } else {
-                // store update locally
-                thisrow.data(data);
-            }
+            // store update locally
+            thisrow.data(data);
         }
     )
 
-    // Editor stores first row data, closes the dialog and redraws the table
-    success(firstRow);          //FX: check for errors and only call on success
+    // Editor expects an object (ignored for multiSelect), closes the dialog and redraws the table
+    success( {} );          //FX: check for errors and only call on success
 
     // deselect/unmark all selected rows
     $('tr.selected').removeClass('selected');
