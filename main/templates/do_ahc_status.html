@@ -48,9 +48,20 @@
     'id': id,
     'csrfmiddlewaretoken': csrftoken
   };
-  $.post('', postdata);
-  sleep(1000).then(() => {
-    location.reload();
+  $.ajax({
+      method: 'POST',
+      url: '',
+      data: postdata,
+      success: function (response) {
+          console.log(response);
+          sleep(1000).then(() => {
+            location.reload();
+          })
+      },
+      error: function (xhr) {
+          console.log(xhr);
+          alert(xhr.responseText);
+      }
   })
   return false;
 }

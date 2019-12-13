@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.forms.models import modelformset_factory
 from django.views import generic
 
@@ -132,7 +132,7 @@ class DoEditView(DoAbstractView, generic.base.TemplateView):
         return context
 
 
-class DoAhcStatusView(DoAbstractView, generic.base.TemplateView):
+class DoAhcStatusView(LoginRequiredMixin, generic.base.TemplateView):
     template_name = 'do_ahc_status.html'
 
     def get_context_data(self, **kwargs):
@@ -146,8 +146,10 @@ class DoAhcStatusView(DoAbstractView, generic.base.TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
+        """Remove member from DO list."""
         id = request.POST.get('id', None)
         if id:
             m = Member.objects.get(id=int(id))
             m.set_do(False)
             return HttpResponse('removed')
+        return HttpResponseBadRequest('Error: No id set.')
