@@ -89,6 +89,7 @@ urlpatterns = [
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
     path('do/my_availability/', views.DoMyAvailabilityView.as_view(),
          name='my_availabilty'),
+    path('do_ahc_status/', views.DoAhcStatusView.as_view(), name='do_ahc_status'),
 
     path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
     path('message/<int:pk>/repage/', views.MessageRepageCreateView.as_view(),

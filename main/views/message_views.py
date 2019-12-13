@@ -407,18 +407,6 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
     template_name = 'message_add.html'
     context_object_name = 'member_list'
 
-    #def get_success_url(self): FIXME
-    #    return self.object.get_absolute_url()
-
-    def get_queryset(self):
-        """Return context with members to page."""
-        initial = {}
-        initial['author'] = self.request.user.pk
-        members = None
-        period_id = self.request.GET.get('period')
-        period_format = self.request.GET.get('period_format')
-        page = self.request.GET.get('page')
-
     def get_queryset(self):
         """Return the member list."""
         return Member.objects.filter(status__in=Member.DO_SHIFT_MEMBERS).order_by('id')
@@ -427,13 +415,11 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
         """Return context for become DO"""
         context = super().get_context_data(**kwargs)
 
-        context['type'] = "become_do"
-
         # DO PII
         do = self.request.user
         context['title'] = "Page DO transition"
 
-        context['format'] = 'page'
+        context['format'] = 'do_shift_starting'
         context['period_format'] = 'broadcast'
         # text box canned message
         start = datetime.now()

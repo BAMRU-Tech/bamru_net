@@ -6,10 +6,14 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
+from main.lib import groups
 from .base import BaseModel, BasePositionModel
 
 from datetime import date, datetime, timedelta
 import math
+
+import logging
+logger = logging.getLogger(__name__)
 
 class CustomUserManager(BaseUserManager):
     """Allows username to be case insensitive."""
@@ -175,6 +179,17 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def get_absolute_url(self):
         return ('member_detail', [str(self.id)])
 
+    def set_do(self, is_do):
+        logger.info('Setting {} DO={}'.format(self, is_do))
+        self.is_current_do = is_do
+        self.save()
+        do_group = groups.get_do_group()
+        for email in self.email_set.filter(pagable=True):
+            if is_do:
+                do_group.insert(email.address)
+            else:
+                do_group.delete(email.address)
+
 
 class Role(BaseModel):
     TYPES = (
@@ -322,6 +337,13 @@ class DoAvailable(BaseModel):  # was AvailDos
         return int(math.ceil(timezone.now().month / 3.))
 
     @classmethod
+    def current_week(cls):
+        week1_start = cls.shift_start(
+            cls.current_year(), cls.current_quarter(), 1)
+        delta = datetime.now() - week1_start
+        return int(math.floor(delta.days / 7)) + 1  # week numberss start at 1
+
+    @classmethod
     def num_weeks_in_quarter(cls, year, quarter):
         if quarter == 4 and cls.quarter_start(year, 5) != cls.quarter_start(year+1, 1):
             return 14
@@ -364,6 +386,19 @@ class DoAvailable(BaseModel):  # was AvailDos
     @classmethod
     def shift_end(cls, year, quarter, week):
         return cls.shift_start(year, quarter, week) + timedelta(days=7) - timedelta(minutes=1)
+
+    @classmethod
+    def current_scheduled_do(cls):
+        result = cls.objects.filter(year=cls.current_year(),
+                                    quarter=cls.current_quarter(),
+                                    week=cls.current_week(),
+                                    assigned=True)
+        if result.count() != 1:
+            logger.error('Expected 1 DO scheduled, got {}: {}'.format(
+                result.count(), result))
+            return None
+        else:
+            return result.first().member
 
 
 def cert_upload_path_handler(instance, filename):

@@ -1,0 +1,70 @@
+{% extends 'base_generic.html' %}
+{% load filters %}
+
+{% block subheader %}
+<strong>
+  DO / AHC Status
+</strong>
+{% endblock subheader %}
+
+{% block content %}
+<main role="main" class="container-fluid">
+
+  <p>
+    You are {% if not request.user.is_current_do %}not{% endif %}
+    a current DO or AHC.
+  </p>
+
+  <p>Currently scheduled DO is {{ current_scheduled_do|member_full }}.</p>
+
+  <p>Active DO/AHCs:</p>
+  <table class="display table-bordered dataTable">
+    {% for member in current_dos %}
+    <tr>
+      <td>{{ member|member_full }}</td>
+      <td>
+        <a href='' onclick='javascript:return do_remove({{ member.id }})'>
+          Remove</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p/>
+  <p>DO email list ({{ do_email_list_name }}):</p>
+  <table class="display table-bordered dataTable">
+    {% for email in do_email_list %}
+    <tr><td>{{ email }}</td></tr>
+    {% endfor %}
+  </table>
+  
+</main>
+
+{% csrf_token %}
+
+<script type="text/javascript">
+  function do_remove(id) {
+  var csrftoken = jQuery("[name=csrfmiddlewaretoken]").val();
+  var postdata = {
+    'id': id,
+    'csrfmiddlewaretoken': csrftoken
+  };
+  $.ajax({
+      method: 'POST',
+      url: '',
+      data: postdata,
+      success: function (response) {
+          console.log(response);
+          sleep(1000).then(() => {
+            location.reload();
+          })
+      },
+      error: function (xhr) {
+          console.log(xhr);
+          alert(xhr.responseText);
+      }
+  })
+  return false;
+}
+</script>
+
+{% endblock %}

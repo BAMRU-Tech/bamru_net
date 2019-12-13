@@ -1,6 +1,7 @@
 #
 #           Base Model
 #
+from django.conf import settings
 from django.db import models
 
 class BaseModel(models.Model):
@@ -33,3 +34,26 @@ class Configuration(BaseModel):
 
     def __str__(self):
         return '{}: {}'.format(self.key, self.value)
+
+    @classmethod
+    def _format_key(cls, key):
+        return '{}_{}'.format(key, settings.HOSTNAME)
+
+    @classmethod
+    def set_host_key(cls, key, value):
+        return cls.objects.update_or_create(
+            key=cls._format_key(key),
+            defaults={'value': value})
+
+    @classmethod
+    def get_host_key_object(cls, key):
+        key = '{}_{}'.format(key, settings.HOSTNAME)
+        return cls.objects.filter(key=key).first()
+
+    @classmethod
+    def get_host_key(cls, key):
+        object = cls.get_host_key_object(key)
+        if object:
+            return object.value
+        else:
+            return None
