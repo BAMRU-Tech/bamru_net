@@ -1,7 +1,7 @@
 /**
  * @summary altEditor
  * @description Lightweight editor for DataTables
- * @version 2.0
+ * @version 2.0.1
  * @file dataTables.editor.free.js
  * @author kingkode (www.kingkode.com)
  *  Modified by: Kasper Olesen (https://github.com/KasperOlesen), Luca Vercelli (https://github.com/luca-vercelli), Zack Hable (www.cobaltdevteam.com)
@@ -22,6 +22,7 @@
  *                Changed option comparison to == for boolean (rather than includes())
  *                Changed button 'edit' to 'update'
  *  CST: 10/28/18 Added input type time 
+ *  CST: 12/12/19 Added multi select
  */
 (function (factory) {
     if (typeof define === 'function' && define.amd) {
