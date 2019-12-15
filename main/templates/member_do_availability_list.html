@@ -150,9 +150,7 @@ function SetAll ( e, dt, node, config ) {
         var row = this;
         var data = row.data();
         data.available = true;
-        sleep(100 * rowLoop).then(() => { //FX: remmove when #469 is fixed
-            UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
-        })
+        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
     } )
 }
 
@@ -162,9 +160,7 @@ function ClearAll ( e, dt, node, config ) {
         var data = row.data();
         data.available = false;
         data.comment = '';
-        sleep(100 * rowLoop).then(() => { //FX: remmove when #469 is fixed
-            UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
-        })
+        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
     } )
 }
 
