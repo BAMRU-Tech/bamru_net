@@ -6,7 +6,9 @@ from main.models import Configuration
 import logging
 logger = logging.getLogger(__name__)
 
-SCOPES = ['https://www.googleapis.com/auth/admin.directory.group']
+SCOPES = ['https://www.googleapis.com/auth/admin.directory.group',
+          'https://www.googleapis.com/auth/calendar',
+]
 
 def get_credentials():
     if not (settings.GOOGLE_TOKEN_FILE):

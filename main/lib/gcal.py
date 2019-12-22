@@ -7,12 +7,11 @@ from oauth2client import file, client, tools
 
 from datetime import timedelta
 
+import main.lib.oauth
+
 import logging
 logger = logging.getLogger(__name__)
 
-
-# If this is modified, a new token will be needed.
-GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar'
 
 def build_gcal_description(bamru_event):
     description_lines = []
@@ -87,6 +86,25 @@ class GcalManager:
         if save:
             bamru_event.save()
 
+    def clear(self):
+        """Clear only works on primary calendars.
+
+        Used only by the sync_gcal manage command.
+        """
+        print("clearing existing events")
+        self.client.calendars().clear(calendarId=self.calendar_id).execute()
+
+    def delete_all(self):
+        """Remove all events from a calendar.
+
+        Can be used instead of clear() on a secondary calendar.
+        """
+        print("deleting all existing events")
+        events = self.client.events().list(calendarId=self.calendar_id).execute()
+        for event in events.get('items'):
+            self.client.events().delete(calendarId=self.calendar_id,
+                                        eventId=event.get('id')).execute()
+
     def sync_all(self, all_bamru_events):
         batch_insert = self.client.new_batch_http_request()
 
@@ -112,8 +130,6 @@ class GcalManager:
             else:
                 event.gcal_id = None
 
-        print("clearing existing events")
-        self.client.calendars().clear(calendarId=self.calendar_id).execute()
         print("executing batch request")
         batch_insert.execute()
 
@@ -134,20 +150,12 @@ class NoopGcalManager:
         for event in all_bamru_events:
             event.save()
 
-
-def get_token_store():
-    return file.Storage(settings.GOOGLE_TOKEN_FILE)
-
 def get_gcal_manager(fallback_manager=NoopGcalManager()):
-    if not (settings.GOOGLE_TOKEN_FILE and settings.GOOGLE_CALENDAR_ID):
-        logger.info("Google calendar not configured")
-        return fallback_manager
-
-    creds = get_token_store().get()
-    if not creds or creds.invalid:
-        logger.error("Bad google calendar oauth credentials!")
+    creds = main.lib.oauth.get_credentials()
+    if not creds:
+        logger.info("Google calendar creds not configured")
         return fallback_manager
 
     client = googleapiclient.discovery.build(
-        'calendar', 'v3', http=creds.authorize(Http()))
+        'calendar', 'v3', credentials=creds)
     return GcalManager(client, settings.GOOGLE_CALENDAR_ID)
