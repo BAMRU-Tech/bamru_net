@@ -15,8 +15,12 @@ def get_credentials():
         logger.info("Google credentials not configured")
         return None
 
-    credentials = service_account.Credentials.from_service_account_file(
-        settings.GOOGLE_TOKEN_FILE, scopes=SCOPES)
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            settings.GOOGLE_TOKEN_FILE, scopes=SCOPES)
+    except (FileNotFoundError, ValueError) as e:
+        logger.info("Unable to load google credentials: {}".format(e))
+        return None
     user = Configuration.get_host_key('google_user')
     if not user:
         logger.info("Google user not configured")
