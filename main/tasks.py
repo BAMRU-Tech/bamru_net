@@ -44,7 +44,7 @@ def send_cert_notice(cert, text, author, cc=[]):
 @shared_task
 def cert_notice_check():
     if not Configuration.get_host_key('cert_notice'):
-        logger.info('Skiping cert notice check ({})'.format(key))
+        logger.info('Skiping cert notice check')
         return
     now = timezone.now()
     date30 = now + timedelta(days=30)
