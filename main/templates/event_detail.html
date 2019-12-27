@@ -709,7 +709,7 @@ function RowEditHandler(dt, row, success, error) {
     )
 
     // Editor expects an object (ignored for multiSelect), closes the dialog and redraws the table
-    success( {} );          //FX: check for errors and only call on success
+    success( row );          //FX: check for errors and only call on success
 
     // deselect/unmark all selected rows
     $('tr.selected').removeClass('selected');
