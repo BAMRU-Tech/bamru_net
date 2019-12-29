@@ -403,7 +403,7 @@ class MemberAvailabilityListView(LoginRequiredMixin, generic.ListView):
         """Return the availability list."""
         member = Member.objects.get(id=self.kwargs['pk'])
         qs = Unavailable.objects.filter(member=member)
-        return Unavailable.objects.filter(member=member)
+        return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
