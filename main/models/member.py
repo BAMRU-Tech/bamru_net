@@ -4,6 +4,7 @@
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 from main.lib import groups
@@ -175,9 +176,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return self.unavailable_set.filter(
             start_on__lte=today, end_on__gte=today).count() > 0
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('member_detail', [str(self.id)])
+        return reverse('member_detail', args=[str(self.id)])
 
     def set_do(self, is_do):
         logger.info('Setting {} DO={}'.format(self, is_do))

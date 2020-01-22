@@ -100,9 +100,8 @@ class Message(BaseModel):
     rsvp_template = models.ForeignKey(
         RsvpTemplate, on_delete=models.SET_NULL, blank=True, null=True)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('message_detail', [str(self.id)])
+        return reverse('message_detail', args=[str(self.id)])
 
     def ancestry_messages(self):
         if not self.ancestry:
