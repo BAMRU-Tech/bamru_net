@@ -119,8 +119,8 @@ urlpatterns = [
 
     url(r'^openid/', include('oidc_provider.urls', namespace='oidc_provider')),
 
-    url(r'^accounts/login/$', auth_views.login, name='login'),
-    url(r'^accounts/logout/$', auth_views.logout, {'next_page': '/'}, name='logout'),
+    url(r'^accounts/login/$', auth_views.LoginView.as_view(), name='login'),
+    url(r'^accounts/logout/$', auth_views.LogoutView.as_view(), {'next_page': '/'}, name='logout'),
     
     path('accounts/password_change/', auth_views.PasswordChangeView.as_view(),
          name='password_change'),

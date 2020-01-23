@@ -2,6 +2,7 @@
 #           Event Model
 #
 from django.db import models
+from django.urls import reverse
 
 from datetime import datetime, timezone, timedelta
 
@@ -51,9 +52,8 @@ class Event(BaseModel):
         else:
             self.period_set.create()
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('event_detail', [str(self.id)])
+        return reverse('event_detail', args=[str(self.id)])
 
 
 class Period(BasePositionModel):

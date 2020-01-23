@@ -284,7 +284,7 @@ $(document).ready( function() {
               visible: false, className: 'noVis'
             },
             { data: 'email', type: ['readonly', 'hidden'],
-              visible: false, className: ['noVis', 'copyEmail']
+              visible: false, className: 'noVis'
             },
             { data: 'period', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis'
@@ -491,7 +491,17 @@ $(document).ready( function() {
                     },
                     { extend: 'copy', exportOptions: { columns: ':visible' }},
                     { extend: 'copy', text: 'Copy email', header: false, title: '',
-                      exportOptions: { columns: '.copyEmail' }},
+                      customize: function( data, button, table ) {
+                          var list = '';
+                          table.cells('.marked').every(
+                              function ( idx ) {
+                                  var data = this.row(idx).data().email;
+                                  list = list + data + '\n';
+                              }
+                          )
+                          return list;
+                      },
+                    },
                     { extend: 'excel', exportOptions: { columns: ':visible' }},
                     { extend: 'csv', exportOptions: { columns: ':visible' }},
                     { extend: 'print', exportOptions: { columns: ':visible' }},
@@ -502,7 +512,12 @@ $(document).ready( function() {
 
         onEditRow: RowEditHandler,
 
-        language: { emptyTable: 'No members added' },
+        language: {
+            emptyTable: 'No members added',
+            buttons: {
+                copySuccess: { _: "emails copied" }
+            }
+        }
     });
     
     EnableMarkSelection( table{{period.position}} );
@@ -536,7 +551,7 @@ function EnableMarkSelection (table) {
             // Unmark deselected rows
             // indexes don't include the row the user selected, seems like a bug
             if (!indexes.includes(rcurrent)) indexes.push(rcurrent);
-            dt.rows(indexes).every( function ( rowIdx, tableLoop, rowLoop ) {
+            dt.rows(indexes).every( function ( idx ) {
                 $(this.node()).children().first().removeClass('marked');
             });
         }
@@ -572,7 +587,7 @@ function EnableMarkSelection (table) {
 
             // Are any rows in the new selection marked
             rmarked = false; runmarked = true;
-            dt.rows( indexes ).every( function ( rowIdx, tableLoop, rowLoop ) {
+            dt.rows( indexes ).every( function ( idx ) {
                 var m = $(this.node()).children().first().hasClass('marked');
                 rmarked = rmarked || m;
                 runmarked = runmarked && !m;
@@ -585,7 +600,7 @@ function EnableMarkSelection (table) {
                 indexes.push(rstart);
 
             // Toggle row marks based on the selection range
-            dt.rows( indexes ).every( function ( rowIdx, tableLoop, rowLoop ) {
+            dt.rows( indexes ).every( function ( idx ) {
                 var el = $(this.node()).children().first();
                 if (!el.hasClass('marked')) {
                     el.addClass('marked');
@@ -605,8 +620,8 @@ function EnableMarkSelection (table) {
 
         // Remember the last set of selected rows
         rselected = [];
-        dt.rows( { selected: true } ).every( function ( rowIdx, tableLoop, rowLoop ) {
-            rselected.push(rowIdx)
+        dt.rows( { selected: true } ).every( function ( idx ) {
+            rselected.push(idx)
         });
 
         rstart = rcurrent;
@@ -617,8 +632,8 @@ function EnableMarkSelection (table) {
 function UpdateNow ( e, dt, node, config ) {
     var num = 0
     dt.cells('.marked').every(
-        function ( idx, tableLoop, rowLoop ) {
-            var row = this.row(this.index().row);
+        function ( idx ) {
+            var row = this.row(idx);
             var data = row.data();
             var d = new Date;
             data.tblId = this.table().node().id;
@@ -648,8 +663,8 @@ function UpdateEventTime ( e, dt, node, config ) {
         alert('Select members before setting time');
     else
         marked.every(
-            function ( idx, tableLoop, rowLoop ) {
-                var row = this.row(this.index().row);
+            function ( idx ) {
+                var row = this.row(idx);
                 var data = row.data();
                 var d = new Date;
                 data.tblId = this.table().node().id;
@@ -683,8 +698,8 @@ function RowEditHandler(dt, row, success, error) {
     // HACK: The editor has a limited understanding of multi-select (limits visible fields)
     // and assumes empty values for all multiSelect fields
     dt.s.dt.cells('.marked').every(
-        function ( idx, tableLoop, rowLoop ) {
-            var thisrow = this.row(this.index().row); // get selected row
+        function ( idx ) {
+            var thisrow = this.row(idx);
             var data = thisrow.data();
             data.tblId = this.table().node().id;   // remember table for this period
 
@@ -709,7 +724,7 @@ function RowEditHandler(dt, row, success, error) {
     )
 
     // Editor expects an object (ignored for multiSelect), closes the dialog and redraws the table
-    success( {} );          //FX: check for errors and only call on success
+    success( row );          //FX: check for errors and only call on success
 
     // deselect/unmark all selected rows
     $('tr.selected').removeClass('selected');
@@ -838,7 +853,7 @@ function DeleteOP (tblName, period, position ) {
 
 function DeleteParticipants ( e, dt, node, config ) {
     var members = [];
-    dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+    dt.rows().every( function ( idx ) {
         if (this.nodes().to$().children().first().hasClass('marked'))
             members.push(this.data().id)
     })
@@ -874,13 +889,13 @@ function MarkRow ( e, dt, type, indices ) {
         var allMarked = true;
         var numRows = indices.length;
         if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+            dt.rows(indices).every( function ( idx ) {
                 // For multi select - unmark only when every row is marked
                 allMarked = allMarked && this.nodes().to$().children().first().hasClass('marked');
             })
         }
         dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
+            .every( function ( idx ) {
                 if (numRows > 1) {
                     if (allMarked)
                         $(this.node()).children().first().removeClass('marked');
