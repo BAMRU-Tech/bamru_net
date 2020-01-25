@@ -697,25 +697,31 @@ function RenderDateTime(data, type, row, meta, time) {
 function RowEditHandler(dt, row, success, error) {
     // HACK: The editor has a limited understanding of multi-select (limits visible fields)
     // and assumes empty values for all multiSelect fields
+    var multiSelect = dt.s.dt.cells('.marked').count() > 1;
     dt.s.dt.cells('.marked').every(
         function ( idx ) {
             var thisrow = this.row(idx);
-            var data = thisrow.data();
-            data.tblId = this.table().node().id;   // remember table for this period
+            var data = {};
 
-            // insert edited data into selected rows
-            //   currently clearing previously set fields is not possible
-            //   since "" is used to indicate no change
-            if (row.en_route_date) data.en_route_date = row.en_route_date;
-            if (row.return_home_date) data.return_home_date = row.return_home_date;
-            if (row.signed_in_date) data.signed_in_date = row.signed_in_date;
-            if (row.signed_out_date) data.signed_out_date = row.signed_out_date;
-            if (row.en_route_time) data.en_route_time = row.en_route_time;
-            if (row.return_home_time) data.return_home_time = row.return_home_time;
-            if (row.signed_in_time) data.signed_in_time = row.signed_in_time;
-            if (row.signed_out_time) data.signed_out_time = row.signed_out_time;
+            if (multiSelect) {
+                data = thisrow.data();
+                // insert edited data into selected rows
+                //   currently clearing previously set fields is not possible
+                //   since "" is used to indicate no change
+                if (row.en_route_date) data.en_route_date = row.en_route_date;
+                if (row.return_home_date) data.return_home_date = row.return_home_date;
+                if (row.signed_in_date) data.signed_in_date = row.signed_in_date;
+                if (row.signed_out_date) data.signed_out_date = row.signed_out_date;
+                if (row.en_route_time) data.en_route_time = row.en_route_time;
+                if (row.return_home_time) data.return_home_time = row.return_home_time;
+                if (row.signed_in_time) data.signed_in_time = row.signed_in_time;
+                if (row.signed_out_time) data.signed_out_time = row.signed_out_time;
+            } else {
+                data = row;
+            }
 
             // store update in the DB
+            data.tblId = this.table().node().id;   // remember table for this period
             UpdatePeriodRow(dt, data); //FX: handle async errors
 
             // store update locally
