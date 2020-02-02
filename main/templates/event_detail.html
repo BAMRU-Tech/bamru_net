@@ -172,7 +172,10 @@ $(document).ready( function() {
     var table{{period.position}} = $('#dTbl{{period.position}}').DataTable( {
         dom: 'Bfrtip',
         responsive: true,
-        select: 'os',
+        select: {
+          style:    'os',
+          selector: 'tr>td:not(.noVis)'
+        },
         altEditor: true,
         paging:   false,
         info:     false,
@@ -471,6 +474,7 @@ $(document).ready( function() {
                 autoClose: true,
                 text: '<i class="fa fa-user"></i> Delete',
                 action: DeleteParticipants,
+                period_position: {{ period.position }}
             },
             {
                 text: '<i class="fa fa-bars"></i>' +
@@ -782,7 +786,7 @@ function UpdatePeriodRow(dt, row, success, error) {
         error: function (xhr) {
             console.log('member edit failed');
             console.log(xhr);
-            alert(xhr.responseText);
+            if (xhr.responseText) alert(xhr.responseText);
         }
     })
     // Remove from summary total, member is readded on display
@@ -804,7 +808,7 @@ function AddMeToOP (period) {
         error: function (xhr) {
             console.log('Period add failed');
             console.log(xhr);
-            alert(xhr.responseText);
+            if (xhr.responseText) alert(xhr.responseText);
             return false;
         }
     })
@@ -869,7 +873,8 @@ function DeleteParticipants ( e, dt, node, config ) {
         return;
     }
     
-    var ok = confirm('Delete '+members.length+' members?');
+    var ok = confirm('Delete '+members.length+' members\nfrom OP'+
+                     config.period_position + '?');
     
     if (ok) {
         for (var i=0; i<members.length; i++) {
