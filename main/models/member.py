@@ -28,6 +28,7 @@ class CurrentMemberManager(models.Manager):
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
+    EMAIL_FIELD = 'display_email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     objects = CustomUserManager()
     members = CurrentMemberManager()
