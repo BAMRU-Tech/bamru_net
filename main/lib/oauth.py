@@ -6,16 +6,18 @@ from main.models import Configuration
 import logging
 logger = logging.getLogger(__name__)
 
-SCOPES = ['https://www.googleapis.com/auth/admin.directory.group']
+SCOPES = ['https://www.googleapis.com/auth/admin.directory.group',
+          'https://www.googleapis.com/auth/calendar',
+]
 
 def get_credentials():
-    if not (settings.GOOGLE_TOKEN_FILE):
+    if not (settings.GOOGLE_CREDENTIALS_FILE):
         logger.info("Google credentials not configured")
         return None
 
     try:
         credentials = service_account.Credentials.from_service_account_file(
-            settings.GOOGLE_TOKEN_FILE, scopes=SCOPES)
+            settings.GOOGLE_CREDENTIALS_FILE, scopes=SCOPES)
     except (FileNotFoundError, ValueError) as e:
         logger.info("Unable to load google credentials: {}".format(e))
         return None

@@ -8,6 +8,7 @@ class Command(BaseCommand):
         group = parser.add_mutually_exclusive_group(required=True)
         group.add_argument('--event', type=int, help="Id of event to sync")
         group.add_argument('--all', action='store_true')
+        group.add_argument('--clear', action='store_true')
 
     def handle(self, *args, **options):
         gcal_manager = get_gcal_manager(fallback_manager=None)
@@ -16,6 +17,10 @@ class Command(BaseCommand):
             return
 
         if options['all']:
+            if options['clear']:
+                gcal_manager.clear()
+            else:
+                gcal_manager.delete_all()
             gcal_manager.sync_all(Event.objects.all())
         elif options['event']:
             event = Event.objects.get(id=options['event'])
