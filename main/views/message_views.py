@@ -208,14 +208,11 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
 
 
 class MessageListView(LoginRequiredMixin, generic.ListView):
+    model = Message
     template_name = 'message_list.html'
     context_object_name = 'message_list'
-
-    def get_queryset(self):
-        """Return event list within the last year """
-        qs = Message.objects.all()
-        qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=365))
-        return qs.order_by('-created_at')
+    paginate_by = 20
+    ordering = ['-created_at']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
