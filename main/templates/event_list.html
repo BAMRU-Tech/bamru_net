@@ -119,7 +119,6 @@ $(document).ready(function() {
     var tableUpcoming = $('#Upcoming').DataTable( {
         dom: 'Bfrtip',
         ajax: { url: ComputeUpcoming(), dataSrc: '', },
-        responsive: true,
         paging:   false,
         info:     false,
 
@@ -179,7 +178,6 @@ $(document).ready(function() {
     var tableRecent = $('#Recent').DataTable( {
         dom: 'Bfrtip',
         ajax: { url: ComputeRecent(), dataSrc: '', },
-        responsive: true,
         paging:   false,
         info:     false,
 

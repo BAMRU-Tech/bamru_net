@@ -94,7 +94,8 @@
                       data: ajaxSettings.data,
                       status: jqXHR.status,
                       error: thrownError || jqXHR.statusText,
-                      response: jqXHR.responseText.substring(0, 100)
+                      response: (typeof jqXHR.responseText !== 'undefined')
+                          ? jqXHR.responseText.substring(0, 100) : ''
                   }
               });
           });
