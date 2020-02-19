@@ -211,7 +211,7 @@ class MessageListView(LoginRequiredMixin, generic.ListView):
     model = Message
     template_name = 'message_list.html'
     context_object_name = 'message_list'
-    paginate_by = 20
+    paginate_by = 15
     ordering = ['-created_at']
 
     def get_context_data(self, **kwargs):

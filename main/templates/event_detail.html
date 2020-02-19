@@ -135,6 +135,7 @@
             <td>{{ p.member.display_email }}</td>
             <td>{{ p.period.id }}</td>
             <td>{{ p.member.is_unavailable }}</td>
+            <td></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -170,15 +171,16 @@ $(document).ready( function() {
     {% for period in event.period_set.all %}
     window.summary['dTbl{{period.position}}'] = Object.assign({}, STATUSES);
     var table{{period.position}} = $('#dTbl{{period.position}}').DataTable( {
+
         dom: 'Bfrtip',
-        responsive: true,
-        select: {
-          style:    'os',
-          selector: 'tr>td:not(.noVis)'
-        },
+
+        responsive: { details: { type: 'column', target: -1 }, },
+        select: { style: 'os', selector: 'tr>td:not(.control)' },
+
         altEditor: true,
         paging:   false,
         info:     false,
+
         order: [[2, 'asc'], [1, 'asc']],
 
         drawCallback: function( settings ) {
@@ -294,6 +296,7 @@ $(document).ready( function() {
             },
             { data: 'is_unavailable', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis', },
+            { type: ['readonly', 'hidden' ], orderable: false, className: 'noVis control' }
         ],
 
         buttons: [

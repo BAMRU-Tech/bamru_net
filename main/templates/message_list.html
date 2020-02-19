@@ -37,23 +37,27 @@
         </td>
       </tr>
       {% endfor %}
-      </tbody>
+    </tbody>
   </table>
 
   <div class="pagination">
     <span class="step-links">
-        {% if page_obj.has_previous %}
-            <a href="?page=1">&laquo; first</a>
-            <a href="?page={{ page_obj.previous_page_number }}">previous</a>
-        {% endif %}
+      {% if page_obj.has_previous %}
+      <a href="?page=1">
+        <i class="fa fa-fast-backward"></i></a>
+      <a href="?page={{ page_obj.previous_page_number }}">
+        <i class="fa fa-caret-square-o-left"></i></a>
+      {% endif %}
 
-        <span class="current">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-        </span>
+      <span class="current">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </span>
 
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">next</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">
+        <i class="fa fa-caret-square-o-right"></i></a>
+      <a href="?page={{ page_obj.paginator.num_pages }}">
+        <i class="fa fa-fast-forward"></i></a>
         {% endif %}
     </span>
   </div>
@@ -68,7 +72,6 @@
 
 order: [[ 2, 'desc' ]],  //FX: Consider subsort order
 deferRender: true,
-paging: true,
 
 columns: [
     {data: 'text', title: 'Message', responsivePriority: 1, },
@@ -81,7 +84,7 @@ columns: [
          } else
              return data;
      }},
-    {data: 'type', visible: false, className: 'noVis', responsivePriority: 6,
+    {data: 'type', visible: false, className: 'noVis', responsivePriority: 6},
     {data: 'period_type', title: 'Type', responsivePriority: 4, },
     {data: 'event', title: 'Event', responsivePriority: 5, },
 ],
