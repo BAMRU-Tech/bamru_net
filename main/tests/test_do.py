@@ -1,8 +1,10 @@
 from django.test import Client, TestCase
+from django.utils import timezone
 
 from main.models import DoAvailable
 
-from datetime import timedelta
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
 
 class DoBasicTestCase(TestCase):
@@ -29,6 +31,8 @@ class DoBasicTestCase(TestCase):
         self.assertDoYearStarts(2017, 12, 27)
         self.assertDoYearStarts(2018, 12, 26)
         self.assertDoYearStarts(2019, 12, 25)
+        self.assertDoYearStarts(2020, 12, 31)
+        self.assertDoYearStarts(2021, 12, 29)
 
     def test_shifts(self):
         shifts = [(y, q, w)
@@ -43,3 +47,18 @@ class DoBasicTestCase(TestCase):
             shift_end = DoAvailable.shift_end(shift[0], shift[1], shift[2])
             next_shift_start = DoAvailable.shift_start(next_shift[0], next_shift[1], next_shift[2])
             self.assertEqual(shift_end, next_shift_start - timedelta(minutes=1))
+
+
+    def check_current(self, dt, year, quarter, week):
+        with patch.object(timezone, 'now', return_value=dt):
+            self.assertEquals(DoAvailable.current_year(), year)
+            self.assertEquals(DoAvailable.current_quarter(), quarter)
+            self.assertEquals(DoAvailable.current_week(), week)
+
+    def test_current(self):
+        # Check that some dates would show the correct y,q,w
+        self.check_current(datetime(2020, 4, 1), 2020, 2, 1)
+        self.check_current(datetime(2020, 1, 1), 2020, 1, 1)
+        self.check_current(datetime(2019, 12, 25), 2019, 4, 14)
+        self.check_current(datetime(2018, 12, 31), 2019, 1, 1)
+        self.check_current(datetime(2012, 1, 1), 2011, 4, 13)
