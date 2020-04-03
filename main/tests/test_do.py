@@ -50,7 +50,8 @@ class DoBasicTestCase(TestCase):
 
 
     def check_current(self, dt, year, quarter, week):
-        with patch.object(timezone, 'now', return_value=dt):
+        tz = timezone.make_aware(dt)
+        with patch.object(timezone, 'now', return_value=tz):
             self.assertEquals(DoAvailable.current_year(), year)
             self.assertEquals(DoAvailable.current_quarter(), quarter)
             self.assertEquals(DoAvailable.current_week(), week)
