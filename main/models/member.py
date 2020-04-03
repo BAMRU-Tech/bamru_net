@@ -329,20 +329,32 @@ class DoAvailable(BaseModel):  # was AvailDos
     def end(self):
         return self.shift_end(self.year, self.quarter, self.week)
 
-    @staticmethod
-    def current_year():
-        return timezone.now().year
+    @classmethod
+    def _current_week_of_year(cls):
+        week1_start = cls.shift_start(
+            cls.current_year(), 1, 1)
+        delta = timezone.now() - week1_start
+        return int(math.floor(delta.days / 7)) + 1  # week numbers start at 1
 
     @staticmethod
-    def current_quarter():
-        return int(math.ceil(timezone.now().month / 3.))
+    def current_year():
+        now = timezone.now()
+        if now.date() < DoAvailable.year_start(now.year):
+            return now.year - 1
+        if now.date() > DoAvailable.year_start(now.year + 1):
+            return now.year + 1
+        return now.year
+
+    @classmethod
+    def current_quarter(cls):
+        week = cls._current_week_of_year() - 1 # return to 0 index
+        if week > 39:
+            return 4  # Don't increment to 5 on 53 week years
+        return int(math.floor(week / 13)) + 1  # quarter numbers start at 1
 
     @classmethod
     def current_week(cls):
-        week1_start = cls.shift_start(
-            cls.current_year(), cls.current_quarter(), 1)
-        delta = datetime.now() - week1_start
-        return int(math.floor(delta.days / 7)) + 1  # week numberss start at 1
+        return cls._current_week_of_year() - 13 * (cls.current_quarter() - 1)
 
     @classmethod
     def num_weeks_in_quarter(cls, year, quarter):
