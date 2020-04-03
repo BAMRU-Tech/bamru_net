@@ -333,7 +333,7 @@ class DoAvailable(BaseModel):  # was AvailDos
     def _current_week_of_year(cls):
         week1_start = cls.shift_start(
             cls.current_year(), 1, 1)
-        delta = timezone.now() - week1_start
+        delta = timezone.now() - timezone.make_aware(week1_start)
         return int(math.floor(delta.days / 7)) + 1  # week numbers start at 1
 
     @staticmethod
