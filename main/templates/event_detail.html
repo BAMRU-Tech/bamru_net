@@ -76,10 +76,12 @@
         {{ event.finish_at|date:'M j, Y H:i' }}
       {% endif %}
       {% endif %}
-    </p>
-    <p>
+    <br>
       <strong>All day:</strong> {{ event.all_day }}
       <strong>Published:</strong> {{ event.published }}
+    </p>
+    <p>
+      ( <strong>*</strong> = OL qualified )
     </p>
 
     {% for period in event.period_set.all %}
@@ -101,7 +103,7 @@
           {% for p in period.participant_set.all %}
           <tr>
             <td></td>
-            <td>{{ p.member }}</td>
+            <td>{{ p.member }} {% if event.type == 'operation' and 'OL' in p.member.roles %}*{% endif %}</td>
             <td>{{ p.member.status }}</td>
             <td>{{ p.member.status_order }}</td>
             <td>{{ p.en_route_at|date:"Y-m-d" }}</td>

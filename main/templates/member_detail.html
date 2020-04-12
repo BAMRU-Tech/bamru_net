@@ -181,7 +181,7 @@ $(document).ready( function() {
     rx = rx ? rx : 'ml';
     href = returns[ rx ];
 
-    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }})";
+    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }}{% if member.roles %}: {{ member.roles }}{% endif %})";
 });
 </script>
 {% endblock js %}
