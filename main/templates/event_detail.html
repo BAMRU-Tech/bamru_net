@@ -80,9 +80,11 @@
       <strong>All day:</strong> {{ event.all_day }}
       <strong>Published:</strong> {{ event.published }}
     </p>
+    {% if event.type == 'operation' %}
     <p>
       ( <strong>*</strong> = OL qualified )
     </p>
+    {% endif %}
 
     {% for period in event.period_set.all %}
     <a name="OP{{period.position}}"></a>
