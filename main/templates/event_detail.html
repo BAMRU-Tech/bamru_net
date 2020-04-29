@@ -504,12 +504,16 @@ $(document).ready( function() {
                     { extend: 'copy', text: 'Copy email', header: false, title: '',
                       customize: function( data, button, table ) {
                           var list = '';
-                          table.cells('.marked').every(
-                              function ( idx ) {
-                                  var data = this.row(idx).data().email;
-                                  list = list + data + '\n';
-                              }
-                          )
+                          if (table.cells('.marked').count() == 0) {
+                              alert('Copy email: select attendees');
+                          } else {
+                              table.cells('.marked').every(
+                                  function ( idx ) {
+                                      var data = this.row(idx).data().email;
+                                      list = list + data + '\n';
+                                  }
+                              )
+                          }
                           return list;
                       },
                     },
@@ -526,7 +530,7 @@ $(document).ready( function() {
         language: {
             emptyTable: 'No members added',
             buttons: {
-                copySuccess: { _: "emails copied" }
+                copySuccess: { _: 'selected emails copied' }
             }
         }
     });
