@@ -310,6 +310,22 @@ $(document).ready( function() {
                 autoClose: true,
                 buttons: [
                     {
+                        text: '<i class="fa fa-bolt"></i> Callout',
+                        action: function ( e, dt, node, config ) {
+                            var href = '{% url "message_add" %}?eid={{ event.id }}' +
+                                '&OP={{ period.position }}' +
+                                '&period={{ period.id }}' +
+                                '&page_format=available';
+                            if (SentryLoaded)
+                                Sentry.withScope(scope => {
+                                    scope.setLevel('info');
+                                    Sentry.captureMessage("Paging Callout",
+                                                          { extra: { page: href } });
+                                });
+                            location.href = href;
+                        }
+                    },
+                    {
                         text: '<i class="fa fa-hourglass-start"></i> Heads Up',
                         action: function ( e, dt, node, config ) {
                             var href = '{% url "message_add" %}?eid={{ event.id }}' +
@@ -327,16 +343,37 @@ $(document).ready( function() {
                         }
                     },
                     {
-                        text: '<i class="fa fa-calendar-check-o"></i> Are you available',
+                        text: '<i class="fa fa-edit"></i> Info<br> (deployed team)',
+                        action: function ( e, dt, node, config ) {
+                            if (dt.rows().count() == 0)
+                                alert('Add members to period before paging them');
+                            else {
+                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
+                                    '&OP={{ period.position }}' +
+                                    '&period={{ period.id }}' +
+                                    '&page_format=info';
+                                if (SentryLoaded)
+                                    Sentry.withScope(scope => {
+                                        scope.setLevel('info');
+                                        Sentry.captureMessage("Paging Info",
+                                                              { extra: { page: href } });
+                                    });
+                                location.href = href;
+                            }
+                        }
+                    },
+                    {
+
+                        text: '<i class="fa fa-edit"></i> Broadcast (entire unit)',
                         action: function ( e, dt, node, config ) {
                             var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&page_format=available';
+                                '&page_format=broadcast';
                             if (SentryLoaded)
                                 Sentry.withScope(scope => {
                                     scope.setLevel('info');
-                                    Sentry.captureMessage("Paging Available",
+                                    Sentry.captureMessage("Paging Broadcast",
                                                           { extra: { page: href } });
                                 });
                             location.href = href;
@@ -383,43 +420,7 @@ $(document).ready( function() {
                         }
                     },
                     {
-                        text: '<i class="fa fa-wrench"></i> Info (team)',
-                        action: function ( e, dt, node, config ) {
-                            if (dt.rows().count() == 0)
-                                alert('Add members to period before paging them');
-                            else {
-                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                    '&OP={{ period.position }}' +
-                                    '&period={{ period.id }}' +
-                                    '&page_format=info';
-                                if (SentryLoaded)
-                                    Sentry.withScope(scope => {
-                                        scope.setLevel('info');
-                                        Sentry.captureMessage("Paging Info",
-                                                              { extra: { page: href } });
-                                    });
-                                location.href = href;
-                            }
-                        }
-                    },
-                    {
-                        text: '<i class="fa fa-wrench"></i> Broadcast (unit)',
-                        action: function ( e, dt, node, config ) {
-                            var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                '&OP={{ period.position }}' +
-                                '&period={{ period.id }}' +
-                                '&page_format=broadcast';
-                            if (SentryLoaded)
-                                Sentry.withScope(scope => {
-                                    scope.setLevel('info');
-                                    Sentry.captureMessage("Paging Broadcast",
-                                                          { extra: { page: href } });
-                                });
-                            location.href = href;
-                        }
-                    },
-                    {
-                        text: '<i class="fa fa-wrench"></i> Test',
+                        text: '<i class="fa fa-send-o"></i> Test',
                         action: function ( e, dt, node, config ) {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
