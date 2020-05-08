@@ -11,28 +11,43 @@
 
 {% block content %}
 <main role="main" class="container-fluid">
-  <p>{{ instructions }}</p>
-  <input type="hidden" name="author" value="{{author}}" id="id_author" />
-  <div class="form-group">
-    <label for="id_text">Message:</label>
-    <textarea name="text" cols="40" rows="2" class="form-control"
-              placeholder="Enter message for {{text}}"
-              title="" required id="id_text">{{ input }}</textarea>
-  </div>
-  <div class="form-group">
-    <div class="form-check">
-      <input type="checkbox" name="email" class="form-check-input"
-             id="id_email" checked />
-      <label class="form-check-label" for="id_email">Email</label>
+  <form name="message-add" role="form">
+    <input type="hidden" name="author" value="{{author}}" id="id_author" />
+    <div class="form-group row">
+      <div class="col-sm-12 col-md-12 col-lg-12" style="padding-top:4px;">
+        {{instructions}}
+      </div>
     </div>
-  </div>
-  <div class="form-group">
-    <div class="form-check">
-      <input type="checkbox" name="sms" class="form-check-input"
-             id="id_sms" checked />
-      <label class="form-check-label" for="id_sms">Sms</label>
+    <div class="form-group row">
+      <div class="col-sm-2 col-md-2 col-lg-2" style="padding-top:4px;">
+        <label for="id_email">Deliver by:</label>
+      </div>
+      <div class="col-sm-1 col-md-1 col-lg-1" style="padding-top:4px;">
+        <div class="form-check form-check-inline">
+          <input type="checkbox" name="email" class="form-check-input"
+                 id="id_email" checked />
+          <label class="form-check-label" for="id_email">Email</label>
+        </div>
+      </div>
+      <div class="col-sm-1 col-md-1 col-lg-1" style="padding-top:4px;">
+        <div class="form-check form-check-inline">
+          <input type="checkbox" name="sms" class="form-check-input"
+                 id="id_sms" checked />
+          <label class="form-check-label" for="id_sms">Sms</label>
+        </div>
+      </div>
     </div>
-  </div>
+    <div style="clear:both;"></div>
+    <div class="form-group row">
+      <div class="col-sm-11 col-md-11 col-lg-11" style="padding-top:4px;">
+        <label for="id_text">Message:</label>
+        <textarea name="text" cols="40" rows="3" class="form-control"
+                  placeholder="Enter message for {{text}}"
+                  title="" required id="id_text">{{ input }}
+        </textarea>
+      </div>
+    </div>
+  </form>
 
   <div id="show-filter" style="display: none">
     <select id="filter-status" multiple="multiple"
@@ -148,6 +163,9 @@ EnableMarkSelection(table);
 
 {% block ready_functions %}
 
+$('#id_text').val(pageMsg);
+$('#id_text').triggerHandler('input');
+
 //if (!'headsUp available'.includes(pageFormat))  //FIXME: correct policy?
     table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
         // Pre-select participants
@@ -165,6 +183,7 @@ const eventId = url.searchParams.get('eid');
 const periodPosition = url.searchParams.get('OP');
 const periodId = url.searchParams.get('period');
 const pageFormat = url.searchParams.get('page_format');
+const pageMsg = url.searchParams.get('msg');
 
 var showStatus = [];
 
@@ -309,6 +328,5 @@ $('#id_text').on('input', function(){
 
     $("#length-message").text(length + " characters used (single SMS fits 160)");
 });
-$('#id_text').triggerHandler('input');
 
 {% endblock functions %}
