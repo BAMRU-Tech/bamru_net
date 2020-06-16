@@ -163,8 +163,10 @@ EnableMarkSelection(table);
 
 {% block ready_functions %}
 
-$('#id_text').val(pageMsg);
-$('#id_text').triggerHandler('input');
+if (pageMsg) {
+    $('#id_text').val(pageMsg);
+    $('#id_text').triggerHandler('input');
+}
 
 //if (!'headsUp available'.includes(pageFormat))  //FIXME: correct policy?
     table.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
