@@ -70,11 +70,7 @@
       {% spaceless %}
       <tr>
         <td></td>
-        <td>
-          <a href="{% url 'member_detail' member.id %}?returnx=ml">
-            {{ member.full_name }}
-          </a>
-        </td>
+        <td>{{ member.full_name }}</td>
         <td>{{ member.status }}</td>
         <td>{{ member.status_order }}</td>
         <td>{{ member.roles }}</td>
@@ -83,7 +79,6 @@
         <td>{{ member.display_email }}</td>
         <td>{{ member.id }}</td>
         <td>{{ member.is_unavailable }}</td>
-        <td></td>
       </tr>
       {% endspaceless %}
       {% endfor %}
@@ -110,8 +105,10 @@ columns: [
     },
     { data: 'full_name', title: 'Name', responsivePriority: 1, 
       render: function(data, type, row, meta) {
-          if (type == 'display' && row.is_unavailable == 'True')
-              data = '<i>' + data + '</i>';
+          if (type == 'display') {
+              data = '<a href="/member/' + row.id + '?returnx=ml">' + data + '</a>';
+              if (row.is_unavailable == 'True') data = '<i>' + data + '</i>';
+          }
           return data;
       }
     },
@@ -137,7 +134,6 @@ columns: [
     { data: 'display_email', title: 'Email', responsivePriority: 3, },
     { data: 'id', visible: false, className: 'noVis', },
     { data: 'is_unavailable', visible: false, className: 'noVis', },
-    { type: ['readonly', 'hidden' ], orderable: false, className: 'noVis control' }
 ],
 
 language: { emptyTable: 'No participants selected' },
