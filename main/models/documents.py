@@ -25,7 +25,7 @@ class BaseDocument(BaseModel):
     class Meta:
         abstract = True
 
-    def get_url(self):
+    def url(self):
         return 'https://docs.google.com/document/d/{}/edit'.format(self.fileId)
 
 

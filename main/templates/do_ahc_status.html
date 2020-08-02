@@ -18,13 +18,13 @@
   <p>
     Currently scheduled DO is {{ current_scheduled_do|member_full }}.
     {% if current_do_log %}
-    (<a href="{{ current_do_log.get_url }}">DO log</a>)
+    (<a href="{{ current_do_log.url }}">DO log</a>)
     {% endif %}
   </p>
   <p>
     The next scheduled DO is {{ next_scheduled_do|member_full }}.
     {% if next_do_log %}
-    (<a href="{{ next_do_log.get_url }}">DO log</a>)
+    (<a href="{{ next_do_log.url }}">DO log</a>)
     {% endif %}
   </p>
 
