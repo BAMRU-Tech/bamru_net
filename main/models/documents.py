@@ -58,6 +58,11 @@ class DoLog(BaseDocument):
         for email in emails:
             drive.add_writer(self.fileId, email)
 
+    def date_range(self):
+        return '{:%Y-%m-%d} - {:%Y-%m-%d}'.format(
+            DoAvailable.shift_start(self.year, self.quarter, self.week),
+            DoAvailable.shift_end(self.year, self.quarter, self.week))
+
     @classmethod
     def current_do_log(cls):
         """Returns the current DO log. If it somehow doesn't exist yet, create it."""
@@ -98,9 +103,8 @@ class DoLog(BaseDocument):
         )
         if created:
             drive = gdrive.GoogleDrive()
-            title = 'BAMRU DO Log {:%Y-%m-%d} - {:%Y-%m-%d} DO {}'.format(
-                DoAvailable.shift_start(**shift), DoAvailable.shift_end(**shift),
-                do.full_name)
+            title = 'BAMRU DO Log {} DO {}'.format(
+                obj.date_range(), do.full_name)
             obj.fileId = drive.file_copy(
                 template.fileId, template.destinationId, title)
             obj.save()
