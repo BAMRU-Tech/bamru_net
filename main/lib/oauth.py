@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/admin.directory.group',
           'https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/drive',
 ]
 
 def get_credentials():

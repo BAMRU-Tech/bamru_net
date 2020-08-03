@@ -7,7 +7,6 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-from main.lib import groups
 from .base import BaseModel, BasePositionModel
 
 from datetime import date, datetime, timedelta
@@ -180,16 +179,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def get_absolute_url(self):
         return reverse('member_detail', args=[str(self.id)])
 
-    def set_do(self, is_do):
-        logger.info('Setting {} DO={}'.format(self, is_do))
-        self.is_current_do = is_do
-        self.save()
-        do_group = groups.get_do_group()
-        for email in self.email_set.filter(pagable=True):
-            if is_do:
-                do_group.insert(email.address)
-            else:
-                do_group.delete(email.address)
+    def pagable_email_addresses(self):
+        return [x.address for x in self.email_set.filter(pagable=True)]
 
 
 class Role(BaseModel):
@@ -330,31 +321,41 @@ class DoAvailable(BaseModel):  # was AvailDos
         return self.shift_end(self.year, self.quarter, self.week)
 
     @classmethod
-    def _current_week_of_year(cls):
-        week1_start = cls.shift_start(
-            cls.current_year(), 1, 1)
-        delta = timezone.now() - timezone.make_aware(week1_start)
-        return int(math.floor(delta.days / 7)) + 1  # week numbers start at 1
-
-    @staticmethod
-    def current_year():
-        now = timezone.now()
+    def current_shift_dict(cls, date=None):
+        now = timezone.now() if date is None else date
         if now.date() < DoAvailable.year_start(now.year):
-            return now.year - 1
-        if now.date() > DoAvailable.year_start(now.year + 1):
-            return now.year + 1
-        return now.year
+            year = now.year - 1
+        elif now.date() > DoAvailable.year_start(now.year + 1):
+            year = now.year + 1
+        else:
+            year = now.year
+        week1_start = cls.shift_start(year, 1, 1)
+        week1_delta = now - timezone.make_aware(week1_start)
+        year_week = int(math.floor(week1_delta.days / 7)) + 1 # 1 indexed
+        quarter = int(math.floor((year_week - 1) / 13)) + 1  # quarter numbers start at 1
+        if year_week > 39:
+            quarter = 4  # Don't increment to 5 on 53 week years
+        quarter_week = year_week - 13 * (quarter - 1)
+        return {
+            'year': year,
+            'quarter': quarter,
+            'week': quarter_week,
+        }
+    @classmethod
+    def next_shift_dict(cls):
+        return cls.current_shift_dict(timezone.now() + timedelta(days=7))
+
+    @classmethod
+    def current_year(cls):
+        return cls.current_shift_dict()['year']
 
     @classmethod
     def current_quarter(cls):
-        week = cls._current_week_of_year() - 1 # return to 0 index
-        if week > 39:
-            return 4  # Don't increment to 5 on 53 week years
-        return int(math.floor(week / 13)) + 1  # quarter numbers start at 1
+        return cls.current_shift_dict()['quarter']
 
     @classmethod
     def current_week(cls):
-        return cls._current_week_of_year() - 13 * (cls.current_quarter() - 1)
+        return cls.current_shift_dict()['week']
 
     @classmethod
     def num_weeks_in_quarter(cls, year, quarter):
@@ -401,17 +402,28 @@ class DoAvailable(BaseModel):  # was AvailDos
         return cls.shift_start(year, quarter, week) + timedelta(days=7) - timedelta(minutes=1)
 
     @classmethod
-    def current_scheduled_do(cls):
-        result = cls.objects.filter(year=cls.current_year(),
-                                    quarter=cls.current_quarter(),
-                                    week=cls.current_week(),
-                                    assigned=True)
+    def is_transition_period(cls):
+        start = cls.shift_start(**cls.next_shift_dict())
+        return timezone.now() + timedelta(days=2) >= timezone.make_aware(start)
+
+    @classmethod
+    def scheduled_do(cls, year, quarter, week):
+        result = cls.objects.filter(
+            year=year, quarter=quarter, week=week, assigned=True)
         if result.count() != 1:
             logger.error('Expected 1 DO scheduled, got {}: {}'.format(
                 result.count(), result))
             return None
         else:
             return result.first().member
+
+    @classmethod
+    def current_scheduled_do(cls):
+        return cls.scheduled_do(**cls.current_shift_dict())
+
+    @classmethod
+    def next_scheduled_do(cls):
+        return cls.scheduled_do(**cls.next_shift_dict())
 
 
 def cert_upload_path_handler(instance, filename):

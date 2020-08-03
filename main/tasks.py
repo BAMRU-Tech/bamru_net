@@ -3,7 +3,8 @@ from django.utils import timezone
 import logging
 from datetime import timedelta
 
-from .models import Cert, Configuration, Distribution, Member, Message, OutboundEmail, OutboundSms, Participant, Role
+from .lib import groups
+from .models import Cert, Configuration, Distribution, DoLog, Member, Message, OutboundEmail, OutboundSms, Participant, Role
 
 from celery import shared_task
 
@@ -99,3 +100,17 @@ def meeting_sign_in_update():
         p.signed_in_at = p.period.event.start_at
         p.signed_out_at = p.period.event.finish_at
         p.save()
+
+def set_do(member, is_do):
+    logger.info('Setting {} DO={}'.format(member, is_do))
+    member.is_current_do = is_do
+    member.save()
+    do_group = groups.get_do_group()
+    for email in member.pagable_email_addresses():
+        if is_do:
+            do_group.insert(email)
+        else:
+            do_group.delete(email)
+    if is_do:
+        DoLog.current_do_log().add_writer(member)
+    # No else - do not remove writers from DO Log.
