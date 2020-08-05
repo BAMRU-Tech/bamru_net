@@ -1,5 +1,5 @@
 from .models import *
-from .tasks import message_send
+from .tasks import message_send, set_do
 from django.core.files.base import ContentFile
 from django.urls import reverse
 from rest_framework import exceptions, serializers
@@ -179,7 +179,7 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
         was_ahc = self.instance is not None and self.instance.ahc
         instance = super().save(**kwargs)
         if instance.ahc and not was_ahc:
-            instance.member.set_do(True)
+            set_do(instance.member, True)
         return instance
 
 
@@ -233,7 +233,7 @@ class MessageDetailSerializer(MessageListSerializer):
         message_send.delay(message.pk)
         logger.debug('MessageSerializer.create done')
         if message.format == 'do_shift_starting':
-            message.author.set_do(True)
+            set_do(message.author, True)
         return message
 
 

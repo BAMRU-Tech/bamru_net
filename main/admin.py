@@ -91,3 +91,15 @@ class MessageAdmin(admin.ModelAdmin):
 @admin.register(Configuration)
 class ConfigurationAdmin(admin.ModelAdmin):
     list_display = ('key', 'value')
+
+
+# Documents
+@admin.register(DocumentTemplate)
+class DocumentTemplateAdmin(admin.ModelAdmin):
+    list_display = ('type', 'enabled', 'url')
+    readonly_fields = ('url', )
+
+@admin.register(DoLog)
+class DoLogAdmin(admin.ModelAdmin):
+    list_display = ('year', 'quarter', 'week', 'url',)
+    readonly_fields = ('type', 'url', )

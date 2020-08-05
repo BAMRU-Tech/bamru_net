@@ -4,7 +4,8 @@ from django.forms.models import modelformset_factory
 from django.views import generic
 
 from main.lib import groups
-from main.models import DoAvailable, Member
+from main.models import DoAvailable, DoLog, Member
+from main.tasks import set_do
 
 from collections import defaultdict
 
@@ -142,6 +143,9 @@ class DoAhcStatusView(LoginRequiredMixin, generic.base.TemplateView):
         context['do_email_list'] = groups.get_do_group().list_emails()
         context['do_email_list_name'] = groups.get_do_group().name
         context['current_scheduled_do'] = DoAvailable.current_scheduled_do()
+        context['next_scheduled_do'] = DoAvailable.next_scheduled_do()
+        context['current_do_log'] = DoLog.current_do_log()
+        context['next_do_log'] = DoLog.maybe_next_do_log()
 
         return context
 
@@ -150,6 +154,6 @@ class DoAhcStatusView(LoginRequiredMixin, generic.base.TemplateView):
         id = request.POST.get('id', None)
         if id:
             m = Member.objects.get(id=int(id))
-            m.set_do(False)
+            set_do(m, False)
             return HttpResponse('removed')
         return HttpResponseBadRequest('Error: No id set.')
