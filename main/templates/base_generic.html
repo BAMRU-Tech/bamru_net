@@ -69,10 +69,14 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
     {% endblock js %}
     {% comment %}
-      browser.sentry-cdn.com is blocked by ad blockers so this copy needs to be
+    moved back to cdn. Do we still see this problem?
+    [obsolete?] browser.sentry-cdn.com is blocked by ad blockers so this copy needs to be
       manually updated. FX: consider removing if the load start is too great
     {% endcomment %}
-    <script src="/static/js/browser.sentry-cdn-5.5.0-bundle.min.js" crossorigin="anonymous"></script>
+    <script
+      src="https://browser.sentry-cdn.com/5.20.1/bundle.min.js"
+      integrity="sha384-O8HdAJg1h8RARFowXd2J/r5fIWuinSBtjhwQoPesfVILeXzGpJxvyY/77OaPPXUo"
+      crossorigin="anonymous"></script>
     <script>
       // Needed for IOS
       $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
