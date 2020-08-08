@@ -79,6 +79,12 @@
     <br>
       <strong>All day:</strong> {{ event.all_day }}
       <strong>Published:</strong> {{ event.published }}
+      {% if event.ahc_log %}
+        <br><a href="{{ event.ahc_log.url }}">AHC Log</a>
+      {% endif %}
+      {% if event.logistics_spreadsheet %}
+        <br><a href="{{ event.logistics_spreadsheet.url }}">Logistics Spreadsheet</a>
+      {% endif %}
     </p>
     {% if event.type == 'operation' %}
     <p>

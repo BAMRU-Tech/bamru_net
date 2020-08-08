@@ -102,4 +102,4 @@ class DocumentTemplateAdmin(admin.ModelAdmin):
 @admin.register(DoLog)
 class DoLogAdmin(admin.ModelAdmin):
     list_display = ('year', 'quarter', 'week', 'url',)
-    readonly_fields = ('type', 'url', )
+    readonly_fields = ('url', )

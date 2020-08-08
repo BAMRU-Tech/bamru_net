@@ -29,7 +29,7 @@ class GoogleDrive(NoopGoogleDrive):
             return NoopGoogleGroup()
         return instance
 
-    def _add_permission(self, fileId, email, role):
+    def _add_permission(self, fileId, email, role, notify):
         permission = {
             'type': 'user',
             'role': role,
@@ -38,11 +38,12 @@ class GoogleDrive(NoopGoogleDrive):
         return self.drive.permissions().create(
             fileId=fileId,
             supportsAllDrives=True,
+            sendNotificationEmail=notify,
             body=permission,
         ).execute()
 
-    def add_writer(self, fileId, email):
-        return self._add_permission(fileId, email, 'writer')
+    def add_writer(self, fileId, email, notify=False):
+        return self._add_permission(fileId, email, 'writer', notify)
 
     def file_copy(self, templateId, destinationId, name):
         dest_file = {'name': name, 'parents' : [destinationId]}

@@ -404,7 +404,7 @@ class DoAvailable(BaseModel):  # was AvailDos
     @classmethod
     def is_transition_period(cls):
         start = cls.shift_start(**cls.next_shift_dict())
-        return timezone.now() + timedelta(days=2) >= timezone.make_aware(start)
+        return timezone.now() + timedelta(days=1) >= timezone.make_aware(start)
 
     @classmethod
     def scheduled_do(cls, year, quarter, week):

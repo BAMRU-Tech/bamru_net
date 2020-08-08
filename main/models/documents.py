@@ -20,16 +20,43 @@ DOCUMENT_TYPES = (
 
 
 class BaseDocument(BaseModel):
+    TYPE = None
     fileId = models.CharField(max_length=255, blank=True) # ID to look up document
-    type = models.CharField(choices=DOCUMENT_TYPES, max_length=255, blank=True)
     class Meta:
         abstract = True
 
     def url(self):
         return 'https://docs.google.com/document/d/{}/edit'.format(self.fileId)
 
+    def add_writers(self, members):
+        [self.add_writer(member) for member in members]
+
+    def add_writer(self, member):
+        self.add_writer_emails(member.pagable_email_addresses())
+
+    def add_writer_emails(self, emails):
+        drive = gdrive.GoogleDrive()
+        for email in emails:
+            drive.add_writer(self.fileId, email)
+
+    @classmethod
+    def _template(cls):
+        return DocumentTemplate.for_type(cls.TYPE)
+
+    def _copy(self, title):
+        """Create from template. You must call save() after this function."""
+        template = self._template()
+        if template is None:
+            logger.error('No {} template'.format(self.TYPE))
+            return
+        drive = gdrive.GoogleDrive()
+        self.fileId = drive.file_copy(
+            template.fileId, template.destinationId, title)
+        # Does NOT call save() because this is usually used within save()
+
 
 class DocumentTemplate(BasePositionMixin, BaseDocument):
+    type = models.CharField(choices=DOCUMENT_TYPES, max_length=255, blank=True)
     enabled = models.BooleanField(default=True)
     destinationId = models.CharField(max_length=255, blank=True)
 
@@ -44,19 +71,51 @@ class DocumentTemplate(BasePositionMixin, BaseDocument):
             return result.first()
 
 
+class AhcLog(BaseDocument):
+    TYPE = 'AHC'
+    event = models.OneToOneField(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='ahc_log',
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            title = 'BAMRU AHC Log {}'.format(self.event.title)
+            self._copy(title)
+        if self.fileId:
+            super(AhcLog, self).save(*args, **kwargs)
+        else:
+            logger.error('Skipping AhcLog.save due to missing fileId.')
+
+
+class LogisticsSpreadsheet(BaseDocument):
+    TYPE = 'L'
+    event = models.OneToOneField(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='logistics_spreadsheet',
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            title = 'Logistics for {}'.format(self.event.title)
+            self._copy(title)
+        if self.fileId:
+            super(LogisticsSpreadsheet, self).save(*args, **kwargs)
+        else:
+            logger.error('Skipping L.save due to missing fileId.')
+
+
 class DoLog(BaseDocument):
     year = models.IntegerField()
     quarter = models.IntegerField()
     week = models.IntegerField()
     TYPE = 'DO'
-
-    def add_writer(self, member):
-        self.add_writer_emails(member.pagable_email_addresses())
-
-    def add_writer_emails(self, emails):
-        drive = gdrive.GoogleDrive()
-        for email in emails:
-            drive.add_writer(self.fileId, email)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['year', 'quarter', 'week'], name='unique_do_log')
+        ]
 
     def date_range(self):
         return '{:%Y-%m-%d} - {:%Y-%m-%d}'.format(
@@ -90,23 +149,17 @@ class DoLog(BaseDocument):
 
     @classmethod
     def _get_or_create_do_log(cls, shift):
-        template = DocumentTemplate.for_type(cls.TYPE)
-        if template is None:
+        if cls._template() is None:
             logger.error('No DO log template')
             return None
         do = DoAvailable.scheduled_do(**shift)
         if do is None:  # Do check here so we don't create a bad version.
             return None
-        obj, created = cls.objects.get_or_create(
-            **shift,
-            defaults={'type': cls.TYPE}
-        )
+        obj, created = cls.objects.get_or_create(**shift)
         if created:
-            drive = gdrive.GoogleDrive()
             title = 'BAMRU DO Log {} DO {}'.format(
                 obj.date_range(), do.full_name)
-            obj.fileId = drive.file_copy(
-                template.fileId, template.destinationId, title)
+            self._copy(title)
             obj.save()
             obj.add_writer(do)
         return obj
