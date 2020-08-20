@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -15,6 +15,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 from main.lib.gcal import get_gcal_manager
 from main.models import Member, Event, Participant, Period
 from main.views.api_views import EventFilter
+from main import tasks
 
 from datetime import timedelta
 import datetime
@@ -81,6 +82,25 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
         context['leaders'] = result
         return context
+
+    def post(self, request, *args, **kwargs):
+        event_id = self.get_object().id
+        logger.info(request.POST)
+        action = request.POST.get('action', None)
+        if action == 'aar':
+            logger.info('Calling event_create_aar {}'.format(event_id))
+            tasks.event_create_aar.delay(event_id)
+            return HttpResponse('aar')
+        if action == 'ahc_log':
+            logger.info('Calling event_create_ahc_log {}'.format(event_id))
+            tasks.event_create_ahc_log.delay(event_id)
+            return HttpResponse('ahc_log')
+        if action == 'logistics_spreadsheet':
+            logger.info('Calling event_create_logistics_spreadsheet {}'.format(event_id))
+            tasks.event_create_logistics_spreadsheet.delay(event_id)
+            return HttpResponse('logistics_spreadsheet')
+        return HttpResponseBadRequest('Error: No action set.')
+
 
 class EventForm(ModelForm):
     class Meta:

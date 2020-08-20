@@ -79,6 +79,15 @@
     <br>
       <strong>All day:</strong> {{ event.all_day }}
       <strong>Published:</strong> {{ event.published }}
+      {% if event.ahc_log %}
+        <br><a href="{{ event.ahc_log.url }}">AHC Log</a>
+      {% endif %}
+      {% if event.logistics_spreadsheet %}
+        <br><a href="{{ event.logistics_spreadsheet.url }}">Logistics Spreadsheet</a>
+      {% endif %}
+      {% if event.aar %}
+        <br><a href="{{ event.aar.url }}">After Action Report (AAR)</a>
+      {% endif %}
     </p>
     {% if event.type == 'operation' %}
     <p>
@@ -608,6 +617,21 @@ $(document).ready( function() {
                             location.href = href;
                         }
                     },
+                    {% if not event.ahc_log %}
+                    { text: 'Generate AHC Log',
+                      action: function () { PostAction('ahc_log') },
+                    },
+                    {% endif %}
+                    {% if not event.logistics_spreadsheet %}
+                    { text: 'Generate Logistics Spreadsheet',
+                      action: function () { PostAction('logistics_spreadsheet') },
+                    },
+                    {% endif %}
+                    {% if not event.aar %}
+                    { text: 'Generate AAR',
+                      action: function () { PostAction('aar') },
+                    },
+                    {% endif %}
                     { extend: 'copy', exportOptions: { columns: ':visible' }},
                     { extend: 'copy', text: 'Copy email', header: false, title: '',
                       customize: function( data, button, table ) {
@@ -955,6 +979,26 @@ function UpdatePeriodRow(dt, row, success, error) {
     // Remove from summary total, member is readded on display
     window.summary[row.tblId][row.status] -= 1;
 
+}
+
+function PostAction (action) {
+    var data = { "action": action };
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/x-www-form-urlencoded',
+        url: location.href,
+        data: data,
+            success: function (response) {
+                console.log('PostAction success.');
+                setTimeout(function() { location.reload() }, 2000);
+            },
+        error: function (xhr) {
+            console.log('PostAction failed');
+            console.log(xhr);
+            if (xhr.responseText) alert(xhr.responseText);
+            return false;
+        }
+    })
 }
 
 function AddMeToOP (period) {

@@ -102,4 +102,19 @@ class DocumentTemplateAdmin(admin.ModelAdmin):
 @admin.register(DoLog)
 class DoLogAdmin(admin.ModelAdmin):
     list_display = ('year', 'quarter', 'week', 'url',)
-    readonly_fields = ('type', 'url', )
+    readonly_fields = ('url', )
+
+@admin.register(Aar)
+class AarAdmin(admin.ModelAdmin):
+    list_display = ('event', 'url',)
+    readonly_fields = ('url', )
+
+@admin.register(AhcLog)
+class AhcLogAdmin(admin.ModelAdmin):
+    list_display = ('event', 'url',)
+    readonly_fields = ('url', )
+
+@admin.register(LogisticsSpreadsheet)
+class LogisticsSpreadsheetAdmin(admin.ModelAdmin):
+    list_display = ('event', 'url',)
+    readonly_fields = ('url', )

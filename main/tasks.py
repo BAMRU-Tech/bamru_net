@@ -4,7 +4,7 @@ import logging
 from datetime import timedelta
 
 from .lib import groups
-from .models import Cert, Configuration, Distribution, DoLog, Member, Message, OutboundEmail, OutboundSms, Participant, Role
+from .models import Cert, Configuration, Distribution, DoLog, Event, Member, Message, OutboundEmail, OutboundSms, Participant, Role
 
 from celery import shared_task
 
@@ -101,7 +101,10 @@ def meeting_sign_in_update():
         p.signed_out_at = p.period.event.finish_at
         p.save()
 
-def set_do(member, is_do):
+@shared_task
+def set_do(member_id, is_do):
+    logger.info('Running set_do triggered by {}, {}'.format(member_id, is_do))
+    member = Member.objects.get(id=member_id)
     logger.info('Setting {} DO={}'.format(member, is_do))
     member.is_current_do = is_do
     member.save()
@@ -114,3 +117,18 @@ def set_do(member, is_do):
     if is_do:
         DoLog.current_do_log().add_writer(member)
     # No else - do not remove writers from DO Log.
+
+@shared_task
+def event_create_aar(event_id):
+    logger.info('Running event_create_aar triggered by {}'.format(event_id))
+    Event.objects.get(id=event_id).create_aar()
+
+@shared_task
+def event_create_ahc_log(event_id):
+    logger.info('Running event_create_ahc_log triggered by {}'.format(event_id))
+    Event.objects.get(id=event_id).create_ahc_log()
+
+@shared_task
+def event_create_logistics_spreadsheet(event_id):
+    logger.info('Running event_create_logistics_spreadsheet triggered by {}'.format(event_id))
+    Event.objects.get(id=event_id).create_logistics_spreadsheet()
