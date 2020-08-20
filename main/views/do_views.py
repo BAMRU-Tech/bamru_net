@@ -9,6 +9,9 @@ from main.tasks import set_do
 
 from collections import defaultdict
 
+import logging
+logger = logging.getLogger(__name__)
+
 class DoAbstractView(LoginRequiredMixin):
     def get_params(self):
         year = self.request.GET.get('year', '')
@@ -153,7 +156,8 @@ class DoAhcStatusView(LoginRequiredMixin, generic.base.TemplateView):
         """Remove member from DO list."""
         id = request.POST.get('id', None)
         if id:
-            m = Member.objects.get(id=int(id))
-            set_do(m, False)
+            m = int(id)
+            logger.info('Calling set_do {}'.format(m))
+            set_do.delay(m, False)
             return HttpResponse('removed')
         return HttpResponseBadRequest('Error: No id set.')

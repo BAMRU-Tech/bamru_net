@@ -179,7 +179,8 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
         was_ahc = self.instance is not None and self.instance.ahc
         instance = super().save(**kwargs)
         if instance.ahc and not was_ahc:
-            set_do(instance.member, True)
+            logger.info('Calling set_do {}'.format(instance.member.pk))
+            set_do.delay(instance.member.pk, True)
         return instance
 
 
@@ -233,7 +234,8 @@ class MessageDetailSerializer(MessageListSerializer):
         message_send.delay(message.pk)
         logger.debug('MessageSerializer.create done')
         if message.format == 'do_shift_starting':
-            set_do(message.author, True)
+            logger.info('Calling set_do {}'.format(message.author.pk))
+            set_do.delay(message.author.pk, True)
         return message
 
 
