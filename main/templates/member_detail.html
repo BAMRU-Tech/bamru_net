@@ -120,9 +120,13 @@ $(document).ready( function() {
         ajax: { url: certUrl,
                 dataSrc: function ( json ) {
                     var data = [];
-                    for ( var i=0 ; i< json.certs.length ; i++ ) {
-                        if (json.certs[i][0])
-                            data.push(json.certs[i][0]);
+                    for ( var i=0 ; i<json.certs.length ; i++ ) {
+                        var nc = json.certs[i].length;
+                        if (nc > 0) {
+                            for ( var j=0; j<nc ; j++ ) {
+                                data.push(json.certs[i][j]);
+                            }
+                        }
                     }
                     return data;
                 }
