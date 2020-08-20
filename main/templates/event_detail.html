@@ -85,6 +85,9 @@
       {% if event.logistics_spreadsheet %}
         <br><a href="{{ event.logistics_spreadsheet.url }}">Logistics Spreadsheet</a>
       {% endif %}
+      {% if event.aar %}
+        <br><a href="{{ event.aar.url }}">After Action Report (AAR)</a>
+      {% endif %}
     </p>
     {% if event.type == 'operation' %}
     <p>
@@ -622,6 +625,11 @@ $(document).ready( function() {
                     {% if not event.logistics_spreadsheet %}
                     { text: 'Generate Logistics Spreadsheet',
                       action: function () { PostAction('logistics_spreadsheet') },
+                    },
+                    {% endif %}
+                    {% if not event.aar %}
+                    { text: 'Generate AAR',
+                      action: function () { PostAction('aar') },
                     },
                     {% endif %}
                     { extend: 'copy', exportOptions: { columns: ':visible' }},

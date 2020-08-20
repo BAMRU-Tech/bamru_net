@@ -7,7 +7,7 @@ from django.urls import reverse
 from datetime import datetime, timezone, timedelta
 
 from .base import BaseModel, BasePositionModel
-from .documents import AhcLog, LogisticsSpreadsheet
+from .documents import Aar, AhcLog, LogisticsSpreadsheet
 from .member import Member, Role
 
 def utc_to_local(utc_dt):
@@ -58,6 +58,13 @@ class Event(BaseModel):
 
     def members(self):
         return Member.objects.filter( participant__period__event=self.id )
+
+    def create_aar(self):
+        if not hasattr(self, 'aar'):
+            aar = Aar(event=self)
+            aar.save()
+            aar.add_writers(self.members())
+        return self.aar
 
     def create_ahc_log(self):
         if not hasattr(self, 'ahc_log'):

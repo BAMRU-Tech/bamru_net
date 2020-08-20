@@ -119,6 +119,11 @@ def set_do(member_id, is_do):
     # No else - do not remove writers from DO Log.
 
 @shared_task
+def event_create_aar(event_id):
+    logger.info('Running event_create_aar triggered by {}'.format(event_id))
+    Event.objects.get(id=event_id).create_aar()
+
+@shared_task
 def event_create_ahc_log(event_id):
     logger.info('Running event_create_ahc_log triggered by {}'.format(event_id))
     Event.objects.get(id=event_id).create_ahc_log()

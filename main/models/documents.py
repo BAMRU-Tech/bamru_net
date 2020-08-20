@@ -71,6 +71,24 @@ class DocumentTemplate(BasePositionMixin, BaseDocument):
             return result.first()
 
 
+class Aar(BaseDocument):
+    TYPE = 'AAR'
+    event = models.OneToOneField(
+        'Event',
+        on_delete=models.CASCADE,
+        related_name='aar',
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            title = 'BAMRU AAR {}'.format(self.event.title)
+            self._copy(title)
+        if self.fileId:
+            super(Aar, self).save(*args, **kwargs)
+        else:
+            logger.error('Skipping Aar.save due to missing fileId.')
+
+
 class AhcLog(BaseDocument):
     TYPE = 'AHC'
     event = models.OneToOneField(

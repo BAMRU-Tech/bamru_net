@@ -87,6 +87,10 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         event_id = self.get_object().id
         logger.info(request.POST)
         action = request.POST.get('action', None)
+        if action == 'aar':
+            logger.info('Calling event_create_aar {}'.format(event_id))
+            tasks.event_create_aar.delay(event_id)
+            return HttpResponse('aar')
         if action == 'ahc_log':
             logger.info('Calling event_create_ahc_log {}'.format(event_id))
             tasks.event_create_ahc_log.delay(event_id)
