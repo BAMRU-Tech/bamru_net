@@ -27,11 +27,12 @@ function goDate(url) {
   <li><a href="/reports/roster/BAMRU-names.html">BAMRU Names (printable HTML)</a> - List of names for ProDeal reporting</li>
 </ul>
 
-<h4>Activity Reports</h4>
+<h4>Date-based Reports</h4>
 <p>
 Start: <input type="date" id="start" value="{{ start|date:"Y-m-d" }}">
 End: <input type="date" id="end" value="{{ end|date:"Y-m-d" }}">
 </p>
+<h5>Events</h5>
 <ul>
   <li><a href="{% url 'report_activity' 'summary' %}"
          onclick="javascript:return goDate('{% url 'report_activity' 'summary' %}');">
@@ -39,6 +40,12 @@ End: <input type="date" id="end" value="{{ end|date:"Y-m-d" }}">
   <li><a href="{% url 'report_activity' 'detail' %}?type="
          onclick="javascript:return goDate('{% url 'report_activity' 'detail' %}');">
       Activity Detail - All Events</a></li>
+</ul>
+<h5>Certs</h5>
+<ul>
+  <li><a href="{% url 'report_cert_expire' %}?type="
+         onclick="javascript:return goDate('{% url 'report_cert_expire' %}');">
+      Cert Expirations</a></li>
 </ul>
 
 <h4>Diagnostic Reports</h4>

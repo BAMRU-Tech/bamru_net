@@ -1,0 +1,77 @@
+{% load filters %}
+{% load humanize %}
+<html>
+<head>
+<style type="text/css">
+
+@page {
+    margin: 1.5cm;
+}
+body { font-family: sans-serif }
+table { page-break-inside:auto }
+tr    { page-break-inside:avoid; page-break-after:auto }
+thead { display:table-header-group }
+tfoot { display:table-footer-group }
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+table, td, th {
+  border: 1px solid black;
+}
+thead tr {
+    background-color: #ccc;
+}
+tr.cert:nth-child(even) {
+    background-color: #eee;
+}
+tr.total {
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+<div align="center">
+  <h2>Bay Area Mountain Rescue Unit</h2>
+  <h1>Cert Expirations - {{ start|date:"N j Y" }} to {{ end|date:"N j Y" }}</h1>
+  {% if type %}<h2>Limited to {{ type }}</h2>{% endif %}
+  <p>CONFIDENTIAL - BAMRU Members Only</p>
+  <p>
+    Limit to:
+    {% for t in types %}
+    <a href='?start={{start|date:"Y-m-d"}}&end={{end|date:"Y-m-d"}}&type={{t.0}}'>{{t.1}}</a>, 
+    {% endfor %}
+    or <a href='?start={{start|date:"Y-m-d"}}&end={{end|date:"Y-m-d"}}'>Show All</a>.
+  </p>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Member</th>
+      <th>Status</th>
+      <th>Type</th>
+      <th>Cert Description</th>
+      <th>Comment</th>
+      <th>Expires</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for cert in certs|dictsort:"expires_on" %}
+    <tr class="cert">
+      <td><a href="{% url 'report_activity_member' cert.member.id %}">
+          {{ cert.member.full_name }}</a></td>
+      <td>{{ cert.member.status }}</td>
+      <td>{{ cert.type }}</td>
+      <td>{{ cert.description }}</td>
+      <td>{{ cert.comment }}</td>
+      <td>{{ cert.expires_on }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+</body>
+</html>
