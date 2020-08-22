@@ -69,7 +69,7 @@ tr.total {
         {% if cert.link %}
           <a href="{{ cert.link }}">Link</a>
         {% endif %}
-        {{ cert.comment }}
+        {{ cert.comment|default_if_none:'' }}
       </td>
       <td>{{ cert.expires_on }}</td>
     </tr>
