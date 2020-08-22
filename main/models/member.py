@@ -460,6 +460,12 @@ class Cert(BasePositionModel):
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
+        # cleanup possible bad values from front end
+        if self.link == 'None':
+            self.link = None
+        if self.comment == 'None':
+            self.comment = None
+
         if self.pk is None:
             saved_file = self.cert_file
             self.cert_file = None

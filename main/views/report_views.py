@@ -5,7 +5,7 @@ from django.template import loader
 from django.utils import timezone
 from django.views import generic, View
 
-from main.models import Member, Event, Participant, Period
+from main.models import Cert, Member, Event, Participant, Period
 
 import collections
 import csv
@@ -157,6 +157,31 @@ class ReportEventMemberView(LoginRequiredMixin, generic.DetailView):
                          .order_by('period__event__start_at', 'period__position'))
         context['events'] = events
         return context
+
+
+class CertExpireView(LoginRequiredMixin, BaseReportView):
+    def get(self, request, **kwargs):
+
+        type = request.GET.get('type', None)
+
+        end = get_datetime_from_text(request.GET.get('end', None),
+                                     timezone.now())
+        start = get_datetime_from_text(request.GET.get('start', None),
+                                       end - timedelta(days=365))
+
+
+        certs = Cert.objects.filter(expires_on__gte=start,
+                                    expires_on__lte=end)
+        if type is not None:
+            certs = certs.filter(type=type)
+
+        context = {}
+        context['certs'] = certs
+        context['types'] = Cert.TYPES
+        context['type'] = type
+        context['start'] = start
+        context['end'] = end
+        return self.render('cert-expire.html', context)
 
 
 class ReportRosterView(LoginRequiredMixin, BaseReportView):
