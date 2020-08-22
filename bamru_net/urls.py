@@ -82,6 +82,8 @@ urlpatterns = [
          name='member_cert_new'),
     path('member/<int:member>/certs/<int:cert>/download/<path:name>',
          views.cert_file_download_view, name='member_cert_download'),
+    path('certs/<int:cert>/download/',
+         views.cert_file_download_view, name='cert_download'),
 
     path('do/schedule/', views.DoListView.as_view(), name='do_sched'),
     path('do/availability/<int:pk>', views.DoMemberDetailView.as_view(),
