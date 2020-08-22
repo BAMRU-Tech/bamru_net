@@ -60,12 +60,17 @@ tr.total {
   <tbody>
     {% for cert in certs|dictsort:"expires_on" %}
     <tr class="cert">
-      <td><a href="{% url 'report_activity_member' cert.member.id %}">
+      <td><a href="{% url 'member_detail' cert.member.id %}">
           {{ cert.member.full_name }}</a></td>
       <td>{{ cert.member.status }}</td>
       <td>{{ cert.type }}</td>
-      <td>{{ cert.description }}</td>
-      <td>{{ cert.comment }}</td>
+      <td><a {% if cert.cert_name %}href="{% url 'cert_download' cert.id %}"{% endif %}>{{ cert.description }}</a></td>
+      <td>
+        {% if cert.link %}
+          <a href="{{ cert.link }}">Link</a>
+        {% endif %}
+        {{ cert.comment }}
+      </td>
       <td>{{ cert.expires_on }}</td>
     </tr>
     {% endfor %}
