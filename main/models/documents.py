@@ -115,6 +115,9 @@ class LogisticsSpreadsheet(BaseDocument):
         related_name='logistics_spreadsheet',
     )
 
+    def url(self):
+        return 'https://docs.google.com/spreadsheets/d/{}/edit'.format(self.fileId)
+
     def save(self, *args, **kwargs):
         if not self.pk:
             title = 'Logistics for {}'.format(self.event.title)
