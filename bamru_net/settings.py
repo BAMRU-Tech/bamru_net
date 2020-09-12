@@ -239,11 +239,6 @@ CELERY_TASK_SOFT_TIME_LIMIT = 300
 CELERY_WORKER_CONCURRENCY = 1
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
-WIKI_BASE_URL = os.environ.get('WIKI_BASE_URL', '')
-WIKI_SSH_DEST = os.environ.get('WIKI_SSH_DEST', '')
-WIKI_SSH_KEY = os.environ.get('WIKI_SSH_KEY', '')
-WIKI_AUTH_DIR = os.environ.get('WIKI_AUTH_DIR', '')
-
 
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']
