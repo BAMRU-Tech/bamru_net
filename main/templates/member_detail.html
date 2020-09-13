@@ -54,7 +54,7 @@
   <strong>Phone numbers:</strong>
   <ul>
     {% for ph in member.phone_set.all %}
-    <li>{{ ph.number }} ({{ ph.type }}{% if ph.pagable %}, pageable{% endif %})</li>
+    <li>{{ ph.display_number }} ({{ ph.type }}{% if ph.pagable %}, pageable{% endif %})</li>
     {% endfor %}
   </ul>
   <strong>Addresses:</strong>
@@ -72,7 +72,7 @@
   <strong>Emergency Contacts:</strong>
   <ul>
     {% for ec in member.emergencycontact_set.all %}
-    <li>{{ ec.name }}: {{ ec.number }} ({{ ec.type }})</li>
+    <li>{{ ec.name }}: {{ ec.display_number }} ({{ ec.type }})</li>
     {% endfor %}
   </ul>
   <p> <strong>Username:</strong> {{ member.username }}</p>

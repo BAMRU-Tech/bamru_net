@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .base import BaseModel, BasePositionModel
+from main.lib import phone
 
 from datetime import date, datetime, timedelta
 import math
@@ -130,28 +131,28 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def display_phone(self):
         """ Return first phone """
         try:
-            return self.phone_set.first().number
+            return self.phone_set.first().display_number
         except AttributeError:
             return ''
 
     @property
     def mobile_phone(self):
         try:
-            return self.phone_set.filter(type='Mobile').first().number
+            return self.phone_set.filter(type='Mobile').first().display_number
         except AttributeError:
             return ''
 
     @property
     def home_phone(self):
         try:
-            return self.phone_set.filter(type='Home').first().number
+            return self.phone_set.filter(type='Home').first().display_number
         except AttributeError:
             return ''
 
     @property
     def work_phone(self):
         try:
-            return self.phone_set.filter(type='Work').first().number
+            return self.phone_set.filter(type='Work').first().display_number
         except AttributeError:
             return ''
 
@@ -266,9 +267,18 @@ class Phone(BasePositionModel):
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     type = models.CharField(choices=TYPES, max_length=255, default='Mobile')
-    number = models.CharField(max_length=255)
+    number = models.CharField(max_length=255, validators=[phone.validate_phone])
     pagable = models.BooleanField(default=True)
     sms_email = models.CharField(max_length=255, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        self.number = phone.format_e164(self.number)
+        return super(Phone, self).save(*args, **kwargs)
+
+    @property
+    def display_number(self):
+        return phone.format_display(self.number)
 
 
 class EmergencyContact(BasePositionModel):
@@ -283,6 +293,10 @@ class EmergencyContact(BasePositionModel):
     number = models.CharField(max_length=255)
     type = models.CharField(choices=TYPES, max_length=255)
     
+    @property
+    def display_number(self):
+        return phone.format_display(self.number)
+
 
 class OtherInfo(BasePositionModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
