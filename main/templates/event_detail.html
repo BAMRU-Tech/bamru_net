@@ -143,6 +143,7 @@
             </td>
             <td>{{ p.ahc|lower }}</td>
             <td>{{ p.ol|lower }}</td>
+            <td>{{ p.logistics|lower }}</td>
             <td>{{ p.id }}</td> {# participant id #}
             <td>{{ p.member.id }}</td>
             <td>{{ p.member.display_email }}</td>
@@ -320,6 +321,7 @@ $(document).ready( function() {
                   if (type == 'display') {
                       if (row.ahc == 'true') data += '(AHC)';
                       if (row.ol == 'true') data += '(OL)';
+                      if (row.logistics == 'true') data += '(Logistics)';
                       data = '<a href="/member/' + row.member + '">' + data + '</a>';
                       if (row.is_unavailable == 'True') {
                           var event_start = new Date('{{ event.start_at|date:'M j, Y' }}');
@@ -388,6 +390,10 @@ $(document).ready( function() {
               visible: false, className: 'noVis'
             },
             { data: 'ol', title: 'Ol',
+              type: 'select', options: ['false', 'true'],
+              visible: false, className: 'noVis'
+            },
+            { data: 'logistics', title: 'Logistics',
               type: 'select', options: ['false', 'true'],
               visible: false, className: 'noVis'
             },
