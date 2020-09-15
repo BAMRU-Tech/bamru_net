@@ -180,7 +180,7 @@ class DoLog(BaseDocument):
         if created:
             title = 'BAMRU DO Log {} DO {}'.format(
                 obj.date_range(), do.full_name)
-            self._copy(title)
+            obj._copy(title)
             obj.save()
             obj.add_writer(do)
         return obj
