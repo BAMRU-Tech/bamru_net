@@ -22,11 +22,11 @@ class GoogleDrive(NoopGoogleDrive):
         instance = super(GoogleDrive, cls).__new__(cls)
         c = main.lib.oauth.get_credentials()
         if not c:
-            return NoopGoogleGroup()
+            return NoopGoogleDrive()
         instance.drive = googleapiclient.discovery.build(
             'drive', 'v3', credentials=c)
         if not instance.drive:
-            return NoopGoogleGroup()
+            return NoopGoogleDrive()
         return instance
 
     def _add_permission(self, fileId, email, role, notify):
