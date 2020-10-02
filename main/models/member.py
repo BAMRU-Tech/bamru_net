@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .base import BaseModel, BasePositionModel
-from main.lib import phone
+from main.lib import admin, phone
 
 from datetime import date, datetime, timedelta
 import math
@@ -183,6 +183,43 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def pagable_email_addresses(self):
         return [x.address for x in self.email_set.filter(pagable=True)]
 
+    @property
+    def google_email(self):
+        return self.email_set.filter(address__endswith='bamru.org').first()
+
+    def _google_profile_info(self):
+        data = {
+            'name': {'givenName': self.first_name, 'familyName': self.last_name},
+            'organizations': [ {'name': 'BAMRU', 'title': self.status}, ],
+        }
+        data['phones'] = [
+            {'type': x.type.lower(), 'value': x.number}
+            for x in self.phone_set.all()]
+        data['emails'] = [
+            {'type': x.type.lower() if x.type != 'Personal' else 'custom',
+             'address': x.address}
+            for x in self.email_set.all()]
+        data['addresses'] = []
+        for x in self.address_set.all():
+            street = x.address1
+            if x.address2:
+                street += '\n' + x.address2
+            data['addresses'].append({
+                'type': x.type.lower(),
+                'streetAddress': '\n'.join([x.address1, x.address2]).strip(),
+                'locality': x.city,
+                'region': x.state,
+                'postalCode': x.zip,
+                'formatted': x.multiline(),
+            })
+        return data
+
+    def update_google_profile(self):
+        email = self.google_email
+        if email:
+            directory = admin.AdminDirectory()
+            directory.update_user(email, self._google_profile_info())
+
 
 class Role(BaseModel):
     TYPES = (
@@ -256,6 +293,9 @@ class Email(BasePositionModel):
     pagable = models.BooleanField(default=True)
     address = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.address
+
 
 class Phone(BasePositionModel):
     TYPES = (
@@ -270,6 +310,9 @@ class Phone(BasePositionModel):
     number = models.CharField(max_length=255, validators=[phone.validate_phone])
     pagable = models.BooleanField(default=True)
     sms_email = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.number
 
     def save(self, *args, **kwargs):
         self.full_clean()
