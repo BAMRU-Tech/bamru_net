@@ -54,6 +54,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
+    profile_email = models.CharField(max_length=255, blank=True, null=True)
     status = models.CharField(choices=TYPES, max_length=255, blank=True)
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
@@ -108,6 +109,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     @property
     def display_email(self):
         """ Return first email """
+        if self.profile_email:
+            return self.profile_email
         try:
             return self.email_set.first().address
         except AttributeError:
@@ -181,11 +184,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return reverse('member_detail', args=[str(self.id)])
 
     def pagable_email_addresses(self):
-        return [x.address for x in self.email_set.filter(pagable=True)]
-
-    @property
-    def google_email(self):
-        return self.email_set.filter(address__endswith='bamru.org').first()
+        return (([self.profile_email] if self.profile_email else []) +
+                 [x.address for x in self.email_set.filter(pagable=True)])
 
     def _google_profile_info(self):
         data = {
@@ -215,10 +215,9 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return data
 
     def update_google_profile(self):
-        email = self.google_email
-        if email:
+        if self.profile_email:
             directory = admin.AdminDirectory()
-            directory.update_user(email, self._google_profile_info())
+            directory.update_user(self.profile_email, self._google_profile_info())
 
 
 class Role(BaseModel):
