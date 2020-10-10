@@ -106,6 +106,7 @@ class Participant(BaseModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     ahc = models.BooleanField(default=False)
     ol = models.BooleanField(default=False)
+    logistics = models.BooleanField(default=False)
     comment = models.CharField(max_length=255, blank=True, null=True)
     en_route_at = models.DateTimeField(blank=True, null=True)
     return_home_at = models.DateTimeField(blank=True, null=True)

@@ -6,13 +6,13 @@ import twilio
 from argparse import Namespace
 from datetime import datetime, timedelta
 
-import phonenumbers
 from anymail.message import AnymailMessage
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
+from main.lib.phone import format_e164
 from .base import BaseModel, BasePositionModel, Configuration
 from .event import Period
 from .member import Email, Member, Phone
@@ -21,11 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Set this if the UI does not append the template
 APPEND_RSVP_TEMPLATE = False
-
-def format_e164(number):
-    return phonenumbers.format_number(
-        phonenumbers.parse(number, 'US'),
-        phonenumbers.PhoneNumberFormat.E164)
 
 def get_next_sms_from_index(increment=True):
     """Gets the next SMS_FROM number from settings.  If increment,

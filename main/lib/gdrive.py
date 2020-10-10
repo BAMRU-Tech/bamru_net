@@ -22,11 +22,11 @@ class GoogleDrive(NoopGoogleDrive):
         instance = super(GoogleDrive, cls).__new__(cls)
         c = main.lib.oauth.get_credentials()
         if not c:
-            return NoopGoogleGroup()
+            return NoopGoogleDrive()
         instance.drive = googleapiclient.discovery.build(
             'drive', 'v3', credentials=c)
         if not instance.drive:
-            return NoopGoogleGroup()
+            return NoopGoogleDrive()
         return instance
 
     def _add_permission(self, fileId, email, role, notify):
@@ -35,12 +35,16 @@ class GoogleDrive(NoopGoogleDrive):
             'role': role,
             'emailAddress': email,
         }
-        return self.drive.permissions().create(
-            fileId=fileId,
-            supportsAllDrives=True,
-            sendNotificationEmail=notify,
-            body=permission,
-        ).execute()
+        try:
+            return self.drive.permissions().create(
+                fileId=fileId,
+                supportsAllDrives=True,
+                sendNotificationEmail=notify,
+                body=permission,
+            ).execute()
+        except googleapiclient.errors.HttpError as e:
+            logger.error(str(e))
+            return ''
 
     def add_writer(self, fileId, email, notify=False):
         return self._add_permission(fileId, email, 'writer', notify)
