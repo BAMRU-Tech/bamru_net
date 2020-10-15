@@ -132,3 +132,7 @@ def event_create_ahc_log(event_id):
 def event_create_logistics_spreadsheet(event_id):
     logger.info('Running event_create_logistics_spreadsheet triggered by {}'.format(event_id))
     Event.objects.get(id=event_id).create_logistics_spreadsheet()
+
+@shared_task
+def member_update_all_google_profiles():
+    [x.update_google_profile() for x in Member.objects.all()]

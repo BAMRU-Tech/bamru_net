@@ -47,6 +47,7 @@
   {% endif %}
   <strong>Email addresses:</strong>
   <ul>
+    {% if member.profile_email %}<li>{{ member.profile_email }} (Profile, pagable)</li>{% endif %}
     {% for em in member.email_set.all %}
     <li>{{ em.address }} ({{ em.type }}{% if em.pagable %}, pageable{% endif %})</li>
     {% endfor %}
