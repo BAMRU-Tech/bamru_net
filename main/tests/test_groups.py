@@ -7,8 +7,8 @@ from django.test import Client, TestCase
 from main.lib import groups
 from main.models import Configuration
 
-USER = 'net_test@bamru.org'
-GROUP = 'test_do@bamru.org'
+USER = 'net_test@bamru.net'
+GROUP = 'test_do@bamru.net'
 ADDRESS = 'test@example.com'
 SLEEP = 0.1
 
