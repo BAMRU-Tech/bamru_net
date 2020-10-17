@@ -317,7 +317,7 @@ function SetEventDates () {
     if (startBefore == null || startBefore == '') {
         if (!months) months = 12;
         start.setMonth(start.getMonth() + months);
-        startBefore = DateBE(new Date(y, months, 0));
+        startBefore = DateBE(new Date(y + 1, months, 0));
     }
 
     if (startAfter) $('#start').val(startAfter);
