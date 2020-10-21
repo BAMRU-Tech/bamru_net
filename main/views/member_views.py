@@ -149,6 +149,7 @@ class MemberEditView(PermissionRequiredMixin, generic.base.TemplateView):
         for f in forms.values():
             f.save()
 
+        member.update_google_profile()
         return HttpResponseRedirect(reverse('member_detail', args=[member.id]))
 
     def get_context_data(self, **kwargs):
