@@ -92,6 +92,18 @@ $(document).ready(function() {
 
 {% block functions %}{% endblock %}
 
+// produces a map with a count of each unique cell
+jQuery.fn.dataTable.Api.register( 'unique_count_map()', function ( ) {
+    return this.flatten().reduce( function ( a, b ) {
+        if ( a.has(b)) {
+          a.set(b, a.get(b) + 1);
+        } else {
+          a.set(b, 1);
+        }
+        return a;
+    }, new Map() );
+} );
+
 function DisplayExpandDetailButton ( e, table, columns ) {
     //FX: easier way? table.responsive.hasHidden() doesn't work with hidden cols
     var btn = $('button.dt-button:contains("' + textShowDetail + '")');
