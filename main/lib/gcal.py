@@ -1,5 +1,6 @@
 import dateutil.parser
 import googleapiclient.discovery
+from google.auth.exceptions import GoogleAuthError
 from django.conf import settings
 from django.utils import timezone
 from httplib2 import Http
@@ -64,11 +65,14 @@ class GcalManager:
             self.delete_for_event(bamru_event, False)
         
         if bamru_event.published:
-            new_event = self.client.events().insert(
-                calendarId=self.calendar_id,
-                body=build_gcal_event(bamru_event),
-            ).execute()
-            bamru_event.gcal_id = new_event['id']
+            try:
+                new_event = self.client.events().insert(
+                    calendarId=self.calendar_id,
+                    body=build_gcal_event(bamru_event),
+                ).execute()
+                bamru_event.gcal_id = new_event['id']
+            except GoogleAuthError as e:
+                logger.error("Gcal create error " + str(e))
         else:
             bamru_event.gcal_id = None
 
@@ -77,10 +81,13 @@ class GcalManager:
 
     def delete_for_event(self, bamru_event, save=True):
         if bamru_event.gcal_id:
-            self.client.events().delete(
-                calendarId=self.calendar_id,
-                eventId=bamru_event.gcal_id,
-            ).execute()
+            try:
+                self.client.events().delete(
+                    calendarId=self.calendar_id,
+                    eventId=bamru_event.gcal_id,
+                ).execute()
+            except GoogleAuthError as e:
+                logger.error("Gcal delete error " + str(e))
             bamru_event.gcal_id = None
        
         if save:
