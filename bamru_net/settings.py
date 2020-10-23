@@ -54,12 +54,14 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'rules.apps.AutodiscoverRulesConfig',
+    'social_django',
     'main',
     'main.templatetags.filters',
     'django.contrib.admin',  # Must be after main for templates
 ]
 
 AUTHENTICATION_BACKENDS = [
+    'social_core.backends.google.GoogleOAuth2',
     'rules.permissions.ObjectPermissionBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
@@ -98,6 +100,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
                 'main.context_processors.dsn',
             ],
         },
@@ -119,6 +123,19 @@ DATABASES = {
         'HOST': os.environ['DJANGO_DB_HOST'],
     }
 }
+
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.social_user',
+    'main.lib.social_auth.validate_login',
+    'social_core.pipeline.social_auth.associate_user',
+)
+SOCIAL_AUTH_USER_MODEL = 'main.Member'
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', '')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', '')
+SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['bamru.org']
 
 AUTH_USER_MODEL = 'main.Member'
 
@@ -220,11 +237,6 @@ CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 CELERY_TASK_SOFT_TIME_LIMIT = 300
 CELERY_WORKER_CONCURRENCY = 1
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-
-WIKI_BASE_URL = os.environ.get('WIKI_BASE_URL', '')
-WIKI_SSH_DEST = os.environ.get('WIKI_SSH_DEST', '')
-WIKI_SSH_KEY = os.environ.get('WIKI_SSH_KEY', '')
-WIKI_AUTH_DIR = os.environ.get('WIKI_AUTH_DIR', '')
 
 
 from django.utils.log import DEFAULT_LOGGING
