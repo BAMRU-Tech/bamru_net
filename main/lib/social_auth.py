@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 def validate_login(uid, *args, **kwargs):
     """Find the user by matching UID to email."""
-    members = Member.members.filter(profile_email=uid)
+    members = Member.members.filter(profile_email__iexact=uid)
     if len(members) == 0:
         logger.warning('No user for {}'.format(uid))
     elif len(members) > 1:
