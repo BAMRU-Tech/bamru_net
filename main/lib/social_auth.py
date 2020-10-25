@@ -1,18 +1,18 @@
-from main.models import Email
+from main.models import Member
 
 import logging
 logger = logging.getLogger(__name__)
 
 def validate_login(uid, *args, **kwargs):
     """Find the user by matching UID to email."""
-    emails = Email.objects.filter(address=uid)
-    if len(emails) == 0:
+    members = Member.members.filter(profile_email=uid)
+    if len(members) == 0:
         logger.warning('No user for {}'.format(uid))
-    elif len(emails) > 1:
-        logger.warning('Multiple users for {}: {}'.format(
-            uid, ','.join(emails)))
+    elif len(members) > 1:
+        logger.error('Multiple users for {}: {}'.format(
+            uid, ','.join(members)))
     else:
-        user = emails.first().member
+        user = members.first()
         return {
             'user': user,
             'is_new': user is None,
