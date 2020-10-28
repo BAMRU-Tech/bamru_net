@@ -136,3 +136,7 @@ def event_create_logistics_spreadsheet(event_id):
 @shared_task
 def member_update_all_google_profiles():
     [x.update_google_profile() for x in Member.objects.all()]
+
+@shared_task
+def member_update_all_profile_emails():
+    [x.profile_email_to_email_set() for x in Member.objects.all()]
