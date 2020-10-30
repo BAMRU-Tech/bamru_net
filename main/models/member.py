@@ -214,6 +214,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return data
 
     def profile_email_to_email_set(self):
+        if not self.profile_email:
+            return  # Nothing to do
         email = self.email_set.filter(address__iexact=self.profile_email)
         if email:
             email.pagable = True

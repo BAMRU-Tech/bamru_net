@@ -27,7 +27,7 @@ class GoogleDrive(NoopGoogleDrive):
         if not c:
             return NoopGoogleDrive()
         instance.drive = googleapiclient.discovery.build(
-            'drive', 'v3', credentials=c)
+            'drive', 'v3', credentials=c, cache_discovery=False)
         if not instance.drive:
             return NoopGoogleDrive()
         return instance
