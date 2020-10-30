@@ -216,8 +216,9 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     def profile_email_to_email_set(self):
         if not self.profile_email:
             return  # Nothing to do
-        email = self.email_set.filter(address__iexact=self.profile_email)
-        if email:
+        email_query = self.email_set.filter(address__iexact=self.profile_email)
+        if email_query:
+            email = email_query.first()
             email.pagable = True
             email.type = 'Other'
             email.save()
