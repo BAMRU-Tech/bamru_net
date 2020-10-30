@@ -1,5 +1,6 @@
 import dateutil.parser
 import googleapiclient.discovery
+import googleapiclient.errors
 from google.auth.exceptions import GoogleAuthError
 from django.conf import settings
 from django.utils import timezone
@@ -71,7 +72,7 @@ class GcalManager:
                     body=build_gcal_event(bamru_event),
                 ).execute()
                 bamru_event.gcal_id = new_event['id']
-            except GoogleAuthError as e:
+            except (googleapiclient.errors.HttpError, GoogleAuthError) as e:
                 logger.error("Gcal create error " + str(e))
         else:
             bamru_event.gcal_id = None
@@ -86,7 +87,7 @@ class GcalManager:
                     calendarId=self.calendar_id,
                     eventId=bamru_event.gcal_id,
                 ).execute()
-            except GoogleAuthError as e:
+            except (googleapiclient.errors.HttpError, GoogleAuthError) as e:
                 logger.error("Gcal delete error " + str(e))
             bamru_event.gcal_id = None
        
@@ -164,5 +165,5 @@ def get_gcal_manager(fallback_manager=NoopGcalManager()):
         return fallback_manager
 
     client = googleapiclient.discovery.build(
-        'calendar', 'v3', credentials=creds)
+        'calendar', 'v3', credentials=creds, cache_discovery=False)
     return GcalManager(client, settings.GOOGLE_CALENDAR_ID)

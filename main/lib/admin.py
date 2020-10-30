@@ -24,7 +24,7 @@ class AdminDirectory(NoopAdminDirectory):
         if not c:
             return NoopAdminDirectory()
         instance.directory = googleapiclient.discovery.build(
-            'admin', 'directory_v1', credentials=c)
+            'admin', 'directory_v1', credentials=c, cache_discovery=False)
         if not instance.directory:
             return NoopAdminDirectory()
         return instance
