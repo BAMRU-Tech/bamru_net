@@ -1,4 +1,7 @@
-import googleapiclient
+# Google groups API
+
+import googleapiclient.discovery
+import googleapiclient.errors
 import main.lib.oauth
 from main.models import Configuration
 
@@ -32,7 +35,7 @@ class GoogleGroup(NoopGoogleGroup):
         if not c:
             return NoopGoogleGroup()
         admin = googleapiclient.discovery.build(
-            'admin', 'directory_v1', credentials=c)
+            'admin', 'directory_v1', credentials=c, cache_discovery=False)
         if not name or not admin:
             return NoopGoogleGroup()
         instance.members = admin.members()

@@ -184,8 +184,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         return reverse('member_detail', args=[str(self.id)])
 
     def pagable_email_addresses(self):
-        return (([self.profile_email] if self.profile_email else []) +
-                 [x.address for x in self.email_set.filter(pagable=True)])
+        return [x.address for x in self.email_set.filter(pagable=True)]
 
     def _google_profile_info(self):
         data = {
@@ -213,6 +212,21 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
                 'formatted': x.multiline(),
             })
         return data
+
+    def profile_email_to_email_set(self):
+        if not self.profile_email:
+            return  # Nothing to do
+        email_query = self.email_set.filter(address__iexact=self.profile_email)
+        if email_query:
+            email = email_query.first()
+            email.pagable = True
+            email.type = 'Other'
+            email.save()
+        else:
+            self.email_set.create(
+                type='Other',
+                pagable=True,
+                address=self.profile_email)
 
     def update_google_profile(self):
         if self.profile_email:

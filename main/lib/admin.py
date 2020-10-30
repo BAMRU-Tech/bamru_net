@@ -1,4 +1,7 @@
-import googleapiclient
+# Google admin API
+
+import googleapiclient.discovery
+import googleapiclient.errors
 import main.lib.oauth
 from main.models import Configuration
 
@@ -21,7 +24,7 @@ class AdminDirectory(NoopAdminDirectory):
         if not c:
             return NoopAdminDirectory()
         instance.directory = googleapiclient.discovery.build(
-            'admin', 'directory_v1', credentials=c)
+            'admin', 'directory_v1', credentials=c, cache_discovery=False)
         if not instance.directory:
             return NoopAdminDirectory()
         return instance
