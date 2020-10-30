@@ -1,4 +1,7 @@
-import googleapiclient
+# Google drive API
+
+import googleapiclient.discovery
+import googleapiclient.errors
 import main.lib.oauth
 from main.models import Configuration
 
@@ -51,10 +54,14 @@ class GoogleDrive(NoopGoogleDrive):
 
     def file_copy(self, templateId, destinationId, name):
         dest_file = {'name': name, 'parents' : [destinationId]}
-        result = self.drive.files().copy(
-            fileId=templateId,
-            supportsAllDrives=True,
-            body=dest_file
-        ).execute()
+        try:
+            result = self.drive.files().copy(
+                fileId=templateId,
+                supportsAllDrives=True,
+                body=dest_file
+            ).execute()
+        except googleapiclient.errors.HttpError as e:
+            logger.error(str(e))
+            return ''
         logger.info(result)
         return result.get('id', '')
