@@ -1,7 +1,9 @@
 from google.oauth2 import service_account
+import json
 
-from django.conf import settings
 from main.models import Configuration
+
+from dynamic_preferences.registries import global_preferences_registry
 
 import logging
 logger = logging.getLogger(__name__)
@@ -14,17 +16,21 @@ SCOPES = [
 ]
 
 def get_credentials():
-    if not (settings.GOOGLE_CREDENTIALS_FILE):
-        logger.info("Google credentials not configured")
+    global_preferences = global_preferences_registry.manager()
+    service_account_json = global_preferences['google__credentials']
+    try:
+        service_account_info = json.loads(service_account_json)
+    except json.decoder.JSONDecodeError as e:
+        logger.info("Google credentials json parse error: " + str(e))
         return None
 
     try:
-        credentials = service_account.Credentials.from_service_account_file(
-            settings.GOOGLE_CREDENTIALS_FILE, scopes=SCOPES)
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info, scopes=SCOPES)
     except (FileNotFoundError, ValueError) as e:
         logger.info("Unable to load google credentials: {}".format(e))
         return None
-    user = Configuration.get_host_key('google_user')
+    user = global_preferences['google__user']
     if not user:
         logger.info("Google user not configured")
         return None

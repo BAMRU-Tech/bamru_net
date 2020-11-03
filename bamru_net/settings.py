@@ -210,8 +210,6 @@ HOSTNAME = os.environ['DJANGO_HOSTNAME']
 # Needed for django-oidc-provider
 SITE_URL = '{}://{}'.format(os.environ.get('DJANGO_SCHEMA', 'https'), HOSTNAME)
 
-WIKI_URL = os.environ.get('WIKI_URL', '')
-
 # Temporary fix for #128
 DJANGO_TWILIO_FORGERY_PROTECTION=False
 
@@ -230,8 +228,8 @@ ANYMAIL = {
 MAILGUN_EMAIL_FROM = os.environ['MAILGUN_EMAIL_FROM']
 DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
 
+# Used for tests
 GOOGLE_CREDENTIALS_FILE = os.environ.get('GOOGLE_CREDENTIALS_FILE', '')
-GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID', '')
 
 CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
