@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'django_filters',
     'django_twilio',
+    'dynamic_preferences',
     'imagekit',
     'oidc_provider',
     'raven.contrib.django.raven_compat',
