@@ -1,8 +1,6 @@
 from google.oauth2 import service_account
 import json
 
-from main.models import Configuration
-
 from dynamic_preferences.registries import global_preferences_registry
 
 import logging
