@@ -2,12 +2,12 @@ import dateutil.parser
 import googleapiclient.discovery
 import googleapiclient.errors
 from google.auth.exceptions import GoogleAuthError
-from django.conf import settings
 from django.utils import timezone
 from httplib2 import Http
 from oauth2client import file, client, tools
 
 from datetime import timedelta
+from dynamic_preferences.registries import global_preferences_registry
 
 import main.lib.oauth
 
@@ -166,4 +166,5 @@ def get_gcal_manager(fallback_manager=NoopGcalManager()):
 
     client = googleapiclient.discovery.build(
         'calendar', 'v3', credentials=creds, cache_discovery=False)
-    return GcalManager(client, settings.GOOGLE_CALENDAR_ID)
+    global_preferences = global_preferences_registry.manager()
+    return GcalManager(client, global_preferences['google__calendar_id_public'])
