@@ -23,7 +23,14 @@ class Event(BaseModel):
     title = models.CharField(max_length=255)
     leaders = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    description_private = models.TextField(
+        blank=True, null=True, verbose_name='Additional private description',
+        help_text='This text will be added to the description text above.')
     location = models.CharField(max_length=255)
+    location_private = models.CharField(
+        max_length=255, blank=True, default='',
+        verbose_name='Private version of location',
+        help_text='Replaces location field on internal calendar.')
     lat = models.CharField(max_length=255, blank=True, null=True)
     lon = models.CharField(max_length=255, blank=True, null=True)
     start_at = models.DateTimeField()
@@ -34,7 +41,8 @@ class Event(BaseModel):
     published = models.BooleanField(
         default=False,
         help_text='Published events are viewable by the public.')
-    gcal_id = models.TextField(blank=True, null=True)
+    gcal_id = models.CharField(max_length=255, blank=True, null=True)
+    gcal_id_private = models.CharField(max_length=255, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         super(Event, self).save(*args, **kwargs)
