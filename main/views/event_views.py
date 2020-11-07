@@ -105,8 +105,8 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 class EventForm(ModelForm):
     class Meta:
         model = Event
-        fields = ['title', 'description', 'type',
-                  'location', 'lat', 'lon', 'leaders',
+        fields = ['title', 'description', 'description_private', 'type',
+                  'location', 'location_private', 'lat', 'lon', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
