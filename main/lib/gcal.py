@@ -147,7 +147,6 @@ class GcalManager:
         print("deleting all existing events from " + str(calendar_id))
         events = self.client.events().list(calendarId=calendar_id).execute()
         print("Found {} events to delete".format(len(events.get('items'))))
-        return
         for event in events.get('items'):
             print("deleting {} {} {}".format(
                 event.get('id'),
