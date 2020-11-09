@@ -123,41 +123,66 @@ class GcalManager:
         if save:
             bamru_event.save()
 
-    def clear(self):
+
+    def clear_public(self):
         """Clear only works on primary calendars.
 
         Used only by the sync_gcal manage command.
         """
         print("clearing existing events")
         self.client.calendars().clear(calendarId=self.calendar_id).execute()
+
+
+    def clear_private(self):
+        """Clear only works on primary calendars.
+
+        Used only by the sync_gcal manage command.
+        """
+        print("clearing existing private events")
         self.client.calendars().clear(calendarId=self.calendar_id_private).execute()
 
-    def delete_all(self):
-        """Remove all events from a calendar.
+
+    def _delete_from_calendar(self, calendar_id):
+        """Remove all events from a calendar."""
+        print("deleting all existing events from " + str(calendar_id))
+        events = self.client.events().list(calendarId=calendar_id).execute()
+        print("Found {} events to delete".format(len(events.get('items'))))
+        return
+        for event in events.get('items'):
+            print("deleting {} {} {}".format(
+                event.get('id'),
+                event.get('status'),
+                event.get('summary'),
+            ))
+            print(self.client.events().delete(calendarId=calendar_id,
+                                              eventId=event.get('id')).execute())
+
+    def delete_public(self):
+        """Remove all public events from a calendar.
 
         Can be used instead of clear() on a secondary calendar.
         """
-        print("deleting all existing events")
-        events = self.client.events().list(calendarId=self.calendar_id).execute()
-        for event in events.get('items'):
-            self.client.events().delete(calendarId=self.calendar_id,
-                                        eventId=event.get('id')).execute()
-        if not self.calendar_id_private:
-            return
-        print("deleting all existing private events")
-        events = self.client.events().list(calendarId=self.calendar_id_private).execute()
-        for event in events.get('items'):
-            self.client.events().delete(calendarId=self.calendar_id_private,
-                                        eventId=event.get('id')).execute()
+        self._delete_from_calendar(self.calendar_id)
 
-    def sync_all(self, all_bamru_events):
+
+    def delete_private(self):
+        """Remove all private events from a calendar.
+
+        Can be used instead of clear() on a secondary calendar.
+        """
+        self._delete_from_calendar(self.calendar_id_private)
+
+
+    def sync_public(self, all_bamru_events):
         batch_insert = self.client.new_batch_http_request()
 
         def make_cb(event):
             def cb(id, response, exception):
                 if exception is None:
+                    print("{} {}".format(id, response))
                     event.gcal_id = response['id']
                 else:
+                    print(str(exception))
                     event.gcal_id = None
                 event.save()
             return cb
@@ -176,18 +201,19 @@ class GcalManager:
                 event.gcal_id = None
 
         print("executing batch request")
-        batch_insert.execute()
+        print(batch_insert.execute())
 
-        if not self.calendar_id_private:
-            return
 
+    def sync_private(self, all_bamru_events):
         batch_insert = self.client.new_batch_http_request()
 
         def make_cb(event):
             def cb(id, response, exception):
                 if exception is None:
+                    print("{} {}".format(id, response))
                     event.gcal_id_private = response['id']
                 else:
+                    print(str(exception))
                     event.gcal_id_private = None
                 event.save()
             return cb
@@ -206,7 +232,7 @@ class GcalManager:
                 event.gcal_id_private = None
 
         print("executing private batch request")
-        batch_insert.execute()
+        print(batch_insert.execute())
 
 
 class NoopGcalManager:
