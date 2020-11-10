@@ -36,14 +36,24 @@
 <main role="main" class="container-fluid">
   <div id="content">
     {% if event.description %}
-    <p><strong>Description:</strong> {{ event.description }}</p>
+    <p><strong>Description:</strong> {{ event.description|urlize }}</p>
     {% endif %}
-    <p><strong>Location:</strong> {{ event.location }}
+    {% if event.description_private %}
+    <p><strong>Private Description:</strong> {{ event.description_private|urlize }}</p>
+    {% endif %}
+    <p><strong>Location:</strong> {{ event.location|urlize }}
       <a target="_blank"
          href="https://google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
         <i class="fa fa-map-marker"></i>
       </a>
       <p>
+      {% if event.location_private %}
+      <strong>Private Location:</strong> {{ event.location_private|urlize }}
+      <a target="_blank"
+         href="https://google.com/maps/search/?api=1&query={{ event.location_private|urlencode }}">
+        <i class="fa fa-map-marker"></i>
+      </a>
+      {% endif %}
       {% if event.lat != None %}
       <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
       {% endif %}
