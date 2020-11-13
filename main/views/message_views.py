@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
+from anymail.message import AnymailMessage
 from anymail.signals import tracking
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -15,6 +16,7 @@ from django.utils.html import escape
 from django.views import generic
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
+from dynamic_preferences.registries import global_preferences_registry
 from twilio.twiml.messaging_response import MessagingResponse
 
 from main.models import Member, Participant, Period
@@ -349,31 +351,50 @@ def sms_callback(request):
 @twilio_view
 def sms(request):
     """Handle an incomming SMS message."""
+    global_preferences = global_preferences_registry.manager()
     response = MessagingResponse()
     twilio_request = decompose(request)
+    twilio_request_body = str(twilio_request.body)
     try:
         sms = InboundSms.objects.create(sid=twilio_request.messagesid,
                                         from_number=twilio_request.from_,
                                         to_number=twilio_request.to,
-                                        body=twilio_request.body)
+                                        body=twilio_request_body)
         logger.info('Received SMS from {}: {}'.format(twilio_request.from_,
-                                                      twilio_request.body))
+                                                      twilio_request_body))
     except:
         logger.error('Unable to save message: ' + str(request.body))
         response.message('BAMRU.net Error: unable to parse your message.')
         return response
 
     sms.process()
+    if sms.extra_info:
+        if sms.outbound:
+            time_slug = sms.outbound.distribution.time_slug
+        else:
+            time_slug = timezone.now().date().isoformat()
+        try:
+            message = AnymailMessage(
+                subject='BAMRU.net response [{}]'.format(time_slug),
+                body='{}\nFrom: {} ({})'.format(
+                    twilio_request_body, sms.member, twilio_request.from_),
+                to=[global_preferences['google__do_group']],
+                from_email=settings.MAILGUN_EMAIL_FROM,
+            )
+            message.send()
+        except Exception as e:
+            logger.error('Anymail error: {}'.format(e))
+
     if not sms.outbound:
         logger.error('No matching OutboundSms from: {} to: {} body: {}'.format(
-            twilio_request.from_, twilio_request.to, twilio_request.body))
+            twilio_request.from_, twilio_request.to, twilio_request_body))
         response.message(
             'BAMRU.net Warning: response ignored. No RSVP question in the past 24 hours.')
         return response
 
     if not (sms.yes or sms.no):
-        logger.error('Unable to parse y/n message {} from {}: '.format(
-            sms.body, sms.member, str(request.body)))
+        logger.error('Unable to parse y/n message {} from {}: {}'.format(
+            sms.body, sms.member, twilio_request_body))
         response.message('Could not parse yes/no in your message. Start your message with y or n.')
         return response
 
