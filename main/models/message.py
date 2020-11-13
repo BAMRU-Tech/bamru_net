@@ -121,6 +121,12 @@ class Message(BaseModel):
         return list(self.descendant_messages()) + self.ancestry_messages()
 
     @property
+    def time_slug(self):
+        timestamp = int(self.created_at.timestamp())
+        timeb = timestamp.to_bytes((timestamp.bit_length() // 8) + 1, 'big')
+        return base64.b85encode(timeb).decode()
+
+    @property
     def expanded_text(self):
         if APPEND_RSVP_TEMPLATE and self.rsvp_template:
             return '{} {}'.format(self.text, self.rsvp_template.text)
@@ -192,12 +198,6 @@ class Distribution(BaseModel):
     @property
     def html(self):
         return self.message.html(self.unauth_rsvp_token)
-
-    @property
-    def time_slug(self):
-        timestamp = int(self.created_at.timestamp())
-        timeb = timestamp.to_bytes((timestamp.bit_length() // 8) + 1, 'big')
-        return base64.b85encode(timeb).decode()
 
     def queue(self, sms_from):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
@@ -432,7 +432,7 @@ class OutboundEmail(OutboundMessage):
         try:
             message = AnymailMessage(
                 subject="BAMRU.net page [{}]".format(
-                    self.distribution.time_slug),
+                    self.distribution.message.time_slug),
                 body=body,
                 to=[self.destination],
                 from_email=settings.MAILGUN_EMAIL_FROM,

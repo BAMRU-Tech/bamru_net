@@ -8,6 +8,8 @@ from django.core import mail
 from django.test import Client, TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
+
+from dynamic_preferences.registries import global_preferences_registry
 from model_mommy import mommy
 
 from main.models import *
@@ -123,6 +125,7 @@ class OutgoingSmsTestCase(TestCase):
 
 
 @override_settings(SMS_FILE_PATH='/tmp',
+                   EMAIL_BACKEND='anymail.backends.test.EmailBackend',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class IncommingSmsTestCase(TestCase):
     def setUp(self):
@@ -144,6 +147,8 @@ class IncommingSmsTestCase(TestCase):
                                        send_sms=True,
                                        make_m2m=True)
         self.c = Client()
+        self.global_preferences = global_preferences_registry.manager()
+        self.global_preferences['google__do_group'] = 'do@example.com'
 
     def test_send(self):
         # Send a transit page
@@ -151,9 +156,29 @@ class IncommingSmsTestCase(TestCase):
         message_send(0)
         source = self.distribution.outboundsms_set.first().source
 
-        # Check no RSVP before
+        #####
+        # First response doesn't match yes/no check
+        body = 'unmatched'
+        response = self.c.post(reverse('sms'),
+                               {'To': source,
+                                'From': self.number,
+                                'MessageSid': 'FAKE_SID_SMS',
+                                'Body': body,
+                                })
+        self.assertEqual(response.status_code, 200)
+
+        # Test that one message was sent:
+        self.assertEqual(len(mail.outbox), 1)
+
+        msg = mail.outbox[0]
+        self.assertEquals(self.global_preferences['google__do_group'], msg.to[0])
+        self.assertIn(body, msg.body)
+        self.assertIn(str(self.number), msg.body)
+
+        # Check no RSVP recorded
         self.assertIsNone(self.participant.en_route_at)
 
+        #####
         # Respond Yes to page
         response = self.c.post(reverse('sms'),
                                {'To': source,
