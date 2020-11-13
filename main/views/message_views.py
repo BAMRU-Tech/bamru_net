@@ -370,7 +370,7 @@ def sms(request):
     sms.process()
     if sms.extra_info:
         if sms.outbound:
-            time_slug = sms.outbound.distribution.time_slug
+            time_slug = sms.outbound.distribution.message.time_slug
         else:
             time_slug = timezone.now().date().isoformat()
         try:
