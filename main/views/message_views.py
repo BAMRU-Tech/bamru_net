@@ -354,7 +354,7 @@ def sms(request):
     global_preferences = global_preferences_registry.manager()
     response = MessagingResponse()
     twilio_request = decompose(request)
-    twilio_request_body = str(twilio_request.body)
+    twilio_request_body = str(twilio_request.body).strip()
     try:
         sms = InboundSms.objects.create(sid=twilio_request.messagesid,
                                         from_number=twilio_request.from_,
