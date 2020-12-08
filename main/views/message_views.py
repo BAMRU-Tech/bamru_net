@@ -354,7 +354,7 @@ def sms(request):
     global_preferences = global_preferences_registry.manager()
     response = MessagingResponse()
     twilio_request = decompose(request)
-    twilio_request_body = str(twilio_request.body)
+    twilio_request_body = str(twilio_request.body).strip()
     try:
         sms = InboundSms.objects.create(sid=twilio_request.messagesid,
                                         from_number=twilio_request.from_,
@@ -368,7 +368,7 @@ def sms(request):
         return response
 
     sms.process()
-    if sms.extra_info:
+    if sms.extra_info or not sms.outbound:
         if sms.outbound:
             time_slug = sms.outbound.distribution.message.time_slug
         else:
@@ -386,14 +386,14 @@ def sms(request):
             logger.error('Anymail error: {}'.format(e))
 
     if not sms.outbound:
-        logger.error('No matching OutboundSms from: {} to: {} body: {}'.format(
+        logger.info('No matching OutboundSms from: {} to: {} body: {}'.format(
             twilio_request.from_, twilio_request.to, twilio_request_body))
         response.message(
             'BAMRU.net Warning: response ignored. No RSVP question in the past 24 hours.')
         return response
 
     if not (sms.yes or sms.no):
-        logger.error('Unable to parse y/n message {} from {}: {}'.format(
+        logger.info('Unable to parse y/n message {} from {}: {}'.format(
             sms.body, sms.member, twilio_request_body))
         response.message('Could not parse yes/no in your message. Start your message with y or n.')
         return response
