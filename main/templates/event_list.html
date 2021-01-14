@@ -249,8 +249,10 @@ $(document).ready(function() {
     ModifyButtonClasses('#Upcoming-more');
     $('#Recent-hdr').append($('#Recent-more'));
     ModifyButtonClasses('#Recent-more');
-    $('#All-hdr').append($('#dTbl-more'));
-    ModifyButtonClasses('#dTbl-more');
+
+    //FIXME: dTbl-more attribue has been temporarily remove (see ftable)
+    //$('#All-hdr').append($('#dTbl-more'));
+    //ModifyButtonClasses('#dTbl-more');
 
     function ModifyButtonClasses( btn ) {
         $(btn).removeClass('dt-button ui-button ui-state-default ui-button-text-only');
