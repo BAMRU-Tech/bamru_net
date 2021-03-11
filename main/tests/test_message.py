@@ -43,6 +43,7 @@ class OutgoingEmailTestCase(TestCase):
         # Respond to page
         response = self.c.get(relative)
         self.assertEqual(response.status_code, 200)
+        return relative
 
     def test_send(self):
         self.distribution.message.queue()
@@ -64,15 +65,20 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
         # First link should be Yes
-        self.follow_link(html, 0)
+        url = self.follow_link(html, 0)
+
+        # The button on that page would POST yes
+        response = self.c.post(url, {'rsvp': 'yes'})
+        self.assertEqual(response.status_code, 200)
 
         # Check that member is added to the event
         self.assertTrue(Participant.objects.filter(
             member=self.email.member,
             period=self.period).exists())
 
-        # Second link should be No
-        self.follow_link(html, 1)
+        # POST no
+        response = self.c.post(url, {'rsvp': 'no'})
+        self.assertEqual(response.status_code, 200)
 
         # Check that member is removed from the event
         self.assertFalse(Participant.objects.filter(

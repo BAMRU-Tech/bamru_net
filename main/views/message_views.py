@@ -326,10 +326,12 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
 def unauth_rsvp(request, token):
     d = get_object_or_404(Distribution, unauth_rsvp_token=token)
     if d.unauth_rsvp_expires_at < timezone.now():
-        response_text = 'Error: token expired'
-    else:
-        rsvp = request.GET.get('rsvp')[0].lower() == 'y'
+        response_text = "Error: token expired. Check that you're responding to a recent page."
+    elif request.method == 'POST':
+        rsvp = request.POST.get('rsvp')[0].lower() == 'y'
         response_text = handle_distribution_rsvp(request, d, rsvp)
+    else:
+        return render(request, "unauth_rsvp.html", context={'distribution':d})
     logger.info('Sending HTTP response to {}: {}'.format(d.member, response_text))
     return HttpResponse(response_text)  # TODO template
 

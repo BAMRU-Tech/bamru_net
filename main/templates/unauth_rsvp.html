@@ -1,0 +1,56 @@
+{% extends 'base_generic.html' %}
+
+{% block css %}
+{{ block.super }}
+<style>
+#rsvps .button {
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+.button_yes {background-color: #4CAF50;} /* Green */
+.button_no {background-color: #f44336;} /* Red */
+</style>
+{% endblock css %}
+
+
+{% block content %}
+
+<div id="rsvps">
+<p>
+  RSVP for
+  <a href="{{ distribution.message.period.event.get_absolute_url }}">
+    {{ distribution.message.period }}</a>
+</p>
+
+<p>
+  <button class="button button_yes" type="button" data-btn="yes">
+    Yes: {{ distribution.message.rsvp_template.yes_prompt }}
+  </button>
+  <button class="button button_no" type="button" data-btn="no">
+    No: {{ distribution.message.rsvp_template.no_prompt }}
+  </button>
+</p>
+</div>
+
+<script>
+$(document).ready(function(){
+
+  $('#rsvps').on('click','button', function (evt) {
+    $.post(window.location,
+    {
+      rsvp: $(this).data('btn'),
+    },
+    function(data,status){
+      alert(data);
+    });
+  });
+});
+</script>
+
+
+{% endblock content %}
