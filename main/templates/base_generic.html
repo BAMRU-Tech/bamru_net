@@ -33,31 +33,6 @@
   </head>
 
   <body>
-    <div class="container-fluid">
-      {% include 'navbar.html' %}
-      <nav class="navbar navbar-expand-sm text-primary subhead">
-        {% block subheader %}{% endblock subheader %}
-      </nav>
-      
-      {% bootstrap_messages %}
-      
-      {% block content %}{% endblock content %}
-    </div>
-    
-    {% comment FIXME: overlaps with datatables nowrap %}
-    <footer class="footer">
-      <div class="container text-center">
-        <p />
-        <p />
-        <p />
-        <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
-          General help</a>
-        | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
-        | <small>{{RELEASE}}</small>
-      </div>
-    </footer>
-    {% endcomment %}
-    
     {% block js %}
 
     {% block jquery %}{# Datatables combined load includes jquery 3.3.1 #}
@@ -191,5 +166,31 @@
     }
 
     </script>
+
+    <div class="container-fluid">
+      {% include 'navbar.html' %}
+      <nav class="navbar navbar-expand-sm text-primary subhead">
+        {% block subheader %}{% endblock subheader %}
+      </nav>
+      
+      {% bootstrap_messages %}
+      
+      {% block content %}{% endblock content %}
+    </div>
+    
+    {% comment FIXME: overlaps with datatables nowrap %}
+    <footer class="footer">
+      <div class="container text-center">
+        <p />
+        <p />
+        <p />
+        <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
+          General help</a>
+        | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
+        | <small>{{RELEASE}}</small>
+      </div>
+    </footer>
+    {% endcomment %}
+    
   </body>
 </html>
