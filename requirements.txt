@@ -29,7 +29,7 @@ django-phonenumber-field==2.0.0
 django-tables2==1.21.2
 django-timezone-field==3.0
 django-twilio==0.11.0
-djangorestframework==3.11.0
+djangorestframework==3.11.2
 docutils==0.14
 flake8==3.5.0
 future==0.17.1
