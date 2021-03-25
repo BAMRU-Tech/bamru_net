@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
 from django.views import generic
+from django.views.decorators.csrf import csrf_exempt
 from django_twilio.decorators import twilio_view
 from django_twilio.request import decompose
 from dynamic_preferences.registries import global_preferences_registry
@@ -323,6 +324,8 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
             .format(distribution.message.period))
 
 
+# This view does not need login or CSRF protection due to the RSVP token.
+@csrf_exempt
 def unauth_rsvp(request, token):
     d = get_object_or_404(Distribution, unauth_rsvp_token=token)
     if d.unauth_rsvp_expires_at < timezone.now():
