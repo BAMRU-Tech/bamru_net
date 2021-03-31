@@ -192,6 +192,7 @@ MEDIA_ROOT = os.environ.get('MEDIA_ROOT', 'system/')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 
 # Raven config for Sentry.io logging
