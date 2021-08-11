@@ -49,8 +49,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     CURRENT_MEMBERS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
     AVAILABLE_MEMBERS = ('TM', 'FM', 'T', 'S')         # Available for operations
-    PRO_MEMBERS = ('TM', 'FM', 'T')                    # Available for pro-deals
-    DO_SHIFT_MEMBERS = ('TM', 'FM', 'T')               # Notify for DO shift changes
+    PRO_MEMBERS = ('TM', 'FM', 'T', 'S')               # Available for pro-deals
+    DO_SHIFT_MEMBERS = ('TM', 'FM', 'T', 'S')          # Notify for DO shift changes
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
