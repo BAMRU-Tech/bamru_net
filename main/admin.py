@@ -92,6 +92,15 @@ class MessageAdmin(admin.ModelAdmin):
 class ConfigurationAdmin(admin.ModelAdmin):
     list_display = ('key', 'value')
 
+@admin.register(DataFile)
+class DataFileAdmin(admin.ModelAdmin):
+    list_display = ('name', 'created_at', 'member')
+    search_fields = ['name',]
+
+@admin.register(MemberPhoto)
+class MemberPhotoAdmin(admin.ModelAdmin):
+    list_display = ('name', 'file', 'created_at', 'member')
+    search_fields = ['member',]
 
 # Documents
 @admin.register(DocumentTemplate)
