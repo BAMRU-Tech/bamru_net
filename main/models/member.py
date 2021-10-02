@@ -91,10 +91,10 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def classic_roles(self):
-        """ Return string, list of ordered roles """
+        """ Return string, list of ordered roles combined with status"""
         roles = [r.role for r in self.role_set.all()] + [self.status]
-        CLASSIC_ROSTER_TYPES = ['Bd', 'OL', 'TM', 'FM', 'T']
-        result = [r for r in CLASSIC_ROSTER_TYPES if r in roles]
+        types = [r[0] for r in Role.TYPES] + list(Member.CURRENT_MEMBERS)
+        result = [r for r in types if r in roles]
         return ' '.join(result)
 
     @property
@@ -247,9 +247,6 @@ class Role(BaseModel):
         ('OL', 'Operators Leader'),
         ('WEB', 'Web Master'),
         ('DOS', 'DO Scheduler'),
-        ('TM', 'Active Technical Member'),
-        ('FM', 'Active Field Member'),
-        ('T', 'Active Trainee'),
     )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     role = models.CharField(choices=TYPES, max_length=255, blank=True)
