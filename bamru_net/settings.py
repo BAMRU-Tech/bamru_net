@@ -125,6 +125,7 @@ DATABASES = {
         'USER': os.environ['DJANGO_DB_USER'],
         'PASSWORD': os.environ['DJANGO_DB_PASS'],
         'HOST': os.environ['DJANGO_DB_HOST'],
+        'OPTIONS': {'sslmode': 'require'},
         'CONN_MAX_AGE': 600,
     }
 }
