@@ -197,11 +197,11 @@ if AZURE_STORAGE_KEY:
     DEFAULT_FILE_STORAGE = 'bamru_net.backend.AzureMediaStorage'
     STATICFILES_STORAGE = 'bamru_net.backend.AzureStaticStorage'
 
-    # AZURE_CUSTOM_DOMAIN = f'{AZURE_STORAGE_ACCOUNT_NAME}.azureedge.net'  # CDN URL
-    AZURE_CUSTOM_DOMAIN = f'{AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net'  # Files URL
+    # AZURE_CUSTOM_DOMAIN = '{}.azureedge.net'.format(AZURE_STORAGE_ACCOUNT_NAME)  # CDN URL
+    AZURE_CUSTOM_DOMAIN = '{}.blob.core.windows.net'.format(AZURE_STORAGE_ACCOUNT_NAME)  # Files URL
 
-    STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_STATIC_CONTAINER}/'
-    MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_MEDIA_CONTAINER}/'
+    STATIC_URL = 'https://{}/{}/'.format(AZURE_CUSTOM_DOMAIN, AZURE_STATIC_CONTAINER)
+    MEDIA_URL = 'https://{}/{}/'.format(AZURE_CUSTOM_DOMAIN, AZURE_MEDIA_CONTAINER)
 
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 else:
