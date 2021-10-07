@@ -188,22 +188,28 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
-DEFAULT_FILE_STORAGE = 'bamru_net.backend.AzureMediaStorage'
-STATICFILES_STORAGE = 'bamru_net.backend.AzureStaticStorage'
-
 AZURE_STORAGE_KEY = os.environ.get('AZURE_STORAGE_KEY', False)
 AZURE_STORAGE_ACCOUNT_NAME = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME', False)
 AZURE_MEDIA_CONTAINER = os.environ.get('AZURE_MEDIA_CONTAINER', 'media')
 AZURE_STATIC_CONTAINER = os.environ.get('AZURE_STATIC_CONTAINER', 'static')
 
-# AZURE_CUSTOM_DOMAIN = f'{AZURE_STORAGE_ACCOUNT_NAME}.azureedge.net'  # CDN URL
-AZURE_CUSTOM_DOMAIN = f'{AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net'  # Files URL
+if AZURE_STORAGE_KEY:
+    DEFAULT_FILE_STORAGE = 'bamru_net.backend.AzureMediaStorage'
+    STATICFILES_STORAGE = 'bamru_net.backend.AzureStaticStorage'
 
-STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_STATIC_CONTAINER}/'
-MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_MEDIA_CONTAINER}/'
+    # AZURE_CUSTOM_DOMAIN = f'{AZURE_STORAGE_ACCOUNT_NAME}.azureedge.net'  # CDN URL
+    AZURE_CUSTOM_DOMAIN = f'{AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net'  # Files URL
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATIC_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_STATIC_CONTAINER}/'
+    MEDIA_URL = f'https://{AZURE_CUSTOM_DOMAIN}/{AZURE_MEDIA_CONTAINER}/'
 
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+else:
+    STATIC_URL = '/static/'
+    STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT')
+
+    MEDIA_URL = '/system/'
+    MEDIA_ROOT = os.environ.get('MEDIA_ROOT', 'system/')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
