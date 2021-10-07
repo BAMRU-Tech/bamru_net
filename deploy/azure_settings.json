@@ -1,0 +1,112 @@
+[
+  {
+    "name": "AZURE_STORAGE_ACCOUNT_NAME",
+    "slotSetting": false,
+    "value": "X_AZURE_STORAGE_ACCOUNT_NAME"
+  },
+  {
+    "name": "AZURE_STORAGE_KEY",
+    "slotSetting": false,
+    "value": "X_AZURE_STORAGE_KEY"
+  },
+  {
+    "name": "CELERY_BROKER_URL",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "DJANGO_ALLOWED_HOST",
+    "slotSetting": false,
+    "value": "X_HOSTNAME"
+  },
+  {
+    "name": "DJANGO_DB_HOST",
+    "slotSetting": false,
+    "value": "X_POSTGRES_HOST"
+  },
+  {
+    "name": "DJANGO_DB_NAME",
+    "slotSetting": false,
+    "value": "X_POSTGRES_DB"
+  },
+  {
+    "name": "DJANGO_DB_PASS",
+    "slotSetting": false,
+    "value": "X_POSTGRES_PASS"
+  },
+  {
+    "name": "DJANGO_DB_USER",
+    "slotSetting": false,
+    "value": "X_POSTGRES_USER"
+  },
+  {
+    "name": "DJANGO_DEBUG",
+    "slotSetting": false,
+    "value": "0"
+  },
+  {
+    "name": "DJANGO_HOSTNAME",
+    "slotSetting": false,
+    "value": "X_HOSTNAME"
+  },
+  {
+    "name": "DJANGO_SECRET_KEY",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "LOG_ROOT",
+    "slotSetting": false,
+    "value": "/home/LogFiles"
+  },
+  {
+    "name": "MAILGUN_API_KEY",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "MAILGUN_EMAIL_FROM",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "MAILGUN_WEBHOOK_SECRET",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "RAVEN_DSN",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+    "slotSetting": false,
+    "value": "True"
+  },
+  {
+    "name": "TWILIO_ACCOUNT_SID",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "TWILIO_AUTH_TOKEN",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "TWILIO_SMS_FROM",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "USE_RAVEN",
+    "slotSetting": false,
+    "value": "1"
+  },
+  {
+    "name": "WEBSITE_HTTPLOGGING_RETENTION_DAYS",
+    "slotSetting": false,
+    "value": "30"
+  }
+]
