@@ -210,10 +210,9 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
     def get(self, request, **kwargs):
         buffer = io.StringIO()
         members = (
-            Member.objects
+            Member.members
                 .prefetch_related('address_set', 'phone_set', 'email_set',
                                   'emergencycontact_set')
-                .filter(status__in=Member.CURRENT_MEMBERS)
                 .order_by('last_name', 'first_name')
         )
 
