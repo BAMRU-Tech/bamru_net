@@ -4,17 +4,23 @@ import unittest
 from django.conf import settings
 from django.test import Client, TestCase
 
+from dynamic_preferences.registries import global_preferences_registry
+from pathlib import Path
+
 from main.lib import groups
 from main.models import Configuration
 
 USER = 'net_test@bamru.net'
 GROUP = 'test_do@bamru.net'
 ADDRESS = 'test@example.com'
-SLEEP = 0.1
+SLEEP = 0.3
 
 class GroupTestCase(TestCase):
     def setUp(self):
-        Configuration.set_host_key('google_user', USER)
+        self.global_preferences = global_preferences_registry.manager()
+        self.global_preferences['google__credentials'] = Path(
+            settings.GOOGLE_CREDENTIALS_FILE).read_text()
+        self.global_preferences['google__user'] = USER
         Configuration.set_host_key('do_group', GROUP)
         self.group = groups.get_do_group()
 

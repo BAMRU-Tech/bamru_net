@@ -393,9 +393,10 @@ class InboundSms(BaseModel):
             if out2:
                 self.member = out2.distribution.member
 
-        yn = self.body[0].lower()
-        self.yes = (yn == 'y')
-        self.no = (yn == 'n')
+        if self.body:
+            yn = self.body[0].lower()
+            self.yes = (yn == 'y')
+            self.no = (yn == 'n')
 
         # Match the common yes/no variants (allow period & whitespace at end).
         # There is an actual message if this regex does not match.
