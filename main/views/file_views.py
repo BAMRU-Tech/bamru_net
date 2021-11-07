@@ -47,7 +47,7 @@ class FileListView(LoginRequiredMixin, generic.ListView):
 
 def download_file_helper(url, filename='', download=False):
     """Set download to make browsers download instead of displaying inline."""
-    if settings.DEBUG:
+    if not settings.USE_NGINX_ACCEL_REDIRECT:
         return redirect(url)
     response = HttpResponse()
     response['Content-Type'] = ''  # Let nginx infer it

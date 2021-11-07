@@ -210,6 +210,7 @@ else:
 
     MEDIA_URL = '/system/'
     MEDIA_ROOT = os.environ.get('MEDIA_ROOT', 'system/')
+USE_NGINX_ACCEL_REDIRECT = not (AZURE_STORAGE_KEY or DEBUG)
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
