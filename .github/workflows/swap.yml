@@ -23,8 +23,9 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     
     - name: Azure CLI Action
-      uses: Azure/cli@1.0.4
+      uses: Azure/cli@v1
       with:
+        azcliversion: 2.29.2
         inlineScript: |
           az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot staging --target-slot production
           echo "https://$(az webapp show --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --query hostNames[0] -o tsv)"
