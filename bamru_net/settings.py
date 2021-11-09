@@ -218,7 +218,7 @@ LOGOUT_REDIRECT_URL = '/'
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 
 # Raven config for Sentry.io logging
-RELEASE = '1' # TODO raven.fetch_git_sha(os.path.abspath(BASE_DIR))
+RELEASE = os.environ.get('GIT_SHA', '0') # TODO raven.fetch_git_sha(os.path.abspath(BASE_DIR))
 if strtobool(os.environ.get('USE_RAVEN', 'False')):
     RAVEN_CONFIG = {
         'dsn': os.environ['RAVEN_DSN'],
