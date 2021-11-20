@@ -12,7 +12,7 @@
   {
     "name": "CELERY_BROKER_URL",
     "slotSetting": false,
-    "value": "X_SECRET_X"
+    "value": "X_CELERY_BROKER_URL"
   },
   {
     "name": "DJANGO_ALLOWED_HOST",
@@ -38,6 +38,11 @@
     "name": "DJANGO_DB_USER",
     "slotSetting": false,
     "value": "X_POSTGRES_USER"
+  },
+  {
+    "name": "DJANGO_DB_SSLMODE",
+    "slotSetting": false,
+    "value": "require"
   },
   {
     "name": "DJANGO_DEBUG",
