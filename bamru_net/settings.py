@@ -314,11 +314,6 @@ LOGGING = {
             'handlers': ['console'],
             'propagate': False,
         },
-        'celery': {
-            'level': 'WARNING',
-            'handlers': ['sentry'],
-            'propagate': False,
-        },
         # Default runserver request logging
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
         # Project logging
