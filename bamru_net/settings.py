@@ -45,9 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'anymail',
     'bootstrap4',
-    'celerybeat_status',
-    'django_celery_beat',
     'django_filters',
+    'django_q',
     'django_twilio',
     'dynamic_preferences',
     'imagekit',
@@ -254,13 +253,13 @@ DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
 # Used for tests
 GOOGLE_CREDENTIALS_FILE = os.environ.get('GOOGLE_CREDENTIALS_FILE', '')
 
-CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
-CELERY_WORKER_HIJACK_ROOT_LOGGER = False
-# Add a five-minute timeout to all Celery tasks.
-CELERY_TASK_SOFT_TIME_LIMIT = 300
-CELERY_WORKER_CONCURRENCY = 1
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-
+Q_CLUSTER = {
+    'workers': 1,
+    'timeout': 90,  # seconds until task is killed
+    'retry': 120,  # seconds until task restarted (retry > timeout)
+    'orm': 'default', # Use Django database as a broker
+    'poll': 2,  # 2 second poll time if blocking DB access not available
+}
 
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']

@@ -8,7 +8,6 @@ POSTGRES_NAME=${NAME}-db
 SERVICEPLAN_NAME=${NAME}-sp
 WEBAPP_NAME=${NAME}-app
 STORAGE_NAME=${NAME}
-REDIS_NAME=${NAME}-redis
 SLOT=staging
 HOSTNAME=$2
 
@@ -16,17 +15,18 @@ POSTGRES_DB=${NAME}
 POSTGRES_USER=${NAME}_admin
 POSTGRES_PASSWORD=$3
 
-LOCATION=westus2
+LOCATION=westus
 SERVICEPLAN_SKU=S1
 POSTGRES_SKU=B_Gen5_1
 
-RUNTIME="python:3.6"
+RUNTIME="python:3.8"
 
 : "${SETUP_AZ:=false}"
 : "${SETUP_CERT:=false}"
 : "${SETUP_STORE:=false}"
 : "${SETUP_DB:=false}"
 : "${SETUP_CONFIG:=false}"
+: "${SETUP_GITHUB:=false}"
 
 if [  $# -lt 3 ]; then
   echo "Usage: \$0 NAME HOSTNAME POSTGRES_PASSWORD"
@@ -41,9 +41,7 @@ if $SETUP_AZ; then
 
   az postgres up --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku-name $POSTGRES_SKU --server-name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password $POSTGRES_PASSWORD --ssl-enforcement Enabled
 
-  az redis create --name $REDIS_NAME --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku Basic --vm-size C0
-
-  az appservice plan create --name $SERVICEPLAN_NAME --resource-group $RESOURCEGROUP_NAME --sku $SERVICEPLAN_SKU --is-linux
+  az appservice plan create --name $SERVICEPLAN_NAME --resource-group $RESOURCEGROUP_NAME --sku $SERVICEPLAN_SKU --is-linux --location $LOCATION
 
   az webapp create --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --plan $SERVICEPLAN_NAME --runtime $RUNTIME
 
@@ -101,12 +99,10 @@ fi
 
 
 AZURE_STORAGE_KEY=$(az storage account keys list  --account-name $STORAGE_NAME --resource-group $RESOURCEGROUP_NAME --query [0].value -o tsv)
-AZURE_REDIS_KEY=$(az redis list-keys --name $REDIS_NAME --resource-group $RESOURCEGROUP_NAME --query primaryKey -o tsv)
 
 if $SETUP_CONFIG; then
   sed -e "s#X_AZURE_STORAGE_KEY#$AZURE_STORAGE_KEY#g" \
       -e "s/X_AZURE_STORAGE_ACCOUNT_NAME/$STORAGE_NAME/g" \
-      -e "s#X_CELERY_BROKER_URL#rediss://:${AZURE_REDIS_KEY}@${REDIS_NAME}.redis.cache.windows.net:6380/0#g" \
       -e "s/X_HOSTNAME/${WEBAPP_NAME}-${SLOT}.azurewebsites.net/g" \
       -e "s/X_POSTGRES_HOST/${POSTGRES_NAME}.postgres.database.azure.com/g" \
       -e "s/X_POSTGRES_DB/$POSTGRES_DB/g" \
@@ -124,10 +120,10 @@ if $SETUP_CONFIG; then
   # rm processed.json processed-${SLOT}.json processed-dev.json
 fi
 
-#az webapp deployment github-actions add --repo "kduncklee/bamru_net_azure" --branch azure --resource-group $RESOURCEGROUP_NAME -n ${WEBAPP_NAME} --slot ${SLOT}
-
 echo Storage command:
 echo az storage blob upload-batch -d media -s . --account-name $STORAGE_NAME --account-key \'$AZURE_STORAGE_KEY\'
 
 echo DB Backup Command:
 echo pg_dump -Fc -v \"host=${POSTGRES_NAME}.postgres.database.azure.com port=5432 user=${POSTGRES_USER}@${POSTGRES_NAME} password=${POSTGRES_PASSWORD} dbname=$POSTGRES_DB sslmode=require\" -f backup.dump
+
+echo psql -h ${POSTGRES_NAME}.postgres.database.azure.com -U ${POSTGRES_USER}@${POSTGRES_NAME}  -v sslmode=require $POSTGRES_DB

@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 
+from django_q.tasks import async_task
 
 class EventListView(LoginRequiredMixin, generic.ListView):
     """ This view does not do anything anymore, left as an example of a simple view """ 
@@ -94,15 +95,15 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         action = request.POST.get('action', None)
         if action == 'aar':
             logger.info('Calling event_create_aar {}'.format(event_id))
-            tasks.event_create_aar.delay(event_id)
+            async_task(tasks.event_create_aar, event_id)
             return HttpResponse('aar')
         if action == 'ahc_log':
             logger.info('Calling event_create_ahc_log {}'.format(event_id))
-            tasks.event_create_ahc_log.delay(event_id)
+            async_task(tasks.event_create_ahc_log, event_id)
             return HttpResponse('ahc_log')
         if action == 'logistics_spreadsheet':
             logger.info('Calling event_create_logistics_spreadsheet {}'.format(event_id))
-            tasks.event_create_logistics_spreadsheet.delay(event_id)
+            async_task(tasks.event_create_logistics_spreadsheet, event_id)
             return HttpResponse('logistics_spreadsheet')
         return HttpResponseBadRequest('Error: No action set.')
 

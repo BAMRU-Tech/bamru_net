@@ -10,11 +10,6 @@
     "value": "X_AZURE_STORAGE_KEY"
   },
   {
-    "name": "CELERY_BROKER_URL",
-    "slotSetting": false,
-    "value": "X_CELERY_BROKER_URL"
-  },
-  {
     "name": "DJANGO_ALLOWED_HOST",
     "slotSetting": false,
     "value": "X_HOSTNAME"

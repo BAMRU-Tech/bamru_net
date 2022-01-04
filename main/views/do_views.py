@@ -2,6 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.forms.models import modelformset_factory
 from django.views import generic
+from django_q.tasks import async_task
 
 from main.lib import groups
 from main.models import DoAvailable, DoLog, Member
@@ -158,6 +159,6 @@ class DoAhcStatusView(LoginRequiredMixin, generic.base.TemplateView):
         if id:
             m = int(id)
             logger.info('Calling set_do {}'.format(m))
-            set_do.delay(m, False)
+            async_task(set_do, m, False)
             return HttpResponse('removed')
         return HttpResponseBadRequest('Error: No id set.')

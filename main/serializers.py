@@ -8,6 +8,7 @@ from rest_framework import exceptions, serializers
 from rest_framework.validators import UniqueTogetherValidator
 from collections import defaultdict
 from base64 import b64encode, b64decode
+from django_q.tasks import async_task
 
 import logging
 logger = logging.getLogger(__name__)
@@ -193,7 +194,7 @@ class PeriodParticipantSerializer(serializers.ModelSerializer):
         instance = super().save(**kwargs)
         if instance.ahc and not was_ahc:
             logger.info('Calling set_do {}'.format(instance.member.pk))
-            set_do.delay(instance.member.pk, True)
+            async_task(set_do, instance.member.pk, True)
         return instance
 
 
@@ -244,11 +245,11 @@ class MessageDetailSerializer(MessageListSerializer):
         logger.info('Calling message.queue {}'.format(message.pk))
         message.queue()
         logger.info('Calling message_send {}'.format(message.pk))
-        message_send.delay(message.pk)
+        async_task(message_send, message.pk)
         logger.debug('MessageSerializer.create done')
         if message.format == 'do_shift_starting':
             logger.info('Calling set_do {}'.format(message.author.pk))
-            set_do.delay(message.author.pk, True)
+            async_task(set_do, message.author.pk, True)
         return message
 
 

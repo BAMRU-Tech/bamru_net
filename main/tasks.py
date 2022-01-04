@@ -2,20 +2,21 @@ from django.utils import timezone
 
 import logging
 from datetime import timedelta
+from django_q.tasks import async_task
 
 from .lib import groups
 from .models import Cert, Configuration, Distribution, DoLog, Event, Member, Message, OutboundEmail, OutboundSms, Participant, Role
 
-from celery import shared_task
-
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+# @shared_task
 def debug_print(text):
-    logger.info('Debug print: {}'.format(text))
+    response = 'Debug print: {}'.format(text)
+    logger.info(response)
+    return response
 
-@shared_task
+# @shared_task
 def message_send(message_id):
     """Task to actually do the message sending.
 
@@ -42,7 +43,7 @@ def send_cert_notice(cert, text, author, cc=[]):
             message=message, member=dest, send_email=True)
         dist.queue(None)
 
-@shared_task
+# @shared_task
 def cert_notice_check():
     if not Configuration.get_host_key('cert_notice'):
         logger.info('Skiping cert notice check')
@@ -81,10 +82,10 @@ def cert_notice_check():
         cert.save()
 
     if cert90.count() + cert30.count() + cert0.count() > 0:
-        message_send.delay('certs')
+        async_task(message_send, 'certs')
 
 
-@shared_task
+# @shared_task
 def meeting_sign_in_update():
     participants = Participant.objects.filter(
         en_route_at__isnull=True,
@@ -101,7 +102,7 @@ def meeting_sign_in_update():
         p.signed_out_at = p.period.event.finish_at
         p.save()
 
-@shared_task
+# @shared_task
 def set_do(member_id, is_do):
     logger.info('Running set_do triggered by {}, {}'.format(member_id, is_do))
     member = Member.objects.get(id=member_id)
@@ -118,25 +119,25 @@ def set_do(member_id, is_do):
         DoLog.current_do_log().add_writer(member)
     # No else - do not remove writers from DO Log.
 
-@shared_task
+# @shared_task
 def event_create_aar(event_id):
     logger.info('Running event_create_aar triggered by {}'.format(event_id))
     Event.objects.get(id=event_id).create_aar()
 
-@shared_task
+# @shared_task
 def event_create_ahc_log(event_id):
     logger.info('Running event_create_ahc_log triggered by {}'.format(event_id))
     Event.objects.get(id=event_id).create_ahc_log()
 
-@shared_task
+# @shared_task
 def event_create_logistics_spreadsheet(event_id):
     logger.info('Running event_create_logistics_spreadsheet triggered by {}'.format(event_id))
     Event.objects.get(id=event_id).create_logistics_spreadsheet()
 
-@shared_task
+# @shared_task
 def member_update_all_google_profiles():
     [x.update_google_profile() for x in Member.objects.all()]
 
-@shared_task
+# @shared_task
 def member_update_all_profile_emails():
     [x.profile_email_to_email_set() for x in Member.objects.all()]
