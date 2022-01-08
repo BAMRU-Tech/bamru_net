@@ -3,9 +3,10 @@ from django.utils import timezone
 import logging
 from datetime import timedelta
 from django_q.tasks import async_task
+from dynamic_preferences.registries import global_preferences_registry
 
 from .lib import groups
-from .models import Cert, Configuration, Distribution, DoLog, Event, Member, Message, OutboundEmail, OutboundSms, Participant, Role
+from .models import Cert, Distribution, DoLog, Event, Member, Message, OutboundEmail, OutboundSms, Participant, Role
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,8 @@ def send_cert_notice(cert, text, author, cc=[]):
 
 # @shared_task
 def cert_notice_check():
-    if not Configuration.get_host_key('cert_notice'):
+    global_preferences = global_preferences_registry.manager()
+    if not global_preferences['general__cert_notice']:
         logger.info('Skiping cert notice check')
         return
     now = timezone.now()

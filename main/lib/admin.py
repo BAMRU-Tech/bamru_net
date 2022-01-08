@@ -3,7 +3,6 @@
 import googleapiclient.discovery
 import googleapiclient.errors
 import main.lib.oauth
-from main.models import Configuration
 
 import logging
 logger = logging.getLogger(__name__)

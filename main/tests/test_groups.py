@@ -1,3 +1,4 @@
+from dynamic_preferences.registries import global_preferences_registry
 import time
 import unittest
 
@@ -8,7 +9,6 @@ from dynamic_preferences.registries import global_preferences_registry
 from pathlib import Path
 
 from main.lib import groups
-from main.models import Configuration
 
 USER = 'net_test@bamru.net'
 GROUP = 'test_do@bamru.net'
@@ -21,7 +21,7 @@ class GroupTestCase(TestCase):
         self.global_preferences['google__credentials'] = Path(
             settings.GOOGLE_CREDENTIALS_FILE).read_text()
         self.global_preferences['google__user'] = USER
-        Configuration.set_host_key('do_group', GROUP)
+        self.global_preferences['google__do_group'] = GROUP
         self.group = groups.get_do_group()
 
     @unittest.skipUnless(settings.GOOGLE_CREDENTIALS_FILE, 'missing config')

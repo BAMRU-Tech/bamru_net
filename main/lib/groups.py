@@ -1,9 +1,9 @@
 # Google groups API
 
+from dynamic_preferences.registries import global_preferences_registry
 import googleapiclient.discovery
 import googleapiclient.errors
 import main.lib.oauth
-from main.models import Configuration
 
 import logging
 logger = logging.getLogger(__name__)
@@ -82,4 +82,5 @@ class GoogleGroup(NoopGoogleGroup):
             logger.error(str(e))
 
 def get_do_group():
-    return GoogleGroup(Configuration.get_host_key('do_group'))
+    global_preferences = global_preferences_registry.manager()
+    return GoogleGroup(global_preferences['google__do_group'])
