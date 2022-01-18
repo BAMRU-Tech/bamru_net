@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Azure Swap Slots - Staging <-> Production
+name: Azure deploy to preprod after testing on staging is complete
 
 # Controls when the workflow will run
 on:
@@ -27,5 +27,19 @@ jobs:
       with:
         azcliversion: 2.29.2
         inlineScript: |
-          az webapp deployment slot swap --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot preprod --target-slot production
-          echo "https://$(az webapp show --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --query hostNames[0] -o tsv)"
+          az webapp deployment slot create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot preprod --configuration-source ${{ env.AZURE_WEBAPP_NAME }}
+
+      - name: Download artifact from build job
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: azure_bamrunet-app
+          workflow_conclusion: success
+          name: python-app
+          path: .
+
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v2
+        id: deploy-to-webapp
+        with:
+          app-name: 'bamrudev-app'
+          slot-name: 'preprod'
