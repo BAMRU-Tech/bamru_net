@@ -10,7 +10,7 @@ on:
 env:
   AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
   AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
-  
+
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   swap:
@@ -21,7 +21,7 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
+
     - name: Azure CLI Action
       uses: Azure/cli@v1
       with:
