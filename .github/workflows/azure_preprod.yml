@@ -29,17 +29,17 @@ jobs:
         inlineScript: |
           az webapp deployment slot create --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --name ${{ env.AZURE_WEBAPP_NAME }} --slot preprod --configuration-source ${{ env.AZURE_WEBAPP_NAME }}
 
-      - name: Download artifact from build job
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: azure_bamrunet-app
-          workflow_conclusion: success
-          name: python-app
-          path: .
+    - name: Download artifact from build job
+      uses: dawidd6/action-download-artifact@v2
+      with:
+        workflow: azure_bamrunet-app
+        workflow_conclusion: success
+        name: python-app
+        path: .
 
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v2
-        id: deploy-to-webapp
-        with:
-          app-name: 'bamrudev-app'
-          slot-name: 'preprod'
+    - name: 'Deploy to Azure Web App'
+      uses: azure/webapps-deploy@v2
+      id: deploy-to-webapp
+      with:
+        app-name: 'bamrudev-app'
+        slot-name: 'preprod'
