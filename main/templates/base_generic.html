@@ -118,7 +118,7 @@
         // input: date string yyyy-mm-dd
         var r = date.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (r == null || r.length != 4) {
-            Sentry.captureMessage('DateFE: Bad date format, expected yyyy-mm-dd', 'error');
+            //Sentry.captureMessage('DateFE: Bad date format, expected yyyy-mm-dd', 'error');
             return '00/00/0000';
         }
         return r[2] + '/' + r[3] + '/' + r[1]
