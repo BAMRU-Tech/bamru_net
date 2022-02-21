@@ -195,7 +195,7 @@ class ReportRosterView(LoginRequiredMixin, BaseReportView):
         context = {}
         context['members'] = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set',
+                .prefetch_related('address_set', 'phone_set', 'email_set', 'role_set',
                                   'emergencycontact_set')
                 .filter(status__in=status)
                 .order_by('last_name', 'first_name')
@@ -212,7 +212,7 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         members = (
             Member.members
                 .prefetch_related('address_set', 'phone_set', 'email_set',
-                                  'emergencycontact_set')
+                                  'emergencycontact_set', 'role_set')
                 .order_by('last_name', 'first_name')
         )
 
@@ -235,37 +235,38 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         data['roles'] = member.classic_roles
         data['first_name'] = member.first_name
         data['last_name'] = member.last_name
-        data['mobile_phone'] = member.mobile_phone
-        data['home_phone'] = member.home_phone
-        data['work_phone'] = member.work_phone
 
-        try:
-            data['other_phone'] = member.phone_set.filter(type='Other').first().number
-        except AttributeError:
-            data['other_phone'] = ''
+        phones = member.grouped_phones()
+        def maybe_number(t):
+            try:
+                return phones[t][0].display_number
+            except IndexError:
+                return ''
+        data['mobile_phone'] = maybe_number('Mobile')
+        data['home_phone'] = maybe_number('Home')
+        data['work_phone'] = maybe_number('Work')
+        data['other_phone'] = maybe_number('Other')
 
-        try:
-            data['home_address'] = member.address_set.filter(type='Home').first().oneline()
-        except AttributeError:
-            data['home_address'] = ''
+        addresses = member.grouped_addresses()
+        def maybe_address(t):
+            try:
+                return addresses[t][0].oneline()
+            except IndexError:
+                return ''
+        data['home_address'] = maybe_address('Home')
+        data['work_address'] = maybe_address('Work')
+        data['other_address'] = maybe_address('Other')
 
-        try:
-            data['work_address'] = member.address_set.filter(type='Work').first().oneline()
-        except AttributeError:
-            data['work_address'] = ''
+        emails = member.grouped_emails()
+        def maybe_email(t):
+            try:
+                return emails[t][0].address
+            except IndexError:
+                return ''
+        data['home_email'] = maybe_email('Home')
+        data['personal_email'] = maybe_email('Personal')
+        data['work_email'] = maybe_email('Work')
 
-        try:
-            data['other_address'] = member.address_set.filter(type='Other').first().oneline()
-        except AttributeError:
-            data['other_address'] = ''
-
-        try:
-            data['home_email'] = member.email_set.filter(type='Home').first().address
-        except AttributeError:
-            data['home_email'] = ''
-
-        data['personal_email'] = member.personal_email
-        data['work_email'] = member.work_email
         data['ham'] = member.ham
         data['v9'] = member.v9
 
@@ -276,7 +277,7 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
     def get(self, request, **kwargs):
         members = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set')
+                .prefetch_related('address_set', 'phone_set', 'email_set', 'role_set')
                 .filter(status__in=Member.CURRENT_MEMBERS)
                 .order_by('last_name', 'first_name')
         )

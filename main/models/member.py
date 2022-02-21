@@ -11,6 +11,7 @@ from django.utils import timezone
 from .base import BaseModel, BasePositionModel
 from main.lib import admin, phone
 
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 import math
 
@@ -112,53 +113,75 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         """ Return first email """
         if self.profile_email:
             return self.profile_email
-        try:
-            return self.email_set.first().address
-        except AttributeError:
-            return ''
+        return self.get_email()
 
     @property
     def personal_email(self):
-        try:
-            return self.email_set.filter(type='Personal').first().address
-        except AttributeError:
-            return ''
+        return self.get_email('Personal')
 
     @property
     def work_email(self):
-        try:
-            return self.email_set.filter(type='Work').first().address
-        except AttributeError:
-            return ''
+        return self.get_email('Work')
 
     @property
     def display_phone(self):
         """ Return first phone """
-        try:
-            return self.phone_set.first().display_number
-        except AttributeError:
-            return ''
+        return self.get_phone()
 
     @property
     def mobile_phone(self):
-        try:
-            return self.phone_set.filter(type='Mobile').first().display_number
-        except AttributeError:
-            return ''
+        return self.get_phone('Mobile')
 
     @property
     def home_phone(self):
-        try:
-            return self.phone_set.filter(type='Home').first().display_number
-        except AttributeError:
-            return ''
+        return self.get_phone('Home')
 
     @property
     def work_phone(self):
+        return self.get_phone('Work')
+
+    def get_email(self, t=None):
         try:
-            return self.phone_set.filter(type='Work').first().display_number
-        except AttributeError:
+            return self.smart_first('email_set', self.email_set, t).address
+        except (IndexError, AttributeError):
             return ''
+
+    def get_phone(self, t=None):
+        try:
+            return self.smart_first('phone_set', self.phone_set, t).display_number
+        except (IndexError, AttributeError):
+            return ''
+
+    def smart_first(self, name, qs, t=None):
+        if name in self._prefetched_objects_cache:
+            # prefetched, just find in objects we have already
+            if t is None:
+                return qs.all()[0]
+            else:
+                # it would be nice if we cached this rather that building the
+                # groups every time. But n for a single user is small.
+                return self.grouped_attrs(qs)[t][0]
+        # not prefetched, fall back to query
+        if t is not None:
+            qs = qs.filter(type=t)
+        return qs.first()
+
+    def grouped_attrs(self, related_qs):
+        """related_qs must have a 'type' field (i.e. it should be email_set, phone_set, or address_set)"""
+        objs = defaultdict(list)
+        for o in related_qs.all():
+            objs[o.type].append(o)
+        return objs
+
+    def grouped_emails(self):
+        return self.grouped_attrs(self.email_set)
+
+    def grouped_phones(self):
+        return self.grouped_attrs(self.phone_set)
+
+    def grouped_addresses(self):
+        return self.grouped_attrs(self.address_set)
+
 
     @property
     def short_name(self):
