@@ -42,7 +42,7 @@ class FileListView(LoginRequiredMixin, generic.ListView):
     context_object_name = 'file_list'
 
     def get_queryset(self):
-        return DataFile.objects.order_by('name')
+        return DataFile.objects.order_by('name').select_related('member')
 
 
 def download_file_helper(url, filename='', download=False):
