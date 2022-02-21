@@ -163,6 +163,12 @@ class MessageCreateView(MessageCreateBaseView):
             else:
                 logger.error('Period format {} not found for: {}'.format(
                 period_format, self.request.body))
+            if members is not None:
+                members = Member.annotate_unavailable(members).prefetch_related(
+                    'email_set',
+                    'phone_set',
+                    'role_set',
+                )
             self.initial['input'] = "{}:".format(str(period))
         return members
 
