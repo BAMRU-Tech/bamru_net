@@ -107,7 +107,13 @@ class EventViewSet(BaseViewSet):
 
 
 class PeriodViewSet(BaseViewSet):
-    queryset = Period.objects.all()
+    queryset = Period.objects.prefetch_related(
+        "participant_set",
+        "participant_set__member",
+        "participant_set__member__phone_set",
+        "participant_set__member__email_set",
+        "participant_set__member__role_set",
+    ).all()
     serializer_class = PeriodSerializer
 
 

@@ -48,6 +48,18 @@ class MemberSerializer(serializers.HyperlinkedModelSerializer):
                   'last_login',) + read_only_fields
 
 
+class ParticipantMemberSerializer(serializers.HyperlinkedModelSerializer):
+    # does not include is_unavailable since we cannot prefetch it
+    class Meta:
+        model = Member
+        read_only_fields = ('username', 'full_name', 'status', 'status_order',
+                            'roles', 'role_order',
+                            'display_email', 'display_phone', 'short_name',
+                            'is_staff', 'is_superuser',)
+        fields = ('id', 'dl', 'ham', 'v9', 'is_current_do',
+                  'last_login',) + read_only_fields
+
+
 class BareUnavailableSerializer(WriteOnceMixin, serializers.ModelSerializer):
     class Meta:
         model = Unavailable
@@ -130,7 +142,7 @@ class BareParticipantSerializer(serializers.ModelSerializer):
 
 
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
-    member = MemberSerializer()
+    member = ParticipantMemberSerializer()
 
     class Meta:
         model = Participant
