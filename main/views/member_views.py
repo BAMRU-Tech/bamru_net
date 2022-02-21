@@ -363,7 +363,9 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
         qs = Member.objects.prefetch_related(
             Prefetch('unavailable_set',
                      queryset=unavailable_set,
-                     to_attr='unavailable_filtered'))
+                     to_attr='unavailable_filtered'),
+            'role_set',
+        )
 
         qs = qs.filter(status__in=Member.AVAILABLE_MEMBERS).order_by('id')
 
