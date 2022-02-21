@@ -84,7 +84,20 @@ class EventFilter(filters.FilterSet):
 
 
 class EventViewSet(BaseViewSet):
-    queryset = Event.objects.all().order_by('-start_at')
+    def get_queryset(self):
+        qs = Event.objects.all().order_by('-start_at')
+        if getattr(self, 'action', None) != 'list':
+            # fetch data used by EventDetailSerializer
+            qs = qs.prefetch_related(
+                "period_set",
+                "period_set__participant_set",
+                "period_set__participant_set__member",
+                "period_set__participant_set__member__phone_set",
+                "period_set__participant_set__member__email_set",
+                "period_set__participant_set__member__role_set",
+            )
+        return qs
+
     filterset_class = EventFilter
     search_fields = ('title', 'description', 'location', )
 

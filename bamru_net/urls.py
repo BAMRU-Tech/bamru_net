@@ -26,7 +26,7 @@ from rest_framework import routers
 from rest_framework.documentation import include_docs_urls
 
 router = routers.DefaultRouter()
-router.register(r'events', views.EventViewSet)
+router.register(r'events', views.EventViewSet, basename='event')
 router.register(r'periods', views.PeriodViewSet)
 router.register(r'participants', views.ParticipantViewSet)
 router.register(r'members', views.MemberViewSet)
