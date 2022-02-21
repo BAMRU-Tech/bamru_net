@@ -111,8 +111,17 @@ class Period(BasePositionModel):
             participant__period=self.id,
             participant__return_home_at__isnull=True)
 
-    def members_for_info_page(self): # used in event_detail
-        return Member.objects.filter( participant__period=self.id )
+    def prefetched_members_for_info_page(self):
+        # used in event_detail
+        # Ideally we'd do a Member query directly, or a select_related() or
+        # prefetch_related() on the participant_set. But, when
+        # participant_set__member has already been prefetched, that actually
+        # makes things worse, triggering a new query per period when all the
+        # relevant objects are already loaded! Possibly we could inspect
+        # self._fields_cache to figure out whether we need to do more
+        # prefetching... but currently this is only used in one place, so
+        # just make the name explicit for now.
+        return [p.member for p in self.participant_set.all()]
 
 
 class Participant(BaseModel):
