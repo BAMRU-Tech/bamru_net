@@ -119,7 +119,7 @@ SLOT_AZURE_STORAGE_KEY=$(az storage account keys list  --account-name $SLOT_STOR
 if $SETUP_CONFIG; then
   sed -e "s#X_AZURE_STORAGE_KEY#$SLOT_AZURE_STORAGE_KEY#g" \
       -e "s/X_AZURE_STORAGE_ACCOUNT_NAME/$SLOT_STORAGE_NAME/g" \
-      -e "s/X_HOSTNAME/${WEBAPP_NAME}-${SLOT}.azurewebsites.net/g" \
+      -e "s/X_HOSTNAME/${SLOT_HOSTNAME}/g" \
       -e "s/X_ALLOWED_HOST/${SLOT_HOSTNAME},${WEBAPP_NAME}-${SLOT}.azurewebsites.net/g" \
       -e "s/X_POSTGRES_HOST/${POSTGRES_NAME}.postgres.database.azure.com/g" \
       -e "s/X_POSTGRES_DB/$SLOT_POSTGRES_DB/g" \
@@ -129,7 +129,7 @@ if $SETUP_CONFIG; then
 
   sed -e "s#X_AZURE_STORAGE_KEY#$AZURE_STORAGE_KEY#g" \
       -e "s/X_AZURE_STORAGE_ACCOUNT_NAME/$STORAGE_NAME/g" \
-      -e "s/X_HOSTNAME/${WEBAPP_NAME}.azurewebsites.net/g" \
+      -e "s/X_HOSTNAME/${HOSTNAME}/g" \
       -e "s/X_ALLOWED_HOST/${HOSTNAME},${WEBAPP_NAME}.azurewebsites.net/g" \
       -e "s/X_POSTGRES_HOST/${POSTGRES_NAME}.postgres.database.azure.com/g" \
       -e "s/X_POSTGRES_DB/$POSTGRES_DB/g" \
