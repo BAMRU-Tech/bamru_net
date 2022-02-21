@@ -75,7 +75,7 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
                    .select_related('event')
                    .filter(event__start_at__gte=start,
                            event__start_at__lte=end)
-                   .prefetch_related('participant_set')
+                   .prefetch_related('participant_set__member')
         )
         if type:
             events = events.filter(type=type)
@@ -170,8 +170,10 @@ class CertExpireView(LoginRequiredMixin, BaseReportView):
                                        end - timedelta(days=365))
 
 
-        certs = Cert.objects.filter(expires_on__gte=start,
-                                    expires_on__lte=end)
+        certs = Cert.objects.filter(
+            expires_on__gte=start,
+            expires_on__lte=end,
+        ).select_related('member')
         if type is not None:
             certs = certs.filter(type=type)
 
@@ -341,7 +343,7 @@ class ReportEventErrorsView(LoginRequiredMixin, View):
         participants = Participant.objects.filter(
             period__event__finish_at__lt=timezone.now(),
             period__event__start_at__gt=timezone.now() - timedelta(days=400),
-        )
+        ).select_related('member', 'period__event')
         errors += self.errors(participants.filter(
             en_route_at__isnull=True,
             return_home_at__isnull=False,
