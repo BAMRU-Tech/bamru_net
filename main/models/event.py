@@ -88,7 +88,13 @@ class Event(BaseModel):
         return self.logistics_spreadsheet
 
 
+class PeriodManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().select_related('event')
+
 class Period(BasePositionModel):
+    objects = PeriodManager()
+
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     start_at = models.DateTimeField(blank=True, null=True)
     finish_at = models.DateTimeField(blank=True, null=True)
