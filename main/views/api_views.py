@@ -201,7 +201,13 @@ class MessageFilter(filters.FilterSet):
 
 
 class MessageViewSet(BaseViewSet):
-    queryset = Message.objects.all()
+    queryset = Message.objects.all().prefetch_related(
+        'author',
+        'author__email_set',
+        'author__phone_set',
+        'author__role_set',
+        'rsvp_template',
+    )
     filterset_class = MessageFilter
     search_fields = ('author__username',)
     def get_serializer_class(self):
