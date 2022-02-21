@@ -216,10 +216,19 @@ class MessageDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
-class MessageListView(LoginRequiredMixin, generic.ListView):
+class GenericMessageListView(generic.ListView):
     model = Message
     template_name = 'message_list.html'
     context_object_name = 'message_list'
+
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            'author',
+            'period__event',
+        )
+
+
+class MessageListView(LoginRequiredMixin, GenericMessageListView):
     paginate_by = 15
     ordering = ['-created_at']
 
@@ -236,30 +245,27 @@ class InboundSmsListView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         qs = InboundSms.objects.all()
         qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=31))
+        qs = qs.select_related(
+            'member',
+            'outbound__distribution__message',
+        )
         return qs.order_by('-created_at')
 
 
-class MessageInboxView(LoginRequiredMixin, generic.ListView):
-    template_name = 'message_list.html'
-    context_object_name = 'message_list'
-
+class MessageInboxView(LoginRequiredMixin, GenericMessageListView):
     def get_queryset(self):
         """Return event list within the last year """
-        qs = Message.objects.all()
-        qs = qs.filter(created_at__gte=timezone.now() - timedelta(days=365))
+        qs = super().get_queryset().filter(created_at__gte=timezone.now() - timedelta(days=365))
         member_id = self.kwargs.get('member_id', None)
         if member_id:
             qs = qs.filter(distribution__member__id=member_id)
         return qs.order_by('-created_at')
 
 
-class MessageEventView(LoginRequiredMixin, generic.ListView):
-    template_name = 'message_list.html'
-    context_object_name = 'message_list'
-
+class MessageEventView(LoginRequiredMixin, GenericMessageListView):
     def get_queryset(self):
+        qs = super().get_queryset()
         event_id = self.kwargs.get('event_id', None)
-        qs = Message.objects.all()
         if event_id:
             qs = qs.filter(period__event__id=event_id)
         return qs.order_by('-created_at')
