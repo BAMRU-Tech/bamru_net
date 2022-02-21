@@ -51,6 +51,11 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
 class MemberPhotoGalleryView(MemberListView):
     template_name = 'member_photo_gallery.html'
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related(
+            'memberphoto_set',
+        )
+
 
 class MemberEditView(PermissionRequiredMixin, generic.base.TemplateView):
     template_name = 'member_edit.html'
