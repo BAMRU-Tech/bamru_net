@@ -3,6 +3,7 @@ from main.models import *
 from main.serializers import *
 
 from django import forms
+from django.db.models import Prefetch
 from rest_framework import exceptions, generics, mixins, parsers, permissions, response, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -48,12 +49,11 @@ class ApiUnavailableViewSet(BaseViewSet):
 
 
 class MemberUnavailableViewSet(BaseViewSet):
-    queryset = Member.members.prefetch_related('unavailable_set')
     serializer_class = MemberUnavailableSerializer
     filter_fields = ('status', )
     search_fields = ('username',  )
 
-    def get_serializer(self, *args, **kwargs):
+    def get_queryset(self):
         filter_kwargs = {}
         if hasattr(self.request, 'query_params'):
             if self.request.query_params.get('date_range_start'):
@@ -62,7 +62,10 @@ class MemberUnavailableViewSet(BaseViewSet):
             if self.request.query_params.get('date_range_end'):
                 filter_kwargs['start_on__lte'] = forms.DateField().clean(
                         self.request.query_params['date_range_end'])
-        return super().get_serializer(*args, unavailable_filter_kwargs=filter_kwargs, **kwargs)
+        return Member.members.all().prefetch_related(
+            'role_set',
+            Prefetch('unavailable_set', queryset=Unavailable.objects.filter(**filter_kwargs), to_attr='filtered_unavailable_set'),
+        )
 
 
 class CertViewSet(BaseViewSet):

@@ -70,16 +70,10 @@ class BareUnavailableSerializer(WriteOnceMixin, serializers.ModelSerializer):
 
 
 class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
-    def __init__(self, *args, **kwargs):
-        self._unavailable_filter_kwargs = kwargs.pop(
-            'unavailable_filter_kwargs', {})
-        super().__init__(*args, **kwargs)
-
     busy = serializers.SerializerMethodField()
 
     def get_busy(self, member):
-        busy = member.unavailable_set.all()
-        busy = busy.filter(**self._unavailable_filter_kwargs)
+        busy = member.filtered_unavailable_set
         return BareUnavailableSerializer(busy, context=self.context, many=True).data
 
     class Meta:
