@@ -1,3 +1,5 @@
+import datetime
+
 from .models import *
 from .tasks import message_send, set_do
 from django.core.files.base import ContentFile
@@ -99,7 +101,13 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
     certs = serializers.SerializerMethodField()
 
     def get_certs(self, member):
-        ordered_certs = member.cert_set.all().order_by('-expires_on', '-id')
+        # we prefetch certs in the viewset, just sort in python to avoid another query per member
+        certs = member.cert_set.all()
+        def future_if_none(t):
+            if t == None:
+                return datetime.date(year=3000, month=1, day=1)
+            return t
+        ordered_certs = sorted(certs, key=lambda c: (future_if_none(c.expires_on), c.id), reverse=True)
         grouped_certs = defaultdict(list)
         for c in ordered_certs:
             grouped_certs[c.type].append(
