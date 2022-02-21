@@ -4,6 +4,7 @@
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
 from django.utils import timezone
 
@@ -176,6 +177,9 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def is_unavailable(self):
+        if getattr(self, '_unavailable_now', None) is not None:
+            return self._unavailable_now > 0
+
         today = timezone.now().today().date()
         return self.unavailable_set.filter(
             start_on__lte=today, end_on__gte=today).count() > 0
@@ -232,6 +236,17 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         if self.profile_email:
             directory = admin.AdminDirectory()
             directory.update_user(self.profile_email, self._google_profile_info())
+
+    @classmethod
+    def prefetch_unavailable(cls, name='member_set'):
+        return Prefetch(name, Member.annotate_unavailable(cls.members))
+
+    @classmethod
+    def annotate_unavailable(cls, qs):
+        today = timezone.now().today().date()
+        return qs.annotate(
+            _unavailable_now=Count('unavailable', filter=Q(unavailable__start_on__lte=today, unavailable__end_on__gte=today))
+        )
 
 
 class Role(BaseModel):

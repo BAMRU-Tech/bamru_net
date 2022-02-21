@@ -23,7 +23,11 @@ class CreateListModelMixin(object):
 
 
 class MemberViewSet(BaseViewSet):
-    queryset = Member.objects.all()
+    queryset = Member.annotate_unavailable(Member.objects).all().prefetch_related(
+        'email_set',
+        'phone_set',
+        'role_set',
+    )
     serializer_class = MemberSerializer
     filter_fields = ('status', )
     search_fields = ('username',  )
