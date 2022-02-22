@@ -36,7 +36,11 @@ class MemberListView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(status__in=Member.CURRENT_MEMBERS).order_by('last_name', 'first_name')
+        return Member.annotate_unavailable(Member.members).order_by(
+            'last_name', 'first_name'
+        ).prefetch_related(
+            'role_set', 'phone_set',
+        )
 
 
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
