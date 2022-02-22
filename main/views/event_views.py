@@ -62,6 +62,11 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
     model = Event
     template_name = 'event_detail.html'
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related(
+            Member.prefetch_unavailable('period_set__participant_set__member'),
+        )
+
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
         obj.add_period(True)
@@ -74,10 +79,10 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
             for leader in context['event'].leaders.split(','):
                 try:
                     id = Member.objects.filter(username=leader.strip().lower()).first().id
-                except:
+                except Exception:
                     id = 0
                 result.append({ 'name': leader, 'id': id })
-        except:
+        except Exception:
             result.append({ 'name': 'TBD', 'id': 0})
 
         context['leaders'] = result

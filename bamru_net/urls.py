@@ -26,15 +26,15 @@ from rest_framework import routers
 from rest_framework.documentation import include_docs_urls
 
 router = routers.DefaultRouter()
-router.register(r'events', views.EventViewSet)
+router.register(r'events', views.EventViewSet, basename='event')
 router.register(r'periods', views.PeriodViewSet)
 router.register(r'participants', views.ParticipantViewSet)
 router.register(r'members', views.MemberViewSet)
-router.register(r'member_certs', views.MemberCertViewSet, basename='member')
+router.register(r'member_certs', views.MemberCertViewSet, basename='member-cert')
 router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
-router.register(r'member_availability', views.MemberUnavailableViewSet, basename='member')
+router.register(r'member_availability', views.MemberUnavailableViewSet, basename='member-availability')
 router.register(r'photos', views.MemberPhotoViewSet)
 router.register(r'messages', views.MessageViewSet)
 router.register(r'inbound_sms', views.InboundSmsViewSet)

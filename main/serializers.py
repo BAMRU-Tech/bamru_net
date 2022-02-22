@@ -1,3 +1,5 @@
+import datetime
+
 from .models import *
 from .tasks import message_send, set_do
 from django.core.files.base import ContentFile
@@ -48,6 +50,18 @@ class MemberSerializer(serializers.HyperlinkedModelSerializer):
                   'last_login',) + read_only_fields
 
 
+class ParticipantMemberSerializer(serializers.HyperlinkedModelSerializer):
+    # does not include is_unavailable since we cannot prefetch it
+    class Meta:
+        model = Member
+        read_only_fields = ('username', 'full_name', 'status', 'status_order',
+                            'roles', 'role_order',
+                            'display_email', 'display_phone', 'short_name',
+                            'is_staff', 'is_superuser',)
+        fields = ('id', 'dl', 'ham', 'v9', 'is_current_do',
+                  'last_login',) + read_only_fields
+
+
 class BareUnavailableSerializer(WriteOnceMixin, serializers.ModelSerializer):
     class Meta:
         model = Unavailable
@@ -56,16 +70,10 @@ class BareUnavailableSerializer(WriteOnceMixin, serializers.ModelSerializer):
 
 
 class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
-    def __init__(self, *args, **kwargs):
-        self._unavailable_filter_kwargs = kwargs.pop(
-            'unavailable_filter_kwargs', {})
-        super().__init__(*args, **kwargs)
-
     busy = serializers.SerializerMethodField()
 
     def get_busy(self, member):
-        busy = member.unavailable_set.all()
-        busy = busy.filter(**self._unavailable_filter_kwargs)
+        busy = member.filtered_unavailable_set
         return BareUnavailableSerializer(busy, context=self.context, many=True).data
 
     class Meta:
@@ -87,7 +95,13 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
     certs = serializers.SerializerMethodField()
 
     def get_certs(self, member):
-        ordered_certs = member.cert_set.all().order_by('-expires_on', '-id')
+        # we prefetch certs in the viewset, just sort in python to avoid another query per member
+        certs = member.cert_set.all()
+        def future_if_none(t):
+            if t == None:
+                return datetime.date(year=3000, month=1, day=1)
+            return t
+        ordered_certs = sorted(certs, key=lambda c: (future_if_none(c.expires_on), c.id), reverse=True)
         grouped_certs = defaultdict(list)
         for c in ordered_certs:
             grouped_certs[c.type].append(
@@ -130,7 +144,7 @@ class BareParticipantSerializer(serializers.ModelSerializer):
 
 
 class ParticipantSerializer(serializers.HyperlinkedModelSerializer):
-    member = MemberSerializer()
+    member = ParticipantMemberSerializer()
 
     class Meta:
         model = Participant

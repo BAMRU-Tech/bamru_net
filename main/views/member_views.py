@@ -51,6 +51,11 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
 class MemberPhotoGalleryView(MemberListView):
     template_name = 'member_photo_gallery.html'
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related(
+            'memberphoto_set',
+        )
+
 
 class MemberEditView(PermissionRequiredMixin, generic.base.TemplateView):
     template_name = 'member_edit.html'
@@ -363,7 +368,9 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
         qs = Member.objects.prefetch_related(
             Prefetch('unavailable_set',
                      queryset=unavailable_set,
-                     to_attr='unavailable_filtered'))
+                     to_attr='unavailable_filtered'),
+            'role_set',
+        )
 
         qs = qs.filter(status__in=Member.AVAILABLE_MEMBERS).order_by('id')
 

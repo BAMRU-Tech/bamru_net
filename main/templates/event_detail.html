@@ -1040,7 +1040,7 @@ function AddMeToOP (period) {
 function DeleteEvent ( event, title ) {
     var numParticipants = 0;
     {% for period in event.period_set.all %}
-      numParticipants += {{ period.members_for_info_page|length }}
+      numParticipants += {{ period.prefeteched_members_for_info_page|length }}
     {% endfor %}
     if (numParticipants > 0) {
         alert('Events with active operational periods cannot be deleted');
