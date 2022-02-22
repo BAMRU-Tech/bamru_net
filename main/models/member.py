@@ -153,7 +153,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
             return ''
 
     def smart_first(self, name, qs, t=None):
-        if name in self._prefetched_objects_cache:
+        if name in getattr(self, '_prefetched_objects_cache', {}):
             # prefetched, just find in objects we have already
             if t is None:
                 return qs.all()[0]
