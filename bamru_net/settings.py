@@ -266,7 +266,7 @@ LOG_ROOT = os.environ['LOG_ROOT']
 LOGGING_CONFIG = None
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'root': {
         'handlers': ['sentry', 'file'],
     },
