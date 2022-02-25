@@ -268,8 +268,7 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'root': {
-        'level': 'WARNING',
-        'handlers': ['sentry'],
+        'handlers': ['sentry', 'file'],
     },
     'formatters': {
         'verbose': {
