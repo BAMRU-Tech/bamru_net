@@ -42,7 +42,7 @@ fi
 if $SETUP_AZ; then
   az group create --name $RESOURCEGROUP_NAME --location $LOCATION
 
-  az postgres up --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku-name $POSTGRES_SKU --server-name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password $POSTGRES_PASSWORD --ssl-enforcement Enabled
+  az postgres up --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku-name $POSTGRES_SKU --server-name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password "$POSTGRES_PASSWORD" --ssl-enforcement Enabled
 
   az postgres db create --resource-group $RESOURCEGROUP_NAME --server-name $POSTGRES_NAME  --name ${SLOT_POSTGRES_DB}
 
@@ -69,13 +69,16 @@ fi
 
 if $SETUP_CERT; then
   # Create and bind a free certificate
-  az webapp config hostname add --webapp-name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME
+  # az webapp config hostname add --webapp-name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME
   az webapp config hostname add --webapp-name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --hostname $SLOT_HOSTNAME
-  #thumbprint=$(az webapp config ssl create  --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME  --output tsv --query thumbprint)
-  thumbprint_slot=$(az webapp config ssl create  --name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --hostname $SLOT_HOSTNAME  --output tsv --query thumbprint)
-  echo "If the thumbprint is not ready, wait a few minutes and re-try."
-  az webapp config ssl bind --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --certificate-thumbprint $thumbprint --ssl-type SNI
-  az webapp config ssl bind --name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --certificate-thumbprint $thumbprint_slot --ssl-type SNI
+  # thumbprint=$(az webapp config ssl create  --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME  --output tsv --query thumbprint)
+  thumbprint_slot=''
+  while [[ -z "$thumbprint_slot" ]]; do
+    thumbprint_slot=$(az webapp config ssl create  --name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --hostname $SLOT_HOSTNAME  --output tsv --query thumbprint)
+    [[ -z "$thumbprint_slot" ]] && echo "no thumbprint yet, waiting a bit..." && sleep 5
+  done
+  # az webapp config ssl bind --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --certificate-thumbprint $thumbprint --ssl-type SNI
+  az webapp config ssl bind --name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --ssl-type SNI --certificate-thumbprint $thumbprint_slot
 fi
 
 if $SETUP_STORE; then
@@ -93,7 +96,6 @@ if $SETUP_STORE; then
     az storage container create --name media --account-name $Name --resource-group $RESOURCEGROUP_NAME --public-access off
     az storage container create --name static --account-name $Name --resource-group $RESOURCEGROUP_NAME --public-access container
   done
-  exit
   az storage cors add --methods GET --service b --origins "https://${WEBAPP_NAME}.azurewebsites.net" --account-name $STORAGE_NAME
   az storage cors add --methods GET --service b --origins "https://${HOSTNAME}" --account-name $STORAGE_NAME
   
@@ -108,7 +110,7 @@ if $SETUP_DB; then
   # mv gunzip db-2021-05-24--18-17.sql.gz db.sql.gz
   gunzip -k db.sql.gz
   sed -i s/bnet_db/${POSTGRES_USER}/ db.sql
-  PGPASSWORD=$POSTGRES_PASSWORD psql --host=${POSTGRES_NAME}.postgres.database.azure.com --port=5432 --username=${POSTGRES_USER}@${POSTGRES_NAME} --dbname=$POSTGRES_DB < db.sql
+  PGPASSWORD="$POSTGRES_PASSWORD" psql --host=${POSTGRES_NAME}.postgres.database.azure.com --port=5432 --username=${POSTGRES_USER}@${POSTGRES_NAME} --dbname=$POSTGRES_DB < db.sql
   rm db.sql
 fi
 
