@@ -282,7 +282,7 @@ class Role(BaseModel):
         ('TO', 'Training Officer'),
         ('RO', 'Recruiting Officer'),
         ('TRS', 'Treasurer'),
-        ('OL', 'Operators Leader'),
+        ('OL', 'Operation Leader'),
         ('WEB', 'Web Master'),
         ('DOS', 'DO Scheduler'),
     )
