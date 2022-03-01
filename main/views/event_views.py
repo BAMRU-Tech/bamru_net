@@ -144,7 +144,7 @@ class EventForm(ModelForm):
         start = cleaned_data.get('start_at')
         finish = cleaned_data.get('finish_at')
         if finish and finish < start:
-            self.add_error('finish', 'Finish time must not be earlier than start time')
+            self.add_error('finish_at', 'Finish time must not be earlier than start time')
         return cleaned_data
 
 
