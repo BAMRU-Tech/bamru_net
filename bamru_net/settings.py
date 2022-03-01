@@ -203,6 +203,7 @@ if AZURE_STORAGE_KEY:
     #STATIC_URL = 'https://{}/{}/'.format(AZURE_CUSTOM_DOMAIN, AZURE_STATIC_CONTAINER)
     MEDIA_URL = 'https://{}/{}/'.format(AZURE_CUSTOM_DOMAIN, AZURE_MEDIA_CONTAINER)
 
+    STATIC_URL = '/static/'
     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 else:
     STATIC_URL = '/static/'
