@@ -338,15 +338,21 @@ def handle_distribution_rsvp(request, distribution, rsvp=False):
 
 # This view does not need login or CSRF protection due to the RSVP token.
 @csrf_exempt
-def unauth_rsvp(request, token):
+def unauth_rsvp(request, token, rsvp):
     d = get_object_or_404(Distribution, unauth_rsvp_token=token)
     if d.unauth_rsvp_expires_at < timezone.now():
         response_text = "Error: token expired. Check that you're responding to a recent page."
     elif request.method == 'POST':
-        rsvp = request.POST.get('rsvp')[0].lower() == 'y'
-        response_text = handle_distribution_rsvp(request, d, rsvp)
+        post_rsvp = request.POST.get('rsvp')
+        if rsvp != post_rsvp:
+            response_text = 'Error: RSVP mismatch {} != {}'.format(rsvp, post_rsvp)
+            logger.error(response_text)
+        else:
+            rsvp_yes = post_rsvp[0].lower() == 'y'
+            response_text = handle_distribution_rsvp(request, d, rsvp_yes)
     else:
-        return render(request, "unauth_rsvp.html", context={'distribution':d})
+        return render(request, "unauth_rsvp.html",
+                      context={'distribution':d, 'rsvp':rsvp})
     logger.info('Sending HTTP response to {}: {}'.format(d.member, response_text))
     return HttpResponse(response_text)  # TODO template
 
