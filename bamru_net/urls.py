@@ -107,7 +107,7 @@ urlpatterns = [
 
     
     # Message Webhook and Responses
-    path('unauth_rsvp/<slug:token>/', views.unauth_rsvp, name='unauth_rsvp'),
+    path('unauth_rsvp/<slug:token>/<slug:rsvp>/', views.unauth_rsvp, name='unauth_rsvp'),
     path('webhooks/anymail/', include('anymail.urls')),
     path('webhooks/sms_callback/', views.sms_callback, name='sms_callback'),
     path('webhooks/sms/', views.sms, name='sms'),

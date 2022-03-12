@@ -262,7 +262,7 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @classmethod
     def prefetch_unavailable(cls, name='member_set'):
-        return Prefetch(name, Member.annotate_unavailable(cls.members))
+        return Prefetch(name, Member.annotate_unavailable(cls.objects))
 
     @classmethod
     def annotate_unavailable(cls, qs):
@@ -282,7 +282,7 @@ class Role(BaseModel):
         ('TO', 'Training Officer'),
         ('RO', 'Recruiting Officer'),
         ('TRS', 'Treasurer'),
-        ('OL', 'Operators Leader'),
+        ('OL', 'Operation Leader'),
         ('WEB', 'Web Master'),
         ('DOS', 'DO Scheduler'),
     )
