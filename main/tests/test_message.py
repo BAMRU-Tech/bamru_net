@@ -65,10 +65,11 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
         # First link should be Yes
-        url = self.follow_link(html, 0)
+        url_yes = self.follow_link(html, 0)
+        url_no = self.follow_link(html, 1)
 
         # The button on that page would POST yes
-        response = self.c.post(url, {'rsvp': 'yes'})
+        response = self.c.post(url_yes, {'rsvp': 'yes'})
         self.assertEqual(response.status_code, 200)
 
         # Check that member is added to the event
@@ -77,7 +78,7 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
         # POST no
-        response = self.c.post(url, {'rsvp': 'no'})
+        response = self.c.post(url_no, {'rsvp': 'no'})
         self.assertEqual(response.status_code, 200)
 
         # Check that member is removed from the event

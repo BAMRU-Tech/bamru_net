@@ -52,9 +52,12 @@ class RsvpTemplate(BasePositionModel):
     def __str__(self):
         return self.name
 
-    def html(self, base_url):
-        yn = ''.join(['<p><a href="{}?rsvp={}">{}</a></p>'
-                      .format(base_url, yn, prompt)
+    def html(self, unauth_rsvp_token):
+        yn = ''.join(['<p><a href="http://{}{}">{}</a></p>'
+                      .format(settings.HOSTNAME,
+                              reverse('unauth_rsvp',
+                                      args=[unauth_rsvp_token, yn]),
+                              prompt)
                       for yn, prompt in
                       (('yes', self.yes_prompt), ('no', self.no_prompt))])
         if APPEND_RSVP_TEMPLATE:
@@ -137,10 +140,7 @@ class Message(BaseModel):
         html_body = ''
         html_body += '<h3>Message:</h3><p>{}</p>'.format(self.text)
         if self.rsvp_template:
-            url = 'http://{}{}'.format(settings.HOSTNAME,
-                                       reverse('unauth_rsvp',
-                                               args=[unauth_rsvp_token]))
-            html_body += self.rsvp_template.html(url)
+            html_body += self.rsvp_template.html(unauth_rsvp_token)
         if self.period:
             url = 'http://{}{}'.format(settings.HOSTNAME,
                                        self.period.event.get_absolute_url())
