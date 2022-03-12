@@ -199,6 +199,24 @@ class IncommingSmsTestCase(TestCase):
         p2 = Participant.objects.get(pk=self.participant.id)
         self.assertIsNotNone(p2.en_route_at)
 
+    def test_extra_info(self):
+        self.assertFalse(InboundSms.has_extra_info('y'))
+        self.assertFalse(InboundSms.has_extra_info('yes.'))
+        self.assertFalse(InboundSms.has_extra_info('yea'))
+        self.assertFalse(InboundSms.has_extra_info('yeah'))
+        self.assertFalse(InboundSms.has_extra_info('yep '))
+        self.assertFalse(InboundSms.has_extra_info('Yes 👍 ')) # emoji
+
+        self.assertFalse(InboundSms.has_extra_info('N'))
+        self.assertFalse(InboundSms.has_extra_info('N   '))
+        self.assertFalse(InboundSms.has_extra_info('No.'))
+        self.assertFalse(InboundSms.has_extra_info('Nope'))
+
+        self.assertTrue(InboundSms.has_extra_info('No x'))
+        self.assertTrue(InboundSms.has_extra_info('Not yet'))
+        self.assertTrue(InboundSms.has_extra_info('Ok'))
+        self.assertTrue(InboundSms.has_extra_info('on'))
+
 
 
 @override_settings(TWILIO_SMS_FROM=['+15005550006'])
