@@ -65,10 +65,11 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
         # First link should be Yes
-        url = self.follow_link(html, 0)
+        url_yes = self.follow_link(html, 0)
+        url_no = self.follow_link(html, 1)
 
         # The button on that page would POST yes
-        response = self.c.post(url, {'rsvp': 'yes'})
+        response = self.c.post(url_yes, {'rsvp': 'yes'})
         self.assertEqual(response.status_code, 200)
 
         # Check that member is added to the event
@@ -77,7 +78,7 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
         # POST no
-        response = self.c.post(url, {'rsvp': 'no'})
+        response = self.c.post(url_no, {'rsvp': 'no'})
         self.assertEqual(response.status_code, 200)
 
         # Check that member is removed from the event
@@ -197,6 +198,24 @@ class IncommingSmsTestCase(TestCase):
         # Check that RSVP is now there
         p2 = Participant.objects.get(pk=self.participant.id)
         self.assertIsNotNone(p2.en_route_at)
+
+    def test_extra_info(self):
+        self.assertFalse(InboundSms.has_extra_info('y'))
+        self.assertFalse(InboundSms.has_extra_info('yes.'))
+        self.assertFalse(InboundSms.has_extra_info('yea'))
+        self.assertFalse(InboundSms.has_extra_info('yeah'))
+        self.assertFalse(InboundSms.has_extra_info('yep '))
+        self.assertFalse(InboundSms.has_extra_info('Yes 👍 ')) # emoji
+
+        self.assertFalse(InboundSms.has_extra_info('N'))
+        self.assertFalse(InboundSms.has_extra_info('N   '))
+        self.assertFalse(InboundSms.has_extra_info('No.'))
+        self.assertFalse(InboundSms.has_extra_info('Nope'))
+
+        self.assertTrue(InboundSms.has_extra_info('No x'))
+        self.assertTrue(InboundSms.has_extra_info('Not yet'))
+        self.assertTrue(InboundSms.has_extra_info('Ok'))
+        self.assertTrue(InboundSms.has_extra_info('on'))
 
 
 

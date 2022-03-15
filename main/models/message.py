@@ -52,9 +52,12 @@ class RsvpTemplate(BasePositionModel):
     def __str__(self):
         return self.name
 
-    def html(self, base_url):
-        yn = ''.join(['<p><a href="{}?rsvp={}">{}</a></p>'
-                      .format(base_url, yn, prompt)
+    def html(self, unauth_rsvp_token):
+        yn = ''.join(['<p><a href="http://{}{}">{}</a></p>'
+                      .format(settings.HOSTNAME,
+                              reverse('unauth_rsvp',
+                                      args=[unauth_rsvp_token, yn]),
+                              prompt)
                       for yn, prompt in
                       (('yes', self.yes_prompt), ('no', self.no_prompt))])
         if APPEND_RSVP_TEMPLATE:
@@ -137,10 +140,7 @@ class Message(BaseModel):
         html_body = ''
         html_body += '<h3>Message:</h3><p>{}</p>'.format(self.text)
         if self.rsvp_template:
-            url = 'http://{}{}'.format(settings.HOSTNAME,
-                                       reverse('unauth_rsvp',
-                                               args=[unauth_rsvp_token]))
-            html_body += self.rsvp_template.html(url)
+            html_body += self.rsvp_template.html(unauth_rsvp_token)
         if self.period:
             url = 'http://{}{}'.format(settings.HOSTNAME,
                                        self.period.event.get_absolute_url())
@@ -376,6 +376,18 @@ class InboundSms(BaseModel):
     no = models.BooleanField(default=False)
     extra_info = models.BooleanField(default=False)
 
+    @staticmethod
+    def has_extra_info(text):
+        # Match the common yes/no variants (allow period & whitespace at end).
+        # Also ignore a single emoji at the end (phone autofill).
+        # There is an actual message if this regex does not match.
+        return (re.compile(r"""(
+                                (y(es|ep|eah?)?)|
+                                (no?(pe)?)
+                               )[.]?\s*[\u263a-\U0001f645]?\s*$""",
+                           re.IGNORECASE | re.VERBOSE)
+                .match(text) is None)
+
     def process(self):
         """Calculate member and outbound using from/to."""
         hours = 24
@@ -398,14 +410,7 @@ class InboundSms(BaseModel):
             self.yes = (yn == 'y')
             self.no = (yn == 'n')
 
-        # Match the common yes/no variants (allow period & whitespace at end).
-        # There is an actual message if this regex does not match.
-        self.extra_info = (re.compile(r"""(
-                                           (y(es)?)|
-                                           (no?(pe)?)
-                                          )[.]?\s*$""",
-                                     re.IGNORECASE | re.VERBOSE)
-                           .match(self.body) is None)
+        self.extra_info = self.has_extra_info(self.body)
 
         self.save()
 
