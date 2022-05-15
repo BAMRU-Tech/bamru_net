@@ -11,6 +11,11 @@
       <i class="fa fa-file"></i>
       Activity report
     </a>
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'member_history' member.id %}>
+      <i class="fa fa-file"></i>
+      History
+    </a>
   </li>
   {% if member.id == request.user.id %}
   <li class="nav-item dropdown">
