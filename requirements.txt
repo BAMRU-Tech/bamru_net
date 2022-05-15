@@ -22,7 +22,7 @@ django-celerybeat-status==0.0.10
 django-datatables-view==1.16.0
 django-dynamic-preferences==1.10.1
 django-extensions==2.1.6
-django-filter==2.0.0
+django-filter==2.4.0
 django-imagekit==4.0.2
 django-oidc-provider==0.7.0
 django-phonenumber-field==2.0.0
