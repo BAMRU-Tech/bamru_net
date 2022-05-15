@@ -57,7 +57,7 @@ pbr==4.2.0
 persisting-theory==0.2.1
 phonenumberslite==8.9.7
 pilkit==2.0
-Pillow==7.2.0
+Pillow==9.0.1
 Plim==0.9.12
 psycopg2-binary==2.7.4
 pyasn1==0.4.4
