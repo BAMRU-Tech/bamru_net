@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from simple_history.admin import SimpleHistoryAdmin
 from .models import *
 
 # Register your models here.
@@ -29,10 +30,11 @@ class OtherInfoInline(InlineDefaults):
 class CertInline(InlineDefaults):
     model=Cert
 
-class MemberUserAdmin(UserAdmin):
+class MemberUserAdmin(UserAdmin, SimpleHistoryAdmin):
     """Override broken defaults from UserAdmin"""
     fieldsets = None
     search_fields = []
+    history_list_display = ["status"]
 
 @admin.register(Member)
 class MemberAdmin(MemberUserAdmin):
@@ -57,14 +59,14 @@ class PeriodInline(InlineDefaults):
     model = Period
 
 @admin.register(Event)
-class EventAdmin(admin.ModelAdmin):
+class EventAdmin(SimpleHistoryAdmin):
     list_display = ('title', 'type', 'start_at', 'finish_at',)
     inlines = [
         PeriodInline,
         ]
 
 @admin.register(Period)
-class PeriodAdmin(admin.ModelAdmin):
+class PeriodAdmin(SimpleHistoryAdmin):
     list_display = ('__str__', 'event', 'position', 'start_at', 'finish_at',)
     inlines = [
         ParticipantInline,

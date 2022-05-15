@@ -5,6 +5,7 @@ from django.db import models
 from django.urls import reverse
 
 from datetime import datetime, timezone, timedelta
+from simple_history.models import HistoricalRecords
 
 from .base import BaseModel, BasePositionModel
 from .documents import Aar, AhcLog, LogisticsSpreadsheet
@@ -43,6 +44,7 @@ class Event(BaseModel):
         help_text='Published events are viewable by the public.')
     gcal_id = models.CharField(max_length=255, blank=True, null=True)
     gcal_id_private = models.CharField(max_length=255, blank=True, null=True)
+    history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
         super(Event, self).save(*args, **kwargs)
@@ -98,6 +100,8 @@ class Period(BasePositionModel):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     start_at = models.DateTimeField(blank=True, null=True)
     finish_at = models.DateTimeField(blank=True, null=True)
+    history = HistoricalRecords()
+
     def __str__(self):
         return "{} OP{}".format(self.event.title, self.position)
 
@@ -135,6 +139,8 @@ class Participant(BaseModel):
     return_home_at = models.DateTimeField(blank=True, null=True)
     signed_in_at = models.DateTimeField(blank=True, null=True)
     signed_out_at = models.DateTimeField(blank=True, null=True)
+    history = HistoricalRecords()
+
     def __str__(self):
         return "{} ({})".format(self.member, self.period)
 

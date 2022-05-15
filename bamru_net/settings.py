@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'raven.contrib.django.raven_compat',
     'rest_framework',
     'rules.apps.AutodiscoverRulesConfig',
+    'simple_history',
     'social_django',
     'main',
     'main.templatetags.filters',
@@ -75,6 +76,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 REST_FRAMEWORK = {
