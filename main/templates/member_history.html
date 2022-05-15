@@ -12,11 +12,6 @@
   <p> <strong>Current Status:</strong> {{ member.status }}</p>
 
   <table id="dTbl" class="display table-bordered compact nowrap">
-    <tr>
-      <th>Date / Time</th>
-      <th>Status</th>
-      <th>Changed by</th>
-    </tr>
   {% for h in diffs %}
     <tr>
       <td>{{ h.history_date }}</td>
@@ -30,3 +25,13 @@
 
 </main>
 {% endblock %}
+
+
+{% block table_options %}
+columns: [
+    { data: 'date', title: 'Date / Time',   },
+    { data: 'status', title: 'Status',  },
+    { data: 'user', title: 'Changed by',   },
+],
+language: { emptyTable: 'No history' },
+{% endblock table_options %}
