@@ -41,13 +41,15 @@ Then...
 Go to namecheap and set:
   * A record of root to prod IP
   * CNAME of staging to staging hostname (bamrunet-app-staging.azurewebsites.net)
-  * asuid and asuid.staging TXT records containing 1472EE3DA91B69279E1CD100F11ED459BB1671EC9BB630D5C4F735FB58D27C14
+  * asuid and asuid.staging TXT records containing b1f53b6f370f9f357a1da8e1c3e8c61795d7deefc09440c65fb3e21f9ed6be9d
 
 `SETUP_CERT=true ./azure_setup.sh bamrunet bamru.info bogus_unused_database_password`
+`SETUP_CERT_SLOT=true ./azure_setup.sh bamrunet bamru.info bogus_unused_database_password`
 
-It will take some time for thumbnails to be done.
+It will take some time for thumbnails to be done. If you see 'Conflict', just wait a bit and try again.
 
 If you get other errors, check the namecheap config and/or try in the GUI for better messages.
+You can also add --debug to the azure CLI command. The TXT record may have changed. You can find the "Custom Domain Verification ID" under "bamrunet-app | Custom domains".
 
 ## Deployment from github
 * Go to "Deployment Center" in app/staging on portal.azure.com

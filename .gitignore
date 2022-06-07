@@ -12,12 +12,14 @@ __pycache__/
 
 TODO*
 
+.azure
 deploy/*.log
 deploy/*.retry
 deploy/.vagrant
 deploy/inventory.ansible
 deploy/db.sql*
-deploy/azure_secrets.json
+deploy/db.dump*
+deploy/*_secrets.json
 deploy/processed*.json
 
 # This will hold user settings and shouldn't be checked in

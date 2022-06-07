@@ -21,7 +21,7 @@
   },
   {
     "name": "DJANGO_DB_NAME",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_POSTGRES_DB"
   },
   {
@@ -51,12 +51,12 @@
   },
   {
     "name": "DJANGO_SECRET_KEY",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "JAVASCRIPT_DSN",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
@@ -66,22 +66,22 @@
   },
   {
     "name": "MAILGUN_API_KEY",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "MAILGUN_EMAIL_FROM",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "MAILGUN_WEBHOOK_SECRET",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "RAVEN_DSN",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
@@ -91,27 +91,27 @@
   },
   {
     "name": "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "TWILIO_ACCOUNT_SID",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "TWILIO_AUTH_TOKEN",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {
     "name": "TWILIO_SMS_FROM",
-    "slotSetting": true,
+    "slotSetting": false,
     "value": "X_SECRET_X"
   },
   {

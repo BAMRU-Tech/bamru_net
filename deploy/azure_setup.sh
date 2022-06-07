@@ -26,6 +26,7 @@ RUNTIME="python:3.8"
 
 : "${SETUP_AZ:=false}"
 : "${SETUP_CERT:=false}"
+: "${SETUP_CERT_SLOT:=false}"
 : "${SETUP_STORE:=false}"
 : "${SETUP_DB:=false}"
 : "${SETUP_CONFIG:=false}"
@@ -44,7 +45,6 @@ if $SETUP_AZ; then
 
   az postgres up --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku-name $POSTGRES_SKU --server-name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password "$POSTGRES_PASSWORD" --ssl-enforcement Enabled
 
-  az postgres db create --resource-group $RESOURCEGROUP_NAME --server-name $POSTGRES_NAME  --name ${SLOT_POSTGRES_DB}
 
   az appservice plan create --name $SERVICEPLAN_NAME --resource-group $RESOURCEGROUP_NAME --sku $SERVICEPLAN_SKU --is-linux --location $LOCATION
 
@@ -60,29 +60,31 @@ if $SETUP_AZ; then
 
   az webapp deployment slot create --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --slot $SLOT --configuration-source $WEBAPP_NAME
   az webapp update -g $RESOURCEGROUP_NAME -n $WEBAPP_NAME --https-only true -s $SLOT
-
-  # Create a dev slot with git local deploy
-  # az webapp deployment slot create --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --slot dev --configuration-source $WEBAPP_NAME
-  # az webapp update -g $RESOURCEGROUP_NAME -n $WEBAPP_NAME --https-only true -s dev
-  # az webapp deployment source config-local-git --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --slot dev
 fi
 
 if $SETUP_CERT; then
   # Create and bind a free certificate
-  # az webapp config hostname add --webapp-name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME
+  az webapp config hostname add --webapp-name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME
+  thumbprint=''
+  while [[ -z "$thumbprint" ]]; do
+    thumbprint=$(az webapp config ssl create  --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME  --output tsv --query thumbprint)
+    [[ -z "$thumbprint" ]] && echo "no thumbprint yet, waiting a bit..." && sleep 5
+  done
+  az webapp config ssl bind --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --certificate-thumbprint $thumbprint --ssl-type SNI
+fi
+if $SETUP_CERT_SLOT; then
+  # Create and bind a free certificate
   az webapp config hostname add --webapp-name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --hostname $SLOT_HOSTNAME
-  # thumbprint=$(az webapp config ssl create  --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --hostname $HOSTNAME  --output tsv --query thumbprint)
   thumbprint_slot=''
   while [[ -z "$thumbprint_slot" ]]; do
     thumbprint_slot=$(az webapp config ssl create  --name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --hostname $SLOT_HOSTNAME  --output tsv --query thumbprint)
     [[ -z "$thumbprint_slot" ]] && echo "no thumbprint yet, waiting a bit..." && sleep 5
   done
-  # az webapp config ssl bind --name $WEBAPP_NAME --resource-group $RESOURCEGROUP_NAME --certificate-thumbprint $thumbprint --ssl-type SNI
   az webapp config ssl bind --name $WEBAPP_NAME -s $SLOT --resource-group $RESOURCEGROUP_NAME --ssl-type SNI --certificate-thumbprint $thumbprint_slot
 fi
 
 if $SETUP_STORE; then
-  for Name in $STORAGE_NAME $SLOT_STORAGE_NAME; do
+  for Name in $STORAGE_NAME; do
     az storage account create --name $Name --resource-group $RESOURCEGROUP_NAME --access-tier Hot --kind StorageV2  --location $LOCATION --min-tls-version TLS1_2 --sku Standard_RAGRS
     az storage account blob-service-properties update --resource-group $RESOURCEGROUP_NAME --account-name $Name \
       --enable-delete-retention true \
@@ -99,8 +101,8 @@ if $SETUP_STORE; then
   az storage cors add --methods GET --service b --origins "https://${WEBAPP_NAME}.azurewebsites.net" --account-name $STORAGE_NAME
   az storage cors add --methods GET --service b --origins "https://${HOSTNAME}" --account-name $STORAGE_NAME
   
-  az storage cors add --methods GET --service b --origins "https://${WEBAPP_NAME}-${SLOT}.azurewebsites.net" --account-name $SLOT_STORAGE_NAME
-  az storage cors add --methods GET --service b --origins "https://${SLOT}.${HOSTNAME}" --account-name $SLOT_STORAGE_NAME
+  az storage cors add --methods GET --service b --origins "https://${WEBAPP_NAME}-${SLOT}.azurewebsites.net" --account-name $STORAGE_NAME
+  az storage cors add --methods GET --service b --origins "https://${SLOT}.${HOSTNAME}" --account-name $STORAGE_NAME
   
   # az storage cors add --methods GET --service b --origins "https://${WEBAPP_NAME}-dev.azurewebsites.net" --account-name $STORAGE_NAME
 fi
@@ -116,28 +118,23 @@ fi
 
 
 AZURE_STORAGE_KEY=$(az storage account keys list  --account-name $STORAGE_NAME --resource-group $RESOURCEGROUP_NAME --query [0].value -o tsv)
-SLOT_AZURE_STORAGE_KEY=$(az storage account keys list  --account-name $SLOT_STORAGE_NAME --resource-group $RESOURCEGROUP_NAME --query [0].value -o tsv)
 
 if $SETUP_CONFIG; then
-  sed -e "s#X_AZURE_STORAGE_KEY#$SLOT_AZURE_STORAGE_KEY#g" \
-      -e "s/X_AZURE_STORAGE_ACCOUNT_NAME/$SLOT_STORAGE_NAME/g" \
-      -e "s/X_HOSTNAME/${SLOT_HOSTNAME}/g" \
-      -e "s/X_ALLOWED_HOST/${SLOT_HOSTNAME},${WEBAPP_NAME}-${SLOT}.azurewebsites.net/g" \
-      -e "s/X_POSTGRES_HOST/${POSTGRES_NAME}.postgres.database.azure.com/g" \
-      -e "s/X_POSTGRES_DB/$SLOT_POSTGRES_DB/g" \
-      -e "s/X_POSTGRES_PASS/$POSTGRES_PASSWORD/g " \
-      -e "s/X_POSTGRES_USER/${POSTGRES_USER}@${POSTGRES_NAME}/g" \
-      azure_settings.json > processed-${SLOT}.json
-
   sed -e "s#X_AZURE_STORAGE_KEY#$AZURE_STORAGE_KEY#g" \
       -e "s/X_AZURE_STORAGE_ACCOUNT_NAME/$STORAGE_NAME/g" \
-      -e "s/X_HOSTNAME/${HOSTNAME}/g" \
-      -e "s/X_ALLOWED_HOST/${HOSTNAME},${WEBAPP_NAME}.azurewebsites.net/g" \
       -e "s/X_POSTGRES_HOST/${POSTGRES_NAME}.postgres.database.azure.com/g" \
       -e "s/X_POSTGRES_DB/$POSTGRES_DB/g" \
       -e "s/X_POSTGRES_PASS/$POSTGRES_PASSWORD/g " \
       -e "s/X_POSTGRES_USER/${POSTGRES_USER}@${POSTGRES_NAME}/g" \
-      azure_settings.json > processed.json
+      azure_settings.json > processed-common.json
+
+  sed -e "s/X_HOSTNAME/${SLOT_HOSTNAME}/g" \
+      -e "s/X_ALLOWED_HOST/${SLOT_HOSTNAME},${WEBAPP_NAME}-${SLOT}.azurewebsites.net/g" \
+      processed-common.json > processed-${SLOT}.json
+
+  sed -e "s/X_HOSTNAME/${HOSTNAME}/g" \
+      -e "s/X_ALLOWED_HOST/${HOSTNAME},${WEBAPP_NAME}.azurewebsites.net/g" \
+      processed-common.json > processed.json
 
   az webapp config appsettings set --resource-group $RESOURCEGROUP_NAME -n ${WEBAPP_NAME} --slot ${SLOT} --settings @processed-${SLOT}.json @azure_secrets.json
   az webapp config appsettings set --resource-group $RESOURCEGROUP_NAME -n ${WEBAPP_NAME} --settings @processed.json @azure_secrets.json
