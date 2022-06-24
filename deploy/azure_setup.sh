@@ -17,10 +17,12 @@ POSTGRES_DB=${NAME}
 SLOT_POSTGRES_DB=${NAME}-${SLOT}
 POSTGRES_USER=${NAME}_admin
 POSTGRES_PASSWORD=$3
+POSTGRES_RO_PASSWORD=$4
 
 LOCATION=westus
 SERVICEPLAN_SKU=S1
 POSTGRES_SKU=B_Gen5_1
+POSTGRES_VERSION=11
 
 RUNTIME="python:3.8"
 
@@ -32,8 +34,8 @@ RUNTIME="python:3.8"
 : "${SETUP_CONFIG:=false}"
 : "${SETUP_GITHUB:=false}"
 
-if [  $# -lt 3 ]; then
-  echo "Usage: \$0 NAME HOSTNAME POSTGRES_PASSWORD"
+if [  $# -lt 4 ]; then
+  echo "Usage: \$0 NAME HOSTNAME POSTGRES_PASSWORD POSTGRES_RO_PASSWORD"
   exit 1;
 fi
 
@@ -43,7 +45,7 @@ fi
 if $SETUP_AZ; then
   az group create --name $RESOURCEGROUP_NAME --location $LOCATION
 
-  az postgres up --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku-name $POSTGRES_SKU --server-name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password "$POSTGRES_PASSWORD" --ssl-enforcement Enabled
+  az postgres up --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku-name $POSTGRES_SKU --server-name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password "$POSTGRES_PASSWORD" --ssl-enforcement Enabled --version $POSTGRES_VERSION
 
 
   az appservice plan create --name $SERVICEPLAN_NAME --resource-group $RESOURCEGROUP_NAME --sku $SERVICEPLAN_SKU --is-linux --location $LOCATION
@@ -107,13 +109,21 @@ if $SETUP_STORE; then
   # az storage cors add --methods GET --service b --origins "https://${WEBAPP_NAME}-dev.azurewebsites.net" --account-name $STORAGE_NAME
 fi
 
-
+PSQL="psql --host=${POSTGRES_NAME}.postgres.database.azure.com --port=5432 --username=${POSTGRES_USER}@${POSTGRES_NAME} --dbname=$POSTGRES_DB"
 if $SETUP_DB; then
   # mv gunzip db-2021-05-24--18-17.sql.gz db.sql.gz
   gunzip -k db.sql.gz
   sed -i s/bnet_db/${POSTGRES_USER}/ db.sql
-  PGPASSWORD="$POSTGRES_PASSWORD" psql --host=${POSTGRES_NAME}.postgres.database.azure.com --port=5432 --username=${POSTGRES_USER}@${POSTGRES_NAME} --dbname=$POSTGRES_DB < db.sql
+  PGPASSWORD="$POSTGRES_PASSWORD" $PSQL < db.sql
   rm db.sql
+  PGPASSWORD="$POSTGRES_PASSWORD" $PSQL <<EOF
+    CREATE ROLE bamrunet_readonly WITH LOGIN ENCRYPTED PASSWORD '${POSTGRES_RO_PASSWORD}';
+    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO bamrunet_readonly;
+    GRANT USAGE ON SCHEMA public TO bamrunet_readonly;
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO bamrunet_readonly;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+       GRANT SELECT ON TABLES TO bamrunet_readonly;
+EOF
 fi
 
 

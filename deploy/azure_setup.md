@@ -19,7 +19,7 @@ Ensure the following are present in the `deploy` directory:
 Do this however you like best.
 
 ## Set up everything other than the certificate:
-`SETUP_AZ=true SETUP_STORE=true SETUP_DB=true SETUP_CONFIG=true ./azure_setup.sh bamrunet bamru.info 'XXX_MAIN_DATABASE_PASSWORD_XXX'`
+`SETUP_AZ=true SETUP_STORE=true SETUP_DB=true SETUP_CONFIG=true ./azure_setup.sh bamrunet bamru.info 'XXX_MAIN_DATABASE_PASSWORD_XXX' 'XXX_READONLY_DATABASE_PASSWORD_XXX'`
 
 ## Upload storage data
 Log into prod, enter the vagrant vm, become bamru user
@@ -43,8 +43,8 @@ Go to namecheap and set:
   * CNAME of staging to staging hostname (bamrunet-app-staging.azurewebsites.net)
   * asuid and asuid.staging TXT records containing b1f53b6f370f9f357a1da8e1c3e8c61795d7deefc09440c65fb3e21f9ed6be9d
 
-`SETUP_CERT=true ./azure_setup.sh bamrunet bamru.info bogus_unused_database_password`
-`SETUP_CERT_SLOT=true ./azure_setup.sh bamrunet bamru.info bogus_unused_database_password`
+`SETUP_CERT=true ./azure_setup.sh bamrunet bamru.info bogus_unused_database_password bogus_unused_database_password`
+`SETUP_CERT_SLOT=true ./azure_setup.sh bamrunet bamru.info bogus_unused_database_password bogus_unused_database_password`
 
 It will take some time for thumbnails to be done. If you see 'Conflict', just wait a bit and try again.
 
@@ -58,3 +58,9 @@ You can also add --debug to the azure CLI command. The TXT record may have chang
 * "Manage publish profile" -> Download
 * Go to the github repo -> github.com/.../settings/secrets/actions
 * Save the downloaded file as AZUREAPPSERVICE_PUBLISHPROFILE
+* Do the same for the dev webapp and save as AZUREAPPSERVICE_PUBLISHPROFILE_DEV
+
+* Save the output of this as AZURE_CREDENTIALS:
+az ad sp create-for-rbac --name "bamrunet-sp" --role contributor \
+    --scopes /subscriptions/{subscription-id}/resourceGroups/bamrunet-rg \
+    --sdk-auth
