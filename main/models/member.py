@@ -14,6 +14,7 @@ from main.lib import admin, phone
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 import math
+from simple_history.models import HistoricalRecords
 
 import logging
 logger = logging.getLogger(__name__)
@@ -66,6 +67,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     is_current_do = models.BooleanField(default=False)
     sign_in_count = models.IntegerField(default=0)
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
+    history = HistoricalRecords(excluded_fields=[
+        'password', 'last_login', 'last_sign_in_at', 'sign_in_count', 'is_current_do'])
 
     def __str__(self):
         return self.full_name
@@ -288,6 +291,7 @@ class Role(BaseModel):
     )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     role = models.CharField(choices=TYPES, max_length=255, blank=True)
+    history = HistoricalRecords()
 
     @property
     def role_ordinal(self):

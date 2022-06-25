@@ -52,6 +52,28 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
         return context
 
 
+class MemberHistoryView(LoginRequiredMixin, generic.DetailView):
+    model = Member
+    template_name = 'member_history.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        member = Member.objects.get(id=self.kwargs['pk'])
+        history = member.history.order_by('history_date')
+        last = None
+        diffs = []
+        for entry in history:
+            if last:
+                for change in last.diff_against(entry).changes:
+                    if change.field == 'status':
+                        diffs.append(entry)
+            else:
+                diffs.append(entry)
+            last = entry
+        context['diffs'] = diffs
+        return context
+
+
 class MemberPhotoGalleryView(MemberListView):
     template_name = 'member_photo_gallery.html'
 

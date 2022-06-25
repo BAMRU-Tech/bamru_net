@@ -376,6 +376,18 @@ class InboundSms(BaseModel):
     no = models.BooleanField(default=False)
     extra_info = models.BooleanField(default=False)
 
+    @staticmethod
+    def has_extra_info(text):
+        # Match the common yes/no variants (allow period & whitespace at end).
+        # Also ignore a single emoji at the end (phone autofill).
+        # There is an actual message if this regex does not match.
+        return (re.compile(r"""(
+                                (y(es|ep|eah?)?)|
+                                (no?(pe)?)
+                               )[.]?\s*[\u263a-\U0001f645]?\s*$""",
+                           re.IGNORECASE | re.VERBOSE)
+                .match(text) is None)
+
     def process(self):
         """Calculate member and outbound using from/to."""
         hours = 24
@@ -398,14 +410,7 @@ class InboundSms(BaseModel):
             self.yes = (yn == 'y')
             self.no = (yn == 'n')
 
-        # Match the common yes/no variants (allow period & whitespace at end).
-        # There is an actual message if this regex does not match.
-        self.extra_info = (re.compile(r"""(
-                                           (y(es)?)|
-                                           (no?(pe)?)
-                                          )[.]?\s*$""",
-                                     re.IGNORECASE | re.VERBOSE)
-                           .match(self.body) is None)
+        self.extra_info = self.has_extra_info(self.body)
 
         self.save()
 
