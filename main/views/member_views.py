@@ -8,7 +8,7 @@ from django.forms import widgets
 from django.forms.formsets import BaseFormSet
 from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect, render, render_to_response
+from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic

@@ -409,7 +409,7 @@ class DoAvailable(BaseModel):  # was AvailDos
     year = models.IntegerField()
     quarter = models.IntegerField()
     week = models.IntegerField()
-    available = models.NullBooleanField(default=None)
+    available = models.BooleanField(default=None, null=True)
     assigned = models.BooleanField(default=False)
     comment = models.CharField(max_length=255, blank=True)
 

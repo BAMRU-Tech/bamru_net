@@ -130,6 +130,9 @@ DATABASES = {
     }
 }
 
+# Avoid unwanted migrations - keep legacy AutoField
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',

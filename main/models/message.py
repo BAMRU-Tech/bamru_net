@@ -182,7 +182,7 @@ class Distribution(BaseModel):
     read_at = models.DateTimeField(blank=True, null=True)
     response_seconds = models.IntegerField(blank=True, null=True)
     rsvp = models.BooleanField(default=False)
-    rsvp_answer = models.NullBooleanField()
+    rsvp_answer = models.BooleanField(null=True)
     unauth_rsvp_token = models.CharField(
         max_length=255, unique=True, null=True, default=uuid.uuid4, editable=False)
     unauth_rsvp_expires_at = models.DateTimeField(blank=True, null=True)
