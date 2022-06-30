@@ -369,7 +369,7 @@ class InboundSms(BaseModel):
     sid = models.CharField(max_length=255, blank=True, null=True)
     from_number = models.CharField(max_length=255, blank=True, null=True)
     to_number = models.CharField(max_length=255, blank=True, null=True)
-    body = models.CharField(max_length=255, blank=True, null=True)
+    body = models.TextField(blank=True, null=True)
     member = models.ForeignKey(Member, null=True, on_delete=models.SET_NULL)
     outbound = models.ForeignKey(OutboundSms, null=True, on_delete=models.SET_NULL)
     yes = models.BooleanField(default=False)
