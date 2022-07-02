@@ -66,6 +66,7 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
     def get_queryset(self):
         return super().get_queryset().prefetch_related(
             Member.prefetch_unavailable('period_set__participant_set__member'),
+            'period_set__participant_set__member__email_set',
         )
 
     def get_object(self, queryset=None):

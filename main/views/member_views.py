@@ -39,7 +39,7 @@ class MemberListView(LoginRequiredMixin, generic.ListView):
         return Member.annotate_unavailable(Member.members).order_by(
             'last_name', 'first_name'
         ).prefetch_related(
-            'role_set', 'phone_set',
+            'role_set', 'phone_set', 'email_set'
         )
 
 
