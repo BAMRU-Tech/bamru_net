@@ -55,6 +55,11 @@
     "value": "X_SECRET_X"
   },
   {
+    "name": "DJANGO_SETTINGS_MODULE",
+    "slotSetting": false,
+    "value": "bamru_net.settings"
+  },
+  {
     "name": "JAVASCRIPT_DSN",
     "slotSetting": false,
     "value": "X_SECRET_X"
@@ -78,6 +83,21 @@
     "name": "MAILGUN_WEBHOOK_SECRET",
     "slotSetting": false,
     "value": "X_SECRET_X"
+  },
+  {
+    "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "OTEL_EXPORTER_OTLP_HEADERS",
+    "slotSetting": false,
+    "value": "X_SECRET_X"
+  },
+  {
+    "name": "OTEL_SERVICE_NAME",
+    "slotSetting": false,
+    "value": "bamrunet-django"
   },
   {
     "name": "RAVEN_DSN",

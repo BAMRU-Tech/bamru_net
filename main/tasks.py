@@ -10,6 +10,9 @@ from .models import Cert, Distribution, DoLog, Event, Member, Message, OutboundE
 
 logger = logging.getLogger(__name__)
 
+from opentelemetry import trace
+tracer = trace.get_tracer(__name__)
+
 
 # @shared_task
 def debug_print(text):
@@ -18,6 +21,7 @@ def debug_print(text):
     return response
 
 # @shared_task
+@tracer.start_as_current_span("message_send")
 def message_send(message_id):
     """Task to actually do the message sending.
 

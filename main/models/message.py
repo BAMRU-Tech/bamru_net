@@ -19,6 +19,9 @@ from .member import Email, Member, Phone
 
 logger = logging.getLogger(__name__)
 
+from opentelemetry import trace
+tracer = trace.get_tracer(__name__)
+
 # Set this if the UI does not append the template
 APPEND_RSVP_TEMPLATE = False
 
@@ -304,6 +307,7 @@ class OutboundSms(OutboundMessage):
             return self.destination
         return self.e164
 
+    @tracer.start_as_current_span("sms_send")
     def send(self):
         if self.sending_started:
             logger.error('send() called twice on sms {}'.format(self.pk))
@@ -425,6 +429,7 @@ class OutboundEmail(OutboundMessage):
             return self.destination
         return self.email.address
 
+    @tracer.start_as_current_span("email_send")
     def send(self):
         if self.sending_started:
             logger.error('send() called twice on email {}'.format(self.pk))
