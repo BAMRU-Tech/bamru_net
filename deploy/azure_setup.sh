@@ -16,15 +16,17 @@ SLOT_HOSTNAME=${SLOT}.${HOSTNAME}
 POSTGRES_DB=${NAME}
 SLOT_POSTGRES_DB=${NAME}-${SLOT}
 POSTGRES_USER=${NAME}_admin
+POSTGRES_RO_USER=${NAME}_readonly
 POSTGRES_PASSWORD=$3
 POSTGRES_RO_PASSWORD=$4
 
 LOCATION=westus
-SERVICEPLAN_SKU=S1
-POSTGRES_SKU=B_Gen5_1
-POSTGRES_VERSION=11
+SERVICEPLAN_SKU=P1V3
+POSTGRES_TIER=Burstable
+POSTGRES_SKU=Standard_B2s
+POSTGRES_VERSION=14
 
-RUNTIME="python:3.8"
+RUNTIME="python:3.9"
 
 : "${SETUP_AZ:=false}"
 : "${SETUP_CERT:=false}"
@@ -32,7 +34,6 @@ RUNTIME="python:3.8"
 : "${SETUP_STORE:=false}"
 : "${SETUP_DB:=false}"
 : "${SETUP_CONFIG:=false}"
-: "${SETUP_GITHUB:=false}"
 
 if [  $# -lt 4 ]; then
   echo "Usage: \$0 NAME HOSTNAME POSTGRES_PASSWORD POSTGRES_RO_PASSWORD"
@@ -45,7 +46,7 @@ fi
 if $SETUP_AZ; then
   az group create --name $RESOURCEGROUP_NAME --location $LOCATION
 
-  az postgres up --resource-group $RESOURCEGROUP_NAME --location $LOCATION --sku-name $POSTGRES_SKU --server-name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password "$POSTGRES_PASSWORD" --ssl-enforcement Enabled --version $POSTGRES_VERSION
+  az postgres flexible-server create --resource-group $RESOURCEGROUP_NAME --location $LOCATION --tier $POSTGRES_TIER --sku-name $POSTGRES_SKU --name $POSTGRES_NAME --database-name $POSTGRES_DB --admin-user $POSTGRES_USER --admin-password "$POSTGRES_PASSWORD" --version $POSTGRES_VERSION --public-access 0.0.0.0 --storage-size 32
 
 
   az appservice plan create --name $SERVICEPLAN_NAME --resource-group $RESOURCEGROUP_NAME --sku $SERVICEPLAN_SKU --is-linux --location $LOCATION
@@ -109,20 +110,23 @@ if $SETUP_STORE; then
   # az storage cors add --methods GET --service b --origins "https://${WEBAPP_NAME}-dev.azurewebsites.net" --account-name $STORAGE_NAME
 fi
 
-PSQL="psql --host=${POSTGRES_NAME}.postgres.database.azure.com --port=5432 --username=${POSTGRES_USER}@${POSTGRES_NAME} --dbname=$POSTGRES_DB"
+PSQL="psql --host=${POSTGRES_NAME}.postgres.database.azure.com --port=5432 --username=${POSTGRES_USER} --dbname=$POSTGRES_DB"
 if $SETUP_DB; then
   # mv gunzip db-2021-05-24--18-17.sql.gz db.sql.gz
   gunzip -k db.sql.gz
   sed -i s/bnet_db/${POSTGRES_USER}/ db.sql
-  PGPASSWORD="$POSTGRES_PASSWORD" $PSQL < db.sql
+  PGSSLMODE=require PGPASSWORD="$POSTGRES_PASSWORD" $PSQL < db.sql
   rm db.sql
-  PGPASSWORD="$POSTGRES_PASSWORD" $PSQL <<EOF
-    CREATE ROLE bamrunet_readonly WITH LOGIN ENCRYPTED PASSWORD '${POSTGRES_RO_PASSWORD}';
-    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO bamrunet_readonly;
-    GRANT USAGE ON SCHEMA public TO bamrunet_readonly;
-    GRANT SELECT ON ALL TABLES IN SCHEMA public TO bamrunet_readonly;
+  PGSSLMODE=require PGPASSWORD="$POSTGRES_PASSWORD" $PSQL <<EOF
+    CREATE ROLE ${POSTGRES_RO_USER} WITH LOGIN ENCRYPTED PASSWORD '${POSTGRES_RO_PASSWORD}';
+    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${POSTGRES_RO_USER};
+    GRANT USAGE ON SCHEMA public TO ${POSTGRES_RO_USER};
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${POSTGRES_RO_USER};
+    GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ${POSTGRES_RO_USER};
     ALTER DEFAULT PRIVILEGES IN SCHEMA public
-       GRANT SELECT ON TABLES TO bamrunet_readonly;
+       GRANT SELECT ON TABLES TO ${POSTGRES_RO_USER};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+       GRANT SELECT ON SEQUENCES TO ${POSTGRES_RO_USER};
 EOF
 fi
 
@@ -135,7 +139,7 @@ if $SETUP_CONFIG; then
       -e "s/X_POSTGRES_HOST/${POSTGRES_NAME}.postgres.database.azure.com/g" \
       -e "s/X_POSTGRES_DB/$POSTGRES_DB/g" \
       -e "s/X_POSTGRES_PASS/$POSTGRES_PASSWORD/g " \
-      -e "s/X_POSTGRES_USER/${POSTGRES_USER}@${POSTGRES_NAME}/g" \
+      -e "s/X_POSTGRES_USER/${POSTGRES_USER}/g" \
       azure_settings.json > processed-common.json
 
   sed -e "s/X_HOSTNAME/${SLOT_HOSTNAME}/g" \
@@ -156,6 +160,6 @@ echo Storage command:
 echo az storage blob upload-batch -d media -s . --account-name $STORAGE_NAME --account-key \'$AZURE_STORAGE_KEY\'
 
 echo DB Backup Command:
-echo pg_dump -Fc -v \"host=${POSTGRES_NAME}.postgres.database.azure.com port=5432 user=${POSTGRES_USER}@${POSTGRES_NAME} password=${POSTGRES_PASSWORD} dbname=$POSTGRES_DB sslmode=require\" -f backup.dump
+echo pg_dump -Fc -v \"host=${POSTGRES_NAME}.postgres.database.azure.com port=5432 user=${POSTGRES_RO_USER} password=${POSTGRES_RO_PASSWORD} dbname=$POSTGRES_DB sslmode=require\" -f backup.dump
 
-echo psql -h ${POSTGRES_NAME}.postgres.database.azure.com -U ${POSTGRES_USER}@${POSTGRES_NAME}  -v sslmode=require $POSTGRES_DB
+echo psql -h ${POSTGRES_NAME}.postgres.database.azure.com -U ${POSTGRES_USER}  -v sslmode=require $POSTGRES_DB

@@ -3,7 +3,7 @@ set -e
 set -x
 
 NAME=$1
-SLOT=dev
+SLOT=$2
 RESOURCEGROUP_NAME=${NAME}-${SLOT}-rg
 POSTGRES_NAME=${NAME}-db # shares db server
 SERVICEPLAN_NAME=${NAME}-${SLOT}-sp
@@ -12,25 +12,24 @@ STORAGE_NAME=${NAME}${SLOT} # Can only be [a-z0-9]
 
 POSTGRES_DB=${NAME}
 POSTGRES_USER=${NAME}_admin
-POSTGRES_PASSWORD=$2
+POSTGRES_PASSWORD=$3
 SLOT_POSTGRES_DB=${NAME}${SLOT}
 SLOT_POSTGRES_USER=${NAME}_${SLOT}_admin
-SLOT_POSTGRES_PASSWORD=$3
+SLOT_POSTGRES_PASSWORD=$4
 
 LOCATION=westus
 SERVICEPLAN_SKU=F1
 
-RUNTIME="python:3.8"
+RUNTIME="python:3.9"
 
 : "${SETUP_AZ:=false}"
 : "${SETUP_CERT:=false}"
 : "${SETUP_STORE:=false}"
 : "${SETUP_DB:=false}"
 : "${SETUP_CONFIG:=false}"
-: "${SETUP_GITHUB:=false}"
 
 if [  $# -lt 3 ]; then
-  echo "Usage: \$0 NAME POSTGRES_PASSWORD SLOT_POSTGRES_PASSWORD"
+  echo "Usage: \$0 NAME SLOT POSTGRES_PASSWORD SLOT_POSTGRES_PASSWORD"
   exit 1;
 fi
 
@@ -58,8 +57,8 @@ fi
 
 if $SETUP_DB; then
     CONNECT="--host=${POSTGRES_NAME}.postgres.database.azure.com --port=5432"
-    CONNECT_ADMIN="$CONNECT --username=${POSTGRES_USER}@${POSTGRES_NAME}"
-    CONNECT_NEW="$CONNECT --username=${SLOT_POSTGRES_USER}@${POSTGRES_NAME}"
+    CONNECT_ADMIN="$CONNECT --username=${POSTGRES_USER}"
+    CONNECT_NEW="$CONNECT --username=${SLOT_POSTGRES_USER}"
     PGSSLMODE=require
     PGPASSWORD="$POSTGRES_PASSWORD" psql $CONNECT_ADMIN ${POSTGRES_DB} <<EOF
     CREATE ROLE ${SLOT_POSTGRES_USER} WITH LOGIN NOSUPERUSER INHERIT CREATEDB NOCREATEROLE NOREPLICATION PASSWORD '${SLOT_POSTGRES_PASSWORD}';
@@ -80,7 +79,7 @@ if $SETUP_CONFIG; then
       -e "s/X_POSTGRES_HOST/${POSTGRES_NAME}.postgres.database.azure.com/g" \
       -e "s/X_POSTGRES_DB/$SLOT_POSTGRES_DB/g" \
       -e "s/X_POSTGRES_PASS/$SLOT_POSTGRES_PASSWORD/g " \
-      -e "s/X_POSTGRES_USER/${SLOT_POSTGRES_USER}@${POSTGRES_NAME}/g" \
+      -e "s/X_POSTGRES_USER/${SLOT_POSTGRES_USER}/g" \
       -e "s/X_HOSTNAME/${WEBAPP_NAME}.azurewebsites.net/g" \
       -e "s/X_ALLOWED_HOST/${WEBAPP_NAME}.azurewebsites.net/g" \
       azure_settings.json > processed-dev.json

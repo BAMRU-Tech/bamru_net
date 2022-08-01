@@ -61,6 +61,6 @@ You can also add --debug to the azure CLI command. The TXT record may have chang
 * Do the same for the dev webapp and save as AZUREAPPSERVICE_PUBLISHPROFILE_DEV
 
 * Save the output of this as AZURE_CREDENTIALS:
-az ad sp create-for-rbac --name "bamrunet-sp" --role contributor \
+az ad sp create-for-rbac --name "bamrunet-ad-sp" --role contributor \
     --scopes /subscriptions/{subscription-id}/resourceGroups/bamrunet-rg \
     --sdk-auth
