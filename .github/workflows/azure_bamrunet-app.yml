@@ -7,6 +7,10 @@ name: push azure staging
 on:
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+  AZURE_WEBAPP_SLOT: ${{ secrets.AZURE_WEBAPP_SLOT }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -58,6 +62,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'bamrunet-app'
-          slot-name: 'staging'
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: ${{ env.AZURE_WEBAPP_SLOT }}
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}

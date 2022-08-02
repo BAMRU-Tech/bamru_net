@@ -10,6 +10,9 @@ on:
       - azure
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME_DEV: ${{ secrets.AZURE_WEBAPP_NAME_DEV }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -64,5 +67,5 @@ jobs:
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'bamrunet-dev-app'
+          app-name: ${{ env.AZURE_WEBAPP_NAME_DEV }}
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DEV }}
