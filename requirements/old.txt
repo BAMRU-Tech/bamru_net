@@ -5,7 +5,7 @@ isort==4.3.4
 jedi==0.12.0
 kombu==4.6.11
 Mako==1.0.7
-markdown2==2.3.9
+markdown2==2.4.0
 mccabe==0.6.1
 parso==0.2.1
 pbr==4.2.0
