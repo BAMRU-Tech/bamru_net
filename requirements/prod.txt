@@ -17,7 +17,7 @@ coreapi==2.3.3
 coreschema==0.0.4
 cryptography==3.3.2
 defusedxml==0.7.0rc1
-Django==3.2.13
+Django==3.2.14
 django-anymail==8.6
 django-appconf==1.0.3
 django-bootstrap4==22.1
