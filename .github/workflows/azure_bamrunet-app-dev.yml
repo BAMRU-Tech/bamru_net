@@ -7,7 +7,7 @@ name: deploy azure dev
 on:
   push:
     branches:
-      - azure
+      - main
   workflow_dispatch:
 
 env:
