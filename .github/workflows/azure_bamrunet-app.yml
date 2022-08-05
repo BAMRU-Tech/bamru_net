@@ -21,7 +21,7 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v1
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: Create and start virtual environment
         run: |
@@ -30,6 +30,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Flatten dependencies (Onyx does not support -r)
+        run: pip freeze > requirements.txt
 
       - name: Embed SHA
         run: echo "export GIT_SHA=${{ github.sha }}" > .env
