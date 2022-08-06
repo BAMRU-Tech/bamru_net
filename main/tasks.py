@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 from django_q.tasks import async_task
 from dynamic_preferences.registries import global_preferences_registry
+import urllib.request
 
 from .lib import groups
 from .models import Cert, Distribution, DoLog, Event, Member, Message, OutboundEmail, OutboundSms, Participant, Role
@@ -19,6 +20,11 @@ def debug_print(text):
     response = 'Debug print: {}'.format(text)
     logger.info(response)
     return response
+
+# @shared_task
+def http_get(url):
+    """Can be used to poll a health check URL."""
+    return urllib.request.urlopen(url).read()
 
 # @shared_task
 @tracer.start_as_current_span("message_send")
