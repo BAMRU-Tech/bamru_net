@@ -30,7 +30,7 @@ class MemberViewSet(BaseViewSet):
         'role_set',
     )
     serializer_class = MemberSerializer
-    filter_fields = ('status', )
+    filterset_fields = ('status', )
     search_fields = ('username',  )
 
 
@@ -50,7 +50,7 @@ class ApiUnavailableViewSet(BaseViewSet):
 
 class MemberUnavailableViewSet(BaseViewSet):
     serializer_class = MemberUnavailableSerializer
-    filter_fields = ('status', )
+    filterset_fields = ('status', )
     search_fields = ('username',  )
 
     def get_queryset(self):
@@ -71,14 +71,14 @@ class MemberUnavailableViewSet(BaseViewSet):
 class CertViewSet(BaseViewSet):
     queryset = Cert.objects.all()
     serializer_class = CertSerializer
-    filter_fields = ('member__status', 'type', )
+    filterset_fields = ('member__status', 'type', )
     search_fields = ('member__username',  )
 
 
 class MemberCertViewSet(BaseViewSet):
     queryset = Member.objects.prefetch_related('cert_set')
     serializer_class = MemberCertSerializer
-    filter_fields = ('status', )
+    filterset_fields = ('status', )
     search_fields = ('username',  )
 
 
@@ -145,7 +145,7 @@ class ParticipantViewSet(CreateListModelMixin, BaseViewSet):
 class DoViewSet(BaseViewSet):
     queryset = DoAvailable.objects.all().order_by('week')
     serializer_class = DoSerializer
-    filter_fields = ('year', 'quarter', 'week', 'available', 'assigned',
+    filterset_fields = ('year', 'quarter', 'week', 'available', 'assigned',
                      'comment', 'member', )
     search_fields = ('member__username',)
 
@@ -219,12 +219,12 @@ class MessageViewSet(BaseViewSet):
 class InboundSmsViewSet(BaseViewSet):
     queryset = InboundSms.objects.all()
     serializer_class = InboundSmsSerializer
-    filter_fields = ('member', 'outbound', 'outbound__distribution__message__period')
+    filterset_fields = ('member', 'outbound', 'outbound__distribution__message__period')
     search_fields = ('member__username', )
 
 
 class MemberPhotoViewSet(BaseViewSet):
     queryset = MemberPhoto.objects.all()
     serializer_class = MemberPhotoSerializer
-    filter_fields = ('member', )
+    filterset_fields = ('member', )
     search_fields = ('member__username', )
