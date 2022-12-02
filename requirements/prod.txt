@@ -52,7 +52,7 @@ persisting-theory==0.2.1
 phonenumbers==8.12.50
 phonenumberslite==8.9.7
 pilkit==2.0
-Pillow==9.0.1
+Pillow==9.3.0
 psycopg2-binary==2.8.6
 pyasn1==0.4.4
 pyasn1-modules==0.2.2
