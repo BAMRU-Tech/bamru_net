@@ -16,13 +16,21 @@
 </div>
 {% endblock subheader %}
 
+{% block pre_content %}
+{% if type.help_text %}
+<p/>
+<div class="alert alert-info" role="alert">
+  {{ type.help_text|linebreaks }}
+</div>
+{% endif %}
+{% endblock pre_content %}
 
 {% block js %}
 {{ block.super }}
 <script>
 $(document).ready( function() {
     const url = new URL(window.location.href);
-    const rx = url.searchParams.get('returnx');
+    const rx = url.searchParams.get('returnx') || 'mc';
     const returns = {
         'ml': '<a href="{% url 'member_list' %}"> Members </a>',
         'al': '<a href="{% url 'available_list' %}"> Availability </a>',
@@ -35,6 +43,22 @@ $(document).ready( function() {
     href = returns[rx];
 
     $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }})";
+});
+
+function show_hide_description() {
+    var selected = parseInt($('#id_subtype').val());
+    if ( {{ other_subtypes }}.includes(selected) ) {
+        $('label[for=id_description], input#id_description').show();
+    } else {
+        $('label[for=id_description], input#id_description').hide();
+    }
+};
+
+$(document).on('change', '#id_subtype', function(e) {
+    show_hide_description();
+});
+$(document).ready(function(e) {
+    show_hide_description();
 });
 </script>
 {% endblock js %}
