@@ -575,6 +575,9 @@ $(document).ready( function() {
             },
             {
                 text: '<i class="fa fa-address-book"></i> Attend',
+                {% if request.user in period.prefetched_members_for_info_page %}
+                attr: {'disabled': 'disabled'},
+                {% endif %}
                 action: function () {
                     AddMeToOP({{period.id}});
                 }
@@ -1040,7 +1043,7 @@ function AddMeToOP (period) {
 function DeleteEvent ( event, title ) {
     var numParticipants = 0;
     {% for period in event.period_set.all %}
-      numParticipants += {{ period.prefeteched_members_for_info_page|length }}
+      numParticipants += {{ period.prefetched_members_for_info_page|length }}
     {% endfor %}
     if (numParticipants > 0) {
         alert('Events with active operational periods cannot be deleted');
