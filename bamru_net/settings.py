@@ -120,17 +120,25 @@ WSGI_APPLICATION = 'bamru_net.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ['DJANGO_DB_NAME'],
-        'USER': os.environ['DJANGO_DB_USER'],
-        'PASSWORD': os.environ['DJANGO_DB_PASS'],
-        'HOST': os.environ['DJANGO_DB_HOST'],
-        'OPTIONS': {'sslmode': os.environ.get('DJANGO_DB_SSLMODE', 'prefer')},
-        'CONN_MAX_AGE': 600,
+if os.environ.get('DJANGO_DB_USE_SQLITE'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.environ['DJANGO_DB_NAME'],
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ['DJANGO_DB_NAME'],
+            'USER': os.environ['DJANGO_DB_USER'],
+            'PASSWORD': os.environ['DJANGO_DB_PASS'],
+            'HOST': os.environ['DJANGO_DB_HOST'],
+            'OPTIONS': {'sslmode': os.environ.get('DJANGO_DB_SSLMODE', 'prefer')},
+            'CONN_MAX_AGE': 600,
+        }
+    }
 
 # Avoid unwanted migrations - keep legacy AutoField
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
