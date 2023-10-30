@@ -2,6 +2,7 @@ import json
 import os
 import re
 import subprocess
+import unittest
 
 from django.conf import settings
 from django.core import mail
@@ -45,6 +46,7 @@ class OutgoingEmailTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         return relative
 
+    @unittest.skipUnless(settings.ANYMAIL['MAILGUN_API_KEY'], 'missing config')
     def test_send(self):
         self.distribution.message.queue()
         message_send(0)
@@ -88,6 +90,7 @@ class OutgoingEmailTestCase(TestCase):
 
 
 @override_settings(SMS_FILE_PATH='/tmp',
+                   TWILIO_SMS_FROM=['+15005550006'],
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class OutgoingSmsTestCase(TestCase):
     def setUp(self):
@@ -102,6 +105,7 @@ class OutgoingSmsTestCase(TestCase):
                                        make_m2m=True)
         self.c = Client()
 
+    @unittest.skipUnless(settings.ANYMAIL['MAILGUN_API_KEY'], 'missing config')
     def test_send(self):
         # Send a generic page
         self.distribution.message.queue()
@@ -133,6 +137,7 @@ class OutgoingSmsTestCase(TestCase):
 
 @override_settings(SMS_FILE_PATH='/tmp',
                    EMAIL_BACKEND='anymail.backends.test.EmailBackend',
+                   TWILIO_SMS_FROM=['+15005550006'],
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class IncommingSmsTestCase(TestCase):
     def setUp(self):
@@ -157,6 +162,7 @@ class IncommingSmsTestCase(TestCase):
         self.global_preferences = global_preferences_registry.manager()
         self.global_preferences['google__do_group'] = 'do@example.com'
 
+    @unittest.skipUnless(settings.ANYMAIL['MAILGUN_API_KEY'], 'missing config')
     def test_send(self):
         # Send a transit page
         self.distribution.message.queue()
@@ -236,6 +242,7 @@ class OutgoingSmsTwilioTestCase(TestCase):
         self.sms = self.distribution.outboundsms_set.first()
         self.assertEqual(self.sms.error_code, code)
 
+    @unittest.skipUnless(os.environ['TWILIO_TEST_AUTH_TOKEN'], 'missing config')
     def test_send(self):
         old_path = settings.SMS_FILE_PATH
         settings.SMS_FILE_PATH = None
