@@ -148,7 +148,7 @@ class MessageCreateView(MessageCreateBaseView):
             if period_format == 'invite':
                 # Invite all, even those who are already in the event (#443).
                 # To exclude them add .exclude(participant__period=period_id)
-                members = Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
+                members = Member.members.filter(status__is_available=True)
             elif period_format == 'leave':
                 members = period.members_for_left_page()
             elif period_format == 'return':
@@ -157,7 +157,7 @@ class MessageCreateView(MessageCreateBaseView):
                 # Use .objects to allow info to guests
                 members = Member.objects.filter(participant__period=period_id)
             elif period_format == 'broadcast':
-                members = Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
+                members = Member.members.filter(status__is_available=True)
             elif period_format == 'test':
                 members = Member.members.filter(participant__period=period_id)
             else:
@@ -450,7 +450,7 @@ class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return the member list."""
-        return Member.objects.filter(status__in=Member.DO_SHIFT_MEMBERS).order_by('id')
+        return Member.members.filter(status__is_do_eligible=True).order_by('id')
 
     def get_context_data(self, **kwargs):
         """Return context for become DO"""

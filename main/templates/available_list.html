@@ -174,7 +174,7 @@ function SetBusy(busy, start, end, comment) {
     return i;
 }
 
-const apiUrlMemberAvail = '/api/member_availability/?status=';
+const apiUrlMemberAvail = '/api/member_availability/?member__status__short=';
 
 function AddAvailRows(table, values) {
     //

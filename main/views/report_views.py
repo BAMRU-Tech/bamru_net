@@ -5,7 +5,7 @@ from django.template import loader
 from django.utils import timezone
 from django.views import generic, View
 
-from main.models import Cert, Member, Event, Participant, Period
+from main.models import Cert, Member, MemberStatusType, Event, Participant, Period
 
 import collections
 import csv
@@ -190,16 +190,19 @@ class ReportRosterView(LoginRequiredMixin, BaseReportView):
     def get(self, request, **kwargs):
 
         if (kwargs['roster_type'] == 'names.html'):
-            status = Member.PRO_MEMBERS
+            status = [t.short for t in MemberStatusType.objects.filter(
+                is_pro_eligible=True)]
         else:
-            status = Member.CURRENT_MEMBERS
+            status = [t.short for t in MemberStatusType.objects.filter(
+                is_current=True)]
 
         context = {}
         context['members'] = (
             Member.objects
                 .prefetch_related('address_set', 'phone_set', 'email_set', 'role_set',
                                   'emergencycontact_set')
-                .filter(status__in=status)
+                .select_related('status')
+                .filter(status__short__in=status)
                 .order_by('last_name', 'first_name')
         )
         context['now'] = timezone.now()
@@ -278,9 +281,8 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
 class ReportRosterVcfView(LoginRequiredMixin, View):
     def get(self, request, **kwargs):
         members = (
-            Member.objects
+            Member.members
                 .prefetch_related('address_set', 'phone_set', 'email_set', 'role_set')
-                .filter(status__in=Member.CURRENT_MEMBERS)
                 .order_by('last_name', 'first_name')
         )
         cards = [self.vcard_for_member(m) for m in members]

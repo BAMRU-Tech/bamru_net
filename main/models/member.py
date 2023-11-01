@@ -19,6 +19,20 @@ from simple_history.models import HistoricalRecords
 import logging
 logger = logging.getLogger(__name__)
 
+
+class MemberStatusType(BasePositionModel):
+    short = models.CharField(max_length=255)
+    long = models.CharField(max_length=255)
+    is_current = models.BooleanField(default=True)
+    is_available = models.BooleanField(default=True)
+    is_pro_eligible = models.BooleanField(default=True)
+    is_do_eligible = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False) # Create new users with this type
+
+    def __str__(self):
+        return self.short
+
+
 class CustomUserManager(BaseUserManager):
     """Allows username to be case insensitive."""
     def get_by_natural_key(self, username):
@@ -27,7 +41,8 @@ class CustomUserManager(BaseUserManager):
 
 class CurrentMemberManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(status__in=Member.CURRENT_MEMBERS)
+        return super().get_queryset().select_related('status').filter(
+            status__is_current=True)
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
@@ -36,29 +51,11 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     objects = CustomUserManager()
     members = CurrentMemberManager()
     
-    TYPES = (
-        ('TM', 'Technical Member'),
-        ('FM', 'Field Member'),
-        ('T', 'Trainee'),
-        ('R', 'Reserve'),
-        ('S', 'Support'),
-        ('A', 'Associate'),
-        ('G', 'Guest'),
-        ('MA', 'Member Alum'),
-        ('GA', 'Guest Alum'),
-        ('MN', 'Member No-contact'),
-        ('GN', 'Guest No-contact'),
-        )
-
-    CURRENT_MEMBERS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
-    AVAILABLE_MEMBERS = ('TM', 'FM', 'T', 'S')         # Available for operations
-    PRO_MEMBERS = ('TM', 'FM', 'T', 'S')               # Available for pro-deals
-    DO_SHIFT_MEMBERS = ('TM', 'FM', 'T', 'S')          # Notify for DO shift changes
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
     profile_email = models.CharField(max_length=255, blank=True, null=True)
-    status = models.CharField(choices=TYPES, max_length=255, blank=True)
+    status = models.ForeignKey(MemberStatusType, on_delete=models.PROTECT, null=True)
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
     v9 = models.CharField(max_length=255, blank=True, null=True)
@@ -81,11 +78,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def status_order(self):
-        """ Return int, lowest value is TM, follows order in Member.TYPES """
-        for statusTuple in Member.TYPES:
-            if statusTuple[0] == self.status:
-                return Member.TYPES.index(statusTuple)
-        return len(Member.TYPES)
+        """ Returns value that can be used to sort by status field. """
+        return self.status.position
 
     @property
     def roles(self):
@@ -97,9 +91,9 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     @property
     def classic_roles(self):
         """ Return string, list of ordered roles combined with status"""
-        roles = [r.role for r in self.role_set.all()] + [self.status]
-        types = [r[0] for r in Role.TYPES] + list(Member.CURRENT_MEMBERS)
-        result = [r for r in types if r in roles]
+        roles = [r.role for r in self.role_set.all()]
+        types = [r[0] for r in Role.TYPES]
+        result = [r for r in types if r in roles] + [self.status.short]
         return ' '.join(result)
 
     @property

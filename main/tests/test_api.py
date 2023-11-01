@@ -1,5 +1,5 @@
 from rest_framework.test import APIClient, APITestCase
-from main.models import Member
+from main.models import Member, MemberStatusType
 
 class TestApiRoot(APITestCase):
     def setUp(self):
@@ -8,7 +8,7 @@ class TestApiRoot(APITestCase):
         self.user = Member.objects.create(first_name='John',
                                           last_name='Doe',
                                           username='john doe',
-                                          status='T',
+                                          status=MemberStatusType.objects.first(),
         )
 
     def test_access(self):
@@ -31,3 +31,12 @@ class TestApiRoot(APITestCase):
             self.assertEqual(
                 response.status_code, 200,
                 'Expected 200 OK because we are logged in')
+
+    def test_filters(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.uri)
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(self.uri + 'members/?status=TM')
+        self.assertEqual(response.status_code, 200)
+        response = self.client.get(self.uri + 'member_availability/?status=TM')
+        self.assertEqual(response.status_code, 200)

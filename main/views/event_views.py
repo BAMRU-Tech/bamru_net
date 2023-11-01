@@ -226,7 +226,7 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return the member list."""
         period_id = self.kwargs.get('period')
-        members = (Member.members.filter(status__in=Member.CURRENT_MEMBERS)
+        members = (Member.members
                    .exclude(participant__period=period_id))
         return members
 

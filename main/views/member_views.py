@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views import generic
 from rules.contrib.views import PermissionRequiredMixin
 
-from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Unavailable
+from main.models import Address, Cert, Email, EmergencyContact, Member, MemberStatusType, Phone, Unavailable
 from main.views.file_views import download_file_helper
 
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
@@ -215,7 +215,7 @@ class MemberAddView(PermissionRequiredMixin, generic.edit.FormView):
                 'username': '{} {}'.format(
                     form.cleaned_data['first_name'],
                     form.cleaned_data['last_name']).lower(),
-                'status': 'G',
+                'status': MemberStatusType.objects.get(is_default=True),
                 'is_active': False,
             })
         if created:
@@ -337,7 +337,7 @@ class CertListView(LoginRequiredMixin, generic.ListView):
         for idx, t in enumerate(Cert.TYPES):
             cert_lookup[t[0]] = idx
         qs = Member.members.prefetch_related('cert_set')
-        qs = qs.filter(status__in=Member.CURRENT_MEMBERS).order_by('id')
+        qs = qs.order_by('id')
 
         for m in qs:
             m.certs = [{'cert':None, 'count':0} for x in cert_lookup]
@@ -391,14 +391,14 @@ class AvailableListView(LoginRequiredMixin, generic.ListView):
         today = self.date
         unavailable_set = Unavailable.objects.filter(
             end_on__gte=today).order_by('start_on')
-        qs = Member.objects.prefetch_related(
+        qs = Member.members.prefetch_related(
             Prefetch('unavailable_set',
                      queryset=unavailable_set,
                      to_attr='unavailable_filtered'),
             'role_set',
         )
 
-        qs = qs.filter(status__in=Member.AVAILABLE_MEMBERS).order_by('id')
+        qs = qs.filter(status__is_available=True).order_by('id')
 
         for m in qs:
             m.days = ['' for x in range(self.days)]

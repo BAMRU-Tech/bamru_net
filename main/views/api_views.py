@@ -23,22 +23,33 @@ class CreateListModelMixin(object):
         return super(CreateListModelMixin, self).get_serializer(*args, **kwargs)
 
 
+class MemberStatusTypeViewSet(BaseViewSet):
+    queryset = MemberStatusType.objects.all()
+    serializer_class = MemberStatusTypeSerializer
+
+
 class MemberViewSet(BaseViewSet):
-    queryset = Member.annotate_unavailable(Member.objects).all().prefetch_related(
-        'email_set',
-        'phone_set',
-        'role_set',
-    )
     serializer_class = MemberSerializer
-    filterset_fields = ('status', )
     search_fields = ('username',  )
+
+    def get_queryset(self):
+        filter_kwargs = {}
+        if hasattr(self.request, 'query_params'):
+            if self.request.query_params.get('status'):
+                filter_kwargs['status__short'] = self.request.query_params['status']
+        return Member.annotate_unavailable(
+            Member.objects).filter(**filter_kwargs).prefetch_related(
+                'email_set',
+                'phone_set',
+                'role_set',
+            )
 
 
 class UnavailableFilter(filters.FilterSet):
     start_on = filters.DateFromToRangeFilter()
     class Meta:
         model = Unavailable
-        fields = ('member__status', 'start_on', )
+        fields = ('member__status__short', 'start_on', )
 
 
 class ApiUnavailableViewSet(BaseViewSet):
@@ -50,19 +61,21 @@ class ApiUnavailableViewSet(BaseViewSet):
 
 class MemberUnavailableViewSet(BaseViewSet):
     serializer_class = MemberUnavailableSerializer
-    filterset_fields = ('status', )
     search_fields = ('username',  )
 
     def get_queryset(self):
+        member_filter_kwargs = {}
         filter_kwargs = {}
         if hasattr(self.request, 'query_params'):
+            if self.request.query_params.get('status'):
+                member_filter_kwargs['status__short'] = self.request.query_params['status']
             if self.request.query_params.get('date_range_start'):
                 filter_kwargs['end_on__gte'] = forms.DateField().clean(
                         self.request.query_params['date_range_start'])
             if self.request.query_params.get('date_range_end'):
                 filter_kwargs['start_on__lte'] = forms.DateField().clean(
                         self.request.query_params['date_range_end'])
-        return Member.members.all().prefetch_related(
+        return Member.members.filter(**member_filter_kwargs).prefetch_related(
             'role_set',
             Prefetch('unavailable_set', queryset=Unavailable.objects.filter(**filter_kwargs), to_attr='filtered_unavailable_set'),
         )
@@ -71,14 +84,14 @@ class MemberUnavailableViewSet(BaseViewSet):
 class CertViewSet(BaseViewSet):
     queryset = Cert.objects.all()
     serializer_class = CertSerializer
-    filterset_fields = ('member__status', 'type', )
+    filterset_fields = ('member__status__short', 'type', )
     search_fields = ('member__username',  )
 
 
 class MemberCertViewSet(BaseViewSet):
     queryset = Member.objects.prefetch_related('cert_set')
     serializer_class = MemberCertSerializer
-    filterset_fields = ('status', )
+    filterset_fields = ('status__short', )
     search_fields = ('username',  )
 
 

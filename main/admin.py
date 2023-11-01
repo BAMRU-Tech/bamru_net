@@ -52,6 +52,11 @@ class MemberAdmin(MemberUserAdmin):
         ]
 
 
+@admin.register(MemberStatusType)
+class MemberStatusTypeAdmin(admin.ModelAdmin):
+    list_display = ('short','long','position')
+
+
 class ParticipantInline(InlineDefaults):
     model = Participant
 

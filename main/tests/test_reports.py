@@ -6,6 +6,7 @@ from main.models import (
         Email,
         EmergencyContact,
         Member,
+        MemberStatusType,
         Phone,
         Role,
 )
@@ -39,16 +40,16 @@ class RosterTestCase(TestCase):
                 mommy.make(Phone, member=member,
                            number=randint(1000000, 9999999),
                            _fill_optional=True)
-            if member.status in ['TM', 'FM', 'T']:
+            if member.status.short in ['TM', 'FM', 'T']:
                 mommy.make(Role, member=member, role=member.status)
-                if member.status in ['TM', 'FM'] and random() < 0.2:
+                if member.status.short in ['TM', 'FM'] and random() < 0.2:
                     mommy.make(Role, member=member, role='OL')
             cls.members.append(member)
 
         # This is the user we'll make requests as. Make sure they can log in.
         cls.user = cls.members[0]
-        if cls.user.status not in ['TM', 'FM', 'T']:
-            cls.user.status = 'T'
+        if cls.user.status.short not in ['TM', 'FM', 'T']:
+            cls.user.status = MemberStatusType.objects.get(short='T')
             cls.user.is_active = True
             cls.user.save()
             mommy.make(Role, member=cls.user, role=cls.user.status)
@@ -58,7 +59,7 @@ class RosterTestCase(TestCase):
 
     def assertResponseContainsMembers(self, response):
         for m in self.members:
-            if m.status in ['TM', 'FM', 'T']:
+            if m.status.short in ['TM', 'FM', 'T']:
                 self.assertIn(m.first_name, response.content.decode('utf-8'))
                 self.assertIn(m.last_name, response.content.decode('utf-8'))
 
@@ -97,7 +98,7 @@ class RosterTestCase(TestCase):
         response = self.client.get('/reports/roster/BAMRU-roster.vcf')
         self.assertEqual(response.status_code, 200)
         for m in self.members:
-            if m.status in ['TM', 'FM', 'T']:
+            if m.status.short in ['TM', 'FM', 'T']:
                 # The vcard format has line breaks, don't bother trying to
                 # parse it, just sanity check.
                 self.assertIn(m.first_name[:20], response.content.decode('utf-8'))
