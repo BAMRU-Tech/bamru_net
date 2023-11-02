@@ -29,8 +29,15 @@ logger = logging.getLogger(__name__)
 from django_datatables_view.base_datatable_view import BaseDatatableView
 from django.utils.html import escape
 
+class MemberStatusTypeMixin:
+    def get_context_data(self, *args, **kwargs):
+        context = super(MemberStatusTypeMixin, self
+                        ).get_context_data(*args, **kwargs)
+        context['member_status_types'] = (
+            MemberStatusType.displayed.all().order_by('position'))
+        return context
 
-class MemberListView(LoginRequiredMixin, generic.ListView):
+class MemberListView(LoginRequiredMixin, MemberStatusTypeMixin, generic.ListView):
     template_name = 'member_list.html'
     context_object_name = 'member_list'
 
@@ -326,7 +333,7 @@ class CertCreateView(LoginRequiredMixin, CertEditMixin, generic.edit.CreateView)
         return context
 
 
-class CertListView(LoginRequiredMixin, generic.ListView):
+class CertListView(LoginRequiredMixin, MemberStatusTypeMixin, generic.ListView):
     template_name = 'cert_list.html'
     context_object_name = 'member_list'
 
@@ -341,7 +348,6 @@ class CertListView(LoginRequiredMixin, generic.ListView):
 
         for m in qs:
             m.certs = [{'cert':None, 'count':0} for x in cert_lookup]
-            #m.cert_count = cert_count.copy()
             for c in m.cert_set.all():
                 idx = cert_lookup[c.type]
                 prev = m.certs[idx]['cert']
@@ -354,7 +360,6 @@ class CertListView(LoginRequiredMixin, generic.ListView):
                 ):
                     m.certs[idx]['cert'] = c
                 m.certs[idx]['count'] += 1
-                #m.cert_count[idx] += 1
         return qs
 
     def get_context_data(self, **kwargs):
@@ -369,7 +374,7 @@ def cert_file_download_view(request, cert, **kwargs):
     return download_file_helper(c.cert_file.url)
 
 
-class AvailableListView(LoginRequiredMixin, generic.ListView):
+class AvailableListView(LoginRequiredMixin, MemberStatusTypeMixin, generic.ListView):
     template_name = 'available_list.html'
     context_object_name = 'member_list'
 

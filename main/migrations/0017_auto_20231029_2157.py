@@ -4,18 +4,18 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 def create_status(apps, schema_editor):
-    TYPES = ( # current, available, pro, do
-        ('TM', 'Technical Member', True, True, True, True, 1),
-        ('FM', 'Field Member', True, True, True, True, 2),
-        ('T', 'Trainee', True, True, True, True, 3),
-        ('R', 'Reserve', True, False, False, False, 4),
-        ('S', 'Support', True, True, True, True, 5),
-        ('A', 'Associate', True, False, False, False, 6),
-        ('G', 'Guest', False, False, False, False, 7),
-        ('MA', 'Member Alum', False, False, False, False, 8),
-        ('GA', 'Guest Alum', False, False, False, False, 9),
-        ('MN', 'Member No-contact', False, False, False, False, 10),
-        ('GN', 'Guest No-contact', False, False, False, False, 11),
+    TYPES = ( # current, available, pro, do, display
+        ('TM', 'Technical Member', True, True, True, True, True, 1),
+        ('FM', 'Field Member', True, True, True, True, True, 2),
+        ('T', 'Trainee', True, True, True, True, True, 3),
+        ('R', 'Reserve', True, False, False, False, True, 4),
+        ('S', 'Support', True, True, True, True, True, 5),
+        ('A', 'Associate', True, False, False, False, True, 6),
+        ('G', 'Guest', False, False, False, False, True, 7),
+        ('MA', 'Member Alum', False, False, False, False, True, 8),
+        ('GA', 'Guest Alum', False, False, False, False, True, 9),
+        ('MN', 'Member No-contact', False, False, False, False, False, 10),
+        ('GN', 'Guest No-contact', False, False, False, False, False, 11),
         )
     MemberStatusType = apps.get_model('main', 'MemberStatusType')
     Member = apps.get_model('main', 'Member')
@@ -27,7 +27,8 @@ def create_status(apps, schema_editor):
         s.is_available = t[3]
         s.is_pro_eligible = t[4]
         s.is_do_eligible = t[5]
-        s.position = t[6]
+        s.is_display = t[6]
+        s.position = t[7]
         s.save()
     g = MemberStatusType.objects.get(short='G')
     g.is_default = True
@@ -59,6 +60,7 @@ class Migration(migrations.Migration):
                 ('is_available', models.BooleanField(default=True)),
                 ('is_pro_eligible', models.BooleanField(default=True)),
                 ('is_do_eligible', models.BooleanField(default=True)),
+                ('is_display', models.BooleanField(default=True)),
                 ('is_default', models.BooleanField(default=False)),
             ],
             options={

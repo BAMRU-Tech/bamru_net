@@ -1,0 +1,41 @@
+{% extends 'base_ftable.html' %}
+
+{% block content %}
+<main class="flex-grow" role="main">
+  {% block content-pre %}{% endblock %}
+  <div id="show-filter" style="display: none">
+    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
+      {% for t in member_status_types %}
+      <option value="{{ t.short }}">{{ t.long }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% block dtable %}
+  <table id="dTbl" class="{% block dtable-class %}display list table-bordered compact nowrap{% endblock %}" style="width:100%">
+    <tbody>
+      {% if member_list.count %}
+      {% for member in member_list %}
+      {% spaceless %}
+      <tr>
+        {% block dtable-row %}
+        {% block dtable-row-pre %}{% endblock %}
+        <td>{{ member.full_name }}</td>
+        <td>{{ member.id }}</td>
+        <td>{{ member.status }}</td>
+        <td>{{ member.status_order }}</td>
+        <td>{{ member.roles }}</td>
+        <td>{{ member.role_order }}</td>
+        <td>{{ member.display_phone }}</td>
+        <td>{{ member.display_email }}</td>
+        <td>{{ member.is_unavailable }}</td>
+        {% endblock dtable-row %}
+      </tr>
+      {% endspaceless %}
+      {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
+  {% endblock dtable %}
+  <div id="footer"></div>
+</main>
+{% endblock content %}

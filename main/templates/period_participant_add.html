@@ -1,4 +1,4 @@
-{% extends 'base_ftable.html' %}
+{% extends 'base_member_table.html' %}
 
 {# --- Page definition --- #}
 
@@ -9,43 +9,9 @@
 <strong class="d-none d-md-block" id="subhdr"></strong>
 {% endblock subheader %}
 
-{% block content %}
-<main role="main">
-  <div id="show-filter" style="display: none">
-    <select id="filter-status" multiple="multiple" selectableHeader="Display status">
-      <option value="TM">Technical Member</option>
-      <option value="FM">Field Member</option>
-      <option value="T">Trainee</option>
-      <option value="R">Reserve</option>
-      <option value="S">Support</option>
-      <option value="A">Associate</option>
-      <option value="G">Guest</option>
-      <option value="MA">Member Alum</option>
-    </select>
-  </div>
-  <table id="dTbl" class="display table-bordered compact" style="width:100%">
-    <tbody>
-      {% for member in member_list %}
-      {% spaceless %}
-      <tr>
-        <td></td>
-        <td>{{ member.full_name }}</td>
-        <td>{{ member.id }}</td>
-        <td>{{ member.status }}</td>
-        <td>{{ member.status_order }}</td>
-        <td>{{ member.roles }}</td>
-        <td>{{ member.role_order }}</td>
-        <td>{{ member.display_phone }}</td>
-        <td>{{ member.display_email }}</td>
-        <td>{{ member.is_unavailable }}</td>
-      </tr>
-      {% endspaceless %}
-      {% endfor %}
-    </tbody>
-  </table>
-</main>
-{% endblock content%}
 
+{% block dtable-row-pre %}<td></td>{% endblock %}
+{% block dtable-class %}display table-bordered compact{% endblock %}
 
 {# --- Table definition --- #}
 

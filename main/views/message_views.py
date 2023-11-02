@@ -24,11 +24,12 @@ from main.models import Member, Participant, Period
 
 from main.models import (Distribution, InboundSms, Message, OutboundEmail,
                          OutboundSms, RsvpTemplate)
+from main.views.member_views import MemberStatusTypeMixin
 
 logger = logging.getLogger(__name__)
 
 
-class MessageCreateBaseView(LoginRequiredMixin, generic.ListView):
+class MessageCreateBaseView(LoginRequiredMixin, MemberStatusTypeMixin, generic.ListView):
     model = Message
     template_name = 'message_add.html'
     context_object_name = 'member_list'
@@ -443,7 +444,7 @@ def handle_outbound_email_tracking(sender, event, esp_name, **kwargs):
     email.save()
 
 
-class ActionBecomeDo(LoginRequiredMixin, generic.ListView):
+class ActionBecomeDo(LoginRequiredMixin, MemberStatusTypeMixin, generic.ListView):
     model = Message
     template_name = 'message_add.html'
     context_object_name = 'member_list'

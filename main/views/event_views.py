@@ -13,8 +13,9 @@ from django.forms import widgets
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from main.lib.gcal import get_gcal_manager
-from main.models import Member, Event, Participant, Period
+from main.models import Member, MemberStatusType, Event, Participant, Period
 from main.views.api_views import EventFilter
+from main.views.member_views import MemberStatusTypeMixin
 from main import tasks
 
 from datetime import timedelta
@@ -88,6 +89,8 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
             result.append({ 'name': 'TBD', 'id': 0})
 
         context['leaders'] = result
+        context['statuses'] = [t.short for t in
+            MemberStatusType.displayed.all().order_by('position')]
         return context
 
     def post(self, request, *args, **kwargs):
@@ -217,7 +220,7 @@ class EventPeriodAddView(LoginRequiredMixin, generic.base.RedirectView):
         return super().get_redirect_url(*args, **kwargs)
 
 
-class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):    
+class PeriodParticipantCreateView(LoginRequiredMixin, MemberStatusTypeMixin, generic.ListView):    
     model = Participant
     fields = ['member', 'ahc', 'ol', 'period']
     context_object_name = 'member_list'

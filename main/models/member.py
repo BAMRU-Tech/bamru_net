@@ -20,13 +20,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class DisplayMemberStatusTypeManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            is_display=True)
+
 class MemberStatusType(BasePositionModel):
+    objects = models.Manager() 
+    displayed = DisplayMemberStatusTypeManager()
+
     short = models.CharField(max_length=255)
     long = models.CharField(max_length=255)
-    is_current = models.BooleanField(default=True)
-    is_available = models.BooleanField(default=True)
+    is_current = models.BooleanField(default=True) # member
+    is_available = models.BooleanField(default=True) # page for callouts
     is_pro_eligible = models.BooleanField(default=True)
-    is_do_eligible = models.BooleanField(default=True)
+    is_do_eligible = models.BooleanField(default=True) # can serve DO shifts
+    is_display = models.BooleanField(default=True) # show on site
     is_default = models.BooleanField(default=False) # Create new users with this type
 
     def __str__(self):
