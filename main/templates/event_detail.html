@@ -258,6 +258,25 @@
             </div>
             <div style="clear:both;"></div>
           </div>
+          <div style="margin-left: initial;margin-right: initial;" class="form-group row">
+            <div class="col-sm-3 col-md-3 col-lg-3 text-right" style="padding-top:4px;">
+              <label for="NeedDO">NeedDO:</label>
+            </div>
+            <div class="col-sm-2 col-md-2 col-lg-2">
+              <input type="checkbox" id="needDO" name="NeedDO"
+                     class="form-control form-control-sm" value="Y">
+            </div>
+          </div>
+          <div style="margin-left: initial;margin-right: initial;" class="form-group row">
+            <div class="col-sm-3 col-md-3 col-lg-3 text-right" style="padding-top:4px;">
+              <label for="NeedAHC">NeedAHC:</label>
+            </div>
+            <div class="col-sm-2 col-md-2 col-lg-2">
+              <input type="checkbox" id="needAHC" name="NeedAHC"
+                     class="form-control form-control-sm" value="Y">
+            </div>
+            <div style="clear:both;"></div>
+          </div>
           <input type="hidden" id="periodPosition" value="">
           <input type="hidden" id="periodID" value="">
           <input type="hidden" id="periodFormat" value="">
@@ -692,8 +711,15 @@ $(document).ready( function() {
 
         // Getting the inputs from the modal
         $('form[name="search-form"] *').filter(':input').each(function (i) {
-            data[$(this).attr('id')] = $(this).val();
+            var inputValue = $(this).val();
+
+            // val for a checkbox input is not useful clientside.
+            if ($(this).attr('type') == 'checkbox') {
+              inputValue = $(this).is(":checked");
+            }
+            data[$(this).attr('id')] = inputValue;
         });
+
 
         var txt = (data.periodFormat == 'headsUp') ? 'Heads Up: ' : data.type + ' Callout: ';
         if (!data.name) {
@@ -714,6 +740,14 @@ $(document).ready( function() {
         }
 
         txt += '. ' + data.periodQuestion;
+
+        if (data.needDO) {
+          txt += ' DO Needed.'
+        }
+
+        if (data.needAHC) {
+          txt += ' AHC Needed.'
+        }
 
         $('#search-modal').modal('hide');
 
