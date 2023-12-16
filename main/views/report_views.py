@@ -262,15 +262,7 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         data['work_address'] = maybe_address('Work')
         data['other_address'] = maybe_address('Other')
 
-        emails = member.grouped_emails()
-        def maybe_email(t):
-            try:
-                return emails[t][0].address
-            except IndexError:
-                return ''
-        data['home_email'] = maybe_email('Home')
-        data['personal_email'] = maybe_email('Personal')
-        data['work_email'] = maybe_email('Work')
+        data['email'] = member.profile_email
 
         data['ham'] = member.ham
         data['v9'] = member.v9
