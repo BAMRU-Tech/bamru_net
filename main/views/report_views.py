@@ -119,13 +119,16 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
             member.total_events = 0
             member.total_hours = 0
             member.type_totals = member_type_totals[member.id]
-            for k, v in member.type_totals.items():
-                member.total_events += v[0]
-                member.total_hours += v[1]
-                unit_totals[0] += v[0]
-                unit_totals[1] += v[1]
-                type_totals[k][0] += v[0]
-                type_totals[k][1] += v[1]
+            for event_type, v in member.type_totals.items():
+                events = v[0]
+                hours = v[1]
+                member.total_events += events
+                member.total_hours += hours
+                unit_totals[1] += hours
+                type_totals[event_type][0] += events
+                type_totals[event_type][1] += hours
+            if member.total_events > 0:
+                unit_totals[0] += 1
 
         context = {}
         context['events'] = events
@@ -259,15 +262,7 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         data['work_address'] = maybe_address('Work')
         data['other_address'] = maybe_address('Other')
 
-        emails = member.grouped_emails()
-        def maybe_email(t):
-            try:
-                return emails[t][0].address
-            except IndexError:
-                return ''
-        data['home_email'] = maybe_email('Home')
-        data['personal_email'] = maybe_email('Personal')
-        data['work_email'] = maybe_email('Work')
+        data['email'] = member.profile_email
 
         data['ham'] = member.ham
         data['v9'] = member.v9
