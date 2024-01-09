@@ -14,7 +14,6 @@ from django.utils import timezone
 
 from main.lib.phone import format_e164
 from .base import BaseModel, BasePositionModel, Configuration
-from .event import Period
 from .member import Email, Member, Phone
 
 logger = logging.getLogger(__name__)
@@ -80,14 +79,16 @@ class Message(BaseModel):
         ('do_shift_starting', 'DO Shift Starting'),
         ('do_shift_pending', 'DO Shift Pending'),
     )
-    PERIOD_FORMATS = (
-        ('invite', 'invite'),
-        ('info', 'info'),
-        ('broadcast', 'broadcast'),
-        ('leave', 'leave'),
-        ('return', 'return'),
-        ('test', 'test'),
-    )
+
+    # TODO: DRY with message_views.py
+    class PeriodFormat(models.TextChoices):
+        INVITE = 'invite', 'invite'
+        INFO = 'info', 'info'
+        BROADCAST = 'broadcast', 'broadcast'
+        LEAVE = 'leave', 'leave'
+        RETURN = 'return', 'return'
+        TEST = 'test', 'test'
+
     author = models.ForeignKey(Member, on_delete=models.CASCADE)
     text = models.TextField()
     format = models.CharField(choices=FORMATS, max_length=255)
@@ -95,9 +96,9 @@ class Message(BaseModel):
         'self', on_delete=models.SET_NULL, blank=True, null=True)
     ancestry = models.CharField(max_length=255, blank=True, null=True)
     period = models.ForeignKey(
-        Period, on_delete=models.SET_NULL, blank=True, null=True)
+        'period', on_delete=models.SET_NULL, blank=True, null=True)
     period_format = models.CharField(
-        choices=PERIOD_FORMATS, max_length=255, blank=True, null=True)
+        choices=PeriodFormat.choices, max_length=255, blank=True, null=True)
     rsvp_template = models.ForeignKey(
         RsvpTemplate, on_delete=models.SET_NULL, blank=True, null=True)
 
