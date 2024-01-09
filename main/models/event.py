@@ -10,6 +10,7 @@ from simple_history.models import HistoricalRecords
 from .base import BaseModel, BasePositionModel
 from .documents import Aar, AhcLog, LogisticsSpreadsheet
 from .member import Member, Role
+from .message import Message, Distribution
 
 def utc_to_local(utc_dt):
     return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)
@@ -155,3 +156,42 @@ class Participant(BaseModel):
     @property
     def hours(self):
         return self.timedelta.total_seconds() / 3600
+
+    # Return True if a participant has a pending Leave message
+
+    # Four cases to consider:
+    # 1) has not received a message
+    # 2) has RSVPed to all message(s)
+    # 3) has RSVPed to NO message(s)
+    # 4) has received multiple messages, most recently, pending rsvp
+    # 5) has received multiple mesages, most recently, RSVPed
+    def pending_en_route_rsvp(self):
+        dists = Distribution.objects.filter(
+            member = self.member,
+            message__period = self.period,
+            message__period_format= Message.PeriodFormat.LEAVE.value)
+
+        # Case 1
+        if len(dists) == 0:
+            return False
+        rsvps = {}
+        rsvps[True] = dists.filter(rsvp = True)
+        rsvps[False] = dists.filter(rsvp = False)
+
+        # Case 2
+        if len(rsvps[False]) == 0:
+            return False
+
+        # Case 3, given not any of the above
+        if len(rsvps[True]) == 0:
+            return True
+
+        most_recent_rsvp = max([d.created_at for d in rsvps[True]])
+        most_recent_pending = max([d.created_at for d in rsvps[False]])
+
+        # Case 4
+        if most_recent_pending > most_recent_rsvp:
+            return True
+
+        # Case 5
+        return False
