@@ -76,20 +76,20 @@ def cert_notice_check():
     oo = Role.objects.filter(role='OO').first().member
 
     for cert in cert90:
-        text = '{}, your "{}" {} cert expires on {}'.format(
-            cert.member, cert.description, cert.get_type_display(), cert.expires_on)
+        text = '{}, your {} cert expires on {}'.format(
+            cert.member, cert.subtype, cert.expires_on)
         send_cert_notice(cert, text, oo, [])
         cert.ninety_day_notice_sent_at = now
         cert.save()
     for cert in cert30:
-        text = 'One month warning! {}, your "{}" {} cert expires on {}'.format(
-            cert.member, cert.description, cert.get_type_display(), cert.expires_on)
+        text = 'One month warning! {}, your {} cert expires on {}'.format(
+            cert.member, cert.subtype, cert.expires_on)
         send_cert_notice(cert, text, oo, [])
         cert.thirty_day_notice_sent_at = now
         cert.save()
     for cert in cert0:
-        text = '{}, your "{}" {} cert has expired!'.format(
-            cert.member, cert.description, cert.get_type_display())
+        text = '{}, your {} cert has expired!'.format(
+            cert.member, cert.subtype)
         send_cert_notice(cert, text, oo, [oo])
         cert.expired_notice_sent_at = now
         cert.save()
