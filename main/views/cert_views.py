@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils.functional import cached_property
 from django.views import generic
 from django.shortcuts import get_object_or_404
+from main.views.file_views import download_file_helper
 
 
 from rules.contrib.views import PermissionRequiredMixin
