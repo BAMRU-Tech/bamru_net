@@ -7,6 +7,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.functional import cached_property
 from django.views import generic
+from django.shortcuts import get_object_or_404
 
 
 from rules.contrib.views import PermissionRequiredMixin
