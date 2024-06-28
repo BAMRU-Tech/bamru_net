@@ -15,11 +15,10 @@
         2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf import settings
-from django.conf.urls import url
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import include, path
+from django.urls import include, path, re_path
 from main import views
 
 from rest_framework import routers
@@ -115,18 +114,18 @@ urlpatterns = [
     path('webhooks/sms_callback/', views.sms_callback, name='sms_callback'),
     path('webhooks/sms/', views.sms, name='sms'),
 
-    url(r'^api/', include(router.urls)),
-    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    url(r'^api-docs/', include_docs_urls(title='BAMRU API')),
+    re_path(r'^api/', include(router.urls)),
+    re_path(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    re_path(r'^api-docs/', include_docs_urls(title='BAMRU API')),
 
     path('admin/', admin.site.urls),
 
-    url(r'^openid/', include('oidc_provider.urls', namespace='oidc_provider')),
+    re_path(r'^openid/', include('oidc_provider.urls', namespace='oidc_provider')),
 
-    url(r'^social/', include('social_django.urls', namespace='social')),
+    re_path(r'^social/', include('social_django.urls', namespace='social')),
 
-    url(r'^accounts/login/$', auth_views.LoginView.as_view(), name='login'),
-    url(r'^accounts/logout/$', auth_views.LogoutView.as_view(), {'next_page': '/'}, name='logout'),
+    re_path(r'^accounts/login/$', auth_views.LoginView.as_view(), name='login'),
+    re_path(r'^accounts/logout/$', auth_views.LogoutView.as_view(), {'next_page': '/'}, name='logout'),
     
     path('accounts/password_change/', auth_views.PasswordChangeView.as_view(),
          name='password_change'),
