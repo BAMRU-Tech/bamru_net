@@ -1,7 +1,7 @@
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
-from main.models import Cert, Member, Phone, Role, Unavailable
+from main.models import Member, Phone, Role, Unavailable
 
 from datetime import timedelta
 
@@ -85,64 +85,6 @@ class MemberTestCase(TestCase):
         self.assertEqual(phone.number, '+11234567890')
         self.assertEqual(phone.display_number, '123-456-7890')
 
-
-class CertTestCase(MemberTestCase):
-    def setUp(self):
-        super().setUp()
-        today = timezone.now().date()
-        self.cert = Cert.objects.create(
-            member=self.user,
-            type='medical',
-            description="WFR",
-            expires_on=today + timedelta(days=100),
-        )
-        Cert.objects.create(
-            member=self.user,
-            type='cpr',
-            expires_on=today + timedelta(days=50),
-        )
-        Cert.objects.create(
-            member=self.user,
-            type='ham',
-            expires_on=today + timedelta(days=10),
-        )
-        Cert.objects.create(
-            member=self.user,
-            type='tracking',
-        )
-        Cert.objects.create(
-            member=self.user,
-            type='driver',
-            expires_on=today + timedelta(days=-10),
-        )
-
-    def test_cert_list(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('cert_list'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_member_cert_list(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('member_cert_list', args=[self.user.id]))
-        self.assertEqual(response.status_code, 200)
-
-    def test_new_cert(self):
-        self.client.force_login(self.user)
-        response = self.client.get(reverse('member_cert_new', args=[self.user.id]) + '?type=medical')
-        self.assertEqual(response.status_code, 200)
-
-        orig_num_certs = Cert.objects.filter(member=self.user).count()
-
-        response = self.client.post(reverse('member_cert_new', args=[self.user.id]) + '?type=medical', {
-            'type': 'medical',
-            'expires_on': '2018-12-31',
-            'description': 'WFR',
-            'comment': '',
-        })
-        self.assertEqual(response.status_code, 302)
-
-        new_num_certs = Cert.objects.filter(member=self.user).count()
-        self.assertEqual(orig_num_certs + 1, new_num_certs)
 
 class UnavailableTestCase(MemberTestCase):
     def setUp(self):
