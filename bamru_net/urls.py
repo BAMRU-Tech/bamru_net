@@ -81,6 +81,8 @@ urlpatterns = [
          name='member_cert_list'),
     path('member/<int:member>/certs/new', views.CertCreateView.as_view(),
          name='member_cert_new'),
+    path('certs/<int:pk>/edit/',
+         views.CertEditView.as_view(), name='cert_edit'),
     path('member/<int:member>/certs/<int:cert>/download/<path:name>',
          views.cert_file_download_view, name='member_cert_download'),
     path('certs/<int:cert>/download/',

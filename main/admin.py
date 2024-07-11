@@ -72,6 +72,17 @@ class PeriodAdmin(SimpleHistoryAdmin):
         ParticipantInline,
         ]
 
+
+class CertSubTypeInline(InlineDefaults):
+    model = CertSubType
+
+@admin.register(CertType)
+class CertTypeAdmin(admin.ModelAdmin):
+    inlines = [
+        CertSubTypeInline,
+    ]
+
+
 @admin.register(DoAvailable)
 class DoAvailableAdmin(admin.ModelAdmin):
     search_fields = ['member__last_name', 'member__first_name', 'member__username']
