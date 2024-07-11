@@ -120,30 +120,20 @@
 {{ block.super }}
 <script>
 $(document).ready( function() {
-    var certUrl = '/api/member_certs/{{ member.id }}/';
+    var certUrl = '/api/certs/?member={{ member.id }}';
     var table = $('#dTbl').DataTable( {
         dom: 'rtip',
         ajax: { url: certUrl,
-                dataSrc: function ( json ) {
-                    var data = [];
-                    for ( var i=0 ; i<json.certs.length ; i++ ) {
-                        var nc = json.certs[i].length;
-                        if (nc > 0) {
-                            for ( var j=0; j<nc ; j++ ) {
-                                data.push(json.certs[i][j]);
-                            }
-                        }
-                    }
-                    return data;
-                }
+                dataSrc: '',
         },
         paging:   false,
         info:     false,
 
-        order: [[ 0, 'asc' ]],
+        order: [[ 0, 'asc' ], [1, 'asc']],
 
         columns: [
-            { data: 'display', title: 'Cert', responsivePriority: 1 },
+            { data: 'type_name', title: 'Type', responsivePriority: 1 },
+            { data: 'subtype_name', title: 'Cert', responsivePriority: 1 },
             { data: 'description', title: 'Description', responsivePriority: 3, },
             { data: 'cert_name', title: 'Documentation', responsivePriority: 4,
               render: renderCertDocumentation
