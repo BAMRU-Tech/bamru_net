@@ -651,7 +651,7 @@ $(document).ready( function() {
                       action: function () { PostAction('aar') },
                     },
                     {% endif %}
-                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'copy', exportOptions: { columns: ':not(.noVis)' }},
                     { extend: 'copy', text: 'Copy email', header: false, title: '',
                       customize: function( data, button, table ) {
                           var list = '';
@@ -668,9 +668,9 @@ $(document).ready( function() {
                           return list;
                       },
                     },
-                    { extend: 'excel', exportOptions: { columns: ':visible' }},
-                    { extend: 'csv', exportOptions: { columns: ':visible' }},
-                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'excel', exportOptions: { columns: ':not(.noVis)' }},
+                    { extend: 'csv', exportOptions: { columns: ':not(.noVis)' }},
+                    { extend: 'print', exportOptions: { columns: ':not(.noVis)' }},
                     { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
             }
