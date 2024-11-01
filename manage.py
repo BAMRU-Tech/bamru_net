@@ -8,7 +8,7 @@ from bamru_net.tracing import setup_tracing
 if __name__ == "__main__":
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bamru_net.settings")
 
-    setup_tracing()
+    # setup_tracing()
 
     try:
         from django.core.management import execute_from_command_line
