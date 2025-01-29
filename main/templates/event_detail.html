@@ -325,7 +325,7 @@ $(document).ready( function() {
               orderable: false, type: ['readonly', 'hidden' ],
               className: 'noVis'
             },
-            { data: 'name', title: 'Name', responsivePriority: 1,
+            { data: 'name', title: 'Name', className: 'all',
               type: 'readonly', width: '45%',
               render: function(data, type, row, meta) {
                   if (type == 'display') {
@@ -360,7 +360,7 @@ $(document).ready( function() {
             },
             { data: 'status_order', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis', },
-            { data: 'en_route_date', title: 'Left', responsivePriority: 2,
+            { data: 'en_route_date', title: 'Left', className: 'all',
               type: ['date', 'allowMultiSelect'], width: '25%',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'en_route_time') },
@@ -368,7 +368,7 @@ $(document).ready( function() {
             { data: 'en_route_time', title: 'at', type: ['time', 'allowMultiSelect' ],
               visible: false, className: 'noVis'
             },
-            { data: 'return_home_date', title: 'Returned', responsivePriority: 2,
+            { data: 'return_home_date', title: 'Returned', className: 'all',
               type: ['date', 'allowMultiSelect'], width: '25%',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'return_home_time') },
