@@ -272,7 +272,7 @@ GOOGLE_CREDENTIALS_FILE = os.environ.get('GOOGLE_CREDENTIALS_FILE', '')
 Q_CLUSTER = {
     'workers': 1,
     'timeout': 180,  # seconds until task is killed
-    'retry': 120,  # seconds until task restarted (retry > timeout)
+    'retry': 200,  # seconds until task restarted (retry > timeout)
     'orm': 'default', # Use Django database as a broker
     'poll': 2,  # 2 second poll time if blocking DB access not available
 }
