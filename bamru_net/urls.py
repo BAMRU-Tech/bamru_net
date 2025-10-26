@@ -23,6 +23,7 @@ from main import views
 
 from rest_framework import routers
 from rest_framework.documentation import include_docs_urls
+from rest_framework.schemas import openapi
 
 router = routers.DefaultRouter()
 router.register(r'events', views.EventViewSet, basename='event')
@@ -116,7 +117,8 @@ urlpatterns = [
 
     re_path(r'^api/', include(router.urls)),
     re_path(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
-    re_path(r'^api-docs/', include_docs_urls(title='BAMRU API')),
+    # pass generator_class to work around rest_framework bug where coreapi schema generator is the default even if coreapi is not installed/working
+    re_path(r'^api-docs/', include_docs_urls(title='BAMRU API', generator_class=openapi.SchemaGenerator)),
 
     path('admin/', admin.site.urls),
 
