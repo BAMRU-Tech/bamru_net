@@ -52,9 +52,9 @@ class DoBasicTestCase(TestCase):
     def check_current(self, dt, year, quarter, week):
         tz = timezone.make_aware(dt)
         with patch.object(timezone, 'now', return_value=tz):
-            self.assertEquals(DoAvailable.current_year(), year)
-            self.assertEquals(DoAvailable.current_quarter(), quarter)
-            self.assertEquals(DoAvailable.current_week(), week)
+            self.assertEqual(DoAvailable.current_year(), year)
+            self.assertEqual(DoAvailable.current_quarter(), quarter)
+            self.assertEqual(DoAvailable.current_week(), week)
 
     def test_current(self):
         # Check that some dates would show the correct y,q,w
