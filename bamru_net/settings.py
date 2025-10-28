@@ -10,10 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
+import logging
 import os
-import raven
+import sentry_sdk
 from distutils.util import strtobool
 from dotenv import load_dotenv, find_dotenv
+from sentry_sdk.integrations.logging import LoggingIntegration
+
 load_dotenv(find_dotenv())
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -51,7 +54,6 @@ INSTALLED_APPS = [
     'dynamic_preferences',
     'imagekit',
     'oidc_provider',
-    'raven.contrib.django.raven_compat',
     'rest_framework',
     'rules.apps.AutodiscoverRulesConfig',
     'simple_history',
@@ -231,15 +233,23 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 
-# Raven config for Sentry.io logging
-RELEASE = os.environ.get('GIT_SHA', '0') # TODO raven.fetch_git_sha(os.path.abspath(BASE_DIR))
-if strtobool(os.environ.get('USE_RAVEN', 'False')):
-    RAVEN_CONFIG = {
-        'dsn': os.environ['RAVEN_DSN'],
-        # If you are using git, you can also automatically configure the
-        # release based on the git info.
-        'release': RELEASE,
-    }
+RELEASE = os.environ.get('GIT_SHA', '0')
+
+# Config for Sentry.io logging
+# The name "raven" refers to the old sentry library;
+# for compatibility, we continue to support the old configuration settings.
+if strtobool(os.environ.get('USE_SENTRY', 'False')) or strtobool(os.environ.get('USE_RAVEN', 'False')):
+    sentry_sdk.init(
+        dsn=os.environ.get('SENTRY_DSN') or os.environ['RAVEN_DSN'],
+        release=RELEASE,
+        enable_logs=True,
+        integrations=[
+            LoggingIntegration(sentry_logs_level=logging.WARNING),
+        ],
+        # Add data like request headers and IP for users;
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        send_default_pii=True,
+    )
 JAVASCRIPT_DSN = os.environ.get('JAVASCRIPT_DSN','')
 
 TWILIO_SMS_FROM = [e.strip() for e in os.environ['TWILIO_SMS_FROM'].split(',')]
@@ -284,7 +294,7 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'root': {
-        'handlers': ['sentry', 'file'],
+        'handlers': ['file'],
     },
     'formatters': {
         'verbose': {
@@ -302,10 +312,6 @@ LOGGING = {
             'maxBytes': 10 * 1024 * 1024,  # 10 MB
             'backupCount': 90,
         },
-        'sentry': {
-            'level': 'WARNING',
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
-        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
@@ -319,22 +325,12 @@ LOGGING = {
             'handlers': ['console'],
             'propagate': False,
         },
-        'raven': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-            'propagate': False,
-        },
-        'sentry.errors': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-            'propagate': False,
-        },
         # Default runserver request logging
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
         # Project logging
         'main': {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-            'handlers': ['console', 'sentry', 'file'],
+            'handlers': ['console', 'file'],
             'propagate': False,
         },
     },

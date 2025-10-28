@@ -78,12 +78,12 @@ python-dateutil==2.7.3
 python-dotenv==0.8.2
 python3-openid==3.2.0
 pytz==2018.4
-raven==6.9.0
 redis==3.5.3
 requests==2.32.5
 requests-oauthlib==2.0.0
 rsa==4.7
 rules==3.3
+sentry-sdk==2.42.1
 setuptools==80.9.0
 six==1.17.0
 social-auth-app-django==5.6.0
@@ -94,7 +94,7 @@ stylus==0.1.2
 twilio==9.8.4
 tzdata==2025.2
 uritemplate==4.2.0
-urllib3==1.26.5
+urllib3==2.5.0
 vobject==0.9.6.1
 wcwidth==0.2.5
 whitenoise==6.0.0
