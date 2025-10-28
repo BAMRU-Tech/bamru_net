@@ -26,7 +26,7 @@ POSTGRES_TIER=Burstable
 POSTGRES_SKU=Standard_B2s
 POSTGRES_VERSION=14
 
-RUNTIME="python:3.9"
+RUNTIME="python:3.13"
 
 : "${SETUP_AZ:=false}"
 : "${SETUP_CERT:=false}"

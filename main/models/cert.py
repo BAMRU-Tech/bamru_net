@@ -53,7 +53,6 @@ class CertType(BasePositionModel):
         return self.name
 
     @classmethod
-    @property
     def display_cert_types(cls):
         return cls.objects.filter(hide_in_summary=False)
 
