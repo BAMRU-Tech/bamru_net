@@ -135,6 +135,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bamru_net.wsgi.application'
 
+if strtobool(os.environ.get("ENABLE_SECURE_PROXY_SSL_HEADER", "False")):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
