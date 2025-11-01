@@ -42,8 +42,8 @@ class Event(BaseModel):
     published = models.BooleanField(
         default=False,
         help_text='Published events are viewable on the public and private calendar.')
-    gcal_id = models.CharField(max_length=255, blank=True, null=True)
-    gcal_id_private = models.CharField(max_length=255, blank=True, null=True)
+    gcal_id = models.CharField(max_length=255, blank=True, null=True)  # deprecated: we are switching to gcal event IDs derived from our own event IDs
+    gcal_id_private = models.CharField(max_length=255, blank=True, null=True)  # deprecated: we are switching to gcal event IDs derived from our own event IDs
     history = HistoricalRecords()
 
     def save(self, *args, **kwargs):
