@@ -1,0 +1,4 @@
+-r base.txt
+-c opentelemetry.txt
+
+model-mommy==1.6.0
