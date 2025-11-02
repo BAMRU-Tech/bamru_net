@@ -82,7 +82,7 @@ class GcalManager:
         try:
             try:
                 self.client.events().insert(
-                    calendarId=self.calendar_id,
+                    calendarId=calendar_id,
                     body=gcal_event,
                 ).execute()
             except googleapiclient.errors.HttpError as e:
@@ -92,7 +92,7 @@ class GcalManager:
                     event_id = gcal_event.pop('id')
                     try:
                         event = self.client.events().update(
-                            calendarId=self.calendar_id,
+                            calendarId=calendar_id,
                             eventId=event_id,
                             body=gcal_event,
                         ).execute()
