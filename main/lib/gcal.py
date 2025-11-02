@@ -4,6 +4,7 @@ import googleapiclient.errors
 from google.auth.exceptions import GoogleAuthError
 from django.utils import timezone
 from httplib2 import Http
+from itertools import batched
 from oauth2client import file, client, tools
 
 from datetime import timedelta
@@ -209,57 +210,37 @@ class GcalManager:
         """
         self._delete_from_calendar(self.calendar_id_private)
 
+    def _add_to_calendar(self, events, calendar_id, include_private):
+        for batch in batched(events, n=500):
+            batch_insert = self.client.new_batch_http_request()
+
+            def make_cb(event):
+                def cb(id, response, exception):
+                    if exception is None:
+                        print("{} {}".format(id, response))
+                    else:
+                        print(str(exception))
+                return cb
+
+            print("building batch request")
+            for event in all_bamru_events:
+                if event.published:
+                    batch_insert.add(
+                        self.client.events().insert(
+                            calendarId=self.calendar_id,
+                            body=build_gcal_event(event, include_private),
+                        ),
+                        callback=make_cb(event)
+                    )
+
+            print("executing batch request")
+            print(batch_insert.execute())
 
     def sync_public(self, all_bamru_events):
-        batch_insert = self.client.new_batch_http_request()
-
-        def make_cb(event):
-            def cb(id, response, exception):
-                if exception is None:
-                    print("{} {}".format(id, response))
-                else:
-                    print(str(exception))
-            return cb
-
-        print("building batch request")
-        for event in all_bamru_events:
-            if event.published:
-                batch_insert.add(
-                    self.client.events().insert(
-                        calendarId=self.calendar_id,
-                        body=build_gcal_event(event, False),
-                    ),
-                    callback=make_cb(event)
-                )
-
-        print("executing batch request")
-        print(batch_insert.execute())
-
+        self._add_to_calendar(all_bamru_events, self.calendar_id, include_private=False)
 
     def sync_private(self, all_bamru_events):
-        batch_insert = self.client.new_batch_http_request()
-
-        def make_cb(event):
-            def cb(id, response, exception):
-                if exception is None:
-                    print("{} {}".format(id, response))
-                else:
-                    print(str(exception))
-            return cb
-
-        print("building batch request")
-        for event in all_bamru_events:
-            if event.published:
-                batch_insert.add(
-                    self.client.events().insert(
-                        calendarId=self.calendar_id_private,
-                        body=build_gcal_event(event, True),
-                    ),
-                    callback=make_cb(event)
-                )
-
-        print("executing private batch request")
-        print(batch_insert.execute())
+        self._add_to_calendar(all_bamru_events, self.calendar_id_private, include_private=True)
 
 
 class NoopGcalManager:
