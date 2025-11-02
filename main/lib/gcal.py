@@ -82,7 +82,7 @@ class GcalManager:
         try:
             try:
                 self.client.events().insert(
-                    calendarId=self.calendar_id,
+                    calendarId=calendar_id,
                     body=gcal_event,
                 ).execute()
             except googleapiclient.errors.HttpError as e:
@@ -92,7 +92,7 @@ class GcalManager:
                     event_id = gcal_event.pop('id')
                     try:
                         event = self.client.events().update(
-                            calendarId=self.calendar_id,
+                            calendarId=calendar_id,
                             eventId=event_id,
                             body=gcal_event,
                         ).execute()
@@ -191,7 +191,7 @@ class GcalManager:
                 ))
                 print(self.client.events().delete(calendarId=calendar_id,
                                                 eventId=event.get('id')).execute())
-            page_token = events.get('page_token')
+            page_token = events.get('nextPageToken')
             if page_token is None:
                 break
 
@@ -223,7 +223,7 @@ class GcalManager:
                 return cb
 
             print("building batch request")
-            for event in all_bamru_events:
+            for event in batch:
                 if event.published:
                     batch_insert.add(
                         self.client.events().insert(
