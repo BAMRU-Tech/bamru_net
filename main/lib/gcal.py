@@ -178,16 +178,21 @@ class GcalManager:
     def _delete_from_calendar(self, calendar_id):
         """Remove all events from a calendar."""
         print("deleting all existing events from " + str(calendar_id))
-        events = self.client.events().list(calendarId=calendar_id).execute()
-        print("Found {} events to delete".format(len(events.get('items'))))
-        for event in events.get('items'):
-            print("deleting {} {} {}".format(
-                event.get('id'),
-                event.get('status'),
-                event.get('summary'),
-            ))
-            print(self.client.events().delete(calendarId=calendar_id,
-                                              eventId=event.get('id')).execute())
+        page_token = ''
+        while True:
+            events = self.client.events().list(calendarId=calendar_id, pageToken=page_token).execute()
+            print("Found {} events to delete".format(len(events.get('items'))))
+            for event in events.get('items'):
+                print("deleting {} {} {}".format(
+                    event.get('id'),
+                    event.get('status'),
+                    event.get('summary'),
+                ))
+                print(self.client.events().delete(calendarId=calendar_id,
+                                                eventId=event.get('id')).execute())
+            page_token = events.get('page_token')
+            if page_token is None:
+                break
 
     def delete_public(self):
         """Remove all public events from a calendar.
