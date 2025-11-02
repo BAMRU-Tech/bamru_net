@@ -191,7 +191,7 @@ class GcalManager:
                 ))
                 print(self.client.events().delete(calendarId=calendar_id,
                                                 eventId=event.get('id')).execute())
-            page_token = events.get('page_token')
+            page_token = events.get('nextPageToken')
             if page_token is None:
                 break
 
