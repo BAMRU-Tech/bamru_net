@@ -26,7 +26,7 @@ def gcal_event_id(bamru_event):
 
     # our event IDs are numbers.
     # add a prefix (from allowed character set) to ensure the result is at least 5 characters.
-    return f"bamrv{bamru_event.id}"
+    return f"bamru{bamru_event.id}"
 
 
 def build_gcal_description(bamru_event, include_private):
