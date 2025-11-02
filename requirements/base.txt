@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.in -o requirements/base.txt
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.1
+aiohttp==3.13.2
     # via
     #   aiohttp-retry
     #   twilio
@@ -16,39 +16,35 @@ asgiref==3.10.0
     # via django
 attrs==25.4.0
     # via aiohttp
-azure-common==1.1.27
-    # via
-    #   azure-storage-blob
-    #   azure-storage-common
-azure-storage-blob==2.1.0
-    # via -r requirements/base.in
-azure-storage-common==2.1.0
+azure-core==1.36.0
     # via azure-storage-blob
-babel==2.9.1
+azure-storage-blob==12.27.1
+    # via -r requirements/base.in
+babel==2.17.0
     # via -r requirements/base.in
 bcrypt==5.0.0
     # via -r requirements/base.in
-beautifulsoup4==4.11.1
+beautifulsoup4==4.14.2
     # via django-bootstrap4
-blessed==1.19.0
+blessed==1.22.0
     # via -r requirements/base.in
 cachetools==6.2.1
     # via google-auth
-certifi==2022.12.7
+certifi==2025.10.5
     # via
     #   requests
     #   sentry-sdk
 cffi==2.0.0
     # via cryptography
-chardet==3.0.4
+chardet==5.2.0
     # via -r requirements/base.in
-charset-normalizer==2.0.12
+charset-normalizer==3.4.4
     # via requests
 coreschema==0.0.4
     # via -r requirements/base.in
-cryptography==41.0.5
+cryptography==46.0.3
     # via
-    #   azure-storage-common
+    #   azure-storage-blob
     #   django-oidc-provider
     #   pyjwt
 defusedxml==0.7.1
@@ -114,43 +110,45 @@ django-twilio==0.14.3.4a1
     # via -r requirements/base.in
 djangorestframework==3.16.1
     # via -r requirements/base.in
-docutils==0.14
+docutils==0.22.2
     # via -r requirements/base.in
 frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
-future==0.17.1
+future==1.0.0
     # via pyjwkest
-google-api-core==2.27.0
+google-api-core==2.28.1
     # via google-api-python-client
-google-api-python-client==2.185.0
+google-api-python-client==2.186.0
     # via -r requirements/base.in
-google-auth==2.41.1
+google-auth==2.42.1
     # via
     #   google-api-core
     #   google-api-python-client
     #   google-auth-httplib2
-google-auth-httplib2==0.2.0
+google-auth-httplib2==0.2.1
     # via google-api-python-client
-googleapis-common-protos==1.56.3
+googleapis-common-protos==1.71.0
     # via google-api-core
-httplib2==0.19.0
+httplib2==0.31.0
     # via
     #   google-api-python-client
     #   google-auth-httplib2
     #   oauth2client
-idna==2.6
+idna==3.11
     # via
     #   requests
     #   yarl
-itypes==1.1.0
+isodate==0.7.2
+    # via azure-storage-blob
+itypes==1.2.0
     # via -r requirements/base.in
-jinja2==2.11.3
+jinja2==3.1.6
     # via
     #   -r requirements/base.in
     #   coreschema
-markupsafe==1.1.1
+markupsafe==3.0.3
     # via jinja2
 multidict==6.7.0
     # via
@@ -164,72 +162,72 @@ oauthlib==3.3.1
     #   social-auth-core
 persisting-theory==1.0
     # via django-dynamic-preferences
-phonenumbers==8.12.50
+phonenumbers==9.0.17
     # via django-twilio
-phonenumberslite==8.9.7
+phonenumberslite==9.0.17
     # via -r requirements/base.in
-pilkit==2.0
+pilkit==3.0
     # via django-imagekit
 pillow==12.0.0
-    # via -r requirements/base.in
+    # via
+    #   -r requirements/base.in
+    #   pilkit
 propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
 proto-plus==1.26.1
     # via google-api-core
-protobuf==3.20.2
+protobuf==6.33.0
     # via
     #   google-api-core
     #   googleapis-common-protos
     #   proto-plus
 psycopg2-binary==2.9.11
     # via -r requirements/base.in
-pyasn1==0.4.4
+pyasn1==0.6.1
     # via
     #   oauth2client
     #   pyasn1-modules
     #   rsa
-pyasn1-modules==0.2.2
+pyasn1-modules==0.4.2
     # via
     #   google-auth
     #   oauth2client
-pycparser==2.18
+pycparser==2.23
     # via cffi
-pycryptodomex==3.16.0
+pycryptodomex==3.23.0
     # via pyjwkest
 pyexecjs==1.5.1
     # via stylus
-pyjwkest==1.4.0
+pyjwkest==1.4.4
     # via -r requirements/base.in
 pyjwt==2.10.1
     # via
     #   django-oidc-provider
     #   social-auth-core
     #   twilio
-pyparsing==2.4.7
+pyparsing==3.2.5
     # via httplib2
-pysocks==1.6.8
+pysocks==1.7.1
     # via -r requirements/base.in
-python-crontab==2.3.6
+python-crontab==3.3.0
     # via -r requirements/base.in
-python-dateutil==2.7.3
+python-dateutil==2.9.0.post0
     # via
     #   arrow
-    #   azure-storage-common
-    #   python-crontab
     #   vobject
-python-dotenv==0.8.2
+python-dotenv==1.2.1
     # via -r requirements/base.in
 python3-openid==3.2.0
     # via social-auth-core
-pytz==2018.4
-    # via babel
-redis==3.5.3
+pytz==2025.2
+    # via vobject
+redis==7.0.1
     # via -r requirements/base.in
 requests==2.32.5
     # via
-    #   azure-storage-common
+    #   azure-core
     #   django-anymail
     #   google-api-core
     #   pyjwkest
@@ -238,13 +236,13 @@ requests==2.32.5
     #   twilio
 requests-oauthlib==2.0.0
     # via social-auth-core
-rsa==4.7
+rsa==4.9.1
     # via
     #   google-auth
     #   oauth2client
-rules==3.3
+rules==3.5
     # via -r requirements/base.in
-sentry-sdk==2.42.1
+sentry-sdk==2.43.0
     # via -r requirements/base.in
 setuptools==80.9.0
     # via
@@ -252,23 +250,28 @@ setuptools==80.9.0
     #   django-twilio
 six==1.17.0
     # via
-    #   blessed
     #   oauth2client
     #   pyexecjs
     #   pyjwkest
     #   python-dateutil
+    #   vobject
 social-auth-app-django==5.6.0
     # via -r requirements/base.in
 social-auth-core==4.8.1
     # via social-auth-app-django
-soupsieve==2.3.2.post1
+soupsieve==2.8
     # via beautifulsoup4
 sqlparse==0.5.3
     # via django
 stylus==0.1.2
     # via -r requirements/base.in
-twilio==9.8.4
+twilio==9.8.5
     # via django-twilio
+typing-extensions==4.15.0
+    # via
+    #   azure-core
+    #   azure-storage-blob
+    #   beautifulsoup4
 tzdata==2025.2
     # via arrow
 uritemplate==4.2.0
@@ -278,11 +281,11 @@ urllib3==2.5.0
     #   django-anymail
     #   requests
     #   sentry-sdk
-vobject==0.9.6.1
+vobject==0.9.9
     # via -r requirements/base.in
-wcwidth==0.2.5
+wcwidth==0.2.14
     # via blessed
-whitenoise==6.0.0
+whitenoise==6.11.0
     # via -r requirements/base.in
 yarl==1.22.0
     # via aiohttp
