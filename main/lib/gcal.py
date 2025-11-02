@@ -4,6 +4,7 @@ import googleapiclient.errors
 from google.auth.exceptions import GoogleAuthError
 from django.utils import timezone
 from httplib2 import Http
+from itertools import batched
 from oauth2client import file, client, tools
 
 from datetime import timedelta
@@ -13,6 +14,19 @@ import main.lib.oauth
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+def gcal_event_id(bamru_event):
+    # Per ID field documentation
+    # https://developers.google.com/workspace/calendar/api/v3/reference/events/insert:
+    # - characters allowed in the ID are those used in base32hex encoding,
+    #   i.e. lowercase letters a-v and digits 0-9, see section 3.1.2 in RFC2938
+    # - the length of the ID must be between 5 and 1024 characters
+    # - the ID must be unique per calendar
+
+    # our event IDs are numbers.
+    # add a prefix (from allowed character set) to ensure the result is at least 5 characters.
+    return f"bamrv{bamru_event.id}"
 
 
 def build_gcal_description(bamru_event, include_private):
@@ -27,6 +41,7 @@ def build_gcal_description(bamru_event, include_private):
         description_lines.append(bamru_event.description)
     return '\n'.join(description_lines)
 
+
 def build_gcal_event(bamru_event, include_private=False):
     start_dt = timezone.localtime(bamru_event.start_at)
     end_dt = timezone.localtime(bamru_event.finish_at)
@@ -39,9 +54,8 @@ def build_gcal_event(bamru_event, include_private=False):
         start = {'dateTime': start_dt.isoformat()}
         end = {'dateTime': end_dt.isoformat()}
 
-    print(start, end)
-
     gcal_event = {
+        'id': gcal_event_id(bamru_event),
         'start': start,
         'end': end,
         'summary': bamru_event.title,
@@ -64,42 +78,41 @@ class GcalManager:
         self.calendar_id = calendar_id
         self.calendar_id_private = calendar_id_private
 
-    def sync_event(self, bamru_event, save=True):
-        # Our approach is to delete this individual event if it exists and
-        # recreate it if appropriate. A fancier approach would be to modify the
-        # existing calendar event.
-
-        if bamru_event.gcal_id:
-            self.delete_for_event(bamru_event, False)
-        
-        if bamru_event.published:
+    def _insert_or_update(self, calendar_id, gcal_event):
+        try:
             try:
-                new_event = self.client.events().insert(
+                self.client.events().insert(
                     calendarId=self.calendar_id,
-                    body=build_gcal_event(bamru_event, False),
+                    body=gcal_event,
                 ).execute()
-                bamru_event.gcal_id = new_event['id']
-            except (googleapiclient.errors.HttpError, GoogleAuthError) as e:
-                logger.error("Gcal create error " + str(e))
+            except googleapiclient.errors.HttpError as e:
+                if e.status_code != 409:
+                    logger.error("Gcal create error " + str(e))
+                else:
+                    event_id = gcal_event.pop('id')
+                    try:
+                        event = self.client.events().update(
+                            calendarId=self.calendar_id,
+                            eventId=event_id,
+                            body=gcal_event,
+                        ).execute()
+                    except googleapiclient.errors.HttpError as e:
+                        logger.error("Gcal update error " + str(e))
+        except GoogleAuthError as e:
+            logger.error("Gcal auth error " + str(e))
+
+    def sync_event(self, bamru_event, save=True):
+        if bamru_event.gcal_id or bamru_event.gcal_id_private:
+            self._delete_legacy_for_event(bamru_event, save)
+
+        if bamru_event.published:
+            self._insert_or_update(self.calendar_id, build_gcal_event(bamru_event, False))
+            if self.calendar_id_private:
+                self._insert_or_update(self.calendar_id_private, build_gcal_event(bamru_event, True))
         else:
-            bamru_event.gcal_id = None
+            self.delete_for_event(bamru_event)
 
-        if bamru_event.published and self.calendar_id_private:
-            try:
-                new_event = self.client.events().insert(
-                    calendarId=self.calendar_id_private,
-                    body=build_gcal_event(bamru_event, True),
-                ).execute()
-                bamru_event.gcal_id_private = new_event['id']
-            except (googleapiclient.errors.HttpError, GoogleAuthError) as e:
-                logger.error("Gcal private create error " + str(e))
-        else:
-            bamru_event.gcal_id_private = None
-
-        if save:
-            bamru_event.save()
-
-    def delete_for_event(self, bamru_event, save=True):
+    def _delete_legacy_for_event(self, bamru_event, save=True):
         if bamru_event.gcal_id:
             try:
                 self.client.events().delete(
@@ -123,6 +136,27 @@ class GcalManager:
         if save:
             bamru_event.save()
 
+    def delete_for_event(self, bamru_event):
+        self._delete_legacy_for_event(bamru_event, True)
+
+        try:
+            self.client.events().delete(
+                calendarId=self.calendar_id,
+                eventId=gcal_event_id(bamru_event),
+            ).execute()
+        except (googleapiclient.errors.HttpError, GoogleAuthError) as e:
+            logger.error("Gcal delete error " + str(e))
+
+        if self.calendar_id_private:
+            try:
+                self.client.events().delete(
+                    calendarId=self.calendar_id_private,
+                    eventId=gcal_event_id(bamru_event),
+                ).execute()
+            except (googleapiclient.errors.HttpError, GoogleAuthError) as e:
+                logger.error("Gcal private delete error " + str(e))
+            bamru_event.gcal_id_private = None
+
 
     def clear_public(self):
         """Clear only works on primary calendars.
@@ -145,16 +179,21 @@ class GcalManager:
     def _delete_from_calendar(self, calendar_id):
         """Remove all events from a calendar."""
         print("deleting all existing events from " + str(calendar_id))
-        events = self.client.events().list(calendarId=calendar_id).execute()
-        print("Found {} events to delete".format(len(events.get('items'))))
-        for event in events.get('items'):
-            print("deleting {} {} {}".format(
-                event.get('id'),
-                event.get('status'),
-                event.get('summary'),
-            ))
-            print(self.client.events().delete(calendarId=calendar_id,
-                                              eventId=event.get('id')).execute())
+        page_token = ''
+        while True:
+            events = self.client.events().list(calendarId=calendar_id, pageToken=page_token).execute()
+            print("Found {} events to delete".format(len(events.get('items'))))
+            for event in events.get('items'):
+                print("deleting {} {} {}".format(
+                    event.get('id'),
+                    event.get('status'),
+                    event.get('summary'),
+                ))
+                print(self.client.events().delete(calendarId=calendar_id,
+                                                eventId=event.get('id')).execute())
+            page_token = events.get('page_token')
+            if page_token is None:
+                break
 
     def delete_public(self):
         """Remove all public events from a calendar.
@@ -171,67 +210,37 @@ class GcalManager:
         """
         self._delete_from_calendar(self.calendar_id_private)
 
+    def _add_to_calendar(self, events, calendar_id, include_private):
+        for batch in batched(events, n=500):
+            batch_insert = self.client.new_batch_http_request()
+
+            def make_cb(event):
+                def cb(id, response, exception):
+                    if exception is None:
+                        print("{} {}".format(id, response))
+                    else:
+                        print(str(exception))
+                return cb
+
+            print("building batch request")
+            for event in all_bamru_events:
+                if event.published:
+                    batch_insert.add(
+                        self.client.events().insert(
+                            calendarId=self.calendar_id,
+                            body=build_gcal_event(event, include_private),
+                        ),
+                        callback=make_cb(event)
+                    )
+
+            print("executing batch request")
+            print(batch_insert.execute())
 
     def sync_public(self, all_bamru_events):
-        batch_insert = self.client.new_batch_http_request()
-
-        def make_cb(event):
-            def cb(id, response, exception):
-                if exception is None:
-                    print("{} {}".format(id, response))
-                    event.gcal_id = response['id']
-                else:
-                    print(str(exception))
-                    event.gcal_id = None
-                event.save()
-            return cb
-
-        print("building batch request")
-        for event in all_bamru_events:
-            if event.published:
-                batch_insert.add(
-                    self.client.events().insert(
-                        calendarId=self.calendar_id,
-                        body=build_gcal_event(event, False),
-                    ),
-                    callback=make_cb(event)
-                )
-            else:
-                event.gcal_id = None
-
-        print("executing batch request")
-        print(batch_insert.execute())
-
+        self._add_to_calendar(all_bamru_events, self.calendar_id, include_private=False)
 
     def sync_private(self, all_bamru_events):
-        batch_insert = self.client.new_batch_http_request()
-
-        def make_cb(event):
-            def cb(id, response, exception):
-                if exception is None:
-                    print("{} {}".format(id, response))
-                    event.gcal_id_private = response['id']
-                else:
-                    print(str(exception))
-                    event.gcal_id_private = None
-                event.save()
-            return cb
-
-        print("building batch request")
-        for event in all_bamru_events:
-            if event.published:
-                batch_insert.add(
-                    self.client.events().insert(
-                        calendarId=self.calendar_id_private,
-                        body=build_gcal_event(event, True),
-                    ),
-                    callback=make_cb(event)
-                )
-            else:
-                event.gcal_id_private = None
-
-        print("executing private batch request")
-        print(batch_insert.execute())
+        self._add_to_calendar(all_bamru_events, self.calendar_id_private, include_private=True)
 
 
 class NoopGcalManager:
