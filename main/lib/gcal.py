@@ -223,7 +223,7 @@ class GcalManager:
                 return cb
 
             print("building batch request")
-            for event in all_bamru_events:
+            for event in batch:
                 if event.published:
                     batch_insert.add(
                         self.client.events().insert(
