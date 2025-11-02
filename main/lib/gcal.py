@@ -227,7 +227,7 @@ class GcalManager:
                 if event.published:
                     batch_insert.add(
                         self.client.events().insert(
-                            calendarId=self.calendar_id,
+                            calendarId=calendar_id,
                             body=build_gcal_event(event, include_private),
                         ),
                         callback=make_cb(event)
