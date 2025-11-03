@@ -228,8 +228,14 @@ AZURE_MEDIA_CONTAINER = os.environ.get('AZURE_MEDIA_CONTAINER', 'media')
 AZURE_STATIC_CONTAINER = os.environ.get('AZURE_STATIC_CONTAINER', 'static')
 
 if AZURE_STORAGE_KEY:
-    DEFAULT_FILE_STORAGE = 'bamru_net.backend.AzureMediaStorage'
-    #STATICFILES_STORAGE = 'bamru_net.backend.AzureStaticStorage'
+    STORAGES = {
+        'default': {
+            'BACKEND': 'bamru_net.backend.AzureMediaStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage', # django default
+        },
+    }
 
     # AZURE_CUSTOM_DOMAIN = '{}.azureedge.net'.format(AZURE_STORAGE_ACCOUNT_NAME)  # CDN URL
     AZURE_CUSTOM_DOMAIN = '{}.blob.core.windows.net'.format(AZURE_STORAGE_ACCOUNT_NAME)  # Files URL
