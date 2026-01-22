@@ -159,6 +159,7 @@
             <td>{{ p.member.display_email }}</td>
             <td>{{ p.period.id }}</td>
             <td>{{ p.member.is_unavailable }}</td>
+            <td>{{ p.pending_en_route_rsvp }}</td>
             <td></td>
           </tr>
           {% endfor %}
@@ -320,6 +321,13 @@ $(document).ready( function() {
 
         },
 
+        createdRow: function( row, data, dataIndex, cells) {
+          if (data.en_route_date == '' &&
+            data.pending_en_route_rsvp  == ['True']) {
+            $(cells[4]).addClass('warn')
+          }
+        },
+
         columns: [
             { data: 'mark', width: '10px', responsivePriority: 1,
               orderable: false, type: ['readonly', 'hidden' ],
@@ -420,7 +428,11 @@ $(document).ready( function() {
               visible: false, className: 'noVis'
             },
             { data: 'is_unavailable', type: ['readonly', 'hidden'],
-              visible: false, className: 'noVis', },
+              visible: false, className: 'noVis'
+            },
+            { data: 'pending_en_route_rsvp', type: ['readonly', 'hidden'],
+              visible: false, className: 'noVis'
+            },
             { type: ['readonly', 'hidden' ], orderable: false, className: 'noVis control' }
         ],
 
