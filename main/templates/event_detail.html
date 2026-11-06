@@ -159,6 +159,8 @@
             <td>{{ p.member.display_email }}</td>
             <td>{{ p.period.id }}</td>
             <td>{{ p.member.is_unavailable }}</td>
+            <td>{{ p.member.display_phone }}</td>
+            <td>{% if current_do and p.member.id == current_do.id %}true{% else %}false{% endif %}</td>
             <td></td>
           </tr>
           {% endfor %}
@@ -284,6 +286,12 @@
   'use strict'
   //FIXME: Where should this list come from?
   const STATUSES = { TM: 0, FM: 0, T: 0, R: 0, S: 0, A: 0, G: 0, MA: 0 };
+  const CURRENT_DO = {% if current_do %}{
+      id: '{{ current_do.id }}',
+      name: '{{ current_do.full_name|escapejs }}',
+      phone: '{{ current_do.display_phone|escapejs }}' }{% else %}null{% endif %};
+  // Set in admin: Global preferences > general > esb_spreadsheet_url
+  const ESB_SPREADSHEET_URL = '{{ esb_spreadsheet_url|escapejs }}';
   window.summary = [];
 
 $(document).ready( function() {
@@ -420,6 +428,10 @@ $(document).ready( function() {
               visible: false, className: 'noVis'
             },
             { data: 'is_unavailable', type: ['readonly', 'hidden'],
+              visible: false, className: 'noVis', },
+            { data: 'phone', type: ['readonly', 'hidden'],
+              visible: false, className: 'noVis', },
+            { data: 'is_do', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis', },
             { type: ['readonly', 'hidden' ], orderable: false, className: 'noVis control' }
         ],
@@ -666,6 +678,45 @@ $(document).ready( function() {
                               )
                           }
                           return list;
+                      },
+                    },
+                    { extend: 'copy', text: 'Copy ESB Spreadsheet details', header: false, title: '',
+                      // Copy first, then open the ESB spreadsheet to paste into
+                      action: function ( e, dt, button, config ) {
+                          $.fn.dataTable.ext.buttons.copyHtml5.action.call(this, e, dt, button, config);
+                          if (ESB_SPREADSHEET_URL)
+                              window.open(ESB_SPREADSHEET_URL, '_blank', 'noopener');
+                      },
+                      customize: function( data, button, table ) {
+                          // Roster rows: Assignment, Name, Phone #, Certification Type,
+                          // Transportation, Notes & Departure Date (tab separated).
+                          // Uses selected attendees, or everyone if none selected.
+                          // When none are selected, also adds this week's DO unless already listed.
+                          // Duty Officer rows come first, then At Home Coord., then the rest.
+                          var rows = [];
+                          table.cells('.marked').every( function ( idx ) {
+                              rows.push(this.row(idx).data()) });
+                          var noneSelected = (rows.length == 0);
+                          if (noneSelected)
+                              table.rows().every( function () { rows.push(this.data()) });
+                          var lines = [];
+                          if (noneSelected && CURRENT_DO && !rows.some(function (r) { return r.member.trim() == CURRENT_DO.id }))
+                              lines.push(['Duty Officer', CURRENT_DO.name, CURRENT_DO.phone, '', '', '']);
+                          rows.forEach( function ( r ) {
+                              var assignment = 'Ground Searcher';
+                              if (r.ol == 'true') assignment = 'Ops Lead';
+                              else if (r.ahc == 'true') assignment = 'At Home Coord.';
+                              else if (r.is_do == 'true') assignment = 'Duty Officer';
+                              var name = $('<div>').html(r.name).text().replace(/\*\s*$/, '').trim();
+                              var cert = (assignment == 'Duty Officer' ||
+                                          assignment == 'At Home Coord.') ? '' : 'Type 1';
+                              lines.push([assignment, name, r.phone.trim(), cert, '', '']);
+                          });
+                          var rank = { 'Duty Officer': 0, 'At Home Coord.': 1 };
+                          var order = function (line) {
+                              return line[0] in rank ? rank[line[0]] : 2 };
+                          lines.sort(function (a, b) { return order(a) - order(b) });
+                          return lines.map(function (line) { return line.join('\t') + '\n' }).join('');
                       },
                     },
                     { extend: 'excel', exportOptions: { columns: ':visible' }},
