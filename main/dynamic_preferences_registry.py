@@ -23,6 +23,13 @@ class WikiUrl(types.StringPreference):
     name = 'wiki_url'
     default = 'https://wiki.bamru.net/mediawiki/index.php?title=Special:UserLogin&returnto=Main+Page'
 
+@global_preferences_registry.register
+class EsbSpreadsheetUrl(types.StringPreference):
+    section = general
+    name = 'esb_spreadsheet_url'
+    verbose_name = 'ESB spreadsheet opened after copying ESB details on an event'
+    default = ''
+
 ###############################################################################
 # Google section
 
