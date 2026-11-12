@@ -1,5 +1,6 @@
 from .api_views import *
 from .auth_views import *
+from .cert_views import *
 from .do_views import *
 from .event_views import *
 from .file_views import *

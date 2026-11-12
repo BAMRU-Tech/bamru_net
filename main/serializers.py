@@ -10,6 +10,10 @@ from collections import defaultdict
 from base64 import b64encode, b64decode
 from django_q.tasks import async_task
 
+import collections
+import dataclasses
+import jinja2
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -86,8 +90,8 @@ class MemberUnavailableSerializer(serializers.HyperlinkedModelSerializer):
 class CertSerializer(WriteOnceMixin, CreatePermModelSerializer):
     class Meta:
         model = Cert
-        read_only_fields = ('is_expired', 'color', 'display', 'cert_name',)
-        write_once_fields = ('member', 'type', )
+        read_only_fields = ('is_expired', 'color', 'type_name', 'subtype_name', 'cert_name',)
+        write_once_fields = ('member',  )
         fields = ('id', 'expires_on', 'description', 'comment', 'link',
                  ) + read_only_fields + write_once_fields
 
@@ -96,18 +100,33 @@ class MemberCertSerializer(serializers.HyperlinkedModelSerializer):
     certs = serializers.SerializerMethodField()
 
     def get_certs(self, member):
-        # we prefetch certs in the viewset, just sort in python to avoid another query per member
-        certs = member.cert_set.all()
-        def future_if_none(t):
-            if t == None:
-                return datetime.date(year=3000, month=1, day=1)
-            return t
-        ordered_certs = sorted(certs, key=lambda c: (future_if_none(c.expires_on), c.id), reverse=True)
-        grouped_certs = defaultdict(list)
-        for c in ordered_certs:
-            grouped_certs[c.type].append(
-                CertSerializer(c, context=self.context).data)
-        return [grouped_certs[t[0]] for t in Cert.TYPES]
+        certs = []
+        role_names = [r.role for r in member.role_set.all()]
+        cert_dict = collections.defaultdict(list)
+        for cert in member.cert_set.all():
+            if cert.subtype:
+                cert_dict[cert.subtype.type.name].append(cert)
+        for cert_type in self.context['display_cert_types']:
+            if cert_type.template:
+                env = self.context['env']
+                try:
+                    result = cert_type.compiled_template(env).render({
+                        'certs': cert_dict[cert_type.name],
+                        'all_certs': cert_dict,
+                        'roles': role_names,
+                    })
+                except jinja2.TemplateError:
+                    result = 'TemplateError'
+                c = DisplayCert()
+                c.type = cert_type.name
+                c.description = result
+                c.count = 1
+                certs.append(dataclasses.asdict(c))
+            else:
+                c = cert_type.get_display_cert(
+                    cert_dict[cert_type.name])
+                certs.append(dataclasses.asdict(c))
+        return certs
 
     class Meta:
         model = Member

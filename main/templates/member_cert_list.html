@@ -17,8 +17,9 @@
     <tbody>
       {% for cert in cert_list %}
       <tr>
-        <td>{{ cert.get_type_display }}</td>
-        <td>{{ cert.description }}</td>
+        <td>{{ cert.subtype.type }}</td>
+        <td>{{ cert.subtype.name }}</td>
+        <td>{% if cert.subtype.is_other %}{{ cert.description }}{% endif %}</td>
         <td>{{ cert.cert_name }}</td>
         <td>{{ cert.link }}</td>
         <td>{{ cert.comment }}</td>
@@ -41,8 +42,6 @@
 select: 'os',
 altEditor: true,
 
-order: [[ 5, 'desc']],
-
 columns: [
     { data: 'type', title: 'Type', responsivePriority: 1,
       type: 'readonly',
@@ -54,6 +53,7 @@ columns: [
           return data;
       },
     },
+    { data: 'subtype', title: 'Sub-Type', responsivePriority: 2, },
     { data: 'description', title: 'Description', responsivePriority: 3, },
     { data: 'cert_name', title: 'Documentation', responsivePriority: 3,
       type: ['read-only', 'hidden'],
@@ -112,9 +112,9 @@ onEditRow: function (dt, row, success, error) {
     buttons: [
         {% for type in cert_types %}
         {
-            text: 'Add {{ type.1 }}',
+            text: 'Add {{ type }}',
             action: function () {
-                location.href ='{% url "member_cert_new" member.id %}?type={{type.0}}&returnx=mc';
+                location.href ='{% url "member_cert_new" member.id %}?type={{type|urlencode}}&returnx=mc';
             }
 
         },
@@ -122,9 +122,14 @@ onEditRow: function (dt, row, success, error) {
     ]
 },
 {
-    extend: 'selected',
+    extend: 'selectedSingle',
     text: '<i class="fa fa-edit"></i> Edit',
-    name: 'edit'        // do not change name
+    action: function ( e, dt, button, config ) {
+        var row = dt.row( { selected: true } );
+        var id = row.data().id;
+        var url = "{% url 'cert_edit' 12345 %}".replace(/12345/, id.toString());
+        window.location = url;
+    }
 },
 {
     autoClose: true,

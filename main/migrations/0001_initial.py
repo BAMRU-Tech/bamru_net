@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
                 ('description', models.CharField(max_length=255)),
                 ('comment', models.CharField(blank=True, max_length=255, null=True)),
                 ('link', models.CharField(blank=True, max_length=255, null=True)),
-                ('cert_file', models.FileField(blank=True, max_length=255, null=True, upload_to=main.models.member.cert_upload_path_handler)),
+                ('cert_file', models.FileField(blank=True, max_length=255, null=True, upload_to=main.models.cert.cert_upload_path_handler)),
                 ('cert_name', models.CharField(blank=True, max_length=255, null=True)),
                 ('cert_content_type', models.CharField(blank=True, max_length=255, null=True)),
                 ('cert_size', models.TextField(blank=True, null=True)),

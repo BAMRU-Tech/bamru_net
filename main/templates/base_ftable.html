@@ -164,6 +164,7 @@ function SetMemberFilter (table, alterRows = true) {
 
 const apiUrlMemberStatus = '/api/members/?status=';
 
+{% block AddRemoveRows %}
 //Used by mem_list, message_add, period_participant_add
 function AddRows(table, values) {
     //
@@ -196,6 +197,7 @@ function RemoveRows(table, values)
 
     table.draw().columns.adjust().responsive.recalc();//FX
 }
+{% endblock %}
 
 //Used by mem_cert_lst and mem_avail_lst
 function DeleteRow ( e, dt, node, config, type, api ) {
