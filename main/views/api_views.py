@@ -107,7 +107,7 @@ class MemberCertViewSet(BaseViewSet):
         env.tests["valid_subtype_in"] = is_valid_subtype_in
         context.update({
             'env': env,
-            'display_cert_types': CertType.display_cert_types,
+            'display_cert_types': CertType.display_cert_types(),
         })
         return context
 
