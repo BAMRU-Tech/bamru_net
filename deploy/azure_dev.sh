@@ -20,7 +20,7 @@ SLOT_POSTGRES_PASSWORD=$4
 LOCATION=westus
 SERVICEPLAN_SKU=F1
 
-RUNTIME="python:3.9"
+RUNTIME="python:3.13"
 
 : "${SETUP_AZ:=false}"
 : "${SETUP_CERT:=false}"
