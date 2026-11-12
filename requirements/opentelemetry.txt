@@ -20,5 +20,4 @@ opentelemetry-proto==1.11.1
 opentelemetry-sdk==1.11.1
 opentelemetry-semantic-conventions==0.30b1
 opentelemetry-util-http==0.30b1
-typing_extensions==4.2.0
 wrapt==1.14.1
