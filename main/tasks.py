@@ -150,7 +150,7 @@ def event_create_logistics_spreadsheet(event_id):
 # @shared_task
 @tracer.start_as_current_span("member_update_all_google_profiles")
 def member_update_all_google_profiles():
-    [x.update_google_profile() for x in Member.objects.all()]
+    [x.update_google_profile() for x in Member.members.all()]
 
 # @shared_task
 @tracer.start_as_current_span("member_update_all_profile_emails")
