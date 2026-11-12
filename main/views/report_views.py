@@ -65,11 +65,12 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
         start = get_datetime_from_text(request.GET.get('start', None),
                                        end - timedelta(days=365))
 
-        # Members, alumni (MA) and no-contact members (MN), narrowed below
-        # to those relevant to the period. Guests are not listed.
+        # Members of every status, including alumni (MA) and no-contact
+        # (MN), narrowed below to those relevant to the period. Guests
+        # (G, GA, GN) are not listed.
         members = list(
             Member.objects
-            .filter(status__in=Member.CURRENT_MEMBERS + ('MA', 'MN'))
+            .exclude(status__in=('G', 'GA', 'GN'))
             .annotate(first_participated_at=Min(
                 'participant__period__event__start_at')))
         events = (Event.objects
