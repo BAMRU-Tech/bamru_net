@@ -10,10 +10,30 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
+import logging
 import os
-import raven
-from distutils.util import strtobool
+import sentry_sdk
 from dotenv import load_dotenv, find_dotenv
+from sentry_sdk.integrations.logging import LoggingIntegration
+
+
+# Copied from definition in setuptools.
+def strtobool(val: str) -> bool:
+    """Convert a string representation of truth to true (1) or false (0).
+
+    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
+    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
+    'val' is anything else.
+    """
+    val = val.lower()
+    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif val in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(f"invalid truth value {val!r}")
+
+
 load_dotenv(find_dotenv())
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -51,7 +71,6 @@ INSTALLED_APPS = [
     'dynamic_preferences',
     'imagekit',
     'oidc_provider',
-    'raven.contrib.django.raven_compat',
     'rest_framework',
     'rules.apps.AutodiscoverRulesConfig',
     'simple_history',
@@ -89,7 +108,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ),
-    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.openapi.AutoSchema'
 }
 
 ROOT_URLCONF = 'bamru_net.urls'
@@ -116,6 +135,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bamru_net.wsgi.application'
 
+if strtobool(os.environ.get("ENABLE_SECURE_PROXY_SSL_HEADER", "False")):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
@@ -207,8 +228,14 @@ AZURE_MEDIA_CONTAINER = os.environ.get('AZURE_MEDIA_CONTAINER', 'media')
 AZURE_STATIC_CONTAINER = os.environ.get('AZURE_STATIC_CONTAINER', 'static')
 
 if AZURE_STORAGE_KEY:
-    DEFAULT_FILE_STORAGE = 'bamru_net.backend.AzureMediaStorage'
-    #STATICFILES_STORAGE = 'bamru_net.backend.AzureStaticStorage'
+    STORAGES = {
+        'default': {
+            'BACKEND': 'bamru_net.backend.AzureMediaStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage', # django default
+        },
+    }
 
     # AZURE_CUSTOM_DOMAIN = '{}.azureedge.net'.format(AZURE_STORAGE_ACCOUNT_NAME)  # CDN URL
     AZURE_CUSTOM_DOMAIN = '{}.blob.core.windows.net'.format(AZURE_STORAGE_ACCOUNT_NAME)  # Files URL
@@ -231,15 +258,23 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 
-# Raven config for Sentry.io logging
-RELEASE = os.environ.get('GIT_SHA', '0') # TODO raven.fetch_git_sha(os.path.abspath(BASE_DIR))
-if strtobool(os.environ.get('USE_RAVEN', 'False')):
-    RAVEN_CONFIG = {
-        'dsn': os.environ['RAVEN_DSN'],
-        # If you are using git, you can also automatically configure the
-        # release based on the git info.
-        'release': RELEASE,
-    }
+RELEASE = os.environ.get('GIT_SHA', '0')
+
+# Config for Sentry.io logging
+# The name "raven" refers to the old sentry library;
+# for compatibility, we continue to support the old configuration settings.
+if strtobool(os.environ.get('USE_SENTRY', 'False')) or strtobool(os.environ.get('USE_RAVEN', 'False')):
+    sentry_sdk.init(
+        dsn=os.environ.get('SENTRY_DSN') or os.environ['RAVEN_DSN'],
+        release=RELEASE,
+        enable_logs=True,
+        integrations=[
+            LoggingIntegration(sentry_logs_level=logging.WARNING),
+        ],
+        # Add data like request headers and IP for users;
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        send_default_pii=True,
+    )
 JAVASCRIPT_DSN = os.environ.get('JAVASCRIPT_DSN','')
 
 TWILIO_SMS_FROM = [e.strip() for e in os.environ['TWILIO_SMS_FROM'].split(',')]
@@ -271,7 +306,7 @@ GOOGLE_CREDENTIALS_FILE = os.environ.get('GOOGLE_CREDENTIALS_FILE', '')
 
 Q_CLUSTER = {
     'workers': 1,
-    'timeout': 90,  # seconds until task is killed
+    'timeout': 180,  # seconds until task is killed
     'retry': 120,  # seconds until task restarted (retry > timeout)
     'orm': 'default', # Use Django database as a broker
     'poll': 2,  # 2 second poll time if blocking DB access not available
@@ -284,7 +319,7 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'root': {
-        'handlers': ['sentry', 'file'],
+        'handlers': ['file'],
     },
     'formatters': {
         'verbose': {
@@ -302,10 +337,6 @@ LOGGING = {
             'maxBytes': 10 * 1024 * 1024,  # 10 MB
             'backupCount': 90,
         },
-        'sentry': {
-            'level': 'WARNING',
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
-        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
@@ -319,22 +350,12 @@ LOGGING = {
             'handlers': ['console'],
             'propagate': False,
         },
-        'raven': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-            'propagate': False,
-        },
-        'sentry.errors': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-            'propagate': False,
-        },
         # Default runserver request logging
         'django.server': DEFAULT_LOGGING['loggers']['django.server'],
         # Project logging
         'main': {
             'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-            'handlers': ['console', 'sentry', 'file'],
+            'handlers': ['console', 'file'],
             'propagate': False,
         },
     },
