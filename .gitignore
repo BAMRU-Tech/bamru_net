@@ -30,3 +30,7 @@ deploy/vault_user.yml
 
 # Local documents and report exports (rosters contain member details)
 *.pdf
+
+# Local context documents (setup notes, specs, exports). Only the README is committed.
+/context/*
+!/context/README.md
