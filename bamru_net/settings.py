@@ -243,6 +243,17 @@ CELERY_TASK_SOFT_TIME_LIMIT = 300
 CELERY_WORKER_CONCURRENCY = 1
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
+if os.environ.get('PROXY_HTTPS'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+ENABLE_ACCEL_REDIRECT = (
+    strtobool(os.environ['ENABLE_ACCEL_REDIRECT'])
+    if 'ENABLE_ACCEL_REDIRECT' in os.environ
+    else not DEBUG
+)
+
+ICON_SET = os.environ.get('ICON_SET', 'original')
+
 
 from django.utils.log import DEFAULT_LOGGING
 LOG_ROOT = os.environ['LOG_ROOT']

@@ -152,4 +152,6 @@ urlpatterns = [
     path('reports/event/errors/', views.ReportEventErrorsView.as_view(), name='report_event_errors'),
     path('reports/cert/expire/', views.CertExpireView.as_view(), name='report_cert_expire'),
 
+    path('favicon.ico', views.favicon_view)
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

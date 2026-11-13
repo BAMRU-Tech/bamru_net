@@ -1,0 +1,14 @@
+Here's the process I used to create favicons:
+ * Import the original svg logo into Figma
+ * Create a modified version with a clearer silhouette
+ * Export the original and modified logos as 512px png
+ * Generate icon set using realfavicongenerator.net
+ * Create a greyscale version of the png
+ * Generate greyscale icon set using realfavicongenerator.net
+
+Sources:
+ * Figma:
+   https://www.figma.com/file/DZjy0160vXXAclMf1TRgUeTK/BAMRU-icons?node-id=0%3A1
+ * PNGs are in this directory
+ * rfg_request.json records the favicon generation settings; it could be edited
+   and used with https://realfavicongenerator.net/api/non_interactive_api

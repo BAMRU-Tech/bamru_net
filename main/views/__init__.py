@@ -7,3 +7,4 @@ from .main_views import *
 from .member_views import *
 from .message_views import *
 from .report_views import *
+from .static_views import *
