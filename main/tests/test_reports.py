@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from django.test import Client, TestCase
 from model_mommy import mommy
 
@@ -6,6 +8,7 @@ from main.models import (
         Email,
         EmergencyContact,
         Member,
+        Participant,
         Phone,
         Role,
 )
@@ -102,3 +105,60 @@ class RosterTestCase(TestCase):
                 # parse it, just sanity check.
                 self.assertIn(m.first_name[:20], response.content.decode('utf-8'))
                 self.assertIn(m.last_name[:20], response.content.decode('utf-8'))
+
+
+class ActivitySummaryTestCase(TestCase):
+    """The report lists everyone with hours in the period, plus current
+    members whose first event was before the period ended. Guests are not
+    listed."""
+    URL = '/reports/activity-summary/?start=2024-01-01&end=2024-12-31'
+    BEFORE_PERIOD = datetime(2023, 6, 1, tzinfo=UTC)
+    IN_PERIOD = datetime(2024, 6, 1, tzinfo=UTC)
+    AFTER_PERIOD = datetime(2025, 6, 1, tzinfo=UTC)
+
+    @classmethod
+    def make_member(cls, last_name, status, event_at=None):
+        """Create a member, with two hours at an event if event_at is given."""
+        member = mommy.make(Member, status=status, last_name=last_name)
+        if event_at:
+            mommy.make(Participant, member=member,
+                       period__event__type='training',
+                       period__event__start_at=event_at,
+                       en_route_at=event_at,
+                       return_home_at=event_at + timedelta(hours=2))
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = mommy.make(Member, status='T')
+        cls.make_member('CurrentWithHours', 'TM', cls.IN_PERIOD)
+        cls.make_member('CurrentWithEarlierEvent', 'TM', cls.BEFORE_PERIOD)
+        cls.make_member('CurrentWithLaterEvent', 'T', cls.AFTER_PERIOD)
+        cls.make_member('CurrentWithNoEvent', 'T')
+        cls.make_member('AlumWithHours', 'MA', cls.IN_PERIOD)
+        cls.make_member('AlumWithoutHours', 'MA')
+        cls.make_member('NoContactWithHours', 'MN', cls.IN_PERIOD)
+        cls.make_member('NoContactWithoutHours', 'MN')
+        cls.make_member('GuestWithHours', 'G', cls.IN_PERIOD)
+
+    def setUp(self):
+        self.client.force_login(self.user)
+        self.report = self.client.get(self.URL).content.decode('utf-8')
+
+    def testListsCurrentMembersWithAnEventByPeriodEnd(self):
+        self.assertIn('CurrentWithHours', self.report)
+        self.assertIn('CurrentWithEarlierEvent', self.report)
+
+    def testListsAlumAndNoContactWithHoursInPeriod(self):
+        self.assertIn('AlumWithHours', self.report)
+        self.assertIn('NoContactWithHours', self.report)
+
+    def testOmitsCurrentMembersWithNoEventByPeriodEnd(self):
+        self.assertNotIn('CurrentWithLaterEvent', self.report)
+        self.assertNotIn('CurrentWithNoEvent', self.report)
+
+    def testOmitsAlumAndNoContactWithoutHoursInPeriod(self):
+        self.assertNotIn('AlumWithoutHours', self.report)
+        self.assertNotIn('NoContactWithoutHours', self.report)
+
+    def testOmitsGuests(self):
+        self.assertNotIn('GuestWithHours', self.report)
