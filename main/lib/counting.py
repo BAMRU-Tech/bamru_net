@@ -261,20 +261,17 @@ HEADS_UP = 'Heads Up'
 REPLY_TEMPLATES_FROM = date(2019, 2, 13)
 
 
-def heads_up_only(operations, until):
-    """Those of these operations, finished without running, that the unit
-    was only warned of, by the pages sent up to `until`: {ids}. From
-    REPLY_TEMPLATES_FROM, one with no callout page, whether it had heads-up
-    pages or none. Before that date pages cannot tell, and none is. One
-    query, of the operations' starts and their pages."""
-    started, called_out = {}, set()             # operation -> the local day it started; those with a callout page
-    for event_id, start_at, page_format, sent, template in reported_events().filter(id__in=operations).values_list(
-            'id', 'start_at', 'period__message__format', 'period__message__created_at',
-            'period__message__rsvp_template__name'):
-        started[event_id] = timezone.localtime(start_at).date()
-        if page_format == 'page' and sent <= until and template == CALLOUT:
-            called_out.add(event_id)
-    return {event_id for event_id, day in started.items() if day >= REPLY_TEMPLATES_FROM and event_id not in called_out}
+def heads_up_only(started, until):
+    """Of operations that finished without running, given with the local day
+    each started ({id: day}), those the unit was only warned of, by the pages
+    sent up to `until`: {ids}. From REPLY_TEMPLATES_FROM, one with no callout
+    page, whether it had heads-up pages or none. Before that date pages cannot
+    tell, and none is, not even one titled as a heads-up, which its title
+    keeps in reporting (reported_events)."""
+    told_apart = {event_id for event_id, day in started.items() if day >= REPLY_TEMPLATES_FROM}
+    called_out = Message.objects.filter(format='page', created_at__lte=until, rsvp_template__name=CALLOUT,
+                                        period__event__in=told_apart).values_list('period__event_id', flat=True)
+    return told_apart - set(called_out)
 
 
 @dataclass(frozen=True)

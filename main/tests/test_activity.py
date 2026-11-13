@@ -10,9 +10,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from main.lib.activity import glossary, member_activity
-from main.lib.counting import (MAX_ENTRY, TYPES, NotRun, activity_rows, count_entry_days, day_hours, entry_hours, entry_led,
-                               hours_by_local_day, member_entries, member_latest, operations_not_run,
-                               operations_that_ran, reported_events, unit_since)
+from main.lib.counting import (MAX_ENTRY, TYPES, NotRun, activity_rows, count_entry_days, day_hours, entry_hours,
+                               entry_led, first_claims, hours_by_local_day, member_entries, member_latest,
+                               operations_not_run, operations_that_ran, reported_events, unit_since)
 from main.models import DoAvailable, Event, Member, Message, Participant, Period, RsvpTemplate
 
 NOW = datetime(2024, 6, 15, 20, 0, tzinfo=dt_timezone.utc)
@@ -80,6 +80,12 @@ class ActivityTestCase(TestCase):
     def not_run(self):
         """Why each operation that did not run by NOW did not: {id: 'heads_up' or 'called_off'}."""
         return {event_id: not_run.why for event_id, not_run in operations_not_run(NOW, operations_that_ran(NOW)).items()}
+
+    def paged(self, event, template):
+        """A page for `event`, sent as it started, asking who can go ('Available?') or warning ('Heads Up')."""
+        page = Message.objects.create(author=self.other, text='Page', format='page', period=event.period_set.first(),
+                                      rsvp_template=RsvpTemplate.objects.get_or_create(name=template)[0])
+        Message.objects.filter(id=page.id).update(created_at=event.start_at)
 
 
 class DaysTestCase(TestCase):
@@ -1013,12 +1019,6 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertEqual(latest['Operation (as AHC)']['day'], date(2024, 3, 9))
         self.assertNotIn('Operation (stood down)', latest)
 
-    def paged(self, event, template):
-        """A page for `event`, sent as it started, asking who can go ('Available?') or warning ('Heads Up')."""
-        page = Message.objects.create(author=self.other, text='Page', format='page', period=event.period_set.first(),
-                                      rsvp_template=RsvpTemplate.objects.get_or_create(name=template)[0])
-        Message.objects.filter(id=page.id).update(created_at=event.start_at)
-
     def test_stood_down_only_from_an_operation_the_unit_was_called_out_for(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
         # Nobody went out on any of these. Only a callout page ("Available?") makes standing down from one.
@@ -1040,10 +1040,13 @@ class MemberLatestTestCase(ActivityTestCase):
         before = super().make_event('operation', when(2019, 2, 12), no_time=[self.member])
         self.assertEqual(self.latest()['Operation (stood down)']['event'], before)
         after = super().make_event('operation', when(2019, 2, 13), no_time=[self.member])
-        both = [before.id, after.id]
-        not_run = operations_not_run(NOW, operations_that_ran(NOW, both), both)
+        # 8pm on the 12th, Pacific time, though the 13th in UTC.
+        evening = super().make_event('operation', datetime(2019, 2, 13, 4, 0, tzinfo=dt_timezone.utc), no_time=[self.member])
+        ids = [before.id, after.id, evening.id]
+        not_run = operations_not_run(NOW, operations_that_ran(NOW, ids), ids)
         self.assertEqual(not_run, {before.id: NotRun('called_off', date(2019, 2, 12)),
-                                   after.id: NotRun('heads_up', date(2019, 2, 13))})
+                                   after.id: NotRun('heads_up', date(2019, 2, 13)),
+                                   evening.id: NotRun('called_off', date(2019, 2, 12))})
 
     def test_stood_down_once_the_operation_has_finished(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
@@ -1209,6 +1212,8 @@ class ReportedEventsTestCase(ActivityTestCase):
             self.titled(title, 'training', when(2024, 3, 10), attended=[self.member])
         total = activity_rows(self.member, NOW)['total']
         self.assertEqual((total['events']['training'], total['days']['training']), (4, 2))
+        # Nor do they make the unit active.
+        self.assertEqual(self.days(self.years()['2024'], 'training'), (2, 2))
         self.assertEqual(sorted(p.period.event.title for p in member_entries(self.member)),
                          ['Rope test', 'Ropes', 'Test event prep', 'Testing anchors'])
         self.titled('Test', 'meeting', when(2024, 5, 10), attended=[self.member])
@@ -1221,9 +1226,21 @@ class ReportedEventsTestCase(ActivityTestCase):
         warned = self.titled("Hollow Creek search (head's up)", 'operation', when(2024, 4, 10))
         # Begun before pages were recorded: kept, as nothing can tell.
         early = self.titled('Old search', 'operation', when(2016, 8, 8))
-        self.assertEqual(self.not_run(), {warned.id: 'heads_up', early.id: 'called_off'})
+        # Titled as a heads-up, but begun before pages told one from a callout: kept, and called off.
+        untold = self.titled('Heads up: search', 'operation', when(2018, 5, 10))
+        # A page sent, though nobody was listed: used, and called off.
+        paged = self.titled('Gully search', 'operation', when(2024, 5, 10))
+        self.paged(paged, 'Available?')
+        self.assertEqual(self.not_run(), {warned.id: 'heads_up', early.id: 'called_off', untold.id: 'called_off',
+                                          paged.id: 'called_off'})
         self.assertNotIn(unused, reported_events())
         self.assertIn('Events left out', dict(glossary()))
+
+    def test_operations_are_left_out_as_never_used_from_9_august_2016_in_local_time(self):
+        before = self.titled('Search', 'operation', datetime(2016, 8, 9, 3, 0, tzinfo=dt_timezone.utc))   # 8pm on the 8th
+        after = self.titled('Search', 'operation', datetime(2016, 8, 9, 7, 30, tzinfo=dt_timezone.utc))   # 00:30 on the 9th
+        self.assertIn(before, reported_events())
+        self.assertNotIn(after, reported_events())
 
     def test_a_heads_up_title_says_heads_up(self):
         # "heads up", "heads-up" or "head's up", in any case, as a word: an operation never used that is
@@ -1259,6 +1276,13 @@ class OverlappingTimeTestCase(ActivityTestCase):
         self.entry(operation, when(2024, 4, 10) - timedelta(hours=5), 8)
         self.entry(operation, when(2024, 4, 10) - timedelta(hours=1), 8, Period.objects.create(event=operation, position=2))
         self.assertEqual(activity_rows(self.member, NOW)['total']['hours']['operation'], 12)
+
+    def test_of_time_logged_twice_the_span_that_began_first_keeps_it(self):
+        # Of two that began together, the one given first, as the lists order them (member_entries).
+        self.assertEqual(first_claims([(10, 14), (10, 12)]), [(10, 14), None])
+        # A span inside another leaves nothing to a third that is inside the first too.
+        self.assertEqual(first_claims([(0, 10), (2, 4), (5, 8)]), [(0, 10), None, None])
+        self.assertEqual(first_claims([(0, 4), (2, 6), (8, 9)]), [(0, 4), (4, 6), (8, 9)])
 
     def test_the_first_to_begin_keeps_the_time_whatever_its_event_s_date(self):
         # The meeting is listed first (its event starts earlier) but its time began later.
