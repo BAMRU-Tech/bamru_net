@@ -68,7 +68,7 @@ table, td, th {
         {% for x in member_table|lookup:member.id %}
         <td>{% if x %}{{x|floatformat:1}}{% endif %}</td>
         {% endfor %}
-        <td>{{member.total|floatformat:1}}</td>
+        <td>{{member.total_hours|floatformat:1}}</td>
       </tr>
       {% endfor %}
     </tbody>
