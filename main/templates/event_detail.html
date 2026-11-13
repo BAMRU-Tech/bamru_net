@@ -12,15 +12,19 @@
   <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }} ({{ event.type }})
 </strong>
 <ul class="navbar-nav ml-auto">
+  <li class="nav-item ml-auto">
+    <a href="{% url 'message_event' event.id %}">
+      <i class="fa fa-list"></i> Messages</a>
+  </li>
   <li class="nav-item">
     <a class="" href="{% url 'event_update' event.id %}">
-      <span>&nbsp;</span> {#FX: shouldn't be necessary #}
+      <span>&nbsp;</span> {#FIXME: shouldn't be necessary #}
       <i class="fa fa-pencil"></i> Edit
     </a>
   </li>
   <li class="nav-item">
     <a class="" href="#" onclick="DeleteEvent({{ event.id }}, '{{ event.title }}')" %}'>
-      <span>&nbsp;</span> {#FX: shouldn't be necessary #}
+      <span>&nbsp;</span> {#FIXME: shouldn't be necessary #}
       <i class="fa fa-trash"></i> Delete
     </a>
   </li>
@@ -32,14 +36,24 @@
 <main role="main" class="container-fluid">
   <div id="content">
     {% if event.description %}
-    <p><strong>Description:</strong> {{ event.description }}</p>
+    <p><strong>Description:</strong> {{ event.description|urlize }}</p>
     {% endif %}
-    <p><strong>Location:</strong> {{ event.location }}
+    {% if event.description_private %}
+    <p><strong>Private Description:</strong> {{ event.description_private|urlize }}</p>
+    {% endif %}
+    <p><strong>Location:</strong> {{ event.location|urlize }}
       <a target="_blank"
          href="https://google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
         <i class="fa fa-map-marker"></i>
       </a>
       <p>
+      {% if event.location_private %}
+      <strong>Private Location:</strong> {{ event.location_private|urlize }}
+      <a target="_blank"
+         href="https://google.com/maps/search/?api=1&query={{ event.location_private|urlencode }}">
+        <i class="fa fa-map-marker"></i>
+      </a>
+      {% endif %}
       {% if event.lat != None %}
       <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
       {% endif %}
@@ -72,11 +86,24 @@
         {{ event.finish_at|date:'M j, Y H:i' }}
       {% endif %}
       {% endif %}
-    </p>
-    <p>
+    <br>
       <strong>All day:</strong> {{ event.all_day }}
       <strong>Published:</strong> {{ event.published }}
+      {% if event.ahc_log %}
+        <br><a href="{{ event.ahc_log.url }}">AHC Log</a>
+      {% endif %}
+      {% if event.logistics_spreadsheet %}
+        <br><a href="{{ event.logistics_spreadsheet.url }}">Logistics Spreadsheet</a>
+      {% endif %}
+      {% if event.aar %}
+        <br><a href="{{ event.aar.url }}">After Action Report (AAR)</a>
+      {% endif %}
     </p>
+    {% if event.type == 'operation' %}
+    <p>
+      ( <strong>*</strong> = OL qualified )
+    </p>
+    {% endif %}
 
     {% for period in event.period_set.all %}
     <a name="OP{{period.position}}"></a>
@@ -97,7 +124,7 @@
           {% for p in period.participant_set.all %}
           <tr>
             <td></td>
-            <td>{{ p.member }}</td>
+            <td>{{ p.member }} {% if event.type == 'operation' and 'OL' in p.member.roles %}*{% endif %}</td>
             <td>{{ p.member.status }}</td>
             <td>{{ p.member.status_order }}</td>
             <td>{{ p.en_route_at|date:"Y-m-d" }}</td>
@@ -126,10 +153,13 @@
             </td>
             <td>{{ p.ahc|lower }}</td>
             <td>{{ p.ol|lower }}</td>
+            <td>{{ p.logistics|lower }}</td>
             <td>{{ p.id }}</td> {# participant id #}
             <td>{{ p.member.id }}</td>
+            <td>{{ p.member.display_email }}</td>
             <td>{{ p.period.id }}</td>
             <td>{{ p.member.is_unavailable }}</td>
+            <td></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -142,35 +172,135 @@
   <p></p>
   <div class="row">
     <a href="#" class="btn navbar-btn"
-            onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
+       onclick="var n={{event.period_set.all.count}}+1; location.href='{% url "event_period_add" event.id %}#OP'+n">
       <i class="fa fa-plus-square-o"></i> OP Next
     </a>
   </div>
 
 </main>
+<!-- Search Details Modal -->
+<div class="modal fade" id="search-modal" role="dialog">
+  <div class="modal-dialog">
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 style="padding-top: 1rem;padding-left: 1rem;" class="modal-title">
+          Search Details For Callout
+        </h4>
+        <button style="margin: initial;" type="button" class="close" data-dismiss="modal">
+          <span>×</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form name="search-form" role="form">
+          <div id="stype" style="margin-left: initial;margin-right: initial;" class="form-group row">
+            <div class="col-sm-3 col-md-3 col-lg-3 text-right" style="padding-top:4px;">
+              <label for="Type">SearchType:</label>
+            </div>
+            <div class="col-sm-8 col-md-8 col-lg-8">
+              <select id="type" name="Type" placeholder="Type of callout"
+                      class="form-control form-control-sm">
+                <option value="Immediate" selected="">Immediate</option>
+                <option value="Delayed">Delayed</option>
+              </select>
+            </div>
+            <div style="clear:both;"></div>
+          </div>
+          <div style="margin-left: initial;margin-right: initial;" class="form-group row">
+            <div class="col-sm-3 col-md-3 col-lg-3 text-right" style="padding-top:4px;">
+              <label for="Name">ShortDesc:</label>
+            </div>
+            <div class="col-sm-8 col-md-8 col-lg-8">
+              <input type="text" id="name" pattern=".*" title="" name="Name"
+                     placeholder="Search/Event name"
+                     class="form-control  form-control-sm" value="">
+            </div>
+            <div style="clear:both;"></div>
+          </div>
+          <div style="margin-left: initial;margin-right: initial;" class="form-group row">
+            <div class="col-sm-3 col-md-3 col-lg-3 text-right" style="padding-top:4px;">
+              <label for="Type">DayOf:</label>
+            </div>
+            <div class="col-sm-8 col-md-8 col-lg-8">
+              <select  id="day" name="Day" placeholder="Day of callout"
+                       class="form-control form-control-sm">
+                <option value="Tomorrow" selected="">Tomorrow</option>
+                <option value="Today">Today</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+              </select>
+            </div>
+            <div style="clear:both;"></div>
+          </div>
+          <div style="margin-left: initial;margin-right: initial;" class="form-group row">
+            <div class="col-sm-3 col-md-3 col-lg-3 text-right" style="padding-top:4px;">
+              <label for="Location">Location:</label></div>
+            <div class="col-sm-8 col-md-8 col-lg-8">
+              <input type="text" id="location" pattern=".*" title="" name="Location"
+                     placeholder="Place name"
+                     class="form-control  form-control-sm" value="">
+            </div>
+            <div style="clear:both;"></div>
+          </div>
+          <div style="margin-left: initial;margin-right: initial;" class="form-group row">
+            <div class="col-sm-3 col-md-3 col-lg-3 text-right" style="padding-top:4px;">
+              <label for="Briefing">BriefingTime:</label>
+            </div>
+            <div class="col-sm-8 col-md-8 col-lg-8">
+              <input type="time" pattern="[0-9]{2}:[0-9]{2}" id="briefing" name="Briefing"
+                     placeholder="Time of briefing" style="overflow:hidden"
+                     class="form-control form-control-sm" value="08:00">
+            </div>
+            <div style="clear:both;"></div>
+          </div>
+          <input type="hidden" id="periodPosition" value="">
+          <input type="hidden" id="periodID" value="">
+          <input type="hidden" id="periodFormat" value="">
+          <input type="hidden" id="periodQuestion" value="">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="search-modal-done">
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock content %}
 
-  
+
 {# --- Table definition --- #}
 
 {% block js %}
 {{ block.super }}
 <script>
-'use strict'
-//FX: Where should this list come from?
-const STATUSES = { TM: 0, FM: 0, T: 0, R: 0, S: 0, A: 0, G: 0, MA: 0 };
-window.summary = [];
+  'use strict'
+  //FIXME: Where should this list come from?
+  const STATUSES = { TM: 0, FM: 0, T: 0, R: 0, S: 0, A: 0, G: 0, MA: 0 };
+  window.summary = [];
 
 $(document).ready( function() {
+
     {% for period in event.period_set.all %}
     window.summary['dTbl{{period.position}}'] = Object.assign({}, STATUSES);
     var table{{period.position}} = $('#dTbl{{period.position}}').DataTable( {
+
         dom: 'Bfrtip',
-        responsive: true,
-        select: 'os',
+
+        responsive: { details: { type: 'column', target: -1 }, },
+        select: { style: 'os', selector: 'tr>td:not(.control)' },
+
         altEditor: true,
         paging:   false,
         info:     false,
+
         order: [[2, 'asc'], [1, 'asc']],
 
         drawCallback: function( settings ) {
@@ -201,6 +331,7 @@ $(document).ready( function() {
                   if (type == 'display') {
                       if (row.ahc == 'true') data += '(AHC)';
                       if (row.ol == 'true') data += '(OL)';
+                      if (row.logistics == 'true') data += '(Logistics)';
                       data = '<a href="/member/' + row.member + '">' + data + '</a>';
                       if (row.is_unavailable == 'True') {
                           var event_start = new Date('{{ event.start_at|date:'M j, Y' }}');
@@ -230,37 +361,37 @@ $(document).ready( function() {
             { data: 'status_order', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis', },
             { data: 'en_route_date', title: 'Left', responsivePriority: 2,
-              type: 'date', width: '25%',
+              type: ['date', 'allowMultiSelect'], width: '25%',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'en_route_time') },
             },
-            { data: 'en_route_time', title: 'at', type: 'time',
+            { data: 'en_route_time', title: 'at', type: ['time', 'allowMultiSelect' ],
               visible: false, className: 'noVis'
             },
             { data: 'return_home_date', title: 'Returned', responsivePriority: 2,
-              type: 'date', width: '25%',
+              type: ['date', 'allowMultiSelect'], width: '25%',
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'return_home_time') },
             },
-            { data: 'return_home_time', title: 'at', type: 'time',
+            { data: 'return_home_time', title: 'at', type: ['time', 'allowMultiSelect' ],
               visible: false, className: 'noVis'
             },
 
             { data: 'signed_in_date', title: 'Signed in', responsivePriority: 4,
-              type: 'date', visible: false,
+              type: ['date', 'allowMultiSelect'], visible: false,
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_in_time') },
             },
-            { data: 'signed_in_time', title: 'at', type: 'time',
+            { data: 'signed_in_time', title: 'at', type: ['time', 'allowMultiSelect' ],
               visible: false, className: 'noVis'
             },
 
             { data: 'signed_out_date', title: 'Signed out', responsivePriority: 4,
-              type: 'date', visible: false,
+              type: ['date', 'allowMultiSelect' ], visible: false,
               render: function (d, t, r, m) {
                   return RenderDateTime(d, t, r, m, 'signed_out_time') },
             },
-            { data: 'signed_out_time', title: 'at', type: 'time',
+            { data: 'signed_out_time', title: 'at', type: ['time', 'allowMultiSelect' ],
               visible: false, className: 'noVis'
             },
 
@@ -272,10 +403,17 @@ $(document).ready( function() {
               type: 'select', options: ['false', 'true'],
               visible: false, className: 'noVis'
             },
+            { data: 'logistics', title: 'Logistics',
+              type: 'select', options: ['false', 'true'],
+              visible: false, className: 'noVis'
+            },
             { data: 'id', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis'
             },
             { data: 'member', type: ['readonly', 'hidden'],
+              visible: false, className: 'noVis'
+            },
+            { data: 'email', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis'
             },
             { data: 'period', type: ['readonly', 'hidden'],
@@ -283,6 +421,7 @@ $(document).ready( function() {
             },
             { data: 'is_unavailable', type: ['readonly', 'hidden'],
               visible: false, className: 'noVis', },
+            { type: ['readonly', 'hidden' ], orderable: false, className: 'noVis control' }
         ],
 
         buttons: [
@@ -292,33 +431,83 @@ $(document).ready( function() {
                 autoClose: true,
                 buttons: [
                     {
-                        text: '<i class="fa fa-hourglass-start"></i> Heads Up',
+                        text: '<i class="fa fa-bolt"></i> Callout',
                         action: function ( e, dt, node, config ) {
-                            var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                '&OP={{ period.position }}' +
-                                '&period={{ period.id }}' +
-                                '&page_format=headsUp';
+                            var b = $(e.currentTarget);
+                            var m = $('#search-modal');
+                            m.find('#periodPosition').val(b.data('position'))
+                            m.find('#periodID').val(b.data('id'))
+                            m.find('#periodFormat').val(b.data('format'))
+                            m.find('#periodQuestion').val(b.data('question'))
 
-                            Sentry.withScope(scope => {
-                                scope.setLevel('info');
-                                Sentry.captureMessage("Paging HeadsUp",
-                                                      { extra: { page: href } });
-                            });
-                            location.href = href;
+
+                            m.find('#stype').show();
+                            m.modal('show');
+                            //XXX$('#search-modal input[0]').focus();
+                        },
+                        attr: {
+                            'data-position': {{ period.position }},
+                            'data-id': {{ period.id }},
+                            'data-format': 'available',
+                            'data-question': 'Are you available?',
                         }
                     },
                     {
-                        text: '<i class="fa fa-calendar-check-o"></i> Are you available',
+                        text: '<i class="fa fa-hourglass-start"></i> Heads Up',
+                        action: function ( e, dt, node, config ) {
+                            var b = $(e.currentTarget);
+                            var m = $('#search-modal');
+                            m.find('#periodPosition').val(b.data('position'))
+                            m.find('#periodID').val(b.data('id'))
+                            m.find('#periodFormat').val(b.data('format'))
+                            m.find('#periodQuestion').val(b.data('question'))
+
+
+                            m.find('#stype').hide();
+                            m.modal('show');
+                            //XXX$('#search-modal input[0]').focus();
+                        },
+                        attr: {
+                            'data-position': {{ period.position }},
+                            'data-id': {{ period.id }},
+                            'data-format': 'headsUp',
+                            'data-question': 'Are you available?',
+                        }
+                    },
+                    {
+                        text: '<i class="fa fa-edit"></i> Info<br> (deployed team)',
+                        action: function ( e, dt, node, config ) {
+                            if (dt.rows().count() == 0)
+                                alert('Add members to period before paging them');
+                            else {
+                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
+                                    '&OP={{ period.position }}' +
+                                    '&period={{ period.id }}' +
+                                    '&page_format=info';
+                                if (SentryLoaded)
+                                    Sentry.withScope(scope => {
+                                        scope.setLevel('info');
+                                        Sentry.captureMessage("Page Info",
+                                                              { extra: { page: href } });
+                                    });
+                                location.href = href;
+                            }
+                        }
+                    },
+                    {
+
+                        text: '<i class="fa fa-edit"></i> Broadcast (entire unit)',
                         action: function ( e, dt, node, config ) {
                             var href = '{% url "message_add" %}?eid={{ event.id }}' +
                                 '&OP={{ period.position }}' +
                                 '&period={{ period.id }}' +
-                                '&page_format=available';
-                            Sentry.withScope(scope => {
-                                scope.setLevel('info');
-                                Sentry.captureMessage("Paging Available",
-                                                      { extra: { page: href } });
-                            });
+                                '&page_format=broadcast';
+                            if (SentryLoaded)
+                                Sentry.withScope(scope => {
+                                    scope.setLevel('info');
+                                    Sentry.captureMessage("Page Broadcast",
+                                                          { extra: { page: href } });
+                                });
                             location.href = href;
                         }
                     },
@@ -332,11 +521,12 @@ $(document).ready( function() {
                                     '&OP={{ period.position }}' +
                                     '&period={{ period.id }}' +
                                     '&page_format=leave';
-                                Sentry.withScope(scope => {
-                                    scope.setLevel('info');
-                                    Sentry.captureMessage("Paging Left",
-                                                      { extra: { page: href } });
-                                });
+                                if (SentryLoaded)
+                                    Sentry.withScope(scope => {
+                                        scope.setLevel('info');
+                                        Sentry.captureMessage("Page Left",
+                                                              { extra: { page: href } });
+                                    });
                                 location.href = href;
                             }
                         }
@@ -351,51 +541,18 @@ $(document).ready( function() {
                                     '&OP={{ period.position }}' +
                                     '&period={{ period.id }}' +
                                     '&page_format=return';
-                                Sentry.withScope(scope => {
-                                    scope.setLevel('info');
-                                    Sentry.captureMessage("Paging Returned",
-                                                          { extra: { page: href } });
-                                });
+                                if (SentryLoaded)
+                                    Sentry.withScope(scope => {
+                                        scope.setLevel('info');
+                                        Sentry.captureMessage("Page Returned",
+                                                              { extra: { page: href } });
+                                    });
                                 location.href = href;
                             }
                         }
                     },
                     {
-                        text: '<i class="fa fa-wrench"></i> Info (team)',
-                        action: function ( e, dt, node, config ) {
-                            if (dt.rows().count() == 0)
-                                alert('Add members to period before paging them');
-                            else {
-                                var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                    '&OP={{ period.position }}' +
-                                    '&period={{ period.id }}' +
-                                    '&page_format=info';
-                                Sentry.withScope(scope => {
-                                    scope.setLevel('info');
-                                    Sentry.captureMessage("Paging Info",
-                                                          { extra: { page: href } });
-                                });
-                                location.href = href;
-                            }
-                        }
-                    },
-                    {
-                        text: '<i class="fa fa-wrench"></i> Broadcast (unit)',
-                        action: function ( e, dt, node, config ) {
-                            var href = '{% url "message_add" %}?eid={{ event.id }}' +
-                                '&OP={{ period.position }}' +
-                                '&period={{ period.id }}' +
-                                '&page_format=broadcast';
-                            Sentry.withScope(scope => {
-                                scope.setLevel('info');
-                                Sentry.captureMessage("Paging Broadcast",
-                                                      { extra: { page: href } });
-                            });
-                            location.href = href;
-                        }
-                    },
-                    {
-                        text: '<i class="fa fa-wrench"></i> Test',
+                        text: '<i class="fa fa-send-o"></i> Test',
                         action: function ( e, dt, node, config ) {
                             if (dt.rows().count() == 0) 
                                 alert('Add members to period before paging them');
@@ -404,11 +561,12 @@ $(document).ready( function() {
                                     '&OP={{ period.position }}' +
                                     '&period={{ period.id }}' +
                                     '&page_format=test';
-                                Sentry.withScope(scope => {
-                                    scope.setLevel('info');
-                                    Sentry.captureMessage("Paging Test",
-                                                          { extra: { page: href } });
-                                });
+                                if (SentryLoaded)
+                                    Sentry.withScope(scope => {
+                                        scope.setLevel('info');
+                                        Sentry.captureMessage("Page Test",
+                                                              { extra: { page: href } });
+                                    });
                                 location.href = href;
                             }
                         }
@@ -416,14 +574,35 @@ $(document).ready( function() {
                 ]
             },
             {
-                text: '<i class="fa fa-address-book"></i> Add',
+                text: '<i class="fa fa-address-book"></i> Attend',
                 action: function () {
-                    var href='{% url "period_participant_add" period.id %}?' +
-                        'et={{period.event.title}} OP{{period.position}}&' +
-                        'eid={{event.id}}&pn={{period.position}}&' +
-                        'pid={{period.id}}';
-                    location.href = href;
+                    AddMeToOP({{period.id}});
                 }
+            },
+            { text: '<i class="fa fa-clock-o"></i> Set times',
+              extend: 'collection',
+              autoClose: true,
+              buttons: [
+                  { text: 'Leave now',
+                    ref_field: 'en_route',
+                    action: UpdateNow,
+                  },
+                  { text: 'Return now',
+                    ref_field: 'return_home',
+                    action: UpdateNow,
+                  },
+                  { text: 'Sign-in now',
+                    ref_field: 'signed_in',
+                    action: UpdateNow,
+                  },
+                  { text: 'Sign-out now',
+                    ref_field: 'signed_out',
+                    action: UpdateNow,
+                  },
+                  { text: 'Sign-in/out using event data',
+                    action: UpdateEventTime,
+                  },
+              ]
             },
             {
                 extend: 'selected',
@@ -431,9 +610,11 @@ $(document).ready( function() {
                 name: 'edit'        // do not change name
             },
             {
+                extend: 'selected',
                 autoClose: true,
                 text: '<i class="fa fa-user"></i> Delete',
                 action: DeleteParticipants,
+                period_position: {{ period.position }}
             },
             {
                 text: '<i class="fa fa-bars"></i>' +
@@ -445,69 +626,268 @@ $(document).ready( function() {
                       action: function () {
                           $("#dTbl{{period.position}}_filter").toggle() }
                     },
-                    { text: 'Set times',
-                      extend: 'collection',
-                      autoClose: true,
-                      buttons: [
-                          { text: 'Left now',
-                            extend: 'selected',
-                            ref_field: 'en_route',
-                            action: UpdateNow,
-                          },
-                          { text: 'Returned now',
-                            extend: 'selected',
-                            ref_field: 'return_home',
-                            action: UpdateNow,
-                          },
-                          { text: 'Signed-in now',
-                            extend: 'selected',
-                            ref_field: 'signed_in',
-                            action: UpdateNow,
-                          },
-                          { text: 'Signed-out now',
-                            extend: 'selected',
-                            ref_field: 'signed_out',
-                            action: UpdateNow,
-                          },
-                      ]
-                    },
-
-                    'copy', 'csv', 'excel', 'print',
                     {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)'
-                    }
+                        text: 'Add participants',
+                        action: function () {
+                            var href='{% url "period_participant_add" period.id %}';
+                            location.href = href;
+                        }
+                    },
+                    {% if not event.ahc_log %}
+                    { text: 'Generate AHC Log',
+                      action: function () { PostAction('ahc_log') },
+                    },
+                    {% endif %}
+                    {% if not event.logistics_spreadsheet %}
+                    { text: 'Generate Logistics Spreadsheet',
+                      action: function () { PostAction('logistics_spreadsheet') },
+                    },
+                    {% endif %}
+                    {% if not event.aar %}
+                    { text: 'Generate AAR',
+                      action: function () { PostAction('aar') },
+                    },
+                    {% endif %}
+                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'copy', text: 'Copy email', header: false, title: '',
+                      customize: function( data, button, table ) {
+                          var list = '';
+                          if (table.cells('.marked').count() == 0) {
+                              alert('Copy email: select attendees');
+                          } else {
+                              table.cells('.marked').every(
+                                  function ( idx ) {
+                                      var data = this.row(idx).data().email;
+                                      list = list + data + '\n';
+                                  }
+                              )
+                          }
+                          return list;
+                      },
+                    },
+                    { extend: 'excel', exportOptions: { columns: ':visible' }},
+                    { extend: 'csv', exportOptions: { columns: ':visible' }},
+                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
             }
         ],
 
-        onEditRow: UpdatePeriodRow,
+        onEditRow: RowEditHandler,
 
-        language: { emptyTable: 'No members added' },
+        language: {
+            emptyTable: 'No members added',
+            buttons: {
+                copySuccess: { _: 'selected emails copied' }
+            }
+        }
     });
     
-    table{{period.position}}.on( 'select', MarkRow);
-    $("#dTbl{{period.position}}_filter").hide();
+    $("#search-modal-done").click(function(){
+
+        var data = {};
+
+        // Getting the inputs from the modal
+        $('form[name="search-form"] *').filter(':input').each(function (i) {
+            data[$(this).attr('id')] = $(this).val();
+        });
+
+        var txt = (data.periodFormat == 'headsUp') ? 'Heads Up: ' : data.type + ' Callout: ';
+        if (!data.name) {
+            alert('Enter a short description for the search'); return;
+        } else {
+            txt += data.name + ' Search';
+        }
+
+        if (!data.briefing) {
+            alert('Enter best guess for briefing time'); return;
+        } else {
+            txt += ': Briefing ' + data.day + ' at ' + data.briefing;
+        }
+
+        if (!data.location) {
+        } else {
+            txt += '@' + data.location;
+        }
+
+        txt += '. ' + data.periodQuestion;
+
+        $('#search-modal').modal('hide');
+
+        var href = '{% url "message_add" %}?eid={{ event.id }}' +
+            '&OP=' +  data.periodPosition +
+            '&period=' + data.periodID +
+            '&page_format=' + data.periodFormat + '&msg=' + txt;
+        if (SentryLoaded)
+            Sentry.withScope(scope => {
+                scope.setLevel('info');
+                Sentry.captureMessage('Page ' + data.periodFormat,
+                                      { extra: { page: href } });
+            });
+        location.href = href;
+    });
+
+    EnableMarkSelection( table{{period.position}} );
+
+    if (window.screen.width < 900)
+        $("#dTbl{{period.position}}_filter").hide();
 
     {% endfor %}
 
 })
 
+// Copied from base_ftable FX: fix ftable to handle multiple tables
+function EnableMarkSelection (table) {
+    var rselected = [];  // Last selected range
+    var rstart = null;   // Start of selection
+    var rcurrent = null; // Current selected row
+    var rmarked = [];    // tmp variable
+    var runmarked = [];  // tmp variable
+
+    table.on( 'deselect', function ( e, dt, type, indexes ) {
+
+        // Was this the last selected range
+        var equal =
+            !(rselected.length == 1 && rselected[0] == rcurrent) &&
+            rselected.length === indexes.length &&
+            rselected.every( function ( value, index ) { return value === indexes[index] });
+
+        if (equal) {
+            // Leave marks
+        } else {
+            // Unmark deselected rows
+            // indexes don't include the row the user selected, seems like a bug
+            if (!indexes.includes(rcurrent)) indexes.push(rcurrent);
+            dt.rows(indexes).every( function ( idx ) {
+                $(this.node()).children().first().removeClass('marked');
+            });
+        }
+
+        // Clear selections
+        rselected = []; rstart = null;
+
+        dt.rows( { selected: true } ).deselect();
+    });
+
+    table.on( 'user-select', function ( e, dt, type, cell ) {
+
+        // Remember current row selection
+        rcurrent = cell[0][0].row;
+        return true;
+    });
+
+    table.on( 'select', function ( e, dt, type, indexes ) {
+
+        // Leave marks if user selection is in selected region
+        if (rselected.length > 1 && rselected.includes(rcurrent)) {
+            rselected = []; rstart = null;
+            return;
+        }
+
+        // This is an attempt to handle the ambiguity between
+        // single click that selects and deselects vs click that marks
+        // the beginning of the selection range
+
+        if (indexes.length >1) {
+            // Don't toggle row that was start of selection range
+            indexes = indexes.filter( function (e) { return e != rstart; });
+
+            // Are any rows in the new selection marked
+            rmarked = false; runmarked = true;
+            dt.rows( indexes ).every( function ( idx ) {
+                var m = $(this.node()).children().first().hasClass('marked');
+                rmarked = rmarked || m;
+                runmarked = runmarked && !m;
+            });
+
+            // Included rstart when it appears to be part of the selected group
+            var rsm = $(dt.row(rstart).node()).children().first().hasClass('marked')  // rstart marked
+            if ((rsm && rmarked) || (!rsm && runmarked))
+                // If all are marked/unmarked include rstart in the toggle selection
+                indexes.push(rstart);
+
+            // Toggle row marks based on the selection range
+            dt.rows( indexes ).every( function ( idx ) {
+                var el = $(this.node()).children().first();
+                if (!el.hasClass('marked')) {
+                    el.addClass('marked');
+                } else {
+                    el.removeClass('marked');
+                }
+            });
+        } else {
+            // Handle a single selection by deselecting
+            var el = $(dt.row( indexes ).node()).children().first();
+            if (!el.hasClass('marked')) {
+                el.addClass('marked');
+            } else {
+                dt.row( indexes ).deselect();
+            }
+        }
+
+        // Remember the last set of selected rows
+        rselected = [];
+        dt.rows( { selected: true } ).every( function ( idx ) {
+            rselected.push(idx)
+        });
+
+        rstart = rcurrent;
+
+    });
+}
+
 function UpdateNow ( e, dt, node, config ) {
+    var num = 0
     dt.cells('.marked').every(
-        function ( idx, tableLoop, rowLoop ) {
-            var row = this.row(this.index().row);
+        function ( idx ) {
+            var row = this.row(idx);
             var data = row.data();
             var d = new Date;
             data.tblId = this.table().node().id;
             data[config.ref_field + '_date'] = DateBE(d);
             data[config.ref_field + '_time'] = d.getHours() + ':' +
                 d.getMinutes().toString().padStart(2, 0);
+            UpdatePeriodRow(dt, data);
+            //console.log('updateNow: '+data.member+' / '+data.period+' / '+data.id)
             row.data(data);
-            UpdatePeriodRow(dt, data, function (data) { return data })
+            row.deselect();
+            num++;
         }
     )
+    if (num == 0) alert('Select members before setting time');
+    // Clear marks
+    $('td.marked').removeClass('marked');
+    $('tr.selected').removeClass('selected');
 }
+
+function UpdateEventTime ( e, dt, node, config ) {
+    {% if event.all_day %}
+    return alert('To set sign-in/sign-out, event must have a date and time')
+    {% endif %}
+    var marked = dt.cells('.marked');
+
+    if (marked.count() < 1)
+        alert('Select members before setting time');
+    else
+        marked.every(
+            function ( idx ) {
+                var row = this.row(idx);
+                var data = row.data();
+                var d = new Date;
+                data.tblId = this.table().node().id;
+                data['signed_in_date'] = '{{ event.start_at|date:'Y-m-j' }}';
+                data['signed_in_time'] = '{{ event.start_at|date:'H:i:00' }}';
+                data['signed_out_date'] = '{{ event.finish_at|date:'Y-m-j' }}';
+                data['signed_out_time'] = '{{ event.finish_at|date:'H:i:00' }}';
+                UpdatePeriodRow(dt, data);
+                row.data(data);
+            }
+    )
+    // Clear marks
+    $('td.marked').removeClass('marked');
+    $('tr.selected').removeClass('selected');
+}
+
 
 function RenderDateTime(data, type, row, meta, time) {
     // Display date and time
@@ -521,56 +901,51 @@ function RenderDateTime(data, type, row, meta, time) {
     return data;
 }
 
-function UpdatePeriodRow(dt, row, success, error) {
-    
-    var memberName = row.name;
-    var memberStatus = row.status;
-    var memberStatusOrder = row.status_order;
-    var memberUnavailable = row.is_unavailable;
-    // Remove from summary, it is readded on display
-    window.summary[row.tblId][memberStatus] -= 1;
+function RowEditHandler(dt, row, success, error) {
+    // HACK: The editor has a limited understanding of multi-select (limits visible fields)
+    // and assumes empty values for all multiSelect fields
+    var multiSelect = dt.s.dt.cells('.marked').count() > 1;
+    dt.s.dt.cells('.marked').every(
+        function ( idx ) {
+            var thisrow = this.row(idx);
+            var data = {};
 
-
-    function ReturnData (data) {
-        // Create closure with memberName and Status
-
-        function UncombineDateTime (ref) {
-            // Separate date and time into _date and _time columns
-            var d = '';
-            var t = '';
-            var ft =  data[ref + '_at'];
-            if (ft) {
-                d = ft.substr(0, 10);
-                t = ft.substr(11, 5);
-                if (t == '00:00') t = '';
+            if (multiSelect) {
+                data = thisrow.data();
+                // insert edited data into selected rows
+                //   currently clearing previously set fields is not possible
+                //   since "" is used to indicate no change
+                if (row.en_route_date) data.en_route_date = row.en_route_date;
+                if (row.return_home_date) data.return_home_date = row.return_home_date;
+                if (row.signed_in_date) data.signed_in_date = row.signed_in_date;
+                if (row.signed_out_date) data.signed_out_date = row.signed_out_date;
+                if (row.en_route_time) data.en_route_time = row.en_route_time;
+                if (row.return_home_time) data.return_home_time = row.return_home_time;
+                if (row.signed_in_time) data.signed_in_time = row.signed_in_time;
+                if (row.signed_out_time) data.signed_out_time = row.signed_out_time;
+            } else {
+                data = row;
             }
 
-            data[ref + '_date'] = d;
-            data[ref + '_time'] = t;
+            // store update in the DB
+            data.tblId = this.table().node().id;   // remember table for this period
+            UpdatePeriodRow(dt, data); //FX: handle async errors
+
+            // store update locally
+            thisrow.data(data);
         }
+    )
 
-        data.name = memberName;
-        data.status = memberStatus;
-        data.status_order = memberStatusOrder;
-        data.is_unavailable = memberUnavailable;
-        // Create additional rows for editing
-        UncombineDateTime('en_route');
-        UncombineDateTime('return_home');
-        UncombineDateTime('signed_in');
-        UncombineDateTime('signed_out');
+    // Editor expects an object (ignored for multiSelect), closes the dialog and redraws the table
+    success( row );          //FX: check for errors and only call on success
 
-        data.ahc = data.ahc.toString();
-        data.ol = data.ol.toString();
+    // deselect/unmark all selected rows
+    $('tr.selected').removeClass('selected');
+    $('td.marked').removeClass('marked');
 
-        // Add ephemeral row
-        data.mark = ''
+}
 
-        // Clear marks
-        //FX: Is this the right place for this, only needs to be called once per operation
-        $('td.marked').removeClass('marked');
-        $('tr.selected').removeClass('selected');
-        return success(data);
-    }
+function UpdatePeriodRow(dt, row, success, error) {
 
     function DataDateTime (ref) {
         // Combine date and time for BE
@@ -598,19 +973,65 @@ function UpdatePeriodRow(dt, row, success, error) {
     DataDateTime('signed_out');
     data.ahc = row.ahc;
     data.ol = row.ol;
-    
+
     var pid = data.id;
+
     data = JSON.stringify(data);
+    //FX: Test for error
     $.ajax({
         method: 'PATCH',
         contentType: 'application/json',
         url: '/api/participants/' + pid + '/',
         data: data,
-        success: ReturnData,
+        success: function (data, status, more) {
+            return true;
+        },
         error: function (xhr) {
             console.log('member edit failed');
             console.log(xhr);
-            alert(xhr.responseText);
+            if (xhr.responseText) alert(xhr.responseText);
+        }
+    })
+    // Remove from summary total, member is readded on display
+    window.summary[row.tblId][row.status] -= 1;
+
+}
+
+function PostAction (action) {
+    var data = { "action": action };
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/x-www-form-urlencoded',
+        url: location.href,
+        data: data,
+            success: function (response) {
+                console.log('PostAction success.');
+                setTimeout(function() { location.reload() }, 2000);
+            },
+        error: function (xhr) {
+            console.log('PostAction failed');
+            console.log(xhr);
+            if (xhr.responseText) alert(xhr.responseText);
+            return false;
+        }
+    })
+}
+
+function AddMeToOP (period) {
+    var data = '[ { "period": ' + period + ', "member": {{request.user.id}} } ]';
+    $.ajax({
+        method: 'POST',
+        contentType: 'application/json',
+        url: '/api/participants/',
+        data: data,
+            success: function (response) {
+                console.log('Period add: signed-in user ');
+                location.reload();
+            },
+        error: function (xhr) {
+            console.log('Period add failed');
+            console.log(xhr);
+            if (xhr.responseText) alert(xhr.responseText);
             return false;
         }
     })
@@ -619,7 +1040,7 @@ function UpdatePeriodRow(dt, row, success, error) {
 function DeleteEvent ( event, title ) {
     var numParticipants = 0;
     {% for period in event.period_set.all %}
-      numParticipants += {{ period.members_for_info_page|length }}
+      numParticipants += {{ period.prefeteched_members_for_info_page|length }}
     {% endfor %}
     if (numParticipants > 0) {
         alert('Events with active operational periods cannot be deleted');
@@ -665,7 +1086,7 @@ function DeleteOP (tblName, period, position ) {
 
 function DeleteParticipants ( e, dt, node, config ) {
     var members = [];
-    dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
+    dt.rows().every( function ( idx ) {
         if (this.nodes().to$().children().first().hasClass('marked'))
             members.push(this.data().id)
     })
@@ -675,7 +1096,8 @@ function DeleteParticipants ( e, dt, node, config ) {
         return;
     }
     
-    var ok = confirm('Delete '+members.length+' members?');
+    var ok = confirm('Delete '+members.length+' members\nfrom OP'+
+                     config.period_position + '?');
     
     if (ok) {
         for (var i=0; i<members.length; i++) {
@@ -701,13 +1123,13 @@ function MarkRow ( e, dt, type, indices ) {
         var allMarked = true;
         var numRows = indices.length;
         if (numRows > 1) {
-            dt.rows(indices).every( function ( rowIdx, tableLoop, rowLoop ) {
+            dt.rows(indices).every( function ( idx ) {
                 // For multi select - unmark only when every row is marked
                 allMarked = allMarked && this.nodes().to$().children().first().hasClass('marked');
             })
         }
         dt.rows(indices)
-            .every( function ( rowIdx, tableLoop, rowLoop ) {
+            .every( function ( idx ) {
                 if (numRows > 1) {
                     if (allMarked)
                         $(this.node()).children().first().removeClass('marked');

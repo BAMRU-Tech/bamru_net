@@ -26,39 +26,17 @@
     <link rel="stylesheet" href="/static/css/style.css" />
     <link rel="stylesheet" href="/static/font-awesome-4.7.0/css/font-awesome-cst.min.css" />
     {# bootstrap_css, needs https #}
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">    {% endblock css %}
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    {% endblock css %}
+
     <title>{% block title %}BAMRU.net{% endblock title %}</title>
+
   </head>
 
   <body>
-    <div class="container-fluid">
-      {% include 'navbar.html' %}
-      <nav class="navbar navbar-expand-sm text-primary subhead">
-        {% block subheader %}{% endblock subheader %}
-      </nav>
-      
-      {% bootstrap_messages %}
-      
-      {% block content %}{% endblock content %}
-    </div>
-    
-    {% comment FIXME: overlaps with datatables nowrap %}
-    <footer class="footer">
-      <div class="container text-center">
-        <p />
-        <p />
-        <p />
-        <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
-          General help</a>
-        | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
-        | <small>{{RELEASE}}</small>
-      </div>
-    </footer>
-    {% endcomment %}
-    
     {% block js %}
 
-    {% block jquery %}{# Datatables combined load include jquery 3.3.1 #}
+    {% block jquery %}{# Datatables combined load includes jquery 3.3.1 #}
     <script
       src="https://code.jquery.com/jquery-3.3.1.min.js"
       integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
@@ -69,30 +47,39 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
     {% endblock js %}
-    <script src="https://browser.sentry-cdn.com/4.3.4/bundle.min.js" crossorigin="anonymous"></script>
+
+    {% comment %}
+      browser.sentry-cdn.com is blocked by ad blockers so this copy needs to be
+      manually updated. FX: consider removing if the load start is too great
+    {% endcomment %}
+    <script src="/static/js/browser.sentry-cdn-5.20.1-bundle.min.js"></script>
     <script>
       // Needed for IOS
       $(document).ready( function() { $('.dropdown-toggle').dropdown() } );
 
-      Sentry.init({
-          dsn: '{{JAVASCRIPT_DSN}}',
-          release: '{{RELEASE}}',
-      });
-      Sentry.configureScope((scope) => {
-          scope.setUser({"username": "{{ request.user }}"});
-      });
-      $(document).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
-          Sentry.captureMessage(thrownError || jqXHR.statusText, {
-              extra: {
-                  type: ajaxSettings.type,
-                  url: ajaxSettings.url,
-                  data: ajaxSettings.data,
-                  status: jqXHR.status,
-                  error: thrownError || jqXHR.statusText,
-                  response: jqXHR.responseText.substring(0, 100)
-              }
+      var SentryLoaded = typeof Sentry !== 'undefined';
+      if (SentryLoaded) {
+          Sentry.init({
+              dsn: '{{JAVASCRIPT_DSN}}',
+              release: '{{RELEASE}}',
           });
-      });
+          Sentry.configureScope((scope) => {
+              scope.setUser({"username": "{{ request.user }}"});
+          });
+          $(document).ajaxError(function(event, jqXHR, ajaxSettings, thrownError) {
+              Sentry.captureMessage(thrownError || jqXHR.statusText, {
+                  extra: {
+                      type: ajaxSettings.type,
+                      url: ajaxSettings.url,
+                      data: ajaxSettings.data,
+                      status: jqXHR.status,
+                      error: thrownError || jqXHR.statusText,
+                      response: (typeof jqXHR.responseText !== 'undefined')
+                          ? jqXHR.responseText.substring(0, 100) : ''
+                  }
+              });
+          });
+      }
     </script>
 
     <script>
@@ -131,8 +118,12 @@
         // Create a frontend formatted date mm/dd/yyyy
         // input: date string yyyy-mm-dd
         var r = date.match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (r == null || r.length != 4)
-            throw('DateFE: Bad date format, expected yyyy-mm-dd');
+        if (r == null || r.length != 4) {
+            var eMsg = 'DateFE: Bad date format, date.match() failed';
+            Sentry.captureMessage(eMsg, 'error');
+            console.log(eMsg);
+            return '00/00/0000';
+        }
         return r[2] + '/' + r[3] + '/' + r[1]
     }
 
@@ -152,6 +143,10 @@
         return date.getFullYear() +
             '-' + pad(date.getMonth()+1) +
             '-'+pad(date.getDate());
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     function Truncate(string, length) {
@@ -176,5 +171,31 @@
     }
 
     </script>
+
+    <div class="container-fluid">
+      {% include 'navbar.html' %}
+      <nav class="navbar navbar-expand-sm text-primary subhead">
+        {% block subheader %}{% endblock subheader %}
+      </nav>
+      
+      {% bootstrap_messages %}
+      
+      {% block content %}{% endblock content %}
+    </div>
+    
+    {% comment FIXME: overlaps with datatables nowrap %}
+    <footer class="footer">
+      <div class="container text-center">
+        <p />
+        <p />
+        <p />
+        <a href="https://github.com/BAMRU-Tech/bamru_net/issues" target="_blank">
+          General help</a>
+        | <a href="mailto:tech_discussion@bamru.org">BAMRU internal help</a>
+        | <small>{{RELEASE}}</small>
+      </div>
+    </footer>
+    {% endcomment %}
+    
   </body>
 </html>

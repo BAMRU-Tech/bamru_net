@@ -27,11 +27,12 @@
   <table id="dTbl" class="display table-bordered compact" style="width:100%">
     <thead>
       <tr>
-        <th>Name</th><th>Status</th><th>Status order</th>
+        <th>Name</th><th>Status</th><th>Status order</th><th>Roles</th><th>Roles order</th>
         {% for h in headers %}
         <th>
           <div class="d-none d-lg-block">{{h}}</div>
           <div class="d-none d-md-block d-lg-none">{{h|date:"M d"}}</div>
+          {# FX: print, excel, csv versions should exclude this div #}
           <div class="d-block d-md-none">{{h|date:"m d"}}</div>
         </th>
         {% endfor %}
@@ -48,6 +49,8 @@
         </td>
         <td>{{ member.status }}</td>
         <td>{{ member.status_order }}</td>
+        <td>{{ member.roles }}</td>
+        <td>{{ member.role_order }}</td>
         {% for day in member.days %}
         {% if day %}
         <td style="background-color:orange" title="{{day}}" style="overflow: hidden">
@@ -62,6 +65,7 @@
         {% endfor %}
         <td{% if member.end_date %} style="background-color:orange"{% endif %}>
           <div class="d-none d-md-block">{{member.end_date|date:"m/d/y"}}</div>
+          {# FX: print, excel, csv versions should exclude this div #}
           <div class="d-block d-md-none">{{member.end_date|date:"m-d"}}</div>
         </td>
       </tr>
@@ -80,9 +84,10 @@ order: [[ 1, 'asc' ], [0, 'asc']],
 
 columnDefs: [  // Uses columns defs because columns titles aren't fixed
     { responsivePriority: 1, targets: 0 },
-    { responsivePriority: 2, targets: [ 3, 4, 5, 6, 8] },
-    { responsivePriority: 3, targets: 7 },
-    { responsivePriority: 10, targets: 1},
+    { responsivePriority: 2, targets: [ 5, 6, 7, 8] },
+    { responsivePriority: 3, targets: 9 },
+    { responsivePriority: 10, targets: 1 },
+    { responsivePriority: 11, targets: 3 },
     { width: '35px', targets: 1 },
     {
         render: function ( data, type, row, meta ) {
@@ -94,20 +99,20 @@ columnDefs: [  // Uses columns defs because columns titles aren't fixed
             }
             return data;
         },
-        targets: [ 3, 4, 5, 6, 7, 8 ],
+        targets: [ 5, 6, 7, 8, 9, 10 ],
 
     },
     {
         type: 'num',
         render: function(data, type, row, meta) {
             if (type == 'sort') {
-                return row[2];
+                return row[meta.col + 1];
             } else
                 return data;
-        }, targets: 1,
+        }, targets: [ 1, 3 ]
     },
       
-    { visible: false, type: 'hidden', className: 'noVis', targets: 2 },
+    { visible: false, type: 'hidden', className: 'noVis', targets: [ 2, 4] },
 ],
 
 language: { emptyTable: 'No members selected' },
@@ -188,7 +193,7 @@ function AddAvailRows(table, values) {
             var row = json[m];
             var data = [
                 '<a href="/member/' + row.id+'?returnx=al">' + row.full_name + '</a>',
-                row.status, row.status_order
+                row.status, row.status_order, row.roles, row.role_order
             ];
             var busy = Array(numDays + 1).fill('');
             var period = row.busy;

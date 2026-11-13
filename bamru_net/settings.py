@@ -39,19 +39,33 @@ ALLOWED_HOSTS = os.environ['DJANGO_ALLOWED_HOST'].split(',') + ['localhost', ]
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django.contrib.humanize',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_twilio',
     'anymail',
     'bootstrap4',
+    'celerybeat_status',
+    'django_celery_beat',
     'django_filters',
+    'django_twilio',
+    'dynamic_preferences',
+    'imagekit',
     'oidc_provider',
     'raven.contrib.django.raven_compat',
     'rest_framework',
+    'rules.apps.AutodiscoverRulesConfig',
+    'simple_history',
+    'social_django',
     'main',
     'main.templatetags.filters',
     'django.contrib.admin',  # Must be after main for templates
+]
+
+AUTHENTICATION_BACKENDS = [
+    'social_core.backends.google.GoogleOAuth2',
+    'rules.permissions.ObjectPermissionBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 MIDDLEWARE = [
@@ -62,14 +76,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
 }
 
 ROOT_URLCONF = 'bamru_net.urls'
@@ -85,6 +104,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'dynamic_preferences.processors.global_preferences',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
                 'main.context_processors.dsn',
             ],
         },
@@ -104,8 +126,22 @@ DATABASES = {
         'USER': os.environ['DJANGO_DB_USER'],
         'PASSWORD': os.environ['DJANGO_DB_PASS'],
         'HOST': os.environ['DJANGO_DB_HOST'],
+        'CONN_MAX_AGE': 600,
     }
 }
+
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.social_user',
+    'main.lib.social_auth.validate_login',
+    'social_core.pipeline.social_auth.associate_user',
+)
+SOCIAL_AUTH_USER_MODEL = 'main.Member'
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', '')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET', '')
+SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = ['bamru.org']
 
 AUTH_USER_MODEL = 'main.Member'
 
@@ -160,6 +196,7 @@ MEDIA_ROOT = os.environ.get('MEDIA_ROOT', 'system/')
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
 OIDC_USERINFO = 'main.oidc_provider_settings.userinfo'
 
 # Raven config for Sentry.io logging
@@ -177,8 +214,6 @@ TWILIO_SMS_FROM = [e.strip() for e in os.environ['TWILIO_SMS_FROM'].split(',')]
 HOSTNAME = os.environ['DJANGO_HOSTNAME']
 # Needed for django-oidc-provider
 SITE_URL = '{}://{}'.format(os.environ.get('DJANGO_SCHEMA', 'https'), HOSTNAME)
-
-WIKI_URL = os.environ.get('WIKI_URL', '')
 
 # Temporary fix for #128
 DJANGO_TWILIO_FORGERY_PROTECTION=False
@@ -198,19 +233,15 @@ ANYMAIL = {
 MAILGUN_EMAIL_FROM = os.environ['MAILGUN_EMAIL_FROM']
 DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
 
+# Used for tests
 GOOGLE_CREDENTIALS_FILE = os.environ.get('GOOGLE_CREDENTIALS_FILE', '')
-GOOGLE_TOKEN_FILE = os.environ.get('GOOGLE_TOKEN_FILE', '')
-GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID', '')
 
 CELERY_BROKER_URL = os.environ['CELERY_BROKER_URL']
-CELERYD_HIJACK_ROOT_LOGGER = False
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 # Add a five-minute timeout to all Celery tasks.
-CELERYD_TASK_SOFT_TIME_LIMIT = 300
-
-WIKI_BASE_URL = os.environ.get('WIKI_BASE_URL', '')
-WIKI_SSH_DEST = os.environ.get('WIKI_SSH_DEST', '')
-WIKI_SSH_KEY = os.environ.get('WIKI_SSH_KEY', '')
-WIKI_AUTH_DIR = os.environ.get('WIKI_AUTH_DIR', '')
+CELERY_TASK_SOFT_TIME_LIMIT = 300
+CELERY_WORKER_CONCURRENCY = 1
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 if os.environ.get('PROXY_HTTPS'):
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

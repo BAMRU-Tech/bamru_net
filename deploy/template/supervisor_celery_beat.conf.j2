@@ -1,0 +1,26 @@
+[program:celery_beat]
+; Set full path to celery program if using virtualenv
+command={{ venv_path }}/bin/celery beat -A bamru_net --loglevel=INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+directory=/home/{{ app_user }}/repo
+
+user={{ app_user }}
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/home/{{ app_user }}/logs/celery-beat-error.log
+
+numprocs=1
+startsecs=10
+
+; Need to wait for currently executing tasks to finish at shutdown.
+; Increase this if you have very long running tasks.
+stopwaitsecs = 600
+
+; When resorting to send SIGKILL to the program to terminate it
+; send SIGKILL to its whole process group instead,
+; taking care of its children as well.
+killasgroup=true
+
+; Set Celery priority higher than default (999)
+; so, if rabbitmq is supervised, it will start first.
+priority=1000

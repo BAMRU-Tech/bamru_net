@@ -3,7 +3,8 @@ from main.models import *
 from main.serializers import *
 
 from django import forms
-from rest_framework import generics, mixins, parsers, permissions, response, views, viewsets
+from django.db.models import Prefetch
+from rest_framework import exceptions, generics, mixins, parsers, permissions, response, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,7 +12,7 @@ from django_filters import rest_framework as filters
 
 
 class BaseViewSet(viewsets.ModelViewSet):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.DjangoObjectPermissions,)
 
 # From https://stackoverflow.com/a/40253309
 class CreateListModelMixin(object):
@@ -23,7 +24,11 @@ class CreateListModelMixin(object):
 
 
 class MemberViewSet(BaseViewSet):
-    queryset = Member.objects.all()
+    queryset = Member.annotate_unavailable(Member.objects).all().prefetch_related(
+        'email_set',
+        'phone_set',
+        'role_set',
+    )
     serializer_class = MemberSerializer
     filter_fields = ('status', )
     search_fields = ('username',  )
@@ -36,13 +41,6 @@ class UnavailableFilter(filters.FilterSet):
         fields = ('member__status', 'start_on', )
 
 
-class UnavailableViewSet(BaseViewSet):
-    queryset = Unavailable.objects.all()
-    serializer_class = UnavailableSerializer
-    filterset_class = UnavailableFilter
-    search_fields = ('member__username', )
-
-
 class ApiUnavailableViewSet(BaseViewSet):
     queryset = Unavailable.objects.all()
     serializer_class = BareUnavailableSerializer
@@ -51,12 +49,11 @@ class ApiUnavailableViewSet(BaseViewSet):
 
 
 class MemberUnavailableViewSet(BaseViewSet):
-    queryset = Member.members.prefetch_related('unavailable_set')
     serializer_class = MemberUnavailableSerializer
     filter_fields = ('status', )
     search_fields = ('username',  )
 
-    def get_serializer(self, *args, **kwargs):
+    def get_queryset(self):
         filter_kwargs = {}
         if hasattr(self.request, 'query_params'):
             if self.request.query_params.get('date_range_start'):
@@ -65,7 +62,10 @@ class MemberUnavailableViewSet(BaseViewSet):
             if self.request.query_params.get('date_range_end'):
                 filter_kwargs['start_on__lte'] = forms.DateField().clean(
                         self.request.query_params['date_range_end'])
-        return super().get_serializer(*args, unavailable_filter_kwargs=filter_kwargs, **kwargs)
+        return Member.members.all().prefetch_related(
+            'role_set',
+            Prefetch('unavailable_set', queryset=Unavailable.objects.filter(**filter_kwargs), to_attr='filtered_unavailable_set'),
+        )
 
 
 class CertViewSet(BaseViewSet):
@@ -91,7 +91,20 @@ class EventFilter(filters.FilterSet):
 
 
 class EventViewSet(BaseViewSet):
-    queryset = Event.objects.all().order_by('-start_at')
+    def get_queryset(self):
+        qs = Event.objects.all().order_by('-start_at')
+        if getattr(self, 'action', None) != 'list':
+            # fetch data used by EventDetailSerializer
+            qs = qs.prefetch_related(
+                "period_set",
+                "period_set__participant_set",
+                "period_set__participant_set__member",
+                "period_set__participant_set__member__phone_set",
+                "period_set__participant_set__member__email_set",
+                "period_set__participant_set__member__role_set",
+            )
+        return qs
+
     filterset_class = EventFilter
     search_fields = ('title', 'description', 'location', )
 
@@ -114,7 +127,13 @@ class EventViewSet(BaseViewSet):
 
 
 class PeriodViewSet(BaseViewSet):
-    queryset = Period.objects.all()
+    queryset = Period.objects.prefetch_related(
+        "participant_set",
+        "participant_set__member",
+        "participant_set__member__phone_set",
+        "participant_set__member__email_set",
+        "participant_set__member__role_set",
+    ).all()
     serializer_class = PeriodSerializer
 
 
@@ -182,10 +201,30 @@ class MessageFilter(filters.FilterSet):
 
 
 class MessageViewSet(BaseViewSet):
-    queryset = Message.objects.all()
+    queryset = Message.objects.all().prefetch_related(
+        'author',
+        'author__email_set',
+        'author__phone_set',
+        'author__role_set',
+        'rsvp_template',
+    )
     filterset_class = MessageFilter
     search_fields = ('author__username',)
     def get_serializer_class(self):
         if getattr(self, 'action', None) == 'list':
             return MessageListSerializer
         return MessageDetailSerializer
+
+
+class InboundSmsViewSet(BaseViewSet):
+    queryset = InboundSms.objects.all()
+    serializer_class = InboundSmsSerializer
+    filter_fields = ('member', 'outbound', 'outbound__distribution__message__period')
+    search_fields = ('member__username', )
+
+
+class MemberPhotoViewSet(BaseViewSet):
+    queryset = MemberPhoto.objects.all()
+    serializer_class = MemberPhotoSerializer
+    filter_fields = ('member', )
+    search_fields = ('member__username', )

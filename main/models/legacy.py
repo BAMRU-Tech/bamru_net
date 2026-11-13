@@ -89,17 +89,6 @@ class EventReports(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
 
-class Photos(models.Model):
-    id = models.IntegerField(primary_key=True)  # AutoField?
-    member_id = models.IntegerField(blank=True, null=True)
-    image_file_name = models.TextField(blank=True, null=True)  # This field type is a guess.
-    image_content_type = models.TextField(blank=True, null=True)  # This field type is a guess.
-    image_file_size = models.IntegerField(blank=True, null=True)
-    image_updated_at = models.IntegerField(blank=True, null=True)
-    position = models.IntegerField(blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
 
 
 

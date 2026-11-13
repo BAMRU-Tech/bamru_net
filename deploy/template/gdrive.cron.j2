@@ -5,7 +5,7 @@ REMOTE_DIR={{ gdrive_remote_dir }}
 RCLONE="/usr/local/bin/rclone --config /home/{{ app_user }}/.rclone.conf"
 
 function rclone_copy {
-    ${RCLONE} copy /home/{{ app_user }}/$1 gdrive:${REMOTE_DIR}/$1
+    ${RCLONE} copy --exclude 'CACHE/**' /home/{{ app_user }}/$1 gdrive:${REMOTE_DIR}/$1
 }
 
 {

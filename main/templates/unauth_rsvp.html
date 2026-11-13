@@ -1,0 +1,18 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+
+<div id="rsvps">
+<p>
+  Confirm RSVP for
+  <a href="{{ distribution.message.period.event.get_absolute_url }}">
+    {{ distribution.message.period }}</a>
+</p>
+
+<form method="POST">
+  <input type='hidden' name='rsvp' value='{{rsvp}}' />
+  <input type="submit" value="{{rsvp}}: {% if rsvp == 'yes' %}{{ distribution.message.rsvp_template.yes_prompt }}{% else %}{{ distribution.message.rsvp_template.no_prompt }}{% endif %}"/>
+</form>
+</div>
+
+{% endblock content %}

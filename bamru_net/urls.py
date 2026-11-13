@@ -26,16 +26,18 @@ from rest_framework import routers
 from rest_framework.documentation import include_docs_urls
 
 router = routers.DefaultRouter()
-router.register(r'events', views.EventViewSet)
+router.register(r'events', views.EventViewSet, basename='event')
 router.register(r'periods', views.PeriodViewSet)
 router.register(r'participants', views.ParticipantViewSet)
 router.register(r'members', views.MemberViewSet)
-router.register(r'member_certs', views.MemberCertViewSet, base_name='member')
+router.register(r'member_certs', views.MemberCertViewSet, basename='member-cert')
 router.register(r'certs', views.CertViewSet)
 router.register(r'availability', views.ApiUnavailableViewSet)
 router.register(r'do', views.DoViewSet)
-router.register(r'member_availability', views.MemberUnavailableViewSet, base_name='member')
+router.register(r'member_availability', views.MemberUnavailableViewSet, basename='member-availability')
+router.register(r'photos', views.MemberPhotoViewSet)
 router.register(r'messages', views.MessageViewSet)
+router.register(r'inbound_sms', views.InboundSmsViewSet)
 
 
 urlpatterns = [
@@ -48,13 +50,17 @@ urlpatterns = [
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),
     path('event/<int:pk>/period/add/',
          views.EventPeriodAddView.as_view(), name='event_period_add'),
+    path('event/<int:event_id>/messages/', views.MessageEventView.as_view(),
+         name='message_event'),
 
     path('event/participant/add/<int:period>/',
          views.PeriodParticipantCreateView.as_view(), name='period_participant_add'),
 
     path('member/', views.MemberListView.as_view(), name='member_list'),
     path('member/<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
+    path('member/<int:pk>/history', views.MemberHistoryView.as_view(), name='member_history'),
     path('member/<int:pk>/edit', views.MemberEditView.as_view(), name='member_edit'),
+    path('member/<int:pk>/photos', views.MemberPhotoView.as_view(), name='member_photos'),
     path('member/add/', views.MemberAddView.as_view(), name='member_add'),
 
     path('availability/', views.AvailableListView.as_view(), name='available_list'),
@@ -67,15 +73,18 @@ urlpatterns = [
     path('file/<path:name>', views.download_data_file_by_name_view), # used by wiki
     path('files/<path:name>', views.download_data_file_by_name_view), # used by wiki
 
+    path('photos/', views.MemberPhotoGalleryView.as_view(), name='member_photo_gallery'),
+    path('photos/<int:id>/<str:format>/', views.member_photo_by_id_view, name='member_photo_download'),
+
     path('cert/', views.CertListView.as_view(), name='cert_list'),
     path('member/<int:pk>/certs/', views.MemberCertListView.as_view(),
          name='member_cert_list'),
     path('member/<int:member>/certs/new', views.CertCreateView.as_view(),
          name='member_cert_new'),
-    path('member/<int:member>/certs/<int:cert>/delete', views.CertDeleteView.as_view(),
-         name='member_cert_delete'),
     path('member/<int:member>/certs/<int:cert>/download/<path:name>',
          views.cert_file_download_view, name='member_cert_download'),
+    path('certs/<int:cert>/download/',
+         views.cert_file_download_view, name='cert_download'),
 
     path('do/schedule/', views.DoListView.as_view(), name='do_sched'),
     path('do/availability/<int:pk>', views.DoMemberDetailView.as_view(),
@@ -83,6 +92,7 @@ urlpatterns = [
     path('do/plan/', views.DoPlanView.as_view(), name='do_plan'),
     path('do/my_availability/', views.DoMyAvailabilityView.as_view(),
          name='my_availabilty'),
+    path('do_ahc_status/', views.DoAhcStatusView.as_view(), name='do_ahc_status'),
 
     path('message/<int:pk>/', views.MessageDetailView.as_view(), name='message_detail'),
     path('message/<int:pk>/repage/', views.MessageRepageCreateView.as_view(),
@@ -92,12 +102,13 @@ urlpatterns = [
          name='message_inbox'),
     path('message/add/', views.MessageCreateView.as_view(), name='message_add'),
     path('message/test/', views.MessageTestCreateView.as_view(), name='message_test'),
+    path('message/inbound/', views.InboundSmsListView.as_view(), name='inbound_list'),
 
     path('action/become_do/', views.ActionBecomeDo.as_view(), name='action_become_do'),
 
     
     # Message Webhook and Responses
-    path('unauth_rsvp/<slug:token>/', views.unauth_rsvp, name='unauth_rsvp'),
+    path('unauth_rsvp/<slug:token>/<slug:rsvp>/', views.unauth_rsvp, name='unauth_rsvp'),
     path('webhooks/anymail/', include('anymail.urls')),
     path('webhooks/sms_callback/', views.sms_callback, name='sms_callback'),
     path('webhooks/sms/', views.sms, name='sms'),
@@ -107,10 +118,14 @@ urlpatterns = [
     url(r'^api-docs/', include_docs_urls(title='BAMRU API')),
 
     path('admin/', admin.site.urls),
+    url(r'^admin/statuscheck/', include('celerybeat_status.urls')),
+
     url(r'^openid/', include('oidc_provider.urls', namespace='oidc_provider')),
 
-    url(r'^accounts/login/$', auth_views.login, name='login'),
-    url(r'^accounts/logout/$', auth_views.logout, {'next_page': '/'}, name='logout'),
+    url(r'^social/', include('social_django.urls', namespace='social')),
+
+    url(r'^accounts/login/$', auth_views.LoginView.as_view(), name='login'),
+    url(r'^accounts/logout/$', auth_views.LogoutView.as_view(), {'next_page': '/'}, name='logout'),
     
     path('accounts/password_change/', auth_views.PasswordChangeView.as_view(),
          name='password_change'),
@@ -132,6 +147,10 @@ urlpatterns = [
     path('reports/roster/BAMRU-roster.csv', views.ReportRosterCsvView.as_view()),
     path('reports/roster/BAMRU-roster.vcf', views.ReportRosterVcfView.as_view()),
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
+    path('reports/activity-member/<int:pk>/', views.ReportEventMemberView.as_view(), name='report_activity_member'),
+    path('reports/activity-<str:activity_type>/', views.ReportEventView.as_view(), name='report_activity'),
+    path('reports/event/errors/', views.ReportEventErrorsView.as_view(), name='report_event_errors'),
+    path('reports/cert/expire/', views.CertExpireView.as_view(), name='report_cert_expire'),
 
     path('favicon.ico', views.favicon_view)
 

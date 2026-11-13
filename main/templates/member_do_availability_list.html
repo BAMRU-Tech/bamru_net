@@ -15,6 +15,13 @@
 
 {% block content %}
 <main role="main">
+  <p>Select the weeks you are available to be DO.</p>
+  <ul>
+    <li>'-' for weeks not selected yet</li>
+    <li>blank for unavailable</li>
+    <li>checked for available</li>
+  </ul>
+  <p>Feel free to add a comment on conflicts or which weeks you prefer.</p>
   <table id="dTbl" class="display table-bordered compact" style="width:100%">
   </table>
 </main>
@@ -58,7 +65,7 @@ columns: [
           return data;
       }
     },
-    { data: 'comment', title: 'Comment' },
+    { data: 'comment', title: 'Comment', width: '50%' },
     { data: 'id', visible: false, type: ['readonly', 'hidden'],
       className: 'noVis'
     },
@@ -73,6 +80,24 @@ columns: [
 language: { emptyTable: 'No DO periods' },
 
 onEditRow: UpdateRow,
+
+drawCallback: function( settings ) {
+    //FIXME: Match input size to parent
+    var size = Math.trunc($('#dTbl thead th:eq(' + 4 + ')').width() / 7);
+    // 7 is a best guess on font size
+    $('#dTbl input:checkbox').each(
+        function (index) {
+            var comment = table.cell(index, 4);
+            // replace comment field with text input 
+            comment.node().innerHTML =
+                '<input type="text" onfocusout="UpdateComment(this)" data-row="' +  index +
+                '" value="' + comment.data() + '" size="' + size + '" maxsize=255>';
+            // mark indeterminate as appropiate
+            if (table.cell(index, 3).data() == null)
+                this.indeterminate = true
+        }
+    )
+},
 
 {% endblock table_options %}
 
@@ -108,15 +133,24 @@ onEditRow: UpdateRow,
 {# remove filter button #}
 {% block filter_button %}{% endblock %}
 
-
 {% block functions %}
+
+function UpdateComment(input) {
+    var index = input.getAttribute('data-row');
+    var data = table.row(index).data();
+    if (data.comment != input.value) {
+        data.comment = input.value;
+        UpdateRow (table, table.row(index).data());
+        console.log(input.value);
+    }
+}
 
 function SetAll ( e, dt, node, config ) {
     dt.rows().every( function ( rowIdx, tableLoop, rowLoop ) {
         var row = this;
         var data = row.data();
         data.available = true;
-        UpdateRow(table, data, function (r, s, m) { row.data(r) });
+        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
     } )
 }
 
@@ -126,7 +160,7 @@ function ClearAll ( e, dt, node, config ) {
         var data = row.data();
         data.available = false;
         data.comment = '';
-        UpdateRow(table, data, function (r, s, m) { row.data(r) });
+        UpdateRow(row.table(), data, function (r, s, m) { row.data(r) });
     } )
 }
 
@@ -197,19 +231,19 @@ function UpdateRow (dt, row,
 
     var id = data.id;
     data = JSON.stringify(data);
-        $.ajax({
-            method: 'PATCH',
-            contentType: 'application/json',
-            url: '/api/do/' + id + '/',
-            data: data,
-            success: success,
-            error: function (xhr) {
-                console.log('availability edit failed');
-                console.log(xhr);
-                alert(xhr.responseText);
-                return false;
-            }
-        })
+    $.ajax({
+        method: 'PATCH',
+        contentType: 'application/json',
+        url: '/api/do/' + id + '/',
+        data: data,
+        success: success,
+        error: function (xhr) {
+            console.log('availability edit failed');
+            console.log(xhr);
+            alert(xhr.responseText);
+            return false;
+        }
+    })
 }
 
 

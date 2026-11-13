@@ -1,17 +1,18 @@
 import base64
 import logging
+import re
 import uuid
 import twilio
 from argparse import Namespace
 from datetime import datetime, timedelta
 
-import phonenumbers
 from anymail.message import AnymailMessage
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
+from main.lib.phone import format_e164
 from .base import BaseModel, BasePositionModel, Configuration
 from .event import Period
 from .member import Email, Member, Phone
@@ -20,11 +21,6 @@ logger = logging.getLogger(__name__)
 
 # Set this if the UI does not append the template
 APPEND_RSVP_TEMPLATE = False
-
-def format_e164(number):
-    return phonenumbers.format_number(
-        phonenumbers.parse(number, 'US'),
-        phonenumbers.PhoneNumberFormat.E164)
 
 def get_next_sms_from_index(increment=True):
     """Gets the next SMS_FROM number from settings.  If increment,
@@ -56,9 +52,12 @@ class RsvpTemplate(BasePositionModel):
     def __str__(self):
         return self.name
 
-    def html(self, base_url):
-        yn = ''.join(['<p><a href="{}?rsvp={}">{}</a></p>'
-                      .format(base_url, yn, prompt)
+    def html(self, unauth_rsvp_token):
+        yn = ''.join(['<p><a href="http://{}{}">{}</a></p>'
+                      .format(settings.HOSTNAME,
+                              reverse('unauth_rsvp',
+                                      args=[unauth_rsvp_token, yn]),
+                              prompt)
                       for yn, prompt in
                       (('yes', self.yes_prompt), ('no', self.no_prompt))])
         if APPEND_RSVP_TEMPLATE:
@@ -99,9 +98,8 @@ class Message(BaseModel):
     rsvp_template = models.ForeignKey(
         RsvpTemplate, on_delete=models.SET_NULL, blank=True, null=True)
 
-    @models.permalink
     def get_absolute_url(self):
-        return ('message_detail', [str(self.id)])
+        return reverse('message_detail', args=[str(self.id)])
 
     def ancestry_messages(self):
         if not self.ancestry:
@@ -119,6 +117,18 @@ class Message(BaseModel):
             '<a href="{}">{}</a>'.format(m.get_absolute_url(), m.id)
             for m in self.ancestry_messages()])
 
+    def descendant_messages(self):
+        return Message.objects.filter(ancestry__contains=self.id)
+
+    def associated_messages(self):
+        return list(self.descendant_messages()) + self.ancestry_messages()
+
+    @property
+    def time_slug(self):
+        timestamp = int(self.created_at.timestamp())
+        timeb = timestamp.to_bytes((timestamp.bit_length() // 8) + 1, 'big')
+        return base64.b85encode(timeb).decode()
+
     @property
     def expanded_text(self):
         if APPEND_RSVP_TEMPLATE and self.rsvp_template:
@@ -130,10 +140,7 @@ class Message(BaseModel):
         html_body = ''
         html_body += '<h3>Message:</h3><p>{}</p>'.format(self.text)
         if self.rsvp_template:
-            url = 'http://{}{}'.format(settings.HOSTNAME,
-                                       reverse('unauth_rsvp',
-                                               args=[unauth_rsvp_token]))
-            html_body += self.rsvp_template.html(url)
+            html_body += self.rsvp_template.html(unauth_rsvp_token)
         if self.period:
             url = 'http://{}{}'.format(settings.HOSTNAME,
                                        self.period.event.get_absolute_url())
@@ -180,6 +187,10 @@ class Distribution(BaseModel):
         max_length=255, unique=True, null=True, default=uuid.uuid4, editable=False)
     unauth_rsvp_expires_at = models.DateTimeField(blank=True, null=True)
 
+    def __str__(self):
+        return 'Message {} to {}'.format(
+            self.message.id, self.member)
+
     @property
     def text(self):
         return self.message.expanded_text
@@ -187,12 +198,6 @@ class Distribution(BaseModel):
     @property
     def html(self):
         return self.message.html(self.unauth_rsvp_token)
-
-    @property
-    def time_slug(self):
-        timestamp = int(self.created_at.timestamp())
-        timeb = timestamp.to_bytes((timestamp.bit_length() // 8) + 1, 'big')
-        return base64.b85encode(timeb).decode()
 
     def queue(self, sms_from):
         self.unauth_rsvp_expires_at = timezone.now() + timedelta(hours=24)
@@ -207,6 +212,14 @@ class Distribution(BaseModel):
                 email, created = OutboundEmail.objects.get_or_create(
                     distribution=self, email=e)
 
+    def handle_rsvp(self, rsvp):
+        self.rsvp = True
+        self.rsvp_answer = rsvp
+        if not self.response_seconds:
+            delta = timezone.now() - self.created_at
+            self.response_seconds = delta.total_seconds()
+        self.save()
+
     def rsvp_display(self):
         if self.rsvp:
             if self.rsvp_answer:
@@ -215,6 +228,26 @@ class Distribution(BaseModel):
                 return 'No'
         else:
             return 'PENDING'
+
+    def response_time(self):
+        day = self.created_at.date()
+        if self.member.unavailable_set.filter(
+            start_on__lte=day, end_on__gte=day).count() > 0:
+            return 'unavail'
+        s = self.response_seconds
+        if s is None:
+            return '-'
+        return s
+
+    def response_time_display(self):
+        s = self.response_time()
+        if not isinstance(s, int):
+            return s
+        if s < 60:
+            return '{0:.0f} s'.format(s)
+        if s < 3600:
+            return '{0:.0f} m'.format(s / 60)
+        return '{0:.1f} hr'.format(s / 3600)
 
 
 class OutboundMessageManager(models.Manager):
@@ -337,6 +370,49 @@ class InboundSms(BaseModel):
     from_number = models.CharField(max_length=255, blank=True, null=True)
     to_number = models.CharField(max_length=255, blank=True, null=True)
     body = models.CharField(max_length=255, blank=True, null=True)
+    member = models.ForeignKey(Member, null=True, on_delete=models.SET_NULL)
+    outbound = models.ForeignKey(OutboundSms, null=True, on_delete=models.SET_NULL)
+    yes = models.BooleanField(default=False)
+    no = models.BooleanField(default=False)
+    extra_info = models.BooleanField(default=False)
+
+    @staticmethod
+    def has_extra_info(text):
+        # Match the common yes/no variants (allow period & whitespace at end).
+        # Also ignore a single emoji at the end (phone autofill).
+        # There is an actual message if this regex does not match.
+        return (re.compile(r"""(
+                                (y(es|ep|eah?)?)|
+                                (no?(pe)?)
+                               )[.]?\s*[\u263a-\U0001f645]?\s*$""",
+                           re.IGNORECASE | re.VERBOSE)
+                .match(text) is None)
+
+    def process(self):
+        """Calculate member and outbound using from/to."""
+        hours = 24
+        date_from = self.created_at - timedelta(hours=hours)
+        qs = OutboundSms.objects.filter(
+            destination=self.from_number,
+            source=self.to_number,
+            created_at__gte=date_from)
+        self.outbound = (qs.filter(distribution__message__rsvp_template__isnull=False)
+                         .order_by('-pk').first())
+        if self.outbound:
+            self.member = self.outbound.distribution.member
+        else:
+            out2 = qs.order_by('-pk').first()
+            if out2:
+                self.member = out2.distribution.member
+
+        if self.body:
+            yn = self.body[0].lower()
+            self.yes = (yn == 'y')
+            self.no = (yn == 'n')
+
+        self.extra_info = self.has_extra_info(self.body)
+
+        self.save()
 
 
 class OutboundEmail(OutboundMessage):
@@ -362,7 +438,7 @@ class OutboundEmail(OutboundMessage):
         try:
             message = AnymailMessage(
                 subject="BAMRU.net page [{}]".format(
-                    self.distribution.time_slug),
+                    self.distribution.message.time_slug),
                 body=body,
                 to=[self.destination],
                 from_email=settings.MAILGUN_EMAIL_FROM,

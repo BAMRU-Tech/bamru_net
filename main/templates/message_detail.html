@@ -35,8 +35,10 @@
 {% if message.period_format %}
 <p><strong>Page format: </strong>{{ message.period_format }}</p>
 {% endif %}
+<p><strong>Sent at: </strong>{{ message.created_at }}</p>
 <p><strong>Stats: </strong>{{ stats }}</p>
 <p><strong>RSVP: </strong>{{ rsvp }}</p>
+<p><strong>Response times: </strong>{{ response_times }}</p>
 <p></p>
 
 <table id="dTbl" class="display table-bordered compact" style="width:100%">
@@ -56,6 +58,8 @@
         {{ m.display|linebreaks }}
         {% endfor %}
       </td>
+      <td>{{ d.response_time_display }}</td>
+      <td>{{ d.response_time }}</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -81,6 +85,20 @@ columns: [
     { data: 'RSVP', title: 'RSVP', responsivePriority: 2, },
     { data: 'sms_status', title: 'Sms status', responsivePriority: 3, },
     { data: 'email_status', title: 'Email status', responsivePriority: 4, },
+    { data: 'response_time', title: 'Response Time', responsivePriority: 5,
+      type: [ 'num' ],
+      render: function(data, type, row, meta) {
+          if (type == 'sort') {
+              if (data == "-") return 999998;
+              if (data == "unavail") return 999999;
+              return row.response_time_raw
+          } else
+              return data;
+      }
+    },
+    { data: 'response_time_raw', title: 'Response Time (sec)',
+      visible: false, type: [ 'readonly', 'hidden' ], className: 'noVis',
+    },
 ],
 
 language: { emptyTable: 'No messages' },

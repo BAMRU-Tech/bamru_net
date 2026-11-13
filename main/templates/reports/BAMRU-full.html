@@ -59,7 +59,7 @@ tfoot td {
       <td>
         {% for phone in member.phone_set.all %}
           {{ phone.get_type_display }}
-          {{ phone.number }}
+          {{ phone.display_number }}
           {% if phone.pagable %}[pagable]{% endif %}
           <br/>
         {% endfor %}
@@ -73,7 +73,7 @@ tfoot td {
       </td>
       <td>
         {% for contact in member.emergencycontact_set.all %}
-          {{ contact.name }} - {{ contact.type }} {{ contact.number }}<br/>
+          {{ contact.name }} - {{ contact.type }} {{ contact.display_number }}<br/>
         {% endfor %}
       </td>
     </tr>

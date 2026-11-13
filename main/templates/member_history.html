@@ -1,0 +1,37 @@
+{% extends 'base_ftable.html' %}
+{% load rules %}
+
+{% block title %}Member History - {{member.username}}{% endblock title %}
+
+{% block content %}
+<main role="main" class="container-fluid">
+<div class="row">
+  <div class="col-sm-8">
+
+  <p> <strong>Member:</strong> {{ member.full_name }}</p>
+  <p> <strong>Current Status:</strong> {{ member.status }}</p>
+
+  <table id="dTbl" class="display table-bordered compact nowrap">
+  {% for h in diffs %}
+    <tr>
+      <td>{{ h.history_date }}</td>
+      <td>{{ h.status }}</td>
+      <td>{{ h.history_user|default_if_none:"[beginning of change history]" }}</td>
+    </tr>
+  {% endfor %}
+  </table>
+</div>
+</div>
+
+</main>
+{% endblock %}
+
+
+{% block table_options %}
+columns: [
+    { data: 'date', title: 'Date / Time',   },
+    { data: 'status', title: 'Status',  },
+    { data: 'user', title: 'Changed by',   },
+],
+language: { emptyTable: 'No history' },
+{% endblock table_options %}

@@ -34,15 +34,17 @@
             <i class="fa fa-certificate"></i>
             Certifications
           </a>
-{% comment FIXME %}
-          <a class="dropdown-item disabled" href="#">
+          <a class="dropdown-item" href="{% url 'member_photo_gallery' %}">
             <i class="fa fa-camera-retro"></i>
             Member photos
           </a>
-{% endcomment %}
           <a class="dropdown-item" href="{% url 'do_sched' %}">
             <i class="fa fa-calendar"></i>
             Quarterly DO schedule
+          </a>
+          <a class="dropdown-item" href="{% url 'do_ahc_status' %}">
+            <i class="fa fa-info-circle"></i>
+            DO/AHC status
           </a>
         </div>
       </li>
@@ -98,7 +100,9 @@
             Temporary DO change
           </a>
 {% endcomment %}
-{% if isEditor %}
+{% load rules %}
+{% has_perm 'main.add_member' request.user as can_add_member %}
+{% if can_add_member %}
           <a class="dropdown-item" href="{% url 'member_add' %}">
             <i class="fa fa-address-book"></i>
             Add a new Member (Guest)
@@ -114,6 +118,7 @@
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" id="navbarDropdown" data-toggle="dropdown">
             <i class="fa fa-user-circle"></i> {{ request.user }}
+            {% if request.user.is_current_do %}(DO/AHC){% endif %}
         </a>
         <div class="dropdown-menu">
           <a class="dropdown-item" href="{% url 'member_detail' request.user.id %}?returnx=ml">

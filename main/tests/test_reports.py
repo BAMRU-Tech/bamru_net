@@ -36,9 +36,9 @@ class RosterTestCase(TestCase):
             for i in range(randint(0, 3)):
                 mommy.make(EmergencyContact, member=member, _fill_optional=True)
             for i in range(randint(0, 3)):
-                mommy.make(Phone, member=member, _fill_optional=True)
-            for i in range(randint(0, 3)):
-                mommy.make(Phone, member=member, _fill_optional=True)
+                mommy.make(Phone, member=member,
+                           number=randint(1000000, 9999999),
+                           _fill_optional=True)
             if member.status in ['TM', 'FM', 'T']:
                 mommy.make(Role, member=member, role=member.status)
                 if member.status in ['TM', 'FM'] and random() < 0.2:

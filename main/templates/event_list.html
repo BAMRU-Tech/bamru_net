@@ -119,7 +119,6 @@ $(document).ready(function() {
     var tableUpcoming = $('#Upcoming').DataTable( {
         dom: 'Bfrtip',
         ajax: { url: ComputeUpcoming(), dataSrc: '', },
-        responsive: true,
         paging:   false,
         info:     false,
 
@@ -149,11 +148,11 @@ $(document).ready(function() {
                     { text: 'Search',
                       action: function () { $("#Upcoming_filter").toggle() }
                     },
-                    'copy', 'csv', 'excel', 'print',
-                    {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)'
-                    }
+                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'excel', exportOptions: { columns: ':visible' }},
+                    { extend: 'csv', exportOptions: { columns: ':visible' }},
+                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
                 attr: { id: 'Upcoming-more' },
             },
@@ -179,7 +178,6 @@ $(document).ready(function() {
     var tableRecent = $('#Recent').DataTable( {
         dom: 'Bfrtip',
         ajax: { url: ComputeRecent(), dataSrc: '', },
-        responsive: true,
         paging:   false,
         info:     false,
 
@@ -209,11 +207,11 @@ $(document).ready(function() {
                     { text: 'Search',
                       action: function () { $("#Recent_filter").toggle() }
                     },
-                    'copy', 'csv', 'excel', 'print',
-                    {
-                        extend: 'colvis',
-                        columns: ':not(.noVis)'
-                    }
+                    { extend: 'copy', exportOptions: { columns: ':visible' }},
+                    { extend: 'excel', exportOptions: { columns: ':visible' }},
+                    { extend: 'csv', exportOptions: { columns: ':visible' }},
+                    { extend: 'print', exportOptions: { columns: ':visible' }},
+                    { extend: 'colvis', columns: ':not(.noVis)'},
                 ],
                 attr: { id: 'Recent-more' },
             }
@@ -239,7 +237,7 @@ $(document).ready(function() {
         var start = $('#start').val()
         var end = $('#end').val()
 
-        AddRowsByDate(table, start, end)
+        AddRowsByDate(table, start, end);
 
         $('#date-modal').modal('hide');
     });
@@ -251,8 +249,10 @@ $(document).ready(function() {
     ModifyButtonClasses('#Upcoming-more');
     $('#Recent-hdr').append($('#Recent-more'));
     ModifyButtonClasses('#Recent-more');
-    $('#All-hdr').append($('#dTbl-more'));
-    ModifyButtonClasses('#dTbl-more');
+
+    //FIXME: dTbl-more attribue has been temporarily remove (see ftable)
+    //$('#All-hdr').append($('#dTbl-more'));
+    //ModifyButtonClasses('#dTbl-more');
 
     function ModifyButtonClasses( btn ) {
         $(btn).removeClass('dt-button ui-button ui-state-default ui-button-text-only');
@@ -319,7 +319,7 @@ function SetEventDates () {
     if (startBefore == null || startBefore == '') {
         if (!months) months = 12;
         start.setMonth(start.getMonth() + months);
-        startBefore = DateBE(new Date(y, months, 0));
+        startBefore = DateBE(new Date(y + 1, months, 0));
     }
 
     if (startAfter) $('#start').val(startAfter);

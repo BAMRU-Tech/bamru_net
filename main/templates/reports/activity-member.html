@@ -1,0 +1,24 @@
+{% load filters %}
+<html>
+
+<body>
+  <h1>Activity report for {{member.full_name}}</h1>
+
+  <table>
+  {% for type in events %}
+    <tr><td colspan=5><h2>{{type.1}}</h2></td></tr>
+    {% for p in events|lookup:type %}
+    <tr>
+      <td>{{ p.period.event.start_at|date:"M d Y" }}</td>
+      <td><a href="{{p.period.event.get_absolute_url}}">{{p.period}}</a></td>
+      <td>{{ p.period.event.location }}</td>
+      <td>{{ p.period.event.leaders }}</td>
+      <td>{{ p.hours|floatformat:1 }}</td>
+    </tr>
+    {% endfor %}
+    {% if not forloop.last %} <tr><td> </td></tr>{% endif %}
+  {% endfor %}
+  </table>
+  
+</body>
+</html>

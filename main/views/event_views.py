@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, render, render_to_response
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -15,6 +15,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 from main.lib.gcal import get_gcal_manager
 from main.models import Member, Event, Participant, Period
 from main.views.api_views import EventFilter
+from main import tasks
 
 from datetime import timedelta
 import datetime
@@ -61,6 +62,11 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
     model = Event
     template_name = 'event_detail.html'
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related(
+            Member.prefetch_unavailable('period_set__participant_set__member'),
+        )
+
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
         obj.add_period(True)
@@ -73,20 +79,39 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
             for leader in context['event'].leaders.split(','):
                 try:
                     id = Member.objects.filter(username=leader.strip().lower()).first().id
-                except:
+                except Exception:
                     id = 0
                 result.append({ 'name': leader, 'id': id })
-        except:
+        except Exception:
             result.append({ 'name': 'TBD', 'id': 0})
 
         context['leaders'] = result
         return context
 
+    def post(self, request, *args, **kwargs):
+        event_id = self.get_object().id
+        logger.info(request.POST)
+        action = request.POST.get('action', None)
+        if action == 'aar':
+            logger.info('Calling event_create_aar {}'.format(event_id))
+            tasks.event_create_aar.delay(event_id)
+            return HttpResponse('aar')
+        if action == 'ahc_log':
+            logger.info('Calling event_create_ahc_log {}'.format(event_id))
+            tasks.event_create_ahc_log.delay(event_id)
+            return HttpResponse('ahc_log')
+        if action == 'logistics_spreadsheet':
+            logger.info('Calling event_create_logistics_spreadsheet {}'.format(event_id))
+            tasks.event_create_logistics_spreadsheet.delay(event_id)
+            return HttpResponse('logistics_spreadsheet')
+        return HttpResponseBadRequest('Error: No action set.')
+
+
 class EventForm(ModelForm):
     class Meta:
         model = Event
-        fields = ['title', 'description', 'type',
-                  'location', 'lat', 'lon', 'leaders',
+        fields = ['title', 'description', 'description_private', 'type',
+                  'location', 'location_private', 'lat', 'lon', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
@@ -119,7 +144,7 @@ class EventForm(ModelForm):
         start = cleaned_data.get('start_at')
         finish = cleaned_data.get('finish_at')
         if finish and finish < start:
-            self.add_error('finish', 'Finish time must not be earlier than start time')
+            self.add_error('finish_at', 'Finish time must not be earlier than start time')
         return cleaned_data
 
 
@@ -199,7 +224,7 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         """Return the member list."""
         period_id = self.kwargs.get('period')
-        members = (Member.members.filter(status__in=Member.AVAILABLE_MEMBERS)
+        members = (Member.members.filter(status__in=Member.CURRENT_MEMBERS)
                    .exclude(participant__period=period_id))
         return members
 
@@ -211,3 +236,13 @@ class PeriodParticipantCreateView(LoginRequiredMixin, generic.ListView):
         return {
             'period':period,
         }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        pid = self.kwargs.get('period')
+        period = Period.objects.filter(id=pid)[0]
+        context['title'] = str(period)
+        context['period_id'] = pid
+        context['period_position'] = period.position
+        context['event_id'] = period.event.id
+        return context

@@ -8,6 +8,8 @@ from django.core import mail
 from django.test import Client, TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
+
+from dynamic_preferences.registries import global_preferences_registry
 from model_mommy import mommy
 
 from main.models import *
@@ -41,6 +43,7 @@ class OutgoingEmailTestCase(TestCase):
         # Respond to page
         response = self.c.get(relative)
         self.assertEqual(response.status_code, 200)
+        return relative
 
     def test_send(self):
         self.distribution.message.queue()
@@ -62,15 +65,21 @@ class OutgoingEmailTestCase(TestCase):
             period=self.period).exists())
 
         # First link should be Yes
-        self.follow_link(html, 0)
+        url_yes = self.follow_link(html, 0)
+        url_no = self.follow_link(html, 1)
+
+        # The button on that page would POST yes
+        response = self.c.post(url_yes, {'rsvp': 'yes'})
+        self.assertEqual(response.status_code, 200)
 
         # Check that member is added to the event
         self.assertTrue(Participant.objects.filter(
             member=self.email.member,
             period=self.period).exists())
 
-        # Second link should be No
-        self.follow_link(html, 1)
+        # POST no
+        response = self.c.post(url_no, {'rsvp': 'no'})
+        self.assertEqual(response.status_code, 200)
 
         # Check that member is removed from the event
         self.assertFalse(Participant.objects.filter(
@@ -123,6 +132,7 @@ class OutgoingSmsTestCase(TestCase):
 
 
 @override_settings(SMS_FILE_PATH='/tmp',
+                   EMAIL_BACKEND='anymail.backends.test.EmailBackend',
                    DJANGO_TWILIO_FORGERY_PROTECTION=False)
 class IncommingSmsTestCase(TestCase):
     def setUp(self):
@@ -144,6 +154,8 @@ class IncommingSmsTestCase(TestCase):
                                        send_sms=True,
                                        make_m2m=True)
         self.c = Client()
+        self.global_preferences = global_preferences_registry.manager()
+        self.global_preferences['google__do_group'] = 'do@example.com'
 
     def test_send(self):
         # Send a transit page
@@ -151,9 +163,29 @@ class IncommingSmsTestCase(TestCase):
         message_send(0)
         source = self.distribution.outboundsms_set.first().source
 
-        # Check no RSVP before
+        #####
+        # First response doesn't match yes/no check
+        body = 'unmatched'
+        response = self.c.post(reverse('sms'),
+                               {'To': source,
+                                'From': self.number,
+                                'MessageSid': 'FAKE_SID_SMS',
+                                'Body': body,
+                                })
+        self.assertEqual(response.status_code, 200)
+
+        # Test that one message was sent:
+        self.assertEqual(len(mail.outbox), 1)
+
+        msg = mail.outbox[0]
+        self.assertEquals(self.global_preferences['google__do_group'], msg.to[0])
+        self.assertIn(body, msg.body)
+        self.assertIn(str(self.number), msg.body)
+
+        # Check no RSVP recorded
         self.assertIsNone(self.participant.en_route_at)
 
+        #####
         # Respond Yes to page
         response = self.c.post(reverse('sms'),
                                {'To': source,
@@ -166,6 +198,24 @@ class IncommingSmsTestCase(TestCase):
         # Check that RSVP is now there
         p2 = Participant.objects.get(pk=self.participant.id)
         self.assertIsNotNone(p2.en_route_at)
+
+    def test_extra_info(self):
+        self.assertFalse(InboundSms.has_extra_info('y'))
+        self.assertFalse(InboundSms.has_extra_info('yes.'))
+        self.assertFalse(InboundSms.has_extra_info('yea'))
+        self.assertFalse(InboundSms.has_extra_info('yeah'))
+        self.assertFalse(InboundSms.has_extra_info('yep '))
+        self.assertFalse(InboundSms.has_extra_info('Yes 👍 ')) # emoji
+
+        self.assertFalse(InboundSms.has_extra_info('N'))
+        self.assertFalse(InboundSms.has_extra_info('N   '))
+        self.assertFalse(InboundSms.has_extra_info('No.'))
+        self.assertFalse(InboundSms.has_extra_info('Nope'))
+
+        self.assertTrue(InboundSms.has_extra_info('No x'))
+        self.assertTrue(InboundSms.has_extra_info('Not yet'))
+        self.assertTrue(InboundSms.has_extra_info('Ok'))
+        self.assertTrue(InboundSms.has_extra_info('on'))
 
 
 

@@ -1,7 +1,7 @@
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
-from main.models import Cert, Member, Role, Unavailable
+from main.models import Cert, Member, Phone, Role, Unavailable
 
 from datetime import timedelta
 
@@ -76,6 +76,14 @@ class MemberTestCase(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.user.get_absolute_url())
         self.assertEqual(response.status_code, 200)
+
+    def test_phone(self):
+        phone = Phone.objects.create(
+            member=self.user,
+            number='1234567890'
+        )
+        self.assertEqual(phone.number, '+11234567890')
+        self.assertEqual(phone.display_number, '123-456-7890')
 
 
 class CertTestCase(MemberTestCase):

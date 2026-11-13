@@ -1,11 +1,22 @@
 {% extends 'base_table.html' %}
+{% load rules %}
 
 {% block title %}Member - {{member.username}}{% endblock title %}
 
 {% block subheader %}
 <strong id='subhdr'></strong>
-{% if isEditor or member.id == request.user.id %}
 <ul class="navbar-nav ml-auto">
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'report_activity_member' member.id %}>
+      <i class="fa fa-file"></i>
+      Activity report
+    </a>
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'member_history' member.id %}>
+      <i class="fa fa-file"></i>
+      History
+    </a>
+  </li>
   {% if member.id == request.user.id %}
   <li class="nav-item dropdown">
     <a class="nav-link" href={% url 'password_change' %}>
@@ -14,31 +25,42 @@
     </a>
   </li>
   {% endif %}
+  {% has_perm 'main.change_member' request.user member as can_edit_member %}
+  {% if can_edit_member %}
+  <li class="nav-item dropdown">
+    <a class="nav-link" href={% url 'member_photos' member.id %}>
+      <i class="fa fa-camera-retro"></i>
+      Edit photos
+    </a>
+  </li>
   <li class="nav-item dropdown">
     <a class="nav-link" href={% url 'member_edit' member.id %}>
       <i class="fa fa-pencil"></i>
       Edit
     </a>
   </li>
+  {% endif %}
 </ul>
-{% endif %}
 {% endblock subheader %}
 
 {% block content %}
 <main role="main" class="container-fluid">
+<div class="row">
+  <div class="col-sm-8">
   {% if member.is_current_do %}
-    <p style="color:red">CURRENT DO until</p>
+    <p style="color:red">CURRENT DO</p>
   {% endif %}
   <strong>Email addresses:</strong>
   <ul>
     {% for em in member.email_set.all %}
-    <li>{{ em.address }} ({{ em.type }}{% if em.pagable %}, pageable{% endif %})</li>
+    <li>{{ em.address }} ({{ em.type }}{% if em.address == em.member.profile_email %}, profile{% endif %}{% if em.pagable %}, pageable{% endif %})
+    </li>
     {% endfor %}
   </ul>
   <strong>Phone numbers:</strong>
   <ul>
     {% for ph in member.phone_set.all %}
-    <li>{{ ph.number }} ({{ ph.type }}{% if ph.pagable %}, pageable{% endif %})</li>
+    <li>{{ ph.display_number }} ({{ ph.type }}{% if ph.pagable %}, pageable{% endif %})</li>
     {% endfor %}
   </ul>
   <strong>Addresses:</strong>
@@ -56,7 +78,7 @@
   <strong>Emergency Contacts:</strong>
   <ul>
     {% for ec in member.emergencycontact_set.all %}
-    <li>{{ ec.name }}: {{ ec.number }} ({{ ec.type }})</li>
+    <li>{{ ec.name }}: {{ ec.display_number }} ({{ ec.type }})</li>
     {% endfor %}
   </ul>
   <p> <strong>Username:</strong> {{ member.username }}</p>
@@ -67,11 +89,21 @@
   <strong> Privileges:</strong>
     {% if member.is_active %}Login{% endif %}
     {% if member.is_staff %}Staff{% endif %}
+</div>
+<div class="col-sm-4">
+ {% for p in member.memberphoto_set.all %}
+   <a href="{% url 'member_photo_download' p.id 'original' %}" class="d-inline-block mx-1 my-2">
+     <img src="{% url 'member_photo_download' p.id 'medium' %}" style="max-height: 150px" />
+   </a>
+ {% endfor %}
+</div>
+</div>
 
   <p></p>
   <nav class="navbar navbar-expand-sm text-primary subhead">
   <strong>Certifications</strong>
-  {% if isEditor or member.id == request.user.id %}
+  {% has_perm 'main.change_certs_for_member' request.user member as can_edit_member_certs %}
+  {% if can_edit_member_certs %}
   <a class="ml-auto" href="{% url 'member_cert_list' member.id %}">
     <i class="fa fa-certificate"></i>
     Edit Certifications
@@ -94,14 +126,17 @@ $(document).ready( function() {
         ajax: { url: certUrl,
                 dataSrc: function ( json ) {
                     var data = [];
-                    for ( var i=0 ; i< json.certs.length ; i++ ) {
-                        if (json.certs[i][0])
-                            data.push(json.certs[i][0]);
+                    for ( var i=0 ; i<json.certs.length ; i++ ) {
+                        var nc = json.certs[i].length;
+                        if (nc > 0) {
+                            for ( var j=0; j<nc ; j++ ) {
+                                data.push(json.certs[i][j]);
+                            }
+                        }
                     }
                     return data;
                 }
         },
-        responsive: true,
         paging:   false,
         info:     false,
 
@@ -156,7 +191,7 @@ $(document).ready( function() {
     rx = rx ? rx : 'ml';
     href = returns[ rx ];
 
-    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }})";
+    $("#subhdr")[0].innerHTML = href + " > {{ member.full_name }} ({{ member.status }}{% if member.roles %}: {{ member.roles }}{% endif %})";
 });
 </script>
 {% endblock js %}

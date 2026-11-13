@@ -1,17 +1,22 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import F
 from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
 from django.views import generic, View
 
-from main.models import Member
+from main.models import Cert, Member, Event, Participant, Period
 
 import collections
 import csv
+import dateutil.parser
 import io
 import os
 import tempfile
 import vobject
+from collections import defaultdict
+from copy import deepcopy
+from datetime import timedelta
 
 import logging
 logger = logging.getLogger(__name__)
@@ -19,6 +24,12 @@ logger = logging.getLogger(__name__)
 
 class ReportListView(generic.base.TemplateView):
     template_name = 'reports/index.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['start'] = timezone.now() - timedelta(days=365)
+        context['end'] = timezone.now()
+        return context
 
 
 class BaseReportView(View):
@@ -39,6 +50,141 @@ class BaseReportView(View):
         else:
             raise Http404
 
+def get_datetime_from_text(text, default):
+    try:
+        return timezone.make_aware(dateutil.parser.parse(text))
+    except (TypeError, ValueError):
+        return default
+
+class ReportEventView(LoginRequiredMixin, BaseReportView):
+    def get(self, request, **kwargs):
+        type = request.GET.get('type', None)
+
+        end = get_datetime_from_text(request.GET.get('end', None),
+                                     timezone.now())
+        start = get_datetime_from_text(request.GET.get('start', None),
+                                       end - timedelta(days=365))
+
+        members = Member.members.all()
+        events = (Event.objects
+                   .filter(start_at__gte=start,
+                           start_at__lte=end)
+                   .order_by('start_at')
+        )
+        periods = (Period.objects
+                   .select_related('event')
+                   .filter(event__start_at__gte=start,
+                           event__start_at__lte=end)
+                   .prefetch_related('participant_set__member')
+        )
+        if type:
+            events = events.filter(type=type)
+            periods = periods.filter(event__type=type)
+        else:
+            type = 'all'
+
+        # tuples are [# attending, hours]
+        type_totals = dict()
+        event_type_count = dict()
+        for t in Event.TYPES:
+            type_totals[t[0]] = [0, 0]
+            event_type_count[t[0]] = 0
+
+        event_indicies = dict()
+        event_totals = dict()
+        for i, event in enumerate(events):
+            event_indicies[event.id] = i
+            event_totals = [0, 0]
+            event_type_count[event.type] += 1
+
+        member_table = dict()
+        member_type_totals = dict()
+        for member in members:
+            member_table[member.id] = [0 for x in event_indicies]
+            member_type_totals[member.id] = deepcopy(type_totals)
+        for period in periods:
+            event_index = event_indicies[period.event.id]
+            for participant in period.participant_set.all():
+                pid = participant.member.id
+                if pid in member_table:  # exclude guests, etc
+                    hours = participant.hours
+                    if hours:
+                        if member_table[pid][event_index] == 0:
+                            member_type_totals[pid][period.event.type][0] += 1
+                        member_type_totals[pid][period.event.type][1] += hours
+                        member_table[pid][event_index] += hours
+
+        unit_totals = [0, 0]
+        for member in members:
+            member.total_events = 0
+            member.total_hours = 0
+            member.type_totals = member_type_totals[member.id]
+            for k, v in member.type_totals.items():
+                member.total_events += v[0]
+                member.total_hours += v[1]
+                unit_totals[0] += v[0]
+                unit_totals[1] += v[1]
+                type_totals[k][0] += v[0]
+                type_totals[k][1] += v[1]
+
+        context = {}
+        context['events'] = events
+        context['members'] = members
+        context['member_table'] = member_table
+        context['unit_type_totals'] = type_totals
+        context['unit_totals'] = unit_totals
+        context['event_type_count'] = event_type_count
+        context['event_total_count'] = sum(event_type_count.values())
+        context['types'] = Event.TYPES
+        context['type'] = type
+        context['start'] = start
+        context['end'] = end
+
+        report_filename = 'activity-{}.html'.format(kwargs['activity_type'])
+        return self.render(report_filename, context)
+
+
+class ReportEventMemberView(LoginRequiredMixin, generic.DetailView):
+    model = Member
+    template_name = 'reports/activity-member.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        events = {}
+        for t in Event.TYPES:
+            events[t] = (Participant.objects
+                         .filter(member__id=self.kwargs['pk'], period__event__type=t[0])
+                         .order_by('period__event__start_at', 'period__position'))
+        context['events'] = events
+        return context
+
+
+class CertExpireView(LoginRequiredMixin, BaseReportView):
+    def get(self, request, **kwargs):
+
+        type = request.GET.get('type', None)
+
+        end = get_datetime_from_text(request.GET.get('end', None),
+                                     timezone.now())
+        start = get_datetime_from_text(request.GET.get('start', None),
+                                       end - timedelta(days=365))
+
+
+        certs = Cert.objects.filter(
+            expires_on__gte=start,
+            expires_on__lte=end,
+        ).select_related('member')
+        if type is not None:
+            certs = certs.filter(type=type)
+
+        context = {}
+        context['certs'] = certs
+        context['types'] = Cert.TYPES
+        context['type'] = type
+        context['start'] = start
+        context['end'] = end
+        return self.render('cert-expire.html', context)
+
 
 class ReportRosterView(LoginRequiredMixin, BaseReportView):
     def get(self, request, **kwargs):
@@ -46,12 +192,12 @@ class ReportRosterView(LoginRequiredMixin, BaseReportView):
         if (kwargs['roster_type'] == 'names.html'):
             status = Member.PRO_MEMBERS
         else:
-             status = Member.CURRENT_MEMBERS
+            status = Member.CURRENT_MEMBERS
 
         context = {}
         context['members'] = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set',
+                .prefetch_related('address_set', 'phone_set', 'email_set', 'role_set',
                                   'emergencycontact_set')
                 .filter(status__in=status)
                 .order_by('last_name', 'first_name')
@@ -66,10 +212,9 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
     def get(self, request, **kwargs):
         buffer = io.StringIO()
         members = (
-            Member.objects
+            Member.members
                 .prefetch_related('address_set', 'phone_set', 'email_set',
-                                  'emergencycontact_set')
-                .filter(status__in=Member.CURRENT_MEMBERS)
+                                  'emergencycontact_set', 'role_set')
                 .order_by('last_name', 'first_name')
         )
 
@@ -92,37 +237,38 @@ class ReportRosterCsvView(LoginRequiredMixin, View):
         data['roles'] = member.classic_roles
         data['first_name'] = member.first_name
         data['last_name'] = member.last_name
-        data['mobile_phone'] = member.mobile_phone
-        data['home_phone'] = member.home_phone
-        data['work_phone'] = member.work_phone
 
-        try:
-            data['other_phone'] = member.phone_set.filter(type='Other').first().number
-        except AttributeError:
-            data['other_phone'] = ''
+        phones = member.grouped_phones()
+        def maybe_number(t):
+            try:
+                return phones[t][0].display_number
+            except IndexError:
+                return ''
+        data['mobile_phone'] = maybe_number('Mobile')
+        data['home_phone'] = maybe_number('Home')
+        data['work_phone'] = maybe_number('Work')
+        data['other_phone'] = maybe_number('Other')
 
-        try:
-            data['home_address'] = member.address_set.filter(type='Home').first().oneline()
-        except AttributeError:
-            data['home_address'] = ''
+        addresses = member.grouped_addresses()
+        def maybe_address(t):
+            try:
+                return addresses[t][0].oneline()
+            except IndexError:
+                return ''
+        data['home_address'] = maybe_address('Home')
+        data['work_address'] = maybe_address('Work')
+        data['other_address'] = maybe_address('Other')
 
-        try:
-            data['work_address'] = member.address_set.filter(type='Work').first().oneline()
-        except AttributeError:
-            data['work_address'] = ''
+        emails = member.grouped_emails()
+        def maybe_email(t):
+            try:
+                return emails[t][0].address
+            except IndexError:
+                return ''
+        data['home_email'] = maybe_email('Home')
+        data['personal_email'] = maybe_email('Personal')
+        data['work_email'] = maybe_email('Work')
 
-        try:
-            data['other_address'] = member.address_set.filter(type='Other').first().oneline()
-        except AttributeError:
-            data['other_address'] = ''
-
-        try:
-            data['home_email'] = member.email_set.filter(type='Home').first().address
-        except AttributeError:
-            data['home_email'] = ''
-
-        data['personal_email'] = member.personal_email
-        data['work_email'] = member.work_email
         data['ham'] = member.ham
         data['v9'] = member.v9
 
@@ -133,7 +279,7 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
     def get(self, request, **kwargs):
         members = (
             Member.objects
-                .prefetch_related('address_set', 'phone_set', 'email_set')
+                .prefetch_related('address_set', 'phone_set', 'email_set', 'role_set')
                 .filter(status__in=Member.CURRENT_MEMBERS)
                 .order_by('last_name', 'first_name')
         )
@@ -176,3 +322,59 @@ class ReportRosterVcfView(LoginRequiredMixin, View):
         if member.v9:
             card.add('note').value = "V9 - {}".format(member.v9)
         return card
+
+
+class ReportEventErrorsView(LoginRequiredMixin, View):
+    def errors(self, participants, message):
+        return self.messages('Error', participants, message)
+
+    def warnings(self, participants, message):
+        return self.messages('Warning', participants, message)
+
+    def messages(self, severity, participants, message):
+        return ['{} - {} in {} {} for {}: {}'.format(
+            p.period.event.start_at, severity, p.period.event.type,
+            p.period, p.member, message)
+                for p in participants]
+
+    def get(self, request, *args, **kwargs):
+        max_hours = 48
+        errors = []
+        participants = Participant.objects.filter(
+            period__event__finish_at__lt=timezone.now(),
+            period__event__start_at__gt=timezone.now() - timedelta(days=400),
+        ).select_related('member', 'period__event')
+        errors += self.errors(participants.filter(
+            en_route_at__isnull=True,
+            return_home_at__isnull=False,
+            ), 'No departure time')
+        errors += self.errors(participants.filter(
+            en_route_at__isnull=False,
+            return_home_at__isnull=True,
+            ), 'No return time')
+        errors += self.errors(participants.filter(
+            signed_in_at__isnull=True,
+            signed_out_at__isnull=False,
+            ), 'No sign in time')
+        errors += self.errors(participants.filter(
+            signed_in_at__isnull=False,
+            signed_out_at__isnull=True,
+            ), 'No sign out time')
+        errors += self.errors(participants.filter(
+            en_route_at__gt=F('return_home_at'),
+            ), 'Departed home after returned home')
+        errors += self.errors(participants.filter(
+            signed_in_at__gt=F('signed_out_at'),
+            ), 'Sign in after sign out')
+        errors += self.warnings(participants.filter(
+            en_route_at__isnull=True,
+            return_home_at__isnull=True,
+            signed_in_at__isnull=True,
+            signed_out_at__isnull=True,
+            ), 'No times recorded')
+        errors += self.warnings(participants.filter(
+            return_home_at__gt=F('en_route_at') + timedelta(hours=max_hours),
+            ), 'Departure-to-return duration > {} hours'.format(max_hours))
+        response = '<h1>Event errors:</h1>'
+        response += '<br>\n'.join(sorted(errors, reverse=True))
+        return HttpResponse(response)

@@ -77,11 +77,6 @@ jobs:
 
             CELERY_BROKER_URL: 'amqp://bnet:bnet_pass@localhost:5672/bnet'
 
-            WIKI_BASE_URL: ''
-            WIKI_SSH_DEST: ''
-            WIKI_SSH_KEY: ''
-            WIKI_AUTH_DIR: ''
-
 
       - store_artifacts:
           path: test-reports

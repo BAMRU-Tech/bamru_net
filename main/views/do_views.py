@@ -1,10 +1,16 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.forms.models import modelformset_factory
 from django.views import generic
 
-from main.models import DoAvailable
+from main.lib import groups
+from main.models import DoAvailable, DoLog, Member
+from main.tasks import set_do
 
 from collections import defaultdict
+
+import logging
+logger = logging.getLogger(__name__)
 
 class DoAbstractView(LoginRequiredMixin):
     def get_params(self):
@@ -128,3 +134,30 @@ class DoEditView(DoAbstractView, generic.base.TemplateView):
                 initial=initial)
         context['formset'] = formset
         return context
+
+
+class DoAhcStatusView(LoginRequiredMixin, generic.base.TemplateView):
+    template_name = 'do_ahc_status.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['current_dos'] = Member.objects.filter(is_current_do=True)
+        context['do_email_list'] = groups.get_do_group().list_emails()
+        context['do_email_list_name'] = groups.get_do_group().name
+        context['current_scheduled_do'] = DoAvailable.current_scheduled_do()
+        context['next_scheduled_do'] = DoAvailable.next_scheduled_do()
+        context['current_do_log'] = DoLog.current_do_log()
+        context['next_do_log'] = DoLog.maybe_next_do_log()
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """Remove member from DO list."""
+        id = request.POST.get('id', None)
+        if id:
+            m = int(id)
+            logger.info('Calling set_do {}'.format(m))
+            set_do.delay(m, False)
+            return HttpResponse('removed')
+        return HttpResponseBadRequest('Error: No id set.')

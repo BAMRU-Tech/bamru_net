@@ -1,7 +1,7 @@
 /**
  * @summary altEditor
  * @description Lightweight editor for DataTables
- * @version 2.0
+ * @version 2.0.1
  * @file dataTables.editor.free.js
  * @author kingkode (www.kingkode.com)
  *  Modified by: Kasper Olesen (https://github.com/KasperOlesen), Luca Vercelli (https://github.com/luca-vercelli), Zack Hable (www.cobaltdevteam.com)
@@ -22,6 +22,7 @@
  *                Changed option comparison to == for boolean (rather than includes())
  *                Changed button 'edit' to 'update'
  *  CST: 10/28/18 Added input type time 
+ *  CST: 12/12/19 Added multi select
  */
 (function (factory) {
     if (typeof define === 'function' && define.amd) {
@@ -270,12 +271,15 @@
 
                 // Building edit-form
                 var data = "";
-
+                //FIXME: This should be a callback to determine multi select
+                var multiSelect = this.s.dt.cells('.marked').count() > 1;
                 data += "<form name='altEditor-form' role='form'>";
                 data += '<input type="hidden" id="tblId" value="' + dt.table().node().id +'">';
                 for (var j in columnDefs) {
                     // handle hidden fields
-                    if (columnDefs[j].type.includes("hidden")) {
+                    if (columnDefs[j].type.includes("hidden")
+                        || (multiSelect && !columnDefs[j].type.includes("allowMultiSelect")))
+                    {
                         data += "<input type='hidden' id='" + columnDefs[j].name + "' value='" + adata.data()[0][columnDefs[j].name] + "'>";
                     }
                     else {
@@ -310,7 +314,7 @@
                                 + "'"
                                 + (columnDefs[j].maxLength == false ? "" : " maxlength='" + columnDefs[j].maxLength + "'")
                                 + " style='overflow:hidden'  class='form-control  form-control-sm' value='"
-                                + that._quoteattr(adata.data()[0][columnDefs[j].name]) + "'>";
+                                + (!multiSelect ? that._quoteattr(adata.data()[0][columnDefs[j].name]) : '') + "'>";
                             data += "<label id='" + columnDefs[j].name + "label"
                                 + "' class='errorLabel'></label>";
                         }
@@ -337,7 +341,7 @@
                                 + "' placeholder='"
                                 + columnDefs[j].title
                                 + "' style='overflow:hidden'  class='form-control  form-control-sm' value='"
-                                + adata.data()[0][columnDefs[j].name] + "'>";
+                                + (!multiSelect ? adata.data()[0][columnDefs[j].name] : '') + "'>";
                         }
 
                         // Adding time-fields
@@ -350,7 +354,7 @@
                                 + "' placeholder='"
                                 + columnDefs[j].title
                                 + "' style='overflow:hidden'  class='form-control  form-control-sm' value='"
-                                + adata.data()[0][columnDefs[j].name] + "'>";
+                                + (!multiSelect ? adata.data()[0][columnDefs[j].name] : '') + "'>";
                         }
 
                         // Adding select-fields
@@ -780,8 +784,10 @@
                     $('#altEditor-modal').modal('hide');
                 }, 1000);
                 
-                this.s.dt.row({ selected : true }).data(data);
-                this.s.dt.row({ selected : true }).deselect();
+                //FIXME: This should be a callback to determine multi select
+                var multiSelect = this.s.dt.cells('.marked').count() > 1;
+                if (!multiSelect) this.s.dt.row({ selected : true }).data(data);
+                this.s.dt.rows({ selected : true }).deselect();
                 this.s.dt.draw();
                 
                 // Disabling submit button
@@ -908,7 +914,7 @@
      * @static
      * @type String
      */
-    altEditor.version = '2.0';
+    altEditor.version = '2.0.1';
 
     /**
      * altEditor defaults

@@ -4,11 +4,20 @@
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.db.models import Count, Prefetch, Q
+from django.urls import reverse
 from django.utils import timezone
 
 from .base import BaseModel, BasePositionModel
+from main.lib import admin, phone
 
+from collections import defaultdict
 from datetime import date, datetime, timedelta
+import math
+from simple_history.models import HistoricalRecords
+
+import logging
+logger = logging.getLogger(__name__)
 
 class CustomUserManager(BaseUserManager):
     """Allows username to be case insensitive."""
@@ -22,6 +31,7 @@ class CurrentMemberManager(models.Manager):
 
 class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'username'
+    EMAIL_FIELD = 'display_email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
     objects = CustomUserManager()
     members = CurrentMemberManager()
@@ -42,11 +52,12 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     CURRENT_MEMBERS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
     AVAILABLE_MEMBERS = ('TM', 'FM', 'T', 'S')         # Available for operations
-    PRO_MEMBERS = ('TM', 'FM', 'T')                    # Available for pro-deals
-    DO_SHIFT_MEMBERS = ('TM', 'FM', 'T')               # Notify for DO shift changes
+    PRO_MEMBERS = ('TM', 'FM', 'T', 'S')               # Available for pro-deals
+    DO_SHIFT_MEMBERS = ('TM', 'FM', 'T', 'S')          # Notify for DO shift changes
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     username = models.CharField(max_length=255, unique=True)
+    profile_email = models.CharField(max_length=255, blank=True, null=True)
     status = models.CharField(choices=TYPES, max_length=255, blank=True)
     dl = models.CharField(max_length=255, blank=True, null=True)
     ham = models.CharField(max_length=255, blank=True, null=True)
@@ -56,6 +67,8 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     is_current_do = models.BooleanField(default=False)
     sign_in_count = models.IntegerField(default=0)
     last_sign_in_at = models.DateTimeField(blank=True, null=True)
+    history = HistoricalRecords(excluded_fields=[
+        'password', 'last_login', 'last_sign_in_at', 'sign_in_count', 'is_current_do'])
 
     def __str__(self):
         return self.full_name
@@ -83,10 +96,10 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def classic_roles(self):
-        """ Return string, list of ordered roles """
+        """ Return string, list of ordered roles combined with status"""
         roles = [r.role for r in self.role_set.all()] + [self.status]
-        CLASSIC_ROSTER_TYPES = ['Bd', 'OL', 'TM', 'FM', 'T']
-        result = [r for r in CLASSIC_ROSTER_TYPES if r in roles]
+        types = [r[0] for r in Role.TYPES] + list(Member.CURRENT_MEMBERS)
+        result = [r for r in types if r in roles]
         return ' '.join(result)
 
     @property
@@ -101,53 +114,77 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
     @property
     def display_email(self):
         """ Return first email """
-        try:
-            return self.email_set.first().address
-        except AttributeError:
-            return ''
+        if self.profile_email:
+            return self.profile_email
+        return self.get_email()
 
     @property
     def personal_email(self):
-        try:
-            return self.email_set.filter(type='Personal').first().address
-        except AttributeError:
-            return ''
+        return self.get_email('Personal')
 
     @property
     def work_email(self):
-        try:
-            return self.email_set.filter(type='Work').first().address
-        except AttributeError:
-            return ''
+        return self.get_email('Work')
 
     @property
     def display_phone(self):
         """ Return first phone """
-        try:
-            return self.phone_set.first().number
-        except AttributeError:
-            return ''
+        return self.get_phone()
 
     @property
     def mobile_phone(self):
-        try:
-            return self.phone_set.filter(type='Mobile').first().number
-        except AttributeError:
-            return ''
+        return self.get_phone('Mobile')
 
     @property
     def home_phone(self):
-        try:
-            return self.phone_set.filter(type='Home').first().number
-        except AttributeError:
-            return ''
+        return self.get_phone('Home')
 
     @property
     def work_phone(self):
+        return self.get_phone('Work')
+
+    def get_email(self, t=None):
         try:
-            return self.phone_set.filter(type='Work').first().number
-        except AttributeError:
+            return self.smart_first('email_set', self.email_set, t).address
+        except (IndexError, AttributeError):
             return ''
+
+    def get_phone(self, t=None):
+        try:
+            return self.smart_first('phone_set', self.phone_set, t).display_number
+        except (IndexError, AttributeError):
+            return ''
+
+    def smart_first(self, name, qs, t=None):
+        if name in getattr(self, '_prefetched_objects_cache', {}):
+            # prefetched, just find in objects we have already
+            if t is None:
+                return qs.all()[0]
+            else:
+                # it would be nice if we cached this rather that building the
+                # groups every time. But n for a single user is small.
+                return self.grouped_attrs(qs)[t][0]
+        # not prefetched, fall back to query
+        if t is not None:
+            qs = qs.filter(type=t)
+        return qs.first()
+
+    def grouped_attrs(self, related_qs):
+        """related_qs must have a 'type' field (i.e. it should be email_set, phone_set, or address_set)"""
+        objs = defaultdict(list)
+        for o in related_qs.all():
+            objs[o.type].append(o)
+        return objs
+
+    def grouped_emails(self):
+        return self.grouped_attrs(self.email_set)
+
+    def grouped_phones(self):
+        return self.grouped_attrs(self.phone_set)
+
+    def grouped_addresses(self):
+        return self.grouped_attrs(self.address_set)
+
 
     @property
     def short_name(self):
@@ -166,19 +203,76 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
 
     @property
     def is_unavailable(self):
+        if getattr(self, '_unavailable_now', None) is not None:
+            return self._unavailable_now > 0
+
         today = timezone.now().today().date()
         return self.unavailable_set.filter(
             start_on__lte=today, end_on__gte=today).count() > 0
 
-    @property
-    def is_editor(self):
-        return (self.is_staff or
-                self.role_set.filter(role='SEC').exists() or
-                self.role_set.filter(role='RO').exists())
-
-    @models.permalink
     def get_absolute_url(self):
-        return ('member_detail', [str(self.id)])
+        return reverse('member_detail', args=[str(self.id)])
+
+    def pagable_email_addresses(self):
+        return [x.address for x in self.email_set.filter(pagable=True)]
+
+    def _google_profile_info(self):
+        data = {
+            'name': {'givenName': self.first_name, 'familyName': self.last_name},
+            'organizations': [ {'name': 'BAMRU', 'title': self.status}, ],
+        }
+        data['phones'] = [
+            {'type': x.type.lower(), 'value': x.number}
+            for x in self.phone_set.all()]
+        data['emails'] = [
+            {'type': x.type.lower() if x.type != 'Personal' else 'custom',
+             'address': x.address}
+            for x in self.email_set.all()]
+        data['addresses'] = []
+        for x in self.address_set.all():
+            street = x.address1
+            if x.address2:
+                street += '\n' + x.address2
+            data['addresses'].append({
+                'type': x.type.lower(),
+                'streetAddress': '\n'.join([x.address1, x.address2]).strip(),
+                'locality': x.city,
+                'region': x.state,
+                'postalCode': x.zip,
+                'formatted': x.multiline(),
+            })
+        return data
+
+    def profile_email_to_email_set(self):
+        if not self.profile_email:
+            return  # Nothing to do
+        email_query = self.email_set.filter(address__iexact=self.profile_email)
+        if email_query:
+            email = email_query.first()
+            email.pagable = True
+            email.type = 'Other'
+            email.save()
+        else:
+            self.email_set.create(
+                type='Other',
+                pagable=True,
+                address=self.profile_email)
+
+    def update_google_profile(self):
+        if self.profile_email:
+            directory = admin.AdminDirectory()
+            directory.update_user(self.profile_email, self._google_profile_info())
+
+    @classmethod
+    def prefetch_unavailable(cls, name='member_set'):
+        return Prefetch(name, Member.annotate_unavailable(cls.objects))
+
+    @classmethod
+    def annotate_unavailable(cls, qs):
+        today = timezone.now().today().date()
+        return qs.annotate(
+            _unavailable_now=Count('unavailable', filter=Q(unavailable__start_on__lte=today, unavailable__end_on__gte=today))
+        )
 
 
 class Role(BaseModel):
@@ -191,15 +285,13 @@ class Role(BaseModel):
         ('TO', 'Training Officer'),
         ('RO', 'Recruiting Officer'),
         ('TRS', 'Treasurer'),
-        ('OL', 'Operators Leader'),
+        ('OL', 'Operation Leader'),
         ('WEB', 'Web Master'),
-        ('REG', 'Registar'),
-        ('TM', 'Active Technical Member'),
-        ('FM', 'Active Field Member'),
-        ('T', 'Active Trainee'),
+        ('DOS', 'DO Scheduler'),
     )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     role = models.CharField(choices=TYPES, max_length=255, blank=True)
+    history = HistoricalRecords()
 
     @property
     def role_ordinal(self):
@@ -253,6 +345,9 @@ class Email(BasePositionModel):
     pagable = models.BooleanField(default=True)
     address = models.CharField(max_length=255)
 
+    def __str__(self):
+        return self.address
+
 
 class Phone(BasePositionModel):
     TYPES = (
@@ -264,9 +359,21 @@ class Phone(BasePositionModel):
         )
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     type = models.CharField(choices=TYPES, max_length=255, default='Mobile')
-    number = models.CharField(max_length=255)
+    number = models.CharField(max_length=255, validators=[phone.validate_phone])
     pagable = models.BooleanField(default=True)
     sms_email = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.number
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        self.number = phone.format_e164(self.number)
+        return super(Phone, self).save(*args, **kwargs)
+
+    @property
+    def display_number(self):
+        return phone.format_display(self.number)
 
 
 class EmergencyContact(BasePositionModel):
@@ -281,6 +388,10 @@ class EmergencyContact(BasePositionModel):
     number = models.CharField(max_length=255)
     type = models.CharField(choices=TYPES, max_length=255)
     
+    @property
+    def display_number(self):
+        return phone.format_display(self.number)
+
 
 class OtherInfo(BasePositionModel):
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
@@ -302,7 +413,7 @@ class DoAvailable(BaseModel):  # was AvailDos
     year = models.IntegerField()
     quarter = models.IntegerField()
     week = models.IntegerField()
-    available = models.BooleanField(default=False)
+    available = models.NullBooleanField(default=None)
     assigned = models.BooleanField(default=False)
     comment = models.CharField(max_length=255, blank=True)
 
@@ -318,13 +429,42 @@ class DoAvailable(BaseModel):  # was AvailDos
     def end(self):
         return self.shift_end(self.year, self.quarter, self.week)
 
-    @staticmethod
-    def current_year():
-        return timezone.now().year
+    @classmethod
+    def current_shift_dict(cls, date=None):
+        now = timezone.now() if date is None else date
+        if now.date() < DoAvailable.year_start(now.year):
+            year = now.year - 1
+        elif now.date() > DoAvailable.year_start(now.year + 1):
+            year = now.year + 1
+        else:
+            year = now.year
+        week1_start = cls.shift_start(year, 1, 1)
+        week1_delta = now - timezone.make_aware(week1_start)
+        year_week = int(math.floor(week1_delta.days / 7)) + 1 # 1 indexed
+        quarter = int(math.floor((year_week - 1) / 13)) + 1  # quarter numbers start at 1
+        if year_week > 39:
+            quarter = 4  # Don't increment to 5 on 53 week years
+        quarter_week = year_week - 13 * (quarter - 1)
+        return {
+            'year': year,
+            'quarter': quarter,
+            'week': quarter_week,
+        }
+    @classmethod
+    def next_shift_dict(cls):
+        return cls.current_shift_dict(timezone.now() + timedelta(days=7))
 
-    @staticmethod
-    def current_quarter():
-        return int(timezone.now().month/4)+1
+    @classmethod
+    def current_year(cls):
+        return cls.current_shift_dict()['year']
+
+    @classmethod
+    def current_quarter(cls):
+        return cls.current_shift_dict()['quarter']
+
+    @classmethod
+    def current_week(cls):
+        return cls.current_shift_dict()['week']
 
     @classmethod
     def num_weeks_in_quarter(cls, year, quarter):
@@ -370,6 +510,30 @@ class DoAvailable(BaseModel):  # was AvailDos
     def shift_end(cls, year, quarter, week):
         return cls.shift_start(year, quarter, week) + timedelta(days=7) - timedelta(minutes=1)
 
+    @classmethod
+    def is_transition_period(cls):
+        start = cls.shift_start(**cls.next_shift_dict())
+        return timezone.now() + timedelta(days=1) >= timezone.make_aware(start)
+
+    @classmethod
+    def scheduled_do(cls, year, quarter, week):
+        result = cls.objects.filter(
+            year=year, quarter=quarter, week=week, assigned=True)
+        if result.count() != 1:
+            logger.error('Expected 1 DO scheduled, got {}: {}'.format(
+                result.count(), result))
+            return None
+        else:
+            return result.first().member
+
+    @classmethod
+    def current_scheduled_do(cls):
+        return cls.scheduled_do(**cls.current_shift_dict())
+
+    @classmethod
+    def next_scheduled_do(cls):
+        return cls.scheduled_do(**cls.next_shift_dict())
+
 
 def cert_upload_path_handler(instance, filename):
     return "certs/{id}/original/{name}".format(
@@ -405,6 +569,12 @@ class Cert(BasePositionModel):
     expired_notice_sent_at = models.DateTimeField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
+        # cleanup possible bad values from front end
+        if self.link == 'None':
+            self.link = None
+        if self.comment == 'None':
+            self.comment = None
+
         if self.pk is None:
             saved_file = self.cert_file
             self.cert_file = None

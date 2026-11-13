@@ -51,6 +51,7 @@
       {% endfor %}
     </tbody>
   </table>
+  <div id="footer"></div>
 </main>
 {% endblock content %}
 
@@ -58,11 +59,23 @@
 {# --- Table definition --- #}
 
 {% block table_options %}
-order: [[ 4, 'asc' ], [0, 'asc']],
+order: [[ 5, 'asc' ], [3, 'asc'], [0, 'asc']],
 
 columns: colDefs,
 
 language: { emptyTable: 'No members selected' },
+
+drawCallback: function () {
+  var api = this.api();
+  var map = api.column( 2, {page:'current'} ).data().unique_count_map();
+  var sum = 0;
+  var text = []
+  for (let [key, value] of map) {
+    text.push(` ${value} ${key}`);
+    sum += value;
+  }
+  $("#footer").html(text.join(", ") + ` (${sum} total)`);
+},
 
 {% endblock table_options %}
 
