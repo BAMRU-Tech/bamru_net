@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from main.lib.activity import glossary, member_activity
-from main.lib.counting import (MAX_ENTRY, TYPES, activity_rows, count_entry_days, day_hours, entry_hours, entry_led,
+from main.lib.counting import (MAX_ENTRY, TYPES, NotRun, activity_rows, count_entry_days, day_hours, entry_hours, entry_led,
                                hours_by_local_day, member_entries, member_latest, operations_not_run,
                                operations_that_ran, reported_events, unit_since)
 from main.models import DoAvailable, Event, Member, Message, Participant, Period, RsvpTemplate
@@ -76,6 +76,10 @@ class ActivityTestCase(TestCase):
 
     def latest(self, member=None):
         return {i['label']: i for i in member_latest(member or self.member, NOW)}
+
+    def not_run(self):
+        """Why each operation that did not run by NOW did not: {id: 'heads_up' or 'called_off'}."""
+        return {event_id: not_run.why for event_id, not_run in operations_not_run(NOW, operations_that_ran(NOW)).items()}
 
 
 class DaysTestCase(TestCase):
@@ -1028,8 +1032,7 @@ class MemberLatestTestCase(ActivityTestCase):
         self.paged(called_out, 'Heads Up')
         self.paged(called_out, 'Available?')
         self.assertEqual(self.latest()['Operation (stood down)']['event'], called_out)
-        self.assertEqual(operations_not_run(NOW),
-                         {heads_up.id: 'heads_up', silent.id: 'heads_up', called_out.id: 'called_off'})
+        self.assertEqual(self.not_run(), {heads_up.id: 'heads_up', silent.id: 'heads_up', called_out.id: 'called_off'})
 
     def test_before_pages_had_reply_templates_an_operation_not_run_was_called_off(self):
         # Pages from before 13 February 2019 had no reply template, so a heads-up cannot be told from a callout.
@@ -1037,7 +1040,10 @@ class MemberLatestTestCase(ActivityTestCase):
         before = super().make_event('operation', when(2019, 2, 12), no_time=[self.member])
         self.assertEqual(self.latest()['Operation (stood down)']['event'], before)
         after = super().make_event('operation', when(2019, 2, 13), no_time=[self.member])
-        self.assertEqual(operations_not_run(NOW, [before.id, after.id]), {before.id: 'called_off', after.id: 'heads_up'})
+        both = [before.id, after.id]
+        not_run = operations_not_run(NOW, operations_that_ran(NOW, both), both)
+        self.assertEqual(not_run, {before.id: NotRun('called_off', date(2019, 2, 12)),
+                                   after.id: NotRun('heads_up', date(2019, 2, 13))})
 
     def test_stood_down_once_the_operation_has_finished(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
@@ -1047,6 +1053,9 @@ class MemberLatestTestCase(ActivityTestCase):
         # Yesterday's, finished, with no time logged: called off at once.
         yesterday = self.make_event('operation', when(2024, 6, 14), no_time=[self.member, self.other])
         self.assertEqual(self.latest()['Operation (stood down)']['event'], yesterday)
+        # One finishing at this very moment has finished.
+        this_morning = self.make_event('operation', NOW - timedelta(hours=4), no_time=[self.member, self.other])
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], this_morning)
 
     def test_an_operation_ran_whatever_slips_were_made_in_its_times(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
@@ -1193,7 +1202,7 @@ class ReportedEventsTestCase(ActivityTestCase):
 
     def test_test_and_demo_events_are_left_out(self):
         self.titled('Ropes', 'training', when(2024, 1, 10), attended=[self.member])
-        for title in ('TEST', '[radio] Test Event', 'test', 'Demo Event - Somewhere'):
+        for title in ('TEST', '[radio] Test Event', 'test', 'Demo Event - Somewhere', 'Demo Events day'):
             self.titled(title, 'training', when(2024, 2, 10), attended=[self.member])
         # Only a title that is a test or a demonstration: these are training.
         for title in ('Testing anchors', 'Test event prep', 'Rope test'):
@@ -1212,9 +1221,17 @@ class ReportedEventsTestCase(ActivityTestCase):
         warned = self.titled("Hollow Creek search (head's up)", 'operation', when(2024, 4, 10))
         # Begun before pages were recorded: kept, as nothing can tell.
         early = self.titled('Old search', 'operation', when(2016, 8, 8))
-        self.assertEqual(operations_not_run(NOW), {warned.id: 'heads_up', early.id: 'called_off'})
+        self.assertEqual(self.not_run(), {warned.id: 'heads_up', early.id: 'called_off'})
         self.assertNotIn(unused, reported_events())
         self.assertIn('Events left out', dict(glossary()))
+
+    def test_a_heads_up_title_says_heads_up(self):
+        # "heads up", "heads-up" or "head's up", in any case, as a word: an operation never used that is
+        # titled so is kept, as heads-up only; any other title leaves it out.
+        for title in ('Heads up: search', 'HEADS-UP search', "Search (head's up)", 'heads - up'):
+            self.assertIn(self.titled(title, 'operation', when(2024, 3, 10)), reported_events(), title)
+        for title in ('Headsup search', 'Head up the canyon', 'Spearheads up the trail', 'Heads upstream'):
+            self.assertNotIn(self.titled(title, 'operation', when(2024, 3, 10)), reported_events(), title)
 
 
 class OverlappingTimeTestCase(ActivityTestCase):
@@ -1344,6 +1361,16 @@ class PagesTestCase(ActivityTestCase):
         super().setUp()
         # The pages read the clock; hold it at NOW so that they do not grow as the tests age.
         self.enterContext(mock.patch('django.utils.timezone.now', return_value=NOW))
+
+    def test_an_entrys_row_and_the_totals_round_its_hours_alike(self):
+        # An hour and a quarter is 1.3 hours, half up as written, in the entry's row and in the table.
+        self.make_event('training', when(2024, 3, 10), attended=[self.member], hours=1.25)
+        client = Client()
+        client.force_login(self.other)
+        response = client.get(reverse('report_activity_member', args=[self.member.id]))
+        self.assertContains(response, '<td>1.3</td>', html=True)
+        self.assertContains(response, '1 / 1.3 hours')
+        self.assertNotContains(response, '1.2')
 
     def test_member_page_table(self):
         event = self.make_event('operation', when(2024, 1, 10), attended=[self.member, self.other])

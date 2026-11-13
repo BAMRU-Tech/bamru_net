@@ -75,10 +75,10 @@ MAX_ENTRY = timedelta(days=7)
 # ignoring case and a leading [tag]: "test", "test event", or one beginning
 # "Demo Event". And operations never used: begun once pages were recorded
 # (PAGES_FROM, the first), with no page sent and nobody listed, unless the
-# title says it was a heads-up, which may have gone by email.
-TEST_TITLE = r"^\W*(\[[^]]*\]\s*)?(test(\s+event)?\W*$|demo\s+event(\W|$))"
+# title says "heads up", "heads-up" or "head's up": it may have gone by email.
+TEST_TITLE = r"^\W*(\[[^]]*\]\s*)?(test(\s+event)?\W*$|demo\s+event)"
 # Word edges written out, as \b means a backspace to Postgres.
-HEADS_UP_TITLE = r"(^|\W)head'?s?[\s-]*up(\W|$)"
+HEADS_UP_TITLE = r"(^|\W)head(s|'s)[\s-]+up(\W|$)"
 PAGES_FROM = date(2016, 8, 9)
 
 
@@ -175,13 +175,16 @@ def _onto(days, hours):
     return counted
 
 
-def day_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, tz=None):
+def day_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, tz=None, claim=None):
     """{local calendar day: hours} for the days an entry's logged time
     counts for, oldest first. The hours are those that fell on each day; time
     on a day too short to count goes to the counted day beside it, so the
     hours add up to the entry's. Empty without time logged; the day it starts,
-    with no hours, when the entry is too long to be right. `tz` is the local
-    timezone, for a caller with many entries to look it up once."""
+    with no hours, when the entry is too long to be right. `claim` is the
+    part of the time the entry keeps where its member logged time twice, as
+    (start, end), or () for none (first_claims, for entries_hours): the days
+    are still those of all its time, and the hours those of the claim. `tz`
+    is the local timezone, for a caller with many entries to look it up once."""
     tz = tz or timezone.get_current_timezone()
     span = logged_span(en_route_at, return_home_at, signed_in_at, signed_out_at)
     if span is None:
@@ -190,20 +193,28 @@ def day_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, tz=None)
     if too_long(start, end, tz):
         return {start.astimezone(tz).date(): 0}
     hours = hours_by_local_day(start, end, tz)
-    return _onto(_counted_days(hours), hours)
+    claimed = hours if claim is None or claim == span else hours_by_local_day(*claim, tz) if claim else {}
+    return _onto(_counted_days(hours), claimed)
 
 
-def entry_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, started, now, tz=None):
-    """{local day: hours} an entry counts for by `now`: its day_hours up to
-    now's local day, and none for an event that had not started by then. A
-    day after today is a slip in the times entered, or time still to come,
-    and counts nothing yet."""
+def end_of_today(now, tz=None):
+    """The local midnight that ends now's day, where counting stops: time
+    after it, and the days after today, count nothing yet. It is a slip in
+    the times entered, or time still to come."""
+    tz = tz or timezone.get_current_timezone()
+    return timezone.make_aware(datetime.combine(now.astimezone(tz).date() + timedelta(days=1), time.min), tz)
+
+
+def entry_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, started, now, tz=None, claim=None):
+    """{local day: hours} an entry counts for by `now`: its day_hours (of
+    `claim`, as there) up to end_of_today, and none for an event that had
+    not started by then."""
     tz = tz or timezone.get_current_timezone()
     if started > now:
         return {}
-    today = now.astimezone(tz).date()
-    return {day: hours for day, hours in day_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, tz).items()
-            if day <= today}
+    stop = end_of_today(now, tz).date()
+    return {day: hours for day, hours
+            in day_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, tz, claim).items() if day < stop}
 
 
 def first_claims(spans):
@@ -228,25 +239,18 @@ def entries_hours(entries, now, tz=None):
     order: entry_hours, but with time the member logged twice (two
     periods or events at once) counted once, for the entry whose time began
     first (first_claims). An entry's days are its own, by the day rule over
-    all its time; only its hours are the part it claims. A slip, or an event
-    not started, claims no time."""
+    all its time; only its hours are the part it claims. An entry of an
+    event not started, or too long to be right, claims no time; time after
+    today claims it, though it counts nothing yet."""
     tz = tz or timezone.get_current_timezone()
-    today = now.astimezone(tz).date()
     spans = {}
     for i, (started, *times) in enumerate(entries):
         span = logged_span(*times)
         if started <= now and span and not too_long(*span, tz):
             spans[i] = span
     claims = dict(zip(spans, first_claims(list(spans.values()))))
-    counted = []
-    for i, (started, *times) in enumerate(entries):
-        if i not in spans:
-            counted.append(entry_hours(*times, started, now, tz))
-            continue
-        claimed = hours_by_local_day(*claims[i], tz) if claims[i] else {}
-        hours = _onto(_counted_days(hours_by_local_day(*spans[i], tz)), claimed)
-        counted.append({day: h for day, h in hours.items() if day <= today})
-    return counted
+    return [entry_hours(*times, started, now, tz, claim=(claims[i] or ()) if i in claims else None)
+            for i, (started, *times) in enumerate(entries)]
 
 
 # The reply templates of the pages for an operation: a callout asks who can
@@ -273,19 +277,28 @@ def heads_up_only(operations, until):
     return {event_id for event_id, day in started.items() if day >= REPLY_TEMPLATES_FROM and event_id not in called_out}
 
 
-def operations_not_run(until, operations=None):
-    """Why each operation that had finished by `until` without running
-    (operations_that_ran) did not, of all operations or of the ids given:
-    {operation id: 'heads_up' (heads_up_only) or 'called_off'}."""
-    ran = operations_that_ran(until, operations)
+@dataclass(frozen=True)
+class NotRun:
+    """Why an operation did not run, and when it would have."""
+    why: str            # 'heads_up' (heads_up_only) or 'called_off'
+    started: date       # the local day it started
+
+
+def operations_not_run(until, ran, operations=None):
+    """Each operation that had finished by `until` and is not among those
+    that ran (`ran`, the set of their ids: operations_that_ran's, or the
+    unit report's reading of the same rule), of all operations or of the
+    ids given: {operation id: NotRun}."""
     if operations is not None and ran >= set(operations):
         return {}           # all of them ran: nothing more to look up
     finished = reported_events().filter(type='operation', finish_at__lte=until)
     if operations is not None:
         finished = finished.filter(id__in=operations)
-    not_run = [event_id for event_id in finished.values_list('id', flat=True) if event_id not in ran]
-    heads_up = heads_up_only(not_run, until)
-    return {event_id: 'heads_up' if event_id in heads_up else 'called_off' for event_id in not_run}
+    started = {event_id: timezone.localtime(start_at).date()
+               for event_id, start_at in finished.values_list('id', 'start_at') if event_id not in ran}
+    heads_up = heads_up_only(started, until)
+    return {event_id: NotRun('heads_up' if event_id in heads_up else 'called_off', day)
+            for event_id, day in started.items()}
 
 
 def unit_days_and_events(entries):
@@ -494,9 +507,10 @@ def member_latest(member, now=None):
     # member stands down from an operation called off, not one that was
     # only a heads-up.
     candidates = [event for event in record.no_time.values() if event.finish_at <= now]
-    not_run = operations_not_run(now, [event.id for event in candidates]) if candidates else {}
-    called_off = {timezone.localtime(event.start_at).date(): event
-                  for event in candidates if not_run.get(event.id) == 'called_off'}
+    ids = [event.id for event in candidates]
+    not_run = operations_not_run(now, operations_that_ran(now, ids), ids) if candidates else {}
+    called_off = {not_run[event.id].started: event
+                  for event in candidates if event.id in not_run and not_run[event.id].why == 'called_off'}
 
     def last(days_to_events, after=()):
         """The most recent of these days, with its event, if it is later

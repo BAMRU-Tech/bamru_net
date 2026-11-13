@@ -15,6 +15,8 @@ Columns run left to right in the order given: periods of time, or categories.
 import math
 import re
 
+from django.template.defaultfilters import floatformat
+
 
 def axis_top(largest):
     """The smallest round number at or above the largest value whose half is
@@ -168,8 +170,12 @@ def _tip_at(i, n):
 
 
 def hours_text(hours):
-    """Hours as the reports write them, to one decimal: '1,234.5'."""
-    return '{:,.1f}'.format(hours)
+    """Hours as the reports write them, in tables, charts and an entry's row
+    (the template filter `hours`): to one decimal, half up as written, so an
+    hour and a quarter is '1.3', with thousands grouped: '1,234.5'. Rounded
+    far past the tenth first, so that a sum's floating-point error (27.55
+    added up as 27.549999...) does not tip it."""
+    return floatformat(round(hours, 6), '1g')
 
 
 def year_label(year):

@@ -32,16 +32,16 @@ the report's glossary; this says what the code decides beyond them.
 import re
 from bisect import bisect_right
 from collections import Counter, defaultdict
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from typing import NamedTuple
 
 from django.db.models import BooleanField, ExpressionWrapper, F, Min, Q, Window
 from django.db.models.functions import Lag
 from django.utils import timezone
 
-from main.lib.counting import (CALLOUT, HAS_TIME, HEADS_UP, IN_FIELD, TYPES, entries_hours, entry_led, first_claims,
-                               heads_up_only, hours_by_local_day, logged_span, reported_events, too_long,
-                               unit_days_and_events)
+from main.lib.counting import (CALLOUT, HAS_TIME, HEADS_UP, IN_FIELD, TYPES, end_of_today, entries_hours, entry_led,
+                               first_claims, hours_by_local_day, logged_span, operations_not_run, reported_events,
+                               too_long, unit_days_and_events)
 from main.models import Distribution, Event, Member, Message, Participant
 
 
@@ -181,8 +181,8 @@ def unit_entries(now):
         claimed_hours.update(zip([entry_id for entry_id, _, _ in logged],
                            entries_hours([(start_at, *times) for _, start_at, times in logged], now, tz)))
     # Time after today counts nothing yet: an entry's hours stop at today (entries_hours), and the time
-    # it logged at the midnight that ends today, so no total counts it.
-    tomorrow = timezone.make_aware(datetime.combine(now.astimezone(tz).date() + timedelta(days=1), time.min), tz)
+    # it logged where counting stops (counting.end_of_today), so no total counts it.
+    counting_stops = end_of_today(now, tz)
     for event_id, event_type, title, _, start_at, member_id, entry_id, in_field, ol, *times in rows:
         hours = claimed_hours[entry_id]
         if not hours:
@@ -195,7 +195,8 @@ def unit_entries(now):
             event=event_id, type=event_type, started=start_day[event_id], member=member_id, in_field=in_field,
             led=entry_led(event_type, ol, in_field, member_id in named.get(event_id, ())),
             members_only=operation or (event_type == 'training' and not GUEST_FRIENDLY.search(title)),
-            hours=hours, span=None if too_long(start, end, tz) else (start, min(end, tomorrow)), en_route_at=times[0])
+            hours=hours, span=None if too_long(start, end, tz) else (start, min(end, counting_stops)),
+            en_route_at=times[0])
 
 
 def _spells(member_days, lapse):
@@ -439,8 +440,10 @@ def _operations(entries, responders, now):
     """Operations, from the entries counted and each operation's responders."""
     out_on = defaultdict(set)            # day -> responders in the field on it, on any operation
     with_ol = set()                      # operations with an OL in the field
+    started = {}                         # operation with a responder -> the local day it started
     for entry in entries:
         if entry.responder:
+            started[entry.event] = entry.started
             for day in entry.hours:
                 out_on[day].add(entry.member)
             if entry.led:
@@ -448,27 +451,19 @@ def _operations(entries, responders, now):
     operations = Counter()               # (year, one of OUTCOMES) -> operations
     responded = []                       # (the day it started, its responders) for operations that ran
     without_ol = Counter()               # year -> operations that ran with no OL recorded
-    not_run = {}                         # operation that finished without running -> the year it started
-    for event_id, start_at, finish_at in (reported_events().filter(type='operation', start_at__lte=now)
-                                          .values_list('id', 'start_at', 'finish_at')):
-        local_start = timezone.localtime(start_at)
-        year = local_start.year
-        # An operation ran when it has a responder: a member in the field, not a guest, with a day up to
-        # today. That is counting.operations_that_ran's rule, the member page's, read from these entries.
-        if event_id in responders:
-            size = len(responders[event_id])
-            operations[(year, RESPONDER_COUNTS.name_for(size))] += 1
-            responded.append((local_start.date(), size))
-            if event_id not in with_ol:
-                without_ol[year] += 1
-        elif finish_at <= now:
-            # Once it has finished, an operation nobody went on did not run, even yesterday's.
-            not_run[event_id] = year
-        # One still under way with no time logged yet waits until it finishes.
-    # It was called out and then called off, or was only ever a heads-up: counting's page rule.
-    heads_up = heads_up_only(not_run, now)
-    for event_id, year in not_run.items():
-        operations[(year, 'heads_up' if event_id in heads_up else 'called_off')] += 1
+    # An operation ran when it has a responder: a member in the field, not a guest, with a day up to
+    # today. That is counting.operations_that_ran's rule, the member page's, read from these entries.
+    for event_id, members in responders.items():
+        day, size = started[event_id], len(members)
+        operations[(day.year, RESPONDER_COUNTS.name_for(size))] += 1
+        responded.append((day, size))
+        if event_id not in with_ol:
+            without_ol[day.year] += 1
+    # One that has finished without running was called off, or was only ever a heads-up: counting's rule,
+    # the member page's too. One still under way with no time logged yet waits until it finishes.
+    for not_run in operations_not_run(now, set(responders)).values():
+        operations[(not_run.started.year, not_run.why)] += 1
+    responded.sort()                     # oldest first
     day_responded = [(day, len(members)) for day, members in out_on.items()]
     operation_days = Counter((day.year, RESPONDER_COUNTS.name_for(len(members))) for day, members in out_on.items())
     return Operations(operations, responded, without_ol, day_responded, operation_days)

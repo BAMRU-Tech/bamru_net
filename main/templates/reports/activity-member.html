@@ -1,4 +1,4 @@
-{% load static %}<!DOCTYPE html>
+{% load static filters %}<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -92,7 +92,7 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
         <td>{{ p.period.event.location }}</td>
         <td>{{ p.period.event.leaders|default_if_none:"" }}</td>
         {# The hours counted, then any left out, in parentheses, as the glossary says. #}
-        <td>{% if p.counted_hours or not p.left_out_hours %}{{ p.counted_hours|floatformat:1 }}{% endif %}{% if p.counted_hours and p.left_out_hours %} {% endif %}{% if p.left_out_hours %}({{ p.left_out_hours|floatformat:1 }}){% endif %}</td>
+        <td>{% if p.counted_hours or not p.left_out_hours %}{{ p.counted_hours|hours }}{% endif %}{% if p.counted_hours and p.left_out_hours %} {% endif %}{% if p.left_out_hours %}({{ p.left_out_hours|hours }}){% endif %}</td>
         <td>{{ p.days }}</td>
       </tr>
       {% endfor %}
