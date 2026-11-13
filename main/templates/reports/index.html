@@ -27,6 +27,11 @@ function goDate(url) {
   <li><a href="/reports/roster/BAMRU-names.html">BAMRU Names (printable HTML)</a> - List of names for ProDeal reporting</li>
 </ul>
 
+<h4>Unit Trends</h4>
+<ul>
+  <li><a href="{% url 'report_activity_unit' %}">Unit Activity</a> - the unit's days, hours and operations by year</li>
+</ul>
+
 <h4>Date-based Reports</h4>
 <p>
 Start: <input type="date" id="start" value="{{ start|date:"Y-m-d" }}">

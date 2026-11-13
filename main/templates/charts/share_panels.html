@@ -1,0 +1,64 @@
+{# Draws a chart built by main.lib.charts.share_panels. Needs css/charts.css and js/charts.js (the menu, and the arrow keys on a plot). #}
+{% load l10n %}
+<figure class="chart" aria-labelledby="{{ chart.name }}-title" style="--chart-digits: {{ chart.digits }}">
+  <div class="chart-head">
+    <div class="chart-title" id="{{ chart.name }}-title" data-chart-part="title"{% if chart.menu %} aria-live="polite"{% endif %}>
+      {% include 'charts/titles.html' with sizes=chart.menu.title_sizes %}
+    </div>
+  </div>
+  {# Always three parts in this order: the head, the note (an empty element without one), and a main part of the plots with their keys and then the controls (an empty element when there are none). In .chart-tiles each part lines up across charts side by side. #}
+  <div class="chart-note">{% spaceless %}
+    {% if chart.total_keys %}<span class="chart-note-keys">{% for key in chart.total_keys %}<span class="chart-key chart-key-m{{ key.number }}"><i class="chart-part-total"></i>{{ key.label }}</span>{% endfor %}</span>{% endif %}
+    {% if chart.note %}<span>{{ chart.note }}</span>{% endif %}
+  {% endspaceless %}</div>
+  <div class="chart-main">
+  <div class="chart-plots" data-chart-part="views">
+    {% include 'charts/views.html' %}
+  </div>
+  <div class="chart-controls">{% spaceless %}
+      {% if chart.menu %}
+      <label class="chart-control chart-menu">{% if chart.menu.label %}<span class="chart-control-label">{{ chart.menu.label }}</span>{% endif %}
+        <select autocomplete="off">
+          {% for option in chart.menu.options %}<option value="{{ forloop.counter0 }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      {% if chart.measures|length > 1 %}
+      <div class="chart-control">{% if chart.measure_switch_label %}<span class="chart-control-label" id="{{ chart.name }}-measure-label">{{ chart.measure_switch_label }}</span>{% endif %}
+      <div class="chart-switch" role="radiogroup" {% if chart.measure_switch_label %}aria-labelledby="{{ chart.name }}-measure-label"{% else %}aria-label="Measure"{% endif %}>
+        {% for measure in chart.measures %}
+        <label><input type="radio" name="{{ chart.name }}-measure"{% if forloop.first %} checked{% else %} class="chart-pick-m{{ measure.number }}"{% endif %}><span>{{ measure.label }}</span></label>
+        {% endfor %}
+      </div>
+      </div>
+      {% endif %}
+      {% if chart.views|length > 1 %}
+      <div class="chart-control">{% if chart.view_switch_label %}<span class="chart-control-label" id="{{ chart.name }}-view-label">{{ chart.view_switch_label }}</span>{% endif %}
+      <div class="chart-switch" role="radiogroup" {% if chart.view_switch_label %}aria-labelledby="{{ chart.name }}-view-label"{% else %}aria-label="View"{% endif %}>
+        {% for view in chart.views %}
+        <label><input type="radio" name="{{ chart.name }}-view"{% if forloop.first %} checked{% else %} class="chart-pick-v{{ forloop.counter }}"{% endif %}><span>{{ view.label }}</span></label>
+        {% endfor %}
+      </div>
+      </div>
+      {% endif %}
+      {% if chart.scale_switch %}
+      <div class="chart-control"><span class="chart-control-label" id="{{ chart.name }}-scale-label">Scale</span>
+      <div class="chart-switch" role="radiogroup" aria-labelledby="{{ chart.name }}-scale-label">
+        <label><input type="radio" name="{{ chart.name }}-scale" class="chart-pick-own"><span>Separate</span></label>
+        <label><input type="radio" name="{{ chart.name }}-scale" checked><span>Shared</span></label>
+      </div>
+      </div>
+      {% endif %}
+  {% endspaceless %}</div>
+  </div>
+  {% if chart.menu %}
+  {# Every option's title and plots, for js/charts.js to put in place of those shown. #}
+  {% for option in chart.menu.options %}
+  <template data-chart-option="{{ forloop.counter0 }}">
+    <div class="chart-title" id="{{ chart.name }}-title" data-chart-part="title">{% include 'charts/titles.html' with chart=option.chart sizes=None %}</div>
+    <div class="chart-plots" data-chart-part="views">{% include 'charts/views.html' with chart=option.chart %}</div>
+  </template>
+  {% endfor %}
+  {% endif %}
+</figure>

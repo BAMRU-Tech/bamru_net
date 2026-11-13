@@ -1,0 +1,393 @@
+/* Charts. Every chart takes its colours and sizes from the tokens below, so
+   a change here changes them all. The look follows the rest of the site:
+   square corners, grey rules, no cards.
+
+   The switches need a browser with :has() (2023 or later). Older ones show
+   each chart as it is drawn: the first measure and view, on the scale its
+   panels share; they hide the switches. The ramp's steps need color-mix() (2023
+   or later); without it they are the plain series colour. */
+/* On the wrappers too, which set their columns by the sizes, and on a
+   page's own element (.chart-page), for the page's rules to use them. */
+.chart, .chart-tiles, .chart-grid, .chart-page {
+  --chart-surface: #ffffff;
+  --chart-ink: #0b0b0b;             /* titles and values */
+  --chart-ink-secondary: #52514e;   /* notes, axis text */
+  --chart-grid: #e1e0d9;            /* gridlines */
+  --chart-axis: #c3c2b7;            /* baseline */
+  --chart-control: #767676;         /* the switches' borders, 4.5:1 on white */
+
+  /* Series colours, for telling kinds apart: blue, then orange; more kinds
+     than two fold into grey (--chart-muted). The blue also has a darker and
+     a lighter step, and the orange a lighter one, for parts of one series.
+     Parts sit flush, so the three blues are told apart by their own steps,
+     each at least 3:1 on white. */
+  --chart-series-1: #1f5fb4;        /* blue, 6.3:1 on white */
+  --chart-series-1-strong: #0a2a55; /* 14.2:1 */
+  --chart-series-1-light: #5b93dc;  /* 3.2:1 */
+  /* A fourth, palest blue, for ordered steps of one thing only, in columns
+     without a total: it is close to the pale total. */
+  --chart-series-1-pale: #c4dbf6;
+  --chart-series-2: #eb6834;        /* orange */
+  --chart-series-2-light: #f5ab88;  /* only just distinct from the orange and from the pale total: key it */
+  --chart-muted: #898781;
+  --chart-muted-light: #bdbcb4;     /* between muted and the total: 1.51:1 to the total, 1.88:1 to muted */
+  --chart-total: #e6e5df;           /* the whole a column is measured against */
+  --chart-total-edge: #949494;      /* the total's edge, 3:1 on white, as the pale total is not */
+
+  --chart-column: 24px;             /* the thickest a column is drawn */
+  --chart-plot: 6rem;               /* height of a panel's plot */
+  /* Room for the value axis labels: three digits, and a fourth with the
+     frame's padding; more for a chart whose values run longer (--chart-digits,
+     which the chart sets). */
+  --chart-gutter: max(1.75rem, calc(var(--chart-digits, 3) * 0.45rem + 0.3rem - var(--chart-inset)));
+  /* Sizes. The breakpoints below are worked out from them. */
+  --chart-panel-min: 12.5rem;       /* the narrowest a panel is still readable */
+  --chart-panel-gap: 1.25rem;       /* between panels side by side */
+  --chart-panel: 18rem;             /* the widest a panel is drawn; on a phone, see below */
+  --chart-band: 2.25rem;            /* the most room one column and its gap take */
+  --chart-inset: 0px;               /* a chart's frame at each side, where the page draws one */
+  --chart-tile-min: 16rem;          /* the narrowest a tile is laid out at */
+  /* The widest a chart is as a tile: its one panel at its widest, and the frame. */
+  --chart-tile: calc(var(--chart-panel) + 2 * var(--chart-inset));
+  --chart-tile-gap: 0.75rem;        /* between tiles side by side */
+  --chart-page-margin: 0.5rem;      /* the page's margin at each side, where the charts fill the screen */
+  --chart-phone: 26.25rem;          /* the widest phone, 420px across */
+}
+/* Breakpoints. A media or container query cannot read the tokens, so each
+   one is a number worked out from them by one of these formulas, and
+   main/tests/test_charts.py works each out again and fails if one differs:
+   - Tiles: n fit a screen n x --chart-tile-min + (n - 1) x --chart-tile-gap
+     + 2 x --chart-page-margin wide: two from 33.75rem, four from 67.25rem. A
+     screen too narrow for two is a phone, up to 33.74rem.
+   - Panels: n fit a chart's plots n x --chart-panel-min + (n - 1) x
+     --chart-panel-gap wide: two from 26.25rem, three from 40rem, four from
+     53.75rem, five from 67.5rem.
+   A range that ends where another starts stops 0.01rem short of it. A
+   page's own breakpoint, set by what its tables need, says so where it is
+   used. */
+/* On a phone a plot fills the screen to its edges, up to the widest phone,
+   so it is wider there than --chart-panel. It keeps that width until two
+   tiles fit, so that it only grows as the screen widens, and its columns
+   take more room to match. */
+@media (max-width: 33.74rem) {
+  .chart, .chart-tiles, .chart-grid, .chart-page {
+    --chart-panel: calc(var(--chart-phone) - 2 * var(--chart-page-margin) - 2 * var(--chart-inset));
+    --chart-band: 3.5rem; }
+}
+
+.chart { margin: 0 0 1rem; color: var(--chart-ink); }  /* the page's own font */
+.chart-title { font-weight: bold; }
+.chart-note { display: flex; flex-wrap: wrap; gap: 0 0.9rem; margin-top: 0.25rem;
+                    color: var(--chart-ink-secondary); font-size: 0.8rem; }
+/* A key keeps its swatch and its words together, on one line. */
+.chart-key { white-space: nowrap; }
+.chart-key i { display: inline-block; width: 0.65rem; height: 0.65rem; margin-right: 0.3rem; }
+
+.chart-part-1 { background: var(--chart-series-1); }
+.chart-part-1-strong { background: var(--chart-series-1-strong); }
+.chart-part-1-light { background: var(--chart-series-1-light); }
+.chart-part-1-pale { background: var(--chart-series-1-pale); }
+.chart-part-2 { background: var(--chart-series-2); }
+.chart-part-2-light { background: var(--chart-series-2-light); }
+.chart-part-muted { background: var(--chart-muted); }
+.chart-part-muted-light { background: var(--chart-muted-light); }
+.chart-part-total { background: var(--chart-total); }
+/* The key to the whole a column is measured against has the column's edge;
+   a part in the total's colour is a flat block, like its key. */
+.chart-note .chart-key i.chart-part-total { box-shadow: inset 0 0 0 1px var(--chart-total-edge); }
+/* Many ordered layers of one thing: steps through the blues, pale at 0%, the
+   series colour at 50%, strong at 100%, placed by --chart-ramp, so a long
+   ramp has the widest range and still passes through the colour of the
+   other charts. For four steps or fewer, use the named blues instead. */
+.chart-part-ramp { background: var(--chart-series-1); }
+/* Only where color-mix() works: a declaration that uses var() is taken on
+   trust when the stylesheet is read, so without it the step would be left
+   with no colour at all, not the fallback above. */
+@supports (color: color-mix(in oklab, red, red)) {
+  .chart-part-ramp {
+    background: color-mix(in oklab,
+      var(--chart-series-1-strong) clamp(0%, calc((var(--chart-ramp) - 50%) * 2), 100%),
+      color-mix(in oklab, var(--chart-series-1) clamp(0%, calc(var(--chart-ramp) * 2), 100%),
+                var(--chart-series-1-pale))); }
+}
+.chart-key i.chart-part-marker, .chart-marker { width: 5px; height: 5px; background: var(--chart-ink); }
+.chart-key i.chart-part-marker { vertical-align: 0.1em; }
+
+/* The controls, at the foot of every chart after its keys: slight, on one
+   line where they fit, no taller than a line of key text, and starting on
+   the keys' left edge, wrapped lines too. Each is led by a few words saying
+   what it sets. */
+.chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.9rem;
+                  margin: 0.3rem 0 0 var(--chart-gutter);
+                  font-size: 0.7rem; line-height: 1.35; }
+.chart .chart-controls:empty, .chart .chart-note:empty { margin: 0; padding: 0; }
+/* Each option stays whole on one line. Where the lead and its switch do
+   not fit side by side, the switch goes under the lead, whole. */
+.chart-control { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.15rem 0.3rem; margin: 0; max-width: 100%; }
+.chart-control-label { color: var(--chart-ink-secondary); }
+.chart-switch { display: flex; border: 1px solid var(--chart-control); }
+.chart-switch label { position: relative; margin: 0; }
+.chart-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.chart-switch span { display: block; padding: 0 0.4rem; color: var(--chart-ink-secondary); cursor: pointer; white-space: nowrap; }
+.chart-switch label + label span { border-left: 1px solid var(--chart-control); }
+/* A finger gets more to aim at than is drawn. */
+.chart-switch span::before { content: ''; position: absolute; inset: -0.45rem 0; }
+/* The option that is on: filled dark, in white text. */
+.chart-switch input:checked + span { background: var(--chart-ink-secondary); color: var(--chart-surface); }
+/* Keyboard focus is a ring around the option, outside it, where it shows
+   against the page whether or not the option is on. */
+.chart-switch input:focus-visible + span { outline: 2px solid var(--chart-series-1); outline-offset: 2px; }
+
+/* A menu among the controls (charts.with_menu), the height of a switch.
+   js/charts.js shows it and makes it work; until then it is hidden. */
+.chart-control.chart-menu { display: none; }
+.chart-scripted .chart-control.chart-menu { display: inline-flex; }
+.chart-menu select { box-sizing: border-box; height: calc(1.35em + 2px); margin: 0; padding: 0 1rem 0 0.25rem;
+                     font: inherit; line-height: 1.35; color: var(--chart-ink); border-radius: 0;
+                     border: 1px solid var(--chart-control);
+                     /* Drawn here, arrow included, so that it is the same in every browser. */
+                     -webkit-appearance: none; appearance: none;
+                     background: var(--chart-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2352514e' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 0.3rem center / 0.5rem auto; }
+.chart-menu select:focus-visible { outline: 2px solid var(--chart-series-1); outline-offset: 1px; }
+
+/* Charts side by side as tiles: in a .chart-tiles wrapper their titles,
+   notes and plots each start level across a row, as tall as the tallest
+   there and no taller: a row with no note has no band for one. Each chart's
+   controls follow straight after its own keys. */
+.chart-tiles { display: grid; gap: 1rem var(--chart-tile-gap); grid-template-columns: minmax(0, var(--chart-tile)); }
+/* One grid for the whole page, so that every row's tiles stand under those
+   of the row above: one column, two where two tiles fit and four where four
+   do (four tiles go two and two, never three and one), whatever the number
+   of tiles in a row; a row of two takes the first two columns. Columns
+   share the line up to --chart-tile each and are packed from the left. */
+@media (min-width: 33.75rem) { .chart-tiles { grid-template-columns: repeat(2, minmax(0, var(--chart-tile))); } }  /* two tiles fit */
+@media (min-width: 67.25rem) { .chart-tiles { grid-template-columns: repeat(4, minmax(0, var(--chart-tile))); } }  /* four tiles fit */
+/* A tile's one panel takes the tile's width, which is already capped. */
+.chart-tiles .chart-panels { grid-template-columns: minmax(0, 1fr); }
+.chart-tiles > .chart { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0;
+                        grid-template-columns: minmax(0, 1fr); margin: 0; min-width: 0;
+                        max-width: var(--chart-tile); }
+
+/* On a page of tiles (.chart-grid on an element around them all) a chart
+   of several panels that is not itself a tile keeps to the same grid: its
+   panels stand over the tiles' plots, and it ends where the grid ends.
+   --chart-inset is what a chart's frame takes at each side, which the page
+   sets when it draws one. */
+.chart-grid { --chart-grid-width: var(--chart-tile); }
+@media (min-width: 33.75rem) {
+  .chart-grid { --chart-grid-width: calc(2 * var(--chart-tile) + var(--chart-tile-gap)); }
+}
+@media (min-width: 67.25rem) {
+  .chart-grid { --chart-grid-width: calc(4 * var(--chart-tile) + 3 * var(--chart-tile-gap)); }
+}
+/* The grid is centred on the page, with everything else inside the
+   wrapper (the page's heading, section headings, a glossary) in the same
+   column; the padding is the page's margin where the grid fills the screen. */
+.chart-grid { max-width: var(--chart-grid-width); margin-left: auto; margin-right: auto;
+              padding-left: var(--chart-page-margin); padding-right: var(--chart-page-margin); }
+.chart-grid .chart:not(.chart-tiles > .chart) { box-sizing: border-box; max-width: var(--chart-grid-width); }
+.chart-grid .chart:not(.chart-tiles > .chart) .chart-panels {
+  column-gap: calc(var(--chart-tile-gap) + 2 * var(--chart-inset));
+  grid-template-columns: minmax(0, calc(var(--chart-tile) - 2 * var(--chart-inset))); }
+@media (min-width: 33.75rem) {
+  .chart-grid .chart:not(.chart-tiles > .chart) .chart-panels {
+    grid-template-columns: repeat(2, minmax(0, calc(var(--chart-tile) - 2 * var(--chart-inset)))); }
+}
+@media (min-width: 67.25rem) {
+  .chart-grid .chart:not(.chart-tiles > .chart) .chart-panels {
+    grid-template-columns: repeat(4, minmax(0, calc(var(--chart-tile) - 2 * var(--chart-inset)))); }
+}
+
+/* Small panels side by side (charts/share_panels.html). A panel is as wide
+   as its columns need, up to --chart-panel, so that seven columns make a
+   narrow plot rather than seven posts spread out; and never narrower than
+   it is still readable (--chart-panel-min), so that a column or two still
+   have room for their key, on the same lines in every view, and their
+   figures. As many panels go across as fit at that width, every row alike. */
+.chart-panels { display: grid; gap: 0.6rem var(--chart-panel-gap); margin-top: 0.3rem;
+                grid-template-columns: repeat(auto-fit, minmax(min(var(--chart-panel-min), 100%), 1fr)); }
+.chart-panel { max-width: min(var(--chart-panel),
+                              max(var(--chart-panel-min), calc(var(--chart-gutter) + var(--chart-count, 99) * var(--chart-band)))); }
+/* On a phone every plot fills the screen, however few its columns, so that
+   a chart's views, of few periods or many, wrap their keys alike. */
+@media (max-width: 33.74rem) { .chart-panel { max-width: var(--chart-panel); } }   /* a phone */
+/* A chart of five panels (the member report's) is laid out by the room its
+   plots have: packed from the left, five across where five fit, and where
+   they do not, three and two rather than four and one. A chart on a page of
+   tiles is laid out by the page's grid instead (.chart-grid, above). */
+.chart-plots { container-type: inline-size; }
+@container (min-width: 26.25rem) and (max-width: 39.99rem) {   /* two panels fit, not three */
+  .chart-panels:has(> .chart-panel:nth-child(5):last-child) { grid-template-columns: repeat(2, minmax(0, var(--chart-panel))); }
+}
+@container (min-width: 53.75rem) and (max-width: 67.49rem) {   /* four fit, not five */
+  .chart-panels:has(> .chart-panel:nth-child(5):last-child) { grid-template-columns: repeat(3, minmax(0, var(--chart-panel))); }
+}
+@container (min-width: 67.5rem) {   /* five fit */
+  .chart-panels:has(> .chart-panel:nth-child(5):last-child) { grid-template-columns: repeat(5, minmax(0, var(--chart-panel))); }
+}
+/* The switches work by :has(), so they are hidden in a browser that lacks
+   it, which shows the chart as it starts. */
+@supports not selector(:has(*)) {
+  .chart-control:not(.chart-menu) { display: none; }
+}
+.chart-panel-label { margin-left: var(--chart-gutter); font-weight: bold; font-size: 0.85rem; line-height: 1.2; }
+/* Room above the plot for half of the top tick's label, and no more. */
+.chart-plot { position: relative; height: var(--chart-plot); margin-top: 0.4rem; }
+.chart-tick { display: none; position: absolute; left: var(--chart-gutter); right: 0; border-top: 1px solid var(--chart-grid); }
+.chart-tick.chart-baseline { border-top-color: var(--chart-axis); }
+.chart-tick span { position: absolute; right: 100%; top: -0.5em; padding-right: 0.3rem; line-height: 1;
+                   font-size: 0.7rem; color: var(--chart-ink-secondary); font-variant-numeric: tabular-nums; }
+.chart-bands { display: flex; margin-left: var(--chart-gutter); }
+.chart-plot .chart-bands { position: relative; height: 100%; align-items: flex-end; }
+.chart-band { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.chart-column { display: flex; flex-direction: column-reverse; flex: none; width: calc(100% - 2px); min-width: 1px;
+                max-width: var(--chart-column); --chart-size: var(--m1-shared);
+                height: calc(var(--chart-size) * var(--chart-up));
+                min-height: min(1px, calc(var(--chart-size) * 100));   /* a hairline, but nothing for zero */
+                background: var(--chart-total); box-shadow: inset 0 0 0 1px var(--chart-total-edge); }
+/* Parts are flat blocks, flush against each other; they cover the total's edge. */
+.chart-column div { width: 100%; flex: none; height: var(--m1); }
+/* A plot with parts below zero (.chart-signed): --chart-up is the share of
+   its height above zero. Each band stacks the column above zero on a region
+   below it, in which the parts below zero hang from the top. */
+.chart-plot { --chart-up: var(--m1-shared-up, 1); }
+.chart-signed .chart-band { flex-direction: column; justify-content: flex-end; align-items: center; }
+.chart-under { flex: none; display: flex; justify-content: center; align-items: flex-start; width: 100%;
+               height: calc((1 - var(--chart-up)) * 100%); }
+.chart-column.chart-down { flex-direction: column; height: var(--chart-size); }
+/* A value marked on a column. It keeps its place across the band without
+   being given one; its height is a share of the whole plot. */
+.chart-marker { position: absolute; --chart-mark: var(--m1-shared-mark); --chart-mark-on: var(--m1-on);
+                bottom: var(--chart-mark); transform: translateY(50%) scale(var(--chart-mark-on));
+                outline: 1px solid var(--chart-surface); }
+.chart-x-axis .chart-band { height: auto; }
+.chart-panel-key { display: flex; flex-wrap: wrap; gap: 0 0.7rem; margin: 0.2rem 0 0 var(--chart-gutter);
+                   font-size: 0.75rem; color: var(--chart-ink-secondary); }
+.chart-x-axis span { font-size: 0.7rem; color: var(--chart-ink-secondary); white-space: nowrap; padding-top: 0.15rem; }
+
+/* The other views, when the reader asks for one */
+.chart-panels.chart-v2, .chart-panels.chart-v3 { display: none; }
+.chart:has(.chart-pick-v2:checked) .chart-panels.chart-v1 { display: none; }
+.chart:has(.chart-pick-v3:checked) .chart-panels.chart-v1 { display: none; }
+.chart:has(.chart-pick-v2:checked) .chart-panels.chart-v2 { display: grid; }
+.chart:has(.chart-pick-v3:checked) .chart-panels.chart-v3 { display: grid; }
+
+/* Which ticks and sizes show depends on two switches: the measure (first,
+   second or third) and the scale (each panel's own, or one shared by all). Each rule
+   stands alone, so a browser without :has() keeps the first view whole. */
+.chart-tick.chart-m1.chart-shared { display: block; }
+.chart:has(.chart-pick-m2:checked) .chart-tick.chart-m1.chart-shared { display: none; }
+.chart:has(.chart-pick-m3:checked) .chart-tick.chart-m1.chart-shared { display: none; }
+.chart:has(.chart-pick-own:checked) .chart-tick.chart-m1.chart-shared { display: none; }
+.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):has(.chart-pick-own:checked) .chart-tick.chart-m1.chart-own { display: block; }
+.chart:has(.chart-pick-m2:checked):not(:has(.chart-pick-own:checked)) .chart-tick.chart-m2.chart-shared { display: block; }
+.chart:has(.chart-pick-m3:checked):not(:has(.chart-pick-own:checked)) .chart-tick.chart-m3.chart-shared { display: block; }
+.chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-tick.chart-m2.chart-own { display: block; }
+.chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-tick.chart-m3.chart-own { display: block; }
+.chart:has(.chart-pick-own:checked) .chart-column { --chart-size: var(--m1-own); }
+.chart:has(.chart-pick-m2:checked) .chart-column { --chart-size: var(--m2-shared); }
+.chart:has(.chart-pick-m3:checked) .chart-column { --chart-size: var(--m3-shared); }
+.chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-column { --chart-size: var(--m2-own); }
+.chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-column { --chart-size: var(--m3-own); }
+.chart:has(.chart-pick-m2:checked) .chart-column div { height: var(--m2); }
+.chart:has(.chart-pick-m3:checked) .chart-column div { height: var(--m3); }
+.chart:has(.chart-pick-own:checked) .chart-plot { --chart-up: var(--m1-own-up, 1); }
+.chart:has(.chart-pick-m2:checked) .chart-plot { --chart-up: var(--m2-shared-up, 1); }
+.chart:has(.chart-pick-m3:checked) .chart-plot { --chart-up: var(--m3-shared-up, 1); }
+.chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-plot { --chart-up: var(--m2-own-up, 1); }
+.chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-plot { --chart-up: var(--m3-own-up, 1); }
+.chart:has(.chart-pick-own:checked) .chart-marker { --chart-mark: var(--m1-own-mark); }
+.chart:has(.chart-pick-m2:checked) .chart-marker { --chart-mark: var(--m2-shared-mark); --chart-mark-on: var(--m2-on); }
+.chart:has(.chart-pick-m3:checked) .chart-marker { --chart-mark: var(--m3-shared-mark); --chart-mark-on: var(--m3-on); }
+.chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-marker { --chart-mark: var(--m2-own-mark); }
+.chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-marker { --chart-mark: var(--m3-own-mark); }
+/* The title follows both the measure and the view. Every variant sits in the same grid cell, so the head is as tall as the
+   longest one and nothing below moves when a switch changes the title. */
+.chart-title { display: grid; }
+.chart-title div { grid-area: 1 / 1; visibility: hidden; }
+.chart-title .chart-m1.chart-v1 { visibility: visible; }
+.chart:has(.chart-pick-m2:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
+.chart:has(.chart-pick-m3:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
+.chart:has(.chart-pick-v2:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
+.chart:has(.chart-pick-v3:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
+.chart:has(.chart-pick-m2:checked):not(:has(.chart-pick-v2:checked)):not(:has(.chart-pick-v3:checked)) .chart-title .chart-m2.chart-v1 { visibility: visible; }
+.chart:has(.chart-pick-m3:checked):not(:has(.chart-pick-v2:checked)):not(:has(.chart-pick-v3:checked)) .chart-title .chart-m3.chart-v1 { visibility: visible; }
+.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):has(.chart-pick-v2:checked) .chart-title .chart-m1.chart-v2 { visibility: visible; }
+.chart:has(.chart-pick-m2:checked):has(.chart-pick-v2:checked) .chart-title .chart-m2.chart-v2 { visibility: visible; }
+.chart:has(.chart-pick-m3:checked):has(.chart-pick-v2:checked) .chart-title .chart-m3.chart-v2 { visibility: visible; }
+.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):has(.chart-pick-v3:checked) .chart-title .chart-m1.chart-v3 { visibility: visible; }
+.chart:has(.chart-pick-m2:checked):has(.chart-pick-v3:checked) .chart-title .chart-m2.chart-v3 { visibility: visible; }
+.chart:has(.chart-pick-m3:checked):has(.chart-pick-v3:checked) .chart-title .chart-m3.chart-v3 { visibility: visible; }
+.chart-only-m2 { display: none; }
+.chart-only-m3 { display: none; }
+.chart:has(.chart-pick-m2:checked) .chart-only-m1 { display: none; }
+.chart:has(.chart-pick-m3:checked) .chart-only-m1 { display: none; }
+.chart:has(.chart-pick-m2:checked) .chart-only-m2 { display: revert; }
+.chart:has(.chart-pick-m3:checked) .chart-only-m3 { display: revert; }
+/* The keys to the measures' totals share one place in the note, as wide as
+   the widest, and only the measure's own shows: so the note after them
+   keeps its lines, and the chart its height, when the measure changes,
+   even to one without a total. */
+.chart-note-keys { display: inline-grid; }
+.chart-note-keys .chart-key { grid-area: 1 / 1; visibility: hidden; }
+.chart-note-keys .chart-key-m1 { visibility: visible; }
+.chart:has(.chart-pick-m2:checked) .chart-note-keys .chart-key-m1 { visibility: hidden; }
+.chart:has(.chart-pick-m3:checked) .chart-note-keys .chart-key-m1 { visibility: hidden; }
+.chart:has(.chart-pick-m2:checked) .chart-note-keys .chart-key-m2 { visibility: visible; }
+.chart:has(.chart-pick-m3:checked) .chart-note-keys .chart-key-m3 { visibility: visible; }
+
+/* The figures for the column under the pointer: a list in a box that floats
+   just above the plot, by the column, over whatever is there, so nothing
+   moves. It starts at the column in the left third of the plot, is centred
+   on it in the middle and ends at it in the right third, and is no wider
+   than two thirds of the plot, its padding and border included, so it
+   stays within the panel. A tap or a
+   click does the same and stays until the next one, because a band takes
+   focus, and on a touch screen the pointer cursor makes it something a tap
+   acts on. The Tab key stops at each plot, and js/charts.js moves along its
+   bands by the arrow keys. */
+.chart-band:hover .chart-column, .chart-band:focus .chart-column { outline: 1px solid var(--chart-ink); }
+.chart-band:focus { outline: none; }
+.chart-plot:focus-visible { outline: 2px solid var(--chart-series-1); outline-offset: 2px; }
+/* Out of sight the box is clipped away, not removed, so that a screen
+   reader reads each column's figures in turn, for the measure and view
+   that are showing. */
+.chart-tip { box-sizing: border-box; position: absolute; z-index: 2; bottom: 100%; margin-bottom: 0.3rem;
+             width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+             pointer-events: none; font-size: 0.8rem; line-height: 1.3; text-align: left;
+             font-variant-numeric: tabular-nums; }
+.chart-band:hover .chart-tip, .chart-band:focus .chart-tip {
+             width: max-content; max-width: 66%; height: auto; padding: 0.3rem 0.5rem; overflow: visible;
+             clip-path: none; white-space: normal;
+             background: var(--chart-surface); border: 1px solid var(--chart-axis);
+             box-shadow: 0 1px 4px rgb(0 0 0 / 0.2); }
+/* Its lines: numbers in one column, right-aligned, what they count beside them. */
+.chart-tip-lines { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.4rem; }
+.chart-tip-number { text-align: right; }
+.chart-tip-text { grid-column: 1 / -1; }
+.chart-tip-left { left: var(--chart-tip-at); }
+.chart-tip-right { right: var(--chart-tip-at); }
+.chart-tip-centre { left: var(--chart-tip-at); transform: translateX(-50%); }
+/* The pointer on another column takes over from the one tapped. */
+.chart-panel:has(.chart-plot .chart-band:hover) .chart-band:focus:not(:hover) .chart-tip {
+             width: 1px; max-width: none; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%);
+             white-space: nowrap; border: 0; box-shadow: none; }
+.chart-panel:has(.chart-plot .chart-band:hover) .chart-band:focus:not(:hover) .chart-column { outline: none; }
+@media (hover: none) { .chart-plot .chart-band { cursor: pointer; } }
+
+/* Browsers leave background colours out of print unless told to keep them,
+   and the columns are background colours. */
+@media print {
+  .chart, .chart * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .chart-controls { display: none; }
+  /* A chart is kept on one page where it fits, and a panel always. */
+  .chart, .chart-panel { break-inside: avoid; }
+}
+/* Forced colours (Windows high contrast) replace background colours, which
+   the columns, the keys' swatches and the option that is on are made of:
+   those keep their own colours, and the option that is on gets an outline
+   inside it, which keyboard focus replaces with its ring outside. */
+@media (forced-colors: active) {
+  .chart-column, .chart-column div, .chart-key i, .chart-marker { forced-color-adjust: none; }
+  .chart-switch input:checked:not(:focus-visible) + span { outline: 2px solid; outline-offset: -2px; }
+}

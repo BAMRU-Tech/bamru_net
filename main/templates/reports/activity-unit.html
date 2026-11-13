@@ -1,0 +1,40 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Unit Activity</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{% static "css/charts.css" %}" />
+<script src="{% static 'js/charts.js' %}" defer></script>
+{% include 'reports/activity_style.html' %}
+{% include 'reports/activity_charts_style.html' %}
+<style type="text/css">
+/* Charts sit under the theme they belong to. A chart of one panel is a tile beside the others of its
+   theme; charts.css decides how many go across, lines them up, and keeps a plot from stretching. */
+h3 { margin: 1.2rem 0 0.4rem; }
+.chart-tiles { margin-bottom: 1rem; }
+/* Every row of the page stands on one grid of columns, centred in the window: chart-grid on the body
+   (charts.css) makes the heading, the charts and the glossary one column of that width. */
+</style>
+</head>
+
+<body class="chart-grid">
+<div align="center">
+  <h2>Bay Area Mountain Rescue Unit</h2>
+  <h1>Unit Activity{% if activity.charts %} - {{ activity.period }}{% endif %}</h1>
+  <p>CONFIDENTIAL - BAMRU Members Only</p>
+</div>
+
+  {% for section in activity.sections %}
+  <h3>{{ section.title }}</h3>
+  {% for chart in section.charts %}{% if chart.wide %}{% include 'charts/share_panels.html' %}{% endif %}{% endfor %}
+  <div class="chart-tiles">
+  {% for chart in section.charts %}{% if not chart.wide %}{% include 'charts/share_panels.html' %}{% endif %}{% endfor %}
+  </div>
+  {% empty %}
+  <p>No activity to show.</p>
+  {% endfor %}
+  {% if activity.charts %}{% include 'reports/glossary.html' %}{% endif %}
+
+</body>
+</html>

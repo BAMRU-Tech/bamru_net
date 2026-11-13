@@ -1,6 +1,7 @@
 #
 #           Event Model
 #
+import re
 from django.db import models
 from django.urls import reverse
 
@@ -49,6 +50,66 @@ class Event(BaseModel):
     def save(self, *args, **kwargs):
         super(Event, self).save(*args, **kwargs)
         self.add_period(True)
+
+    @staticmethod
+    def _usernames(members=None):
+        """What reads leaders texts for usernames: ({username, lower case and
+        single-spaced: id}, a pattern that matches any of them as whole
+        words, with any spacing, ignoring case, the longer first). `members`
+        is [(username, id)], every member's in id order unless given; of two
+        whose usernames differ only by case or spacing, the first is kept,
+        so the member with the lower id."""
+        if members is None:
+            members = Member.objects.order_by('id').values_list('username', 'id')
+        ids = {}
+        for username, member_id in members:
+            words = username.lower().split()
+            if words:
+                ids.setdefault(' '.join(words), member_id)
+        if not ids:
+            return ids, re.compile(r'(?!)')
+        alternatives = '|'.join(r'\s+'.join(re.escape(word) for word in username.split())
+                                for username in sorted(ids, key=len, reverse=True))
+        # A username ends where a letter or a digit does not follow. The
+        # lookarounds are written so that an underscore ends one too, and
+        # stand once around all the usernames, which is many times quicker
+        # than once around each.
+        return ids, re.compile(r'(?<![^\W_])(?:' + alternatives + r')(?![^\W_])', re.IGNORECASE)
+
+    @staticmethod
+    def _cut(text, ids, pattern):
+        """A leaders text cut into [(text, member id or None)] by the usernames
+        in it. The text is read left to right: the first username to start
+        wins, and of two that start at one place the longer; so "Ann Lee
+        Fox" is "ann lee" and then plain "Fox", though "lee fox" is a
+        member too, and "Ann Lee" is "ann lee" and not "lee"."""
+        parts, start = [], 0
+        for match in pattern.finditer(text):
+            if match.start() > start:
+                parts.append((text[start:match.start()], None))
+            # Unicode can match a username ignoring case without lowering to
+            # it (a long s for an s); that text stays unlinked.
+            parts.append((match.group(), ids.get(' '.join(match.group().lower().split()))))
+            start = match.end()
+        if start < len(text):
+            parts.append((text[start:], None))
+        return parts
+
+    def leader_parts(self, members=None):
+        """This event's leaders text cut into [(text, member id or None)], so
+        that each username in it can be linked. However the text is written,
+        a leader is a member whose username appears in it (see _cut for
+        which, where two could). `members` is as for _usernames."""
+        return self._cut(self.leaders or '', *self._usernames(members))
+
+    @classmethod
+    def members_named(cls, texts, members=None):
+        """{text: the ids of the members it names} for each of these leaders
+        texts, by the rule of leader_parts, with the usernames read into one
+        pattern for them all. `members` is as for _usernames."""
+        ids, pattern = cls._usernames(members)
+        return {text: {member_id for _, member_id in cls._cut(text, ids, pattern) if member_id is not None}
+                for text in set(texts) if text}
 
     def __str__(self):
         return self.title

@@ -1,24 +1,108 @@
-{% load filters %}
-<html>
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Activity report - {{ member.full_name }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="{% static "css/charts.css" %}" />
+{% include 'reports/activity_style.html' %}
+{% include 'reports/activity_charts_style.html' %}
+<style type="text/css">
+/* The heading, the summary, the chart and the event lists are one column,
+   centred, as wide as the chart's five panels at their widest, with their
+   gaps and its frame. The sizes are charts.css's (chart-page on the body). */
+body { max-width: calc(5 * var(--chart-panel) + 4 * var(--chart-panel-gap) + 2 * var(--chart-inset));
+       margin-left: auto; margin-right: auto;
+       padding-left: var(--chart-page-margin); padding-right: var(--chart-page-margin); }
+table.events { table-layout: fixed; }
+/* A word wider than its column folds, not running over the rule beside it. */
+table.events td { overflow-wrap: anywhere; }
+table.events col.date { width: 9%; }
+table.events col.event { width: 31%; }
+table.events col.location { width: 29%; }
+table.events col.leaders { width: 19%; }
+table.events col.hours, table.events col.days { width: 6%; }
+/* On a phone the two number columns need room for their headings, taken
+   from the text columns, which wrap. */
+@media (max-width: 34rem) {   /* the summary's breakpoint, below */
+  table.events { font-size: 0.8em; }
+  table.events col.date { width: 14%; }
+  table.events col.event { width: 27%; }
+  table.events col.location { width: 21%; }
+  table.events col.leaders { width: 14%; }
+  table.events col.hours, table.events col.days { width: 12%; }
+}
+table.events td:nth-last-child(-n+2) { text-align: right; }
+/* The summary has a column for each type and duty: with all three duties
+   they need about 543px, measured, so its breakpoint is its own, 34rem
+   (544px), a little above the charts' phone width. Below it each year is a
+   block of its own, one line for each column with something in it, the
+   column's heading beside the figure. */
+@media (max-width: 34rem) {
+  table.summary, table.summary caption, table.summary tbody, table.summary tr, table.summary th, table.summary td {
+    display: block; }
+  table.summary caption { border: 0; }     /* inside the table's own border here */
+  table.summary thead { display: none; }
+  table.summary td { display: flex; justify-content: space-between; gap: 1em; padding: 0 4px; border: 0; }
+  table.summary td::before { content: attr(data-label); }
+  table.summary tbody th { font-weight: bold; padding: 0 4px; border: 0; border-top: 1px solid black; }
+  table.summary td:empty { display: none; }
+}
+</style>
+<script src="{% static "js/charts.js" %}" defer></script>
+</head>
 
-<body>
-  <h1>Activity report for {{member.full_name}}</h1>
+<body class="chart-page">
+<div align="center">
+  <h2>Bay Area Mountain Rescue Unit</h2>
+  <h1>Activity report - {{ member.full_name }}</h1>
+  <p>CONFIDENTIAL - BAMRU Members Only</p>
+</div>
 
-  <table>
-  {% for type in events %}
-    <tr><td colspan=5><h2>{{type.1}}</h2></td></tr>
-    {% for p in events|lookup:type %}
-    <tr>
-      <td>{{ p.period.event.start_at|date:"M d Y" }}</td>
-      <td><a href="{{p.period.event.get_absolute_url}}">{{p.period}}</a></td>
-      <td>{{ p.period.event.location }}</td>
-      <td>{{ p.period.event.leaders }}</td>
-      <td>{{ p.hours|floatformat:1 }}</td>
-    </tr>
-    {% endfor %}
-    {% if not forloop.last %} <tr><td> </td></tr>{% endif %}
-  {% endfor %}
+  {% if activity %}
+  <table class="summary">
+    <caption>{{ activity.table.title }}</caption>
+    <thead>
+      <tr><th>Year</th>{% for column in activity.table.columns %}<th>{{ column }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for row in activity.table.rows %}
+      <tr class="member"><th scope="row">{{ row.label }}</th>{% for label, cell in row.cells %}<td data-label="{{ label }}">{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+      <tr class="total"><th scope="row">{{ activity.table.total.label }}</th>{% for label, cell in activity.table.total.cells %}<td data-label="{{ label }}">{{ cell }}</td>{% endfor %}</tr>
+    </tbody>
   </table>
-  
+  <p></p>
+  {% include 'charts/share_panels.html' with chart=activity.chart %}
+  {% endif %}
+
+  {% for label, participants in event_sections %}
+  <p></p>
+  <table class="events">
+    <caption>{{ label }}</caption>
+    <colgroup><col class="date"><col class="event"><col class="location"><col class="leaders"><col class="hours"><col class="days"></colgroup>
+    <thead>
+      <tr><th>Date</th><th>Event</th><th>Location</th><th>Leaders</th><th>Hours</th><th>Days</th></tr>
+    </thead>
+    <tbody>
+      {% for p in participants %}
+      <tr class="member">
+        <td>{{ p.period.event.start_at|date:"d M Y" }}</td>
+        <td><a href="{{ p.period.event.get_absolute_url }}">{{ p.period }}</a></td>
+        <td>{{ p.period.event.location }}</td>
+        <td>{{ p.period.event.leaders|default_if_none:"" }}</td>
+        {# The hours counted, then any left out, in parentheses, as the glossary says. #}
+        <td>{% if p.counted_hours or not p.left_out_hours %}{{ p.counted_hours|floatformat:1 }}{% endif %}{% if p.counted_hours and p.left_out_hours %} {% endif %}{% if p.left_out_hours %}({{ p.left_out_hours|floatformat:1 }}){% endif %}</td>
+        <td>{{ p.days }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+
+  {% if activity %}
+  {% include 'reports/glossary.html' with glossary=activity.glossary %}
+  {% endif %}
+
 </body>
 </html>

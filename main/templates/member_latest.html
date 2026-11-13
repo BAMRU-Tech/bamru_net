@@ -1,0 +1,26 @@
+{% if latest %}
+  <p></p>
+  <nav class="navbar navbar-expand-sm text-primary subhead">
+  <strong>Activity</strong>
+  </nav>
+  <table id="activityTbl" class="display table-bordered compact"
+         cellpadding="0" cellspacing="0" style="width:100%">
+    <thead>
+      <tr><th>Last</th><th>Event</th><th>Date</th><th>How long ago</th></tr>
+    </thead>
+    <tbody>
+      {% for item in latest %}
+      <tr>
+        <td>{{ item.label }}</td>
+        {% if item.event %}
+        <td><a href="{% url 'event_detail' item.event.id %}">{{ item.event.title }}</a></td>
+        <td>{{ item.day|date:"d M Y" }}</td>
+        <td>{{ item.ago }}</td>
+        {% else %}
+        <td>None</td><td></td><td></td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}

@@ -1,0 +1,360 @@
+"""Build the structures the chart templates in templates/charts/ draw.
+
+Views and report code produce numbers; the functions here turn them into
+marks (sizes, ticks, labels); the templates draw them; static/css/charts.css
+holds every colour and size.
+
+A chart is a function in its report's module that returns share_panels(...)
+or with_menu(...), with colours from COLOURS and a name of its own on the
+page. The page includes charts/share_panels.html with the chart, and loads
+css/charts.css and, deferred, js/charts.js. Breakpoints and the names the
+templates, stylesheet and script share are checked by tests/test_charts.py.
+
+Columns run left to right in the order given: periods of time, or categories.
+"""
+import math
+import re
+
+
+def axis_top(largest):
+    """The smallest round number at or above the largest value whose half is
+    a whole number, so the axis has clean ticks at the top and the middle."""
+    if largest <= 2:
+        return 2
+    power = 10 ** math.floor(math.log10(largest))
+    for step in (1, 1.2, 1.5, 2, 3, 4, 5, 6, 8, 10):
+        top = step * power
+        if top >= largest and top % 2 == 0:
+            return int(top)
+
+
+def _percent(value, whole):
+    return round(100 * value / whole, 2) if whole else 0
+
+
+def _below(cell):
+    """How far a cell's parts reach below zero."""
+    return -sum(value for _, value in cell['parts'] if value < 0)
+
+
+def _scale(cells, m):
+    """The value axis for these cells in measure m: (top, floor, step). The
+    floor is how far the axis runs below zero, 0 when nothing does."""
+    up = max((max(c[m]['total'], c[m].get('marker') or 0) for c in cells), default=0)
+    down = max((max(_below(c[m]), -(c[m].get('marker') or 0)) for c in cells), default=0)
+    if not down:
+        top = axis_top(up)
+        return top, 0, top // 2
+    # One step above and below zero, so the gridlines are evenly spaced.
+    step = axis_top(max(up, down)) // 2
+    return math.ceil(up / step) * step, math.ceil(down / step) * step, step
+
+
+def _ticks(top, floor, step):
+    ticks = [{'value': value, 'at': _percent(value + floor, top + floor)}
+             for value in range(top, -floor - 1, -step)]
+    for tick in ticks:
+        if tick['value'] == 0:
+            tick['base'] = True
+    return ticks
+
+
+def _colour(name):
+    """A colour name as the class that draws it and, for a step of the ramp,
+    how far along the ramp it is (a percentage)."""
+    if name.startswith('ramp-'):
+        _, step, steps = name.split('-')
+        return {'colour': 'ramp', 'ramp': _percent(int(step) - 1, int(steps) - 1)}
+    return {'colour': name}
+
+
+# The colours a part may have: a chart-part-... class in charts.css each.
+COLOURS = {'1', '1-strong', '1-light', '1-pale', '2', '2-light', 'muted', 'muted-light', 'total'}
+
+
+def _check(name, measures, views):
+    """Raise ValueError, saying where, for input share_panels would draw wrongly
+    or fail on later with an error that does not say what is wrong."""
+    def fail(message, *where):
+        raise ValueError('chart {!r}{}: {}'.format(name, ''.join(', ' + place for place in where), message))
+
+    def check_colour(colour, *where, key=False):
+        ramp = re.fullmatch(r'ramp-(\d+)-(\d+)', colour)
+        if not (colour in COLOURS or (key and colour == 'marker')
+                or (ramp and 1 <= int(ramp[1]) <= int(ramp[2]) and int(ramp[2]) > 1)):
+            fail('{!r} is not a colour the charts have'.format(colour), *where)
+
+    for measure in measures:
+        if 'label' not in measure or 'title' not in measure:
+            fail('a measure has a label and a title')
+    for view in views:
+        if any(key not in view for key in ('label', 'periods', 'series')):
+            fail('a view has a label, periods and series')
+        in_view = 'view {!r}'.format(view['label'])
+        if any(not isinstance(period.get('short'), str) for period in view['periods']):
+            fail("every period has a short label, '' for none", in_view)
+        if view.get('max_labels', 9) < 1:
+            fail('max_labels is at least 1', in_view)
+        titles = view.get('titles', measures)
+        if not (isinstance(titles, (list, tuple)) and len(titles) == len(measures)):
+            fail('a view with titles has a list of them, one for each measure', in_view)
+        for series in view['series']:
+            in_panel = 'panel {!r}'.format(series.get('label', ''))
+            if not series.get('key'):
+                fail('every panel has a key: name what its columns count', in_view, in_panel)
+            if 'cells' not in series:
+                fail('every panel has cells', in_view, in_panel)
+            for item in series['key']:
+                if not (isinstance(item, (list, tuple)) and len(item) == 2):
+                    fail('a key names its items as (colour, label)', in_view, in_panel, 'key')
+                check_colour(item[0], in_view, in_panel, 'key', key=True)
+            if (any('marker' in entry for cell in series['cells'] for entry in cell)
+                    and 'marker' not in [colour for colour, _ in series['key']]):
+                fail("a panel with markers names them in its key, as 'marker'", in_view, in_panel)
+            if len(series['cells']) != len(view['periods']):
+                fail('{} columns for {} periods'.format(len(series['cells']), len(view['periods'])), in_view, in_panel)
+            for i, cell in enumerate(series['cells']):
+                where = (in_view, in_panel, 'column {}'.format(i + 1))
+                if len(cell) != len(measures):
+                    fail('a column has one entry for each measure', *where)
+                for entry in cell:
+                    if any(key not in entry for key in ('parts', 'total', 'tip')):
+                        fail('a column has parts, a total and a tip for each measure', *where)
+                    figures = [entry['total'], entry.get('marker') or 0] + [value for _, value in entry['parts']]
+                    if any(not isinstance(figure, (int, float)) or math.isnan(figure) for figure in figures):
+                        fail('every figure is a number', *where)
+                    tip = entry['tip']
+                    if not (isinstance(tip, str) or isinstance(tip, (list, tuple)) and all(
+                            isinstance(line, str) or isinstance(line, (list, tuple)) and len(line) == 2
+                            for line in tip)):
+                        fail('a tip is a line, or a list of a heading and lines, each text or (number, label)',
+                             *where)
+                colours = [colour for colour, _ in cell[0]['parts']]
+                if len(set(colours)) != len(colours):
+                    fail('a colour is used twice in one column', *where)
+                for colour in colours:
+                    check_colour(colour, *where)
+                for entry in cell:
+                    if [colour for colour, _ in entry['parts']] != colours:
+                        fail('the measures list different colours, or the same in another order', *where)
+                    if entry['total'] < 0:
+                        fail('a total is not below zero; parts below zero are parts', *where)
+                    reached = sum(value for _, value in entry['parts'] if value > 0)
+                    if reached > entry['total'] * (1 + 1e-9) + 1e-9:
+                        fail('the parts above zero add up to {}, more than the total {}'.format(reached, entry['total']),
+                             *where)
+
+
+def _tip(tip):
+    """A column's figures as a heading and the lines under it. A line is
+    (number, label), drawn number first with the numbers in a column, or
+    plain text."""
+    lines = [tip] if isinstance(tip, str) else list(tip)
+    return {'head': lines[0] if lines else '',
+            'lines': [{'text': line} if isinstance(line, str) else {'number': line[0], 'label': line[1]}
+                      for line in lines[1:]]}
+
+
+def _tip_at(i, n):
+    """Where column i of n's figures float, so that they stay within the
+    plot's width: from the column's left edge in the left third, centred on
+    it in the middle, back from its right edge in the right third."""
+    middle = (i + 0.5) / n
+    if middle < 1 / 3:
+        return {'side': 'left', 'at': round(100 * i / n, 2)}
+    if middle > 2 / 3:
+        return {'side': 'right', 'at': round(100 * (n - 1 - i) / n, 2)}
+    return {'side': 'centre', 'at': round(100 * middle, 2)}
+
+
+def hours_text(hours):
+    """Hours as the reports write them, to one decimal: '1,234.5'."""
+    return '{:,.1f}'.format(hours)
+
+
+def year_label(year):
+    """A year as a chart's time axis shows it: "'24"."""
+    return "'{:02d}".format(year % 100)
+
+
+def share_panels(measures, views, note='', *, name, measure_switch_label='Show', view_switch_label='By'):
+    """Columns by period or category, one small panel per series. Each column is a total
+    (pale) with the parts reached stacked inside it, bottom up.
+
+    measures: one to three things to plot on the same columns, in the order
+      of the switch, the first shown by default:
+      {'label': 'Days', 'title': ..., 'total_label': 'Unit active'}
+      total_label names the pale part in the legend; leave it out when the
+      parts always add up to the total. The note keeps room for the longest,
+      so that it does not reflow when the measure changes.
+    views: up to three ways of drawing it, the first shown by default: usually
+      ways of cutting time, named for the reader by view_switch_label.
+      {'label': 'Years', 'name': ..., 'max_labels': 9, 'titles': [...],
+       'periods': [{'short': ...}],                              # oldest first
+       'series': [{'label': ..., 'key': [(colour, label), ...],
+                   'cells': [[{'parts': [(colour, value), ...],
+                               'total': ..., 'tip': ..., 'marker': ...}, ...]]}]}
+      key names a panel's colours under it, and every panel has one, even
+      of a single colour: [('1', 'Pages')]. A series may have an empty
+      label, for a chart of one panel whose title already says what it is.
+      name, which may be left out, is what a screen reader is told each of
+      the view's plots is, after its series label, in place of the view's
+      label: for a label that does not say it alone, such as 'Month'.
+      short goes on the time axis, and may be empty for an unlabelled period.
+      titles, one per measure, replace the measures' titles while that view
+      is shown; leave it out when the measures' titles hold for every view.
+      Each cell is a list with one entry per measure. tip is the figures
+      shown by the column under the pointer or tapped: a line, or a list
+      of lines, the first a heading and the rest (number, label) pairs,
+      such as (5, 'joined'), or plain text. Its parts stack bottom
+      up in the order given, and must be in the same order in every measure.
+      A part with a negative value hangs below zero, and those stack downward
+      in the order given; the total is the whole above zero only. marker,
+      which may be left out, is a value marked on the column with a small
+      dark dot (a net, say); name it in the key with the colour 'marker'.
+    A colour is the name of a chart-part-... class in charts.css: '1' and '2'
+      for the series colours, '1-strong' and '1-light' for a darker and a
+      lighter step of the first, '2-light' for a lighter step of the second,
+      'muted' for grey, 'muted-light' a lighter grey between it and the
+      total, for a second kind of what is not attendance. '1-pale' is a fourth, palest blue for ordered steps
+      ('1-pale', '1-light', '1', '1-strong'); it is close to the pale total,
+      so not for a column that shows one. For more layers than four,
+      'ramp-3-17' is step 3 of 17 from '1-pale' through '1' at the middle
+      to '1-strong'.
+    note: a sentence under the title saying what the chart is for; terms
+      are defined in the report's glossary, not here.
+    measure_switch_label, view_switch_label: the words drawn before each
+      switch, saying what it sets ('Show', 'By', or 'Left after no activity
+      for'); '' leaves one without. The scale's switch says 'Scale'.
+    name: this chart's own on the page, a letter and then letters, digits,
+      hyphens or underscores; it ties the switches and the title to it.
+
+    A chart of several panels starts on the scale they share, and its scale
+    switch gives each panel its own; a chart of one panel has no such switch.
+
+    Every size is worked out for both scales, so the reader can switch.
+    """
+    if not re.fullmatch(r'[A-Za-z][\w-]*', name, re.ASCII):
+        raise ValueError('a chart\'s name is a letter, then letters, digits, - or _: {!r}'.format(name))
+    if not 1 <= len(measures) <= 3 or not 1 <= len(views) <= 3:
+        raise ValueError('share_panels draws one to three measures and one to three views')
+    _check(name, measures, views)
+    numbers = range(len(measures))
+    drawn = []
+    for v, view in enumerate(views):
+        titles = [view['titles'][m] if view.get('titles') else measures[m]['title'] for m in numbers]
+        periods = view['periods']
+        labelled = [i for i, p in enumerate(periods) if p['short']]
+        step = math.ceil(len(labelled) / view.get('max_labels', 9)) if labelled else 1
+        shown = set(labelled[::-1][::step])
+        every = [c for s in view['series'] for c in s['cells']]
+        shared_scales = [_scale(every, m) for m in numbers]
+        panels = []
+        for s in view['series']:
+            scales = {'own': [_scale(s['cells'], m) for m in numbers], 'shared': shared_scales}
+            signed = any(floor for which in scales.values() for _, floor, _ in which)
+
+            def sizes(amounts, above):
+                """Each measure's amount as a share of the axis above zero, or
+                below it, on the panel's own scale and the shared one."""
+                return {which: [_percent(amount, top if above else floor)
+                                for amount, (top, floor, _) in zip(amounts, scales[which])]
+                        for which in scales}
+
+            cells = []
+            for i, c in enumerate(s['cells']):
+                colours = [colour for colour, _ in c[0]['parts']]      # the same in every measure (_check)
+                values = {colour: [dict(c[m]['parts'])[colour] for m in numbers] for colour in colours}
+                below = [_below(c[m]) for m in numbers]
+                parts, under = [], []
+                for colour in colours:
+                    up = [_percent(max(value, 0), c[m]['total']) for m, value in enumerate(values[colour])]
+                    down = [_percent(max(-value, 0), below[m]) for m, value in enumerate(values[colour])]
+                    if any(up):
+                        parts.append(dict(_colour(colour), sizes=up))
+                    if any(down):
+                        under.append(dict(_colour(colour), sizes=down))
+                markers = [c[m].get('marker') for m in numbers]
+                cell = {
+                    'drawn': any(c[m]['total'] for m in numbers),
+                    'tips': [_tip(c[m]['tip']) for m in numbers],
+                    'tip_at': _tip_at(i, len(s['cells'])),
+                    'parts': parts,
+                }
+                cell.update(sizes([c[m]['total'] for m in numbers], above=True))
+                if under:
+                    cell['under'] = dict(sizes(below, above=False), parts=under)
+                if any(marker is not None for marker in markers):
+                    # Where the dot sits, as a share of the whole axis, floor to top.
+                    cell['marker'] = {
+                        'on': [int(marker is not None) for marker in markers],
+                        **{which: [_percent((marker or 0) + floor, top + floor)
+                                   for marker, (top, floor, _) in zip(markers, scales[which])]
+                           for which in scales}}
+                cells.append(cell)
+            panels.append({
+                'label': s.get('label', ''),
+                # For readers who cannot see the plot: which panel and view this
+                # is. The chart itself is named by its title as shown.
+                'name': ', '.join(part for part in (s.get('label'), view.get('name') or view['label']) if part),
+                'key': [dict(_colour(colour), label=label) for colour, label in s.get('key', ())],
+                'ticks': [{'measure': m + 1, 'scale': which, 'ticks': _ticks(*scales[which][m])}
+                          for m in numbers for which in ('own', 'shared')],
+                # With parts below zero, the share of the plot above it, for each measure and scale.
+                'signed': signed and [{'measure': m + 1, 'scale': which,
+                                       'up': round(top / (top + floor), 4)}
+                                      for m in numbers for which in ('own', 'shared')
+                                      for top, floor, _ in [scales[which][m]]],
+                'cells': cells,
+            })
+        drawn.append({
+            'label': view['label'],
+            'number': v + 1,
+            'axis': [{'label': p['short'], 'shown': i in shown} for i, p in enumerate(periods)],
+            'panels': panels,
+        })
+    return {
+        'titles': [{'measure': m + 1, 'view': v + 1,
+                    'text': view['titles'][m] if view.get('titles') else measure['title']}
+                   for v, view in enumerate(views) for m, measure in enumerate(measures)],
+        'scale_switch': any(len(view['series']) > 1 for view in views),
+        'view_switch_label': view_switch_label,
+        'measure_switch_label': measure_switch_label,
+        'measures': [dict(measure, number=m + 1) for m, measure in enumerate(measures)],
+        # The keys to the measures' totals, in the note: one place for them all.
+        'total_keys': [{'number': m + 1, 'label': measure['total_label']}
+                       for m, measure in enumerate(measures) if measure.get('total_label')],
+        'note': note,
+        'name': name,
+        'views': drawn,
+        # The longest value on any value axis, in characters: the gutter is made wide enough for it.
+        'digits': max((len(str(tick['value'])) for view in drawn for panel in view['panels']
+                       for ticks in panel['ticks'] for tick in ticks['ticks']), default=1),
+    }
+
+
+def with_menu(options, label):
+    """One chart whose figures the reader changes from a menu among its
+    controls, under the plots, for more choices than a switch holds (a
+    year, say). options is [(label, chart)], in the menu's order, each chart
+    drawn by share_panels with the same name, measures, views and switches,
+    so that one set of switches serves them all; the first is the one shown
+    to start with, and without script. The page needs js/charts.js: every
+    option's title and plots are in the page, and the script puts the one
+    chosen in place."""
+    if not options:
+        raise ValueError('with_menu needs options')
+    if len({chart['name'] for _, chart in options}) > 1:
+        raise ValueError('the charts of one menu share one name')
+    if len({(tuple(measure['label'] for measure in chart['measures']), tuple(view['label'] for view in chart['views']),
+             chart['scale_switch']) for _, chart in options}) > 1:
+        raise ValueError('the charts of one menu have the same measures and views, which the switches serve')
+    chart = dict(options[0][1])
+    # Every option's titles are laid out unseen in the title's place, so that
+    # the head is as tall for one option as for another and nothing moves.
+    sizes = list(dict.fromkeys(title['text'] for _, option_chart in options for title in option_chart['titles']))
+    chart['digits'] = max(option_chart['digits'] for _, option_chart in options)
+    chart['menu'] = {'label': label, 'title_sizes': sizes,
+                     'options': [{'label': option_label, 'chart': option_chart, 'selected': i == 0}
+                                 for i, (option_label, option_chart) in enumerate(options)]}
+    return chart

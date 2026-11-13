@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views import generic
 from rules.contrib.views import PermissionRequiredMixin
 
+from main.lib.counting import member_latest
 from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Unavailable
 from main.views.file_views import download_file_helper
 
@@ -49,6 +50,7 @@ class MemberDetailView(LoginRequiredMixin, generic.DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['latest'] = member_latest(self.object)
         return context
 
 
