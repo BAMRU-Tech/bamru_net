@@ -41,7 +41,12 @@ class Event(BaseModel):
         help_text='All Day events do not have a start or end time.')
     published = models.BooleanField(
         default=False,
-        help_text='Published events are viewable on the public and private calendar.')
+        help_text=(
+            'Published events will appear on bamru.org as trainings. '
+            'They will also appear in Google calendar. '
+            'Do not publish Operations, Meetings, or Community events.'
+        )
+    )
     gcal_id = models.CharField(max_length=255, blank=True, null=True)  # deprecated: we are switching to gcal event IDs derived from our own event IDs
     gcal_id_private = models.CharField(max_length=255, blank=True, null=True)  # deprecated: we are switching to gcal event IDs derived from our own event IDs
     history = HistoricalRecords()
