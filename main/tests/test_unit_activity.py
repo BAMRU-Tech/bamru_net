@@ -38,13 +38,16 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
             chart = next(o['chart'] for o in chart['menu']['options'] if o['label'] == option)
         return next(p for p in chart['views'][view]['panels'] if p['label'] == label)
 
-    def tips(self, name, label, measure=0, view=0, option=None):
-        """Each column's hover text: its heading, then each line's number and label, joined with " | "."""
+    def tips(self, name, label, measure=None, view=0, option=None):
+        """Each column's hover text for the measure of that label, or the one the chart starts on: its
+        heading, then each line's number and label, joined with " | "."""
         def said(tip):
             return ' | '.join([tip['head']] + [line['text'] if 'text' in line else
                                                '{} {}'.format(line['number'], line['label'])
                                                for line in tip['lines']])
-        return [said(c['tips'][measure]) for c in self.panel(name, label, view, option)['cells']]
+        # A column's figures are in the order the measures are drawn, the one started on first.
+        number = next(m['number'] for m in self.chart(name)['measures'] if m['label'] == measure) if measure else 1
+        return [said(c['tips'][number - 1]) for c in self.panel(name, label, view, option)['cells']]
 
     def test_each_entry_as_the_report_counts_it(self):
         self.make_event('operation', when(2024, 2, 7), ol=[self.member], ahc=[self.other])
@@ -104,16 +107,17 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         chart = self.chart('days')
         self.assertEqual([m['label'] for m in chart['measures']], ['Days', 'Events', 'Hours'])
         self.assertEqual([v['label'] for v in chart['views']], ['Unit (any member out)', 'Members (added up)'])
-        # Hover text is a heading and a line for each part.
+        # Hover text is a heading and a line for each part, for each measure in the order drawn: Hours first.
         self.assertEqual(self.panel('days', 'Operations')['cells'][0]['tips'],
-                         [{'head': '2024 to 15 Jun: 3 days', 'lines': [{'number': '1', 'label': 'on weekdays'},
+                         [{'head': '2024 to 15 Jun: 48.0 hours',
+                           'lines': [{'number': '12.0', 'label': 'on weekdays'},
+                                     {'number': '36.0', 'label': 'on weekends'}]},
+                          {'head': '2024 to 15 Jun: 3 days', 'lines': [{'number': '1', 'label': 'on weekdays'},
                                                                        {'number': '2', 'label': 'on weekends'}]},
                           {'head': '2024 to 15 Jun: 1 event', 'lines': [{'number': '1', 'label': 'on weekdays'},
-                                                                        {'number': '0', 'label': 'on weekends'}]},
-                          {'head': '2024 to 15 Jun: 48.0 hours',
-                           'lines': [{'number': '12.0', 'label': 'on weekdays'},
-                                     {'number': '36.0', 'label': 'on weekends'}]}])
-        self.assertEqual([self.tips('days', 'Operations', measure=m, view=1)[0] for m in range(3)],
+                                                                        {'number': '0', 'label': 'on weekends'}]}])
+        self.assertEqual([self.tips('days', 'Operations', measure=m, view=1)[0]
+                          for m in ('Days', 'Events', 'Hours')],
                          ['2024 to 15 Jun: 6 member-days | 2 on weekdays | 4 on weekends',
                           '2024 to 15 Jun: 2 events attended | 2 on weekdays | 0 on weekends',
                           '2024 to 15 Jun: 96.0 member-hours | 24.0 on weekdays | 72.0 on weekends'])
@@ -342,6 +346,15 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.make_event('training', when(2024, 4, 7), attended=[alum, self.member], leaders='Cal')
         self.assertEqual(self.years()[2024]['members']['training'], {'others': 1, 'led': 1})
 
+    def test_of_time_logged_twice_from_the_same_moment_the_member_reports_event_keeps_it(self):
+        # An operation and a training both from noon, the operation entered first: the member report's
+        # order gives the shared hours to the operation, and so does this report.
+        self.make_event('operation', when(2024, 2, 7), attended=[self.member], hours=4)
+        self.make_event('training', when(2024, 2, 7), attended=[self.member], hours=4)
+        row = self.years()[2024]
+        self.assertEqual({t: sum(row['people_hours'][t].values()) for t in ('operation', 'training')},
+                         {'operation': 4, 'training': 0})
+
     def test_the_longer_username_is_the_leader_where_two_could_match(self):
         short = self.make_member('Lee', 'TM')
         full = self.make_member('Ann Lee', 'TM')
@@ -402,7 +415,7 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
                                  'later is counted under their first recorded status, and one never recorded as '
                                  'Other status.'),
                       unit_activity(NOW)['glossary'])
-        self.assertEqual(self.tips('status', ''),
+        self.assertEqual(self.tips('status', '', measure='Days'),
                          ['2024 to 15 Jun: 5 responder-days | 1 Trainee | 3 Field Member | 0 Technical Member '
                           '| 1 Other status'])
         # The hours each logged on those days, by the same statuses.
@@ -412,7 +425,7 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.assertEqual(self.years()[2024]['status_events'], {'T': 1, 'FM': 3, 'TM': 0, 'other': 1})
         self.assertEqual(chart['measures'][1]['title'],
                          'Operations attended, by status at the start, 2024')
-        self.assertEqual(self.tips('status', '', measure=1),
+        self.assertEqual(self.tips('status', '', measure='Events'),
                          ['2024 to 15 Jun: 5 operations attended in the field | 1 Trainee | 3 Field Member '
                           '| 0 Technical Member | 1 Other status'])
 
@@ -768,12 +781,12 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         # hour is still "hours", as a figure to one decimal reads.
         self.make_event('operation', when(2023, 2, 8), attended=[self.member], hours=1)
         self.make_event('operation', when(2024, 2, 7), attended=[self.member], hours=0.5)
-        self.assertEqual(self.tips('days', 'Operations', measure=2),
+        self.assertEqual(self.tips('days', 'Operations', measure='Hours'),
                          ['2023: 1.0 hours | 1.0 on weekdays | 0.0 on weekends',
                           '2024 to 15 Jun: 0.5 hours | 0.5 on weekdays | 0.0 on weekends'])
-        self.assertEqual(self.tips('days', 'Operations', measure=2, view=1)[1],
+        self.assertEqual(self.tips('days', 'Operations', measure='Hours', view=1)[1],
                          '2024 to 15 Jun: 0.5 member-hours | 0.5 on weekdays | 0.0 on weekends')
-        self.assertEqual(self.tips('status', '', measure=2)[-1],
+        self.assertEqual(self.tips('status', '', measure='Hours')[-1],
                          '2024 to 15 Jun: 0.5 responder-hours | 0.0 Trainee | 0.5 Field Member '
                          '| 0.0 Technical Member | 0.0 Other status')
 
@@ -789,7 +802,7 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
                       'Medical guest lecture', 'Rope rescue with guest instructor', 'Avalanche talk, guest presenter',
                       'Helicopter ops (no guests)', 'Members only, no guests', 'no  guests (members only)',
                       'No-guests drill', 'NO GUESTS', 'Not for guests', 'Rigging, not  for guests',
-                      'Not-for-guests drill', '4G/LTE comms', 'Type G litter rigging',
+                      'Not-for-guests drill', '4G/LTE comms', 'Comms over 4G', 'Type G litter rigging',
                       'G.P.S. navigation', 'Plan G drill'):
             self.assertFalse(GUEST_FRIENDLY.search(title), title)
 
@@ -891,6 +904,25 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.assertEqual(first_year({2018, 2022, 2024}), 2022)
         self.assertEqual(first_year({2024}), 2024)
 
+    def test_a_stray_record_does_not_size_the_responders_chart(self):
+        # Four out on a stray operation in 1995; two at most since 2022. The columns run to 2 responders.
+        self.make_event('operation', when(1995, 2, 7), attended=[self.member, self.other, self.third,
+                                                                 self.make_member('Dee', 'T')])
+        for year in (2022, 2024):
+            self.make_event('operation', when(year, 2, 7), attended=[self.member, self.other])
+        self.assertEqual(len(self.tips('responders', '')), 2)
+
+    def test_the_records_of_joining_start_with_the_page(self):
+        # Trainings in 2015, then 2020 and 2021, with meetings between: the page starts in 2015, and so
+        # do the records of joining, though no operation, training or community event filled the gap.
+        self.make_event('training', when(2015, 3, 7), attended=[self.member])
+        for year in (2016, 2017, 2018, 2019):
+            self.make_event('meeting', when(year, 3, 7), attended=[self.member])
+        for year in (2020, 2021):
+            self.make_event('training', when(year, 3, 7), attended=[self.other])
+        self.assertEqual(unit_activity(NOW)['period'][:4], '2015')
+        self.assertEqual(unit_rows(NOW)['records_from'], 2015)
+
     def test_a_year_without_any_does_not_hide_the_years_before(self):
         # Operations in 2020 to 2022 and none since: the chart still shows them, with empty years after.
         for year in (2020, 2021, 2022):
@@ -966,7 +998,7 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         # The operations chart's days, as its operations.
         days = self.panel('operations', '')['cells']
         self.assertTrue(grey(days[0]) and not grey(days[2]))
-        self.assertEqual(self.tips('operations', '', measure=1)[0], '2012: 1 day | ' + before)
+        self.assertEqual(self.tips('operations', '', measure='Days')[0], '2012: 1 day | ' + before)
         # Operations at each responder count: the early part grey over all years, all of it in 2012.
         responders = self.panel('responders', '')
         self.assertEqual(responders['cells'][0]['tips'][0]['lines'][:2],
@@ -1053,7 +1085,7 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.assertEqual([sum(years[y]['unit_events']['training'].values()) for y in (2023, 2024)], [1, 0])
         self.assertEqual(years[2023]['unit_events']['training'], {'weekday': 0, 'weekend': 1})   # a Sunday
         # The days chart and the page's period start in 2023, for the event.
-        self.assertEqual(self.tips('days', 'Trainings', measure=1)[0], '2023: 1 event | 0 on weekdays | 1 on weekends')
+        self.assertEqual(self.tips('days', 'Trainings', measure='Events')[0], '2023: 1 event | 0 on weekdays | 1 on weekends')
         self.assertTrue(unit_activity(NOW)['period'].startswith('2023 to '))
 
     def test_a_member_whose_first_day_is_a_stray_record_counts_as_joining_when_the_records_start(self):
@@ -1108,6 +1140,28 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.assertEqual(responders['tips'][0]['lines'][:2], [{'number': 1, 'label': 'from 2013'},
                                                               {'number': 1, 'label': EARLY.said}])
 
+    def test_the_days_and_status_charts_start_on_hours(self):
+        # Each starts on Hours, its title the hours one, and its switch still reads Days, Events, Hours.
+        self.make_event('operation', when(2024, 2, 7), attended=[self.member])
+        for name, title in (('days', 'Unit active hours (any member out), by type and part of the week, 2024'),
+                            ('status', 'Responder-hours, by status on the day, 2024')):
+            chart = self.chart(name)
+            self.assertEqual(chart['titles'][0]['text'], title)
+            self.assertEqual([(m['label'], m['number']) for m in chart['measures']],
+                             [('Days', 2), ('Events', 3), ('Hours', 1)])
+        # The others start on their first measure.
+        self.assertEqual(self.chart('operations')['titles'][0]['text'],
+                         'Operations, by unique responder count, 2024')
+        # As drawn, before any script: Hours is the option on.
+        self.member.set_password('password')
+        self.member.save()
+        client = Client()
+        client.login(username=self.member.username, password='password')
+        with mock.patch('django.utils.timezone.now', return_value=NOW):
+            html = client.get(reverse('report_activity_unit')).content.decode()
+        for name in ('days', 'status'):
+            self.assertIn('<input type="radio" name="{}-measure" checked><span>Hours</span>'.format(name), html)
+
     def test_page(self):
         self.make_event('operation', when(2024, 2, 7), attended=[self.member])
         self.member.set_password('password')
@@ -1137,7 +1191,8 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.assertContains(response, '<th scope="row">Called off</th><td>The operation was called out with an '
                                       'availability page, and has finished with no member other than the AHC having '
                                       'a day attended on it up to today. Before 13 Feb 2019, when pages first said '
-                                      'which they were, heads-ups count here too.</td>')
+                                      'which they were, every operation that did not run counts here, pages or '
+                                      'not.</td>')
         self.assertContains(response, '<th scope="row">Heads-up only</th><td>The operation has finished with no '
                                       'availability page sent, only heads-ups or no page at all, and no member other '
                                       'than the AHC has a day attended on it up to today. Told apart from 13 Feb '

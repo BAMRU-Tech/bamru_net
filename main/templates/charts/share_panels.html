@@ -28,7 +28,7 @@
       <div class="chart-control">{% if chart.measure_switch_label %}<span class="chart-control-label" id="{{ chart.name }}-measure-label">{{ chart.measure_switch_label }}</span>{% endif %}
       <div class="chart-switch" role="radiogroup" {% if chart.measure_switch_label %}aria-labelledby="{{ chart.name }}-measure-label"{% else %}aria-label="Measure"{% endif %}>
         {% for measure in chart.measures %}
-        <label><input type="radio" name="{{ chart.name }}-measure"{% if forloop.first %} checked{% else %} class="chart-pick-m{{ measure.number }}"{% endif %}><span>{{ measure.label }}</span></label>
+        <label><input type="radio" name="{{ chart.name }}-measure"{% if measure.number == 1 %} checked{% else %} class="chart-pick-m{{ measure.number }}"{% endif %}><span>{{ measure.label }}</span></label>
         {% endfor %}
       </div>
       </div>

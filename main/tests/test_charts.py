@@ -141,6 +141,29 @@ class ChartsTestCase(TestCase):
                          [{'side': 'left', 'at': 0}, {'side': 'left', 'at': 16.67}, {'side': 'centre', 'at': 41.67},
                           {'side': 'centre', 'at': 58.33}, {'side': 'right', 'at': 16.67}, {'side': 'right', 'at': 0}])
 
+    def test_a_chart_can_start_on_a_later_measure(self):
+        # It draws what a chart listing that measure first draws, so a browser without the switches
+        # shows it, with its title, ticks and figures; the switch keeps its order.
+        def chart(labels, **start):
+            cells = [[{'parts': [('1', n)], 'total': n, 'tip': label} for label, n in labels]]
+            view = {'label': 'Years', 'periods': [{'short': '1'}], 'titles': [label + ' by year' for label, _ in labels],
+                    'series': [{'key': [('1', 'Counted')], 'label': label, 'cells': cells} for label in 'ST']}
+            return share_panels([{'label': label, 'title': label} for label, _ in labels], [view], **start)
+        started = chart([('Days', 1), ('Events', 3), ('Hours', 7)], start_measure='Hours')
+        listed_first = chart([('Hours', 7), ('Days', 1), ('Events', 3)])
+        self.assertEqual(dict(started, measures=None), dict(listed_first, measures=None))
+        self.assertEqual(started['titles'][0], {'measure': 1, 'view': 1, 'text': 'Hours by year'})
+        self.assertEqual([(m['label'], m['number']) for m in started['measures']],
+                         [('Days', 2), ('Events', 3), ('Hours', 1)])
+        html = render_to_string('charts/share_panels.html', {'chart': started})
+        radios = ['<input type="radio" name="chart-measure" class="chart-pick-m2"><span>Days</span>',
+                  '<input type="radio" name="chart-measure" class="chart-pick-m3"><span>Events</span>',
+                  '<input type="radio" name="chart-measure" checked><span>Hours</span>']
+        self.assertEqual(sorted(radios, key=html.find), radios)
+        self.assertNotIn(-1, [html.find(radio) for radio in radios])
+        with self.assertRaisesRegex(ValueError, "Days, Events, Hours: 'Weeks'"):
+            chart([('Days', 1), ('Events', 3), ('Hours', 7)], start_measure='Weeks')
+
     def test_menu(self):
         def chart(period, name='ops'):
             cells = [[{'parts': [('1', 1)], 'total': 2, 'tip': [month, (1, 'in ' + period)]}] for month in ('Jan', 'Feb')]
@@ -245,6 +268,13 @@ class ChartsTestCase(TestCase):
         switched = dict(chart(['Months']), scale_switch=True)
         with self.assertRaisesRegex(ValueError, 'same measures and views'):
             with_menu([('All years', chart(['Months'])), ('2026', switched)], 'Year')
+        # And they start on the same measure.
+        cells = [[{'parts': [('1', 1)], 'total': 2, 'tip': ''}] * 2]
+        view = {'label': 'Months', 'periods': [{'short': 'a'}], 'series': [{'label': '', 'key': [('1', 'Counted')], 'cells': cells}]}
+        hours = self.MEASURES + [{'label': 'Hours', 'title': 'Hours'}]
+        with self.assertRaisesRegex(ValueError, 'same measures and views'):
+            with_menu([('All years', share_panels(hours, [view], name='ops', start_measure='Hours')),
+                       ('2026', share_panels(hours, [view], name='ops'))], 'Year')
 
     def test_the_keys_to_the_totals_share_one_place(self):
         # So that the note keeps its lines when the measure changes, even to one without a total.

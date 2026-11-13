@@ -177,12 +177,13 @@ def year_label(year):
     return "'{:02d}".format(year % 100)
 
 
-def share_panels(measures, views, note='', *, name, measure_switch_label='Show', view_switch_label='By'):
+def share_panels(measures, views, note='', *, name, start_measure=None, measure_switch_label='Show',
+                 view_switch_label='By'):
     """Columns by period or category, one small panel per series. Each column is a total
     (pale) with the parts reached stacked inside it, bottom up.
 
     measures: one to three things to plot on the same columns, in the order
-      of the switch, the first shown by default:
+      of the switch:
       {'label': 'Days', 'title': ..., 'total_label': 'Unit active'}
       total_label names the pale part in the legend; leave it out when the
       parts always add up to the total. The note keeps room for the longest,
@@ -221,6 +222,9 @@ def share_panels(measures, views, note='', *, name, measure_switch_label='Show',
       so not for a column that shows one. For more layers than four,
       'ramp-3-17' is step 3 of 17 from '1-pale' through '1' at the middle
       to '1-strong'.
+    start_measure: the label of the measure shown to start with, and in a
+      browser without the switches; the first if left out. The switch keeps
+      the order of measures.
     note: a sentence under the title saying what the chart is for; terms
       are defined in the report's glossary, not here.
     measure_switch_label, view_switch_label: the words drawn before each
@@ -239,6 +243,18 @@ def share_panels(measures, views, note='', *, name, measure_switch_label='Show',
     if not 1 <= len(measures) <= 3 or not 1 <= len(views) <= 3:
         raise ValueError('share_panels draws one to three measures and one to three views')
     _check(name, measures, views)
+    labels = [measure['label'] for measure in measures]
+    if start_measure is not None and start_measure not in labels:
+        raise ValueError('a chart starts on one of its measures, {}: {!r}'.format(', '.join(labels), start_measure))
+    # The measures are numbered as drawn: the one started on is the first, which charts.css shows
+    # without the switch; the switch lists them in the order given, each with its number.
+    first = labels.index(start_measure) if start_measure else 0
+    order = [first] + [m for m in range(len(measures)) if m != first]
+    switch = [dict(measure, number=order.index(m) + 1) for m, measure in enumerate(measures)]
+    measures = [measures[m] for m in order]
+    views = [dict(view, titles=view.get('titles') and [view['titles'][m] for m in order],
+                  series=[dict(s, cells=[[cell[m] for m in order] for cell in s['cells']]) for s in view['series']])
+             for view in views]
     numbers = range(len(measures))
     drawn = []
     for v, view in enumerate(views):
@@ -320,7 +336,7 @@ def share_panels(measures, views, note='', *, name, measure_switch_label='Show',
         'scale_switch': any(len(view['series']) > 1 for view in views),
         'view_switch_label': view_switch_label,
         'measure_switch_label': measure_switch_label,
-        'measures': [dict(measure, number=m + 1) for m, measure in enumerate(measures)],
+        'measures': switch,
         # The keys to the measures' totals, in the note: one place for them all.
         'total_keys': [{'number': m + 1, 'label': measure['total_label']}
                        for m, measure in enumerate(measures) if measure.get('total_label')],
@@ -337,7 +353,8 @@ def with_menu(options, label):
     """One chart whose figures the reader changes from a menu among its
     controls, under the plots, for more choices than a switch holds (a
     year, say). options is [(label, chart)], in the menu's order, each chart
-    drawn by share_panels with the same name, measures, views and switches,
+    drawn by share_panels with the same name, measures (started on the same
+    one), views and switches,
     so that one set of switches serves them all; the first is the one shown
     to start with, and without script. The page needs js/charts.js: every
     option's title and plots are in the page, and the script puts the one
@@ -346,7 +363,8 @@ def with_menu(options, label):
         raise ValueError('with_menu needs options')
     if len({chart['name'] for _, chart in options}) > 1:
         raise ValueError('the charts of one menu share one name')
-    if len({(tuple(measure['label'] for measure in chart['measures']), tuple(view['label'] for view in chart['views']),
+    if len({(tuple((measure['label'], measure['number']) for measure in chart['measures']),
+             tuple(view['label'] for view in chart['views']),
              chart['scale_switch']) for _, chart in options}) > 1:
         raise ValueError('the charts of one menu have the same measures and views, which the switches serve')
     chart = dict(options[0][1])

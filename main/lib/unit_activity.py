@@ -2,10 +2,10 @@
 main.lib.unit_counting counts. What the terms mean is in the glossary at the
 page's foot (unit_glossary, after the terms shared with a member's report).
 
-- The page starts in its first year with something to show, after any stray
-  early record (unit_counting.first_year); each chart shows all it has from
-  that year on, from its own first year with data to this year, empty years
-  included.
+- The page starts in the report's first year with something to show, after
+  any stray early record (unit_rows' first_year); each chart shows all it has
+  from that year on, from its own first year with data to this year, empty
+  years included.
 - A chart whose columns are months, days of the week, hours or numbers of
   responders adds up every year on record, or the one year the reader picks
   from its menu.
@@ -22,7 +22,7 @@ from django.template.defaultfilters import pluralize
 from main.lib import charts
 from main.lib.counting import EVENT_TYPES, LEADING, REPLY_TEMPLATES_FROM, TYPES
 from main.lib.unit_counting import (DEPARTURE_MINUTES, FULL, LEFT_AFTER, LONG_DAY, REPLY_MINUTES, SIZES, THIN, Cuts,
-                                    first_year, unit_rows)
+                                    unit_rows)
 
 
 # Few operations had their times logged before this year, so whether one ran
@@ -204,7 +204,7 @@ def _days_chart(years, this_year):
          for label, title in zip(('Days', 'Events', 'Hours'), views[0]['titles'])],
         views,
         note='How busy is the unit, how much time do its members give, and how much of it falls on weekdays?',
-        name='days', measure_switch_label='Count', view_switch_label='For')
+        name='days', start_measure='Hours', measure_switch_label='Count', view_switch_label='For')
 
 
 def _operations_chart(years, this_year):
@@ -349,7 +349,7 @@ def _status_chart(years, this_year):
         [_year_view(rows, [{'label': '', 'cells': [cell(r) for r in rows],
                        'key': STATUSES.key()}], label='By year', name='Time in the field, by status')],
         note='How is time in the field split by status?',
-        name='status', measure_switch_label='Count')
+        name='status', start_measure='Hours', measure_switch_label='Count')
 
 
 class Slot(NamedTuple):
@@ -614,7 +614,8 @@ def unit_glossary(status_from=None):
          'each responder on it.'),
         ('Called off', 'The operation was called out with an availability page, and has finished with no member '
                        'other than the AHC having a day attended on it up to today. Before {}, when pages first said '
-                       'which they were, heads-ups count here too.'.format(told_apart)),
+                       'which they were, every operation that did not run counts here, pages or '
+                       'not.'.format(told_apart)),
         ('Heads-up only', 'The operation has finished with no availability page sent, only heads-ups or no page at '
                           'all, and no member other than the AHC has a day attended on it up to today. Told apart '
                           'from {}.'.format(told_apart)),
@@ -671,12 +672,8 @@ def unit_activity(now=None):
     from the start, so that panels read against each other."""
     rows = unit_rows(now)
     today = rows['today']
-    # The page starts in its first year with something to show, after any stray early record
-    # (first_year), or this year when there is nothing; every chart shows what it has from then on.
-    with_data = {year for year, r in rows['years'].items()
-                 if any(r['operations'].values())
-                 or any(sum(r['people_days'][t].values()) + sum(r['people_events'][t].values()) for t in TYPES)}
-    first = first_year(with_data) if with_data else today.year
+    # The page starts in the report's first year (unit_rows), and every chart shows what it has from then on.
+    first = rows['first_year']
     # Each year named for the charts: in full for the figures, short on the time axis; this year to today.
     years = {year: dict(r, label=str(year) if year < today.year else '{} to {}'.format(year, today.strftime('%d %b')),
                         short=charts.year_label(year))

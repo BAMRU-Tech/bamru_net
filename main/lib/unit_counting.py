@@ -217,8 +217,9 @@ class Retention(NamedTuple):
     records_from: int           # the year the records of joining start
 
 
-def _retention(entries, today):
-    """Retention, from the entries counted."""
+def _retention(entries, today, report_from):
+    """Retention, from the entries counted, with the records of joining
+    starting no earlier than the report's first year."""
     first_day = {}                       # member -> their first day at any event
     member_only = defaultdict(set)       # member -> their days at operations and trainings not open to guests
     reportable_days = defaultdict(set)   # member -> their days at a reportable event
@@ -236,10 +237,10 @@ def _retention(entries, today):
     # A member's reportable days since they joined; the day of joining counts, whatever the event.
     reportable = {member: {day for day in reportable_days[member] if day >= joined} | {joined}
                   for member, joined in joined_on.items()}
-    # The records start where the series of reportable days does: one stray early record does not
-    # move it. Whoever was there before then counts as there when the records start.
-    records_from = first_year({day.year for member_days in reportable.values() for day in member_days}
-                               or {today.year})
+    # The records start where the reportable days do, but not before the report's first year: a stray
+    # early record does not move them. Whoever was there before then counts as there when they start.
+    records_from = max(min((day.year for member_days in reportable.values() for day in member_days),
+                           default=today.year), report_from)
     active_in = defaultdict(Counter)                     # year -> the year they joined -> members
     flows = {months: {kind: Counter() for kind in FLOW_KINDS} for months in LEFT_AFTER}   # -> flow -> year -> members
     for member_days in reportable.values():
@@ -444,7 +445,7 @@ def _operations(entries, responders, now):
                 out_on[day].add(entry.member)
             if entry.led:
                 with_ol.add(entry.event)
-    operations = Counter()               # (year, 'thin', 'middling', 'full' or 'called_off') -> operations
+    operations = Counter()               # (year, one of OUTCOMES) -> operations
     responded = []                       # (the day it started, its responders) for operations that ran
     without_ol = Counter()               # year -> operations that ran with no OL recorded
     not_run = {}                         # operation that finished without running -> the year it started
@@ -546,7 +547,6 @@ def unit_rows(now=None):
     replies = _replies(callout_pages)
     first_out = _first_out(entries, callout_pages)
     runs = _stretches(entries)
-    retention = _retention(entries, today)
     # The local time of each operation's first page, for operations that have started.
     first_pages = [timezone.localtime(paged_at) for paged_at in (
         Message.objects.filter(format='page', period__event__in=reported_events(), period__event__type='operation',
@@ -554,10 +554,13 @@ def unit_rows(now=None):
         .values('period__event_id').annotate(paged_at=Min('created_at')).values_list('paged_at', flat=True))]
 
     # A year has a row when anything is counted in it: a day attended, an event (in the year it started)
-    # or an operation.
+    # or an operation. The report starts in the first of them, after any stray early record, or this year
+    # when there is nothing; joining is counted from then on.
     recorded = ({year for t in TYPES for year, _ in participation.days['people'][t]}
                 | {year for t in TYPES for year, _ in participation.events['people'][t]}
                 | {year for year, _ in operations.outcomes})
+    first = first_year(recorded) if recorded else today.year
+    retention = _retention(entries, today, first)
     years = {}
     for year in range(min(recorded, default=today.year), today.year + 1):
         row = years[year] = {
@@ -588,6 +591,6 @@ def unit_rows(now=None):
                                     for t in TYPES}
             row[who + '_hours'] = {t: {part: participation.hours[who][(t, year, part)] for part in PARTS_OF_WEEK.names}
                                    for t in TYPES}
-    return {'today': today, 'years': years, 'responded': operations.responded,
+    return {'today': today, 'first_year': first, 'years': years, 'responded': operations.responded,
             'day_responded': operations.day_responded, 'first_pages': first_pages,
             'status_from': status_counts.since, 'reply_hours': replies.by_hour, 'records_from': retention.records_from}
