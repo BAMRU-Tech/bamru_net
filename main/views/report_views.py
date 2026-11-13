@@ -142,7 +142,8 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
                 member.total_events += num_events
                 member.total_hours += hours
                 unit_totals[1] += hours
-                type_totals[event_type][0] += num_events
+                if num_events > 0:
+                    type_totals[event_type][0] += 1
                 type_totals[event_type][1] += hours
             if member.total_events > 0:
                 unit_totals[0] += 1
