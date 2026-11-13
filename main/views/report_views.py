@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import F
+from django.db.models import F, Min
 from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
@@ -65,7 +65,14 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
         start = get_datetime_from_text(request.GET.get('start', None),
                                        end - timedelta(days=365))
 
-        members = Member.members.all()
+        # Members of every status, including alumni (MA) and no-contact
+        # (MN), narrowed below to those relevant to the period. Guests
+        # (G, GA, GN) are not listed.
+        members = list(
+            Member.objects
+            .exclude(status__in=('G', 'GA', 'GN'))
+            .annotate(first_participated_at=Min(
+                'participant__period__event__start_at')))
         events = (Event.objects
                    .filter(start_at__gte=start,
                            start_at__lte=end)
@@ -113,6 +120,16 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
                             member_type_totals[pid][period.event.type][0] += 1
                         member_type_totals[pid][period.event.type][1] += hours
                         member_table[pid][event_index] += hours
+
+        def is_current_member_who_had_participated_by_period_end(member):
+            return (member.status in Member.CURRENT_MEMBERS
+                    and member.first_participated_at is not None
+                    and member.first_participated_at <= end)
+
+        members = [
+            member for member in members
+            if any(member_table[member.id])  # logged hours in the period
+            or is_current_member_who_had_participated_by_period_end(member)]
 
         unit_totals = [0, 0]
         for member in members:
