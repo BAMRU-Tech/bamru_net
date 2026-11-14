@@ -39,10 +39,11 @@ from django.db.models import BooleanField, ExpressionWrapper, F, Min, Q, Window
 from django.db.models.functions import Lag
 from django.utils import timezone
 
-from main.lib.counting import (CALLOUT, HAS_TIME, HEADS_UP, IN_FIELD, TYPES, end_of_today, entries_hours, entry_led,
-                               first_claims, hours_by_local_day, logged_span, operations_not_run, reported_events,
-                               too_long, unit_days_and_events)
-from main.models import Distribution, Event, Member, Message, Participant
+from main.lib.counting import (CALLOUT, HAS_TIME, HEADS_UP, IN_FIELD, TYPES, NotRun, end_of_today, entries_hours,
+                               entry_led, first_claims, hours_by_local_day, logged_span, operations_not_run,
+                               reported_events, too_long, unit_days_and_events)
+from main.models import Distribution, Member, Message, Participant
+from main.models.event import every_username, members_named
 
 
 class Cuts(tuple):
@@ -63,7 +64,7 @@ THIN = 3                                 # the fewest responders: this many or f
 FULL = 8                                 # the most: this many or more
 RESPONDER_COUNTS = Cuts((('thin', THIN), ('middling', FULL - 1), ('full', None)))
 SIZES = RESPONDER_COUNTS.names
-NOT_RUN = ('called_off', 'heads_up')     # an operation nobody went on: called out, then off; or only a heads-up
+NOT_RUN = (NotRun.CALLED_OFF, NotRun.HEADS_UP_ONLY)   # why an operation nobody went on did not run
 OUTCOMES = SIZES + NOT_RUN
 PARTS_OF_WEEK = Cuts((('weekday', 4), ('weekend', None)))       # by date.weekday(): Monday 0 to Friday 4
 RECORDED_STATUSES = ('T', 'FM', 'TM')    # those a responder is counted under; any other is 'other'
@@ -78,7 +79,9 @@ DEPARTURE_SPEEDS = Cuts((('half', DEPARTURE_MINUTES[0] / 60), ('hour', DEPARTURE
                          ('later', None)))                      # in hours
 DEPARTURE_KINDS = DEPARTURE_SPEEDS.names + ('none',)            # then no departure logged after the page
 FLOW_KINDS = ('joined', 'came_back', 'left', 'left_returned')
+ROLES = ('others', 'led')                # who attended an event: those who did not lead it, and those who did
 WHOSE = ('unit', 'people')               # whose days, events and hours: the unit's (any member out), its members'
+MEASURES = ('days', 'events', 'hours')   # what participation is counted in
 
 # The pages that ask who can go, by the name of their reply template: callout pages, and heads-ups,
 # which count as callout pages here, as members are asked to reply quickly to those too.
@@ -130,7 +133,7 @@ def _named_leaders(rows):
     page links them by. Each distinct text is read once."""
     texts = {event_id: leaders for event_id, event_type, _, leaders, *_ in rows
              if event_type != 'operation' and leaders}
-    by_text = Event.members_named(texts.values())
+    by_text = members_named(texts.values(), every_username())
     return {event_id: by_text[text] for event_id, text in texts.items()}
 
 
@@ -142,7 +145,8 @@ class UnitEntry(NamedTuple):
     started: date               # the local day the event started
     member: int
     in_field: bool              # counting.IN_FIELD: all but the AHC's time on an operation
-    led: bool                   # flagged OL in the field, or named in the leaders text of an event not an operation
+    led: bool                   # off operations: led it, flagged OL or named in its leaders text (counting.entry_led)
+    ol: bool                    # on an operation: its OL in the field (counting.entry_led)
     members_only: bool          # at an operation or a training guests may not come to: a day towards joining
     hours: dict                 # {local day: hours} it counts for by now (counting.entries_hours): its days
     span: tuple                 # the (start, end) logged, up to the end of today; None when too long to be right
@@ -190,10 +194,11 @@ def unit_entries(now):
         if event_id not in start_day:
             start_day[event_id] = start_at.astimezone(tz).date()
         operation = event_type == 'operation'
+        leading = entry_led(event_type, ol, in_field, member_id in named.get(event_id, ()))
         start, end = logged_span(*times)
         yield UnitEntry(
             event=event_id, type=event_type, started=start_day[event_id], member=member_id, in_field=in_field,
-            led=entry_led(event_type, ol, in_field, member_id in named.get(event_id, ())),
+            led=leading and not operation, ol=leading and operation,
             members_only=operation or (event_type == 'training' and not GUEST_FRIENDLY.search(title)),
             hours=hours, span=None if too_long(start, end, tz) else (start, min(end, counting_stops)),
             en_route_at=times[0])
@@ -266,15 +271,15 @@ def _retention(entries, today, report_from):
 
 def _roles(entries):
     """Who attended each type of event in each year, and in what role:
-    {(type, year): {'led': members, 'others': members}}. Each member counts
+    {(type, year): {role: members}}, for each of ROLES. Each member counts
     once: whoever led at all is counted as leading."""
     attended, led = defaultdict(set), defaultdict(set)  # (type, year) -> members
     for entry in entries:
         for day in entry.hours:
             attended[(entry.type, day.year)].add(entry.member)
-            if entry.led:
+            if entry.led or entry.ol:
                 led[(entry.type, day.year)].add(entry.member)
-    return {key: {'led': len(led[key]), 'others': len(members - led[key])} for key, members in attended.items()}
+    return {key: {'others': len(members - led[key]), 'led': len(led[key])} for key, members in attended.items()}
 
 
 def _stretches(entries):
@@ -430,9 +435,9 @@ def _first_out(entries, callout_pages):
 class Operations(NamedTuple):
     """How often the unit is called out, how often the callout is called off, and how many go."""
     outcomes: Counter           # (year, one of OUTCOMES: its responder count, or why it did not run) -> operations
-    responded: list             # (the day it started, its responders) for each that ran
+    responded: list             # (the day it started, its responder count) for each that ran
     without_ol: Counter         # year -> operations that ran with no OL recorded
-    day_responded: list         # (day, responders) for each day the unit was out on operations
+    day_responded: list         # (day, its responder count) for each day the unit was out on operations
     days: Counter               # (year, the day's responder count, as RESPONDER_COUNTS) -> those days
 
 
@@ -446,10 +451,10 @@ def _operations(entries, responders, now):
             started[entry.event] = entry.started
             for day in entry.hours:
                 out_on[day].add(entry.member)
-            if entry.led:
+            if entry.ol:
                 with_ol.add(entry.event)
     operations = Counter()               # (year, one of OUTCOMES) -> operations
-    responded = []                       # (the day it started, its responders) for operations that ran
+    responded = []                       # (the day it started, its responder count) for operations that ran
     without_ol = Counter()               # year -> operations that ran with no OL recorded
     # An operation ran when it has a responder: a member in the field, not a guest, with a day up to
     # today. That is counting.operations_that_ran's rule, the member page's, read from these entries.
@@ -469,21 +474,16 @@ def _operations(entries, responders, now):
     return Operations(operations, responded, without_ol, day_responded, operation_days)
 
 
-class Participation(NamedTuple):
-    """How busy the unit is and how much its members put in, for the unit
-    (any member out) and for its members (added up)."""
-    days: dict                  # 'unit' or 'people' -> type -> Counter((year, part of the week))
-    events: dict                # the same, of events
-    hours: dict                 # 'unit' or 'people' -> Counter((type, year, part of the week))
-
-
-def _by_year_and_part(days):
-    """Counter((year, part of the week)) of these days."""
-    return Counter((day.year, PARTS_OF_WEEK.name_for(day.weekday())) for day in days)
+def _year_and_part(day):
+    """Where a day counts: in its year, and in its part of the week by its own date."""
+    return day.year, PARTS_OF_WEEK.name_for(day.weekday())
 
 
 def _participation(entries):
-    """Participation, from the entries counted."""
+    """How busy the unit is and how much its members put in, from the
+    entries counted: {who: {measure: {type: Counter((year, part of the
+    week))}}}, for each of WHOSE, the unit (any member out) and its members
+    (added up), and each of MEASURES."""
     # The unit's active days and events are counting's rule, the member report's too, over the entries in
     # the field: type -> unit active days, and type -> unit event -> the day it started.
     active_days, held = unit_days_and_events((entry.event, entry.type, entry.started, entry.hours)
@@ -491,42 +491,102 @@ def _participation(entries):
     attended_days = defaultdict(set)     # type -> (member, day) attended
     attended = defaultdict(dict)         # type -> (member, event) attended -> the day it started
     logged = defaultdict(list)           # type -> (start, end) of time logged in the field
-    hours = {'unit': Counter(), 'people': Counter()}     # -> (type, year, part of the week) -> hours
+    counted = {who: {measure: {t: Counter() for t in TYPES} for measure in MEASURES} for who in WHOSE}
     for entry in entries:
         t = entry.type
         # A member's hours go to the days they count for, as on the member's own report; an entry
         # too long to be right has none.
         for day, on_day in entry.hours.items():
-            hours['people'][(t, day.year, PARTS_OF_WEEK.name_for(day.weekday()))] += on_day
+            counted['people']['hours'][t][_year_and_part(day)] += on_day
         attended_days[t].update((entry.member, day) for day in entry.hours)
         # An event counts once, however long it ran, in the year it started.
         attended[t][(entry.member, entry.event)] = entry.started
         if entry.in_field and entry.span:
             logged[t].append(entry.span)
-    # The unit's hours are those anyone was out, each once, on the calendar days they fell on.
     for t in TYPES:
+        # The unit's hours are those anyone was out, each once, on the calendar days they fell on.
         for start, end in filter(None, first_claims(logged[t])):
             for day, on_day in hours_by_local_day(start, end).items():
-                hours['unit'][(t, day.year, PARTS_OF_WEEK.name_for(day.weekday()))] += on_day
-    days = {'unit': {t: _by_year_and_part(active_days[t]) for t in TYPES},
-            'people': {t: _by_year_and_part(day for _, day in attended_days[t]) for t in TYPES}}
-    events = {'unit': {t: _by_year_and_part(held[t].values()) for t in TYPES},
-              'people': {t: _by_year_and_part(attended[t].values()) for t in TYPES}}
-    return Participation(days, events, hours)
+                counted['unit']['hours'][t][_year_and_part(day)] += on_day
+        counted['unit']['days'][t].update(map(_year_and_part, active_days[t]))
+        counted['people']['days'][t].update(_year_and_part(day) for _, day in attended_days[t])
+        counted['unit']['events'][t].update(map(_year_and_part, held[t].values()))
+        counted['people']['events'][t].update(map(_year_and_part, attended[t].values()))
+    return counted
+
+
+class UnitYear(NamedTuple):
+    """A year's figures on the unit's report. Each {category: n} has every
+    category of its kind, in the order the kind lists them."""
+    year: int
+    operations: dict            # {one of OUTCOMES: operations}
+    operation_days: dict        # {one of SIZES: days the unit was out with that many responders}
+    without_ol: int             # operations that ran with no OL recorded
+    members: dict               # {type: {one of ROLES: members}}
+    participation: dict         # {one of WHOSE: {one of MEASURES: {type: {part of the week: amount}}}}
+    status_days: dict           # {one of STATUSES_COUNTED: responder-days}
+    status_hours: dict          # {one of STATUSES_COUNTED: responder-hours}
+    status_events: dict         # {one of STATUSES_COUNTED: operations attended}
+    replies: dict               # {one of REPLY_KINDS: callouts to members}
+    first_out: dict             # {one of DEPARTURE_KINDS: immediate callouts}
+    runs: dict                  # {one of RUN_LENGTHS: stretches in the field}
+    active: dict                # {the year they joined, from the year the records of joining start: members}
+    left_known: dict            # {months of LEFT_AFTER: whether who left in the year is known yet}
+    flows: dict                 # {months of LEFT_AFTER: {one of FLOW_KINDS: members}}
+
+
+class UnitCounts(NamedTuple):
+    """Every count the year rows are made of, each as its function gives it."""
+    participation: dict         # _participation
+    operations: Operations
+    roles: dict                 # _roles
+    by_status: ByStatus
+    replies: Replies
+    first_out: dict             # _first_out
+    runs: Counter               # _stretches
+    retention: Retention
+
+
+def _unit_year(year, counts, today):
+    """The year's UnitYear, from the counts."""
+    return UnitYear(
+        year=year,
+        operations={outcome: counts.operations.outcomes[(year, outcome)] for outcome in OUTCOMES},
+        operation_days={size: counts.operations.days[(year, size)] for size in SIZES},
+        without_ol=counts.operations.without_ol[year],
+        members={t: counts.roles.get((t, year), dict.fromkeys(ROLES, 0)) for t in TYPES},
+        participation={who: {measure: {t: {part: by_part[(year, part)] for part in PARTS_OF_WEEK.names}
+                                       for t, by_part in by_type.items()}
+                             for measure, by_type in measures.items()}
+                       for who, measures in counts.participation.items()},
+        status_days={status: counts.by_status.days[(year, status)] for status in STATUSES_COUNTED},
+        status_hours={status: counts.by_status.hours[(year, status)] for status in STATUSES_COUNTED},
+        status_events={status: counts.by_status.events[(year, status)] for status in STATUSES_COUNTED},
+        replies={kind: counts.replies.by_year[year][kind] for kind in REPLY_KINDS},
+        first_out={kind: counts.first_out[year][kind] for kind in DEPARTURE_KINDS},
+        runs={length: counts.runs[(year, length)] for length in RUN_LENGTHS},
+        active={cohort: counts.retention.active[year][cohort]
+                for cohort in range(counts.retention.records_from, today.year + 1)},
+        # Who left in a year is known once more than 12 months have passed since its last day, the day
+        # after which a member last there on it has left.
+        left_known={months: date(year, 12, 31) + LAPSE * (months // 12) < today for months in LEFT_AFTER},
+        flows={months: {kind: counts.retention.flows[months][kind][year] for kind in FLOW_KINDS}
+               for months in LEFT_AFTER})
 
 
 def unit_rows(now=None):
     """Count the unit's days, hours, operations and the people on them by
     year. The entries are read once (unit_entries), and each kind of figure is
-    counted from them by a function of its own; this puts the counts into
-    rows. Returns {'today': ..., 'years': {year: row}, ...} with a row for
-    every year from the earliest record to this one, and what the charts
-    without years add up, each with its day: 'responded' and 'day_responded'
-    [(day, responders)] for operations that ran and for days the unit was
-    out, 'first_pages' [local time of each operation's first page] and
-    'reply_hours' {(day sent, hour, how soon): callouts to members}; and
-    'status_from', the day the first status was recorded, and 'records_from',
-    the year the records of joining start."""
+    counted from them by a function of its own; _unit_year puts the counts
+    into a row for each year from the earliest record to this one. Returns
+    {'today': ..., 'first_year': the year the report starts, after any stray
+    early record (first_year), 'years': {year: UnitYear}, ...}, and what the
+    charts without years add up, each with its day: 'responded' and
+    'day_responded' [(day, responder count)] for operations that ran and for
+    days the unit was out, 'first_pages' [local time of each operation's
+    first page] and 'reply_hours' {(day sent, hour, how soon): callouts to
+    members}; and 'status_from', the day the first status was recorded, and
+    'records_from', the year the records of joining start."""
     now = now or timezone.now()
     today = timezone.localtime(now).date()
     entries = list(unit_entries(now))
@@ -537,55 +597,24 @@ def unit_rows(now=None):
                                            rsvp_template__name__in=ASKS_AVAILABILITY, created_at__lte=now)
     participation = _participation(entries)
     operations = _operations(entries, responders, now)
-    roles = _roles(entries)
-    status_counts = _by_status(entries, responders)
-    replies = _replies(callout_pages)
-    first_out = _first_out(entries, callout_pages)
-    runs = _stretches(entries)
+    # A year has a row when anything is counted in it: a day attended, an event (in the year it started)
+    # or an operation. The report starts in the first of them, after any stray early record, or this year
+    # when there is nothing; joining is counted from then on.
+    recorded = ({year for measure in ('days', 'events') for by_part in participation['people'][measure].values()
+                 for year, _ in by_part}
+                | {year for year, _ in operations.outcomes})
+    first = first_year(recorded) if recorded else today.year
+    counts = UnitCounts(participation, operations, _roles(entries), _by_status(entries, responders),
+                        _replies(callout_pages), _first_out(entries, callout_pages), _stretches(entries),
+                        _retention(entries, today, first))
     # The local time of each operation's first page, for operations that have started.
     first_pages = [timezone.localtime(paged_at) for paged_at in (
         Message.objects.filter(format='page', period__event__in=reported_events(), period__event__type='operation',
                                period__event__start_at__lte=now)
         .values('period__event_id').annotate(paged_at=Min('created_at')).values_list('paged_at', flat=True))]
-
-    # A year has a row when anything is counted in it: a day attended, an event (in the year it started)
-    # or an operation. The report starts in the first of them, after any stray early record, or this year
-    # when there is nothing; joining is counted from then on.
-    recorded = ({year for t in TYPES for year, _ in participation.days['people'][t]}
-                | {year for t in TYPES for year, _ in participation.events['people'][t]}
-                | {year for year, _ in operations.outcomes})
-    first = first_year(recorded) if recorded else today.year
-    retention = _retention(entries, today, first)
-    years = {}
-    for year in range(min(recorded, default=today.year), today.year + 1):
-        row = years[year] = {
-            'year': year,
-            'operations': {outcome: operations.outcomes[(year, outcome)] for outcome in OUTCOMES},
-            'operation_days': {size: operations.days[(year, size)] for size in SIZES},
-            'members': {t: roles.get((t, year), {'led': 0, 'others': 0}) for t in TYPES},
-            'without_ol': operations.without_ol[year],
-            'status_days': {status: status_counts.days[(year, status)] for status in STATUSES_COUNTED},
-            'status_hours': {status: status_counts.hours[(year, status)] for status in STATUSES_COUNTED},
-            'status_events': {status: status_counts.events[(year, status)] for status in STATUSES_COUNTED},
-            'replies': {kind: replies.by_year[year][kind] for kind in REPLY_KINDS},
-            'first_out': {kind: first_out[year][kind] for kind in DEPARTURE_KINDS},
-            'runs': {length: runs[(year, length)] for length in RUN_LENGTHS},
-            'active': {cohort: retention.active[year][cohort]
-                       for cohort in range(retention.records_from, today.year + 1)},
-            # Who left in a year is known once more than 12 months have passed since its last day, the
-            # day after which a member last there on it has left.
-            'left_known': {months: date(year, 12, 31) + LAPSE * (months // 12) < today for months in LEFT_AFTER},
-            'flows': {months: {kind: retention.flows[months][kind][year] for kind in FLOW_KINDS}
-                      for months in LEFT_AFTER},
-        }
-        for who in WHOSE:
-            row[who + '_days'] = {t: {part: participation.days[who][t][(year, part)] for part in PARTS_OF_WEEK.names}
-                                  for t in TYPES}
-            row[who + '_events'] = {t: {part: participation.events[who][t][(year, part)]
-                                        for part in PARTS_OF_WEEK.names}
-                                    for t in TYPES}
-            row[who + '_hours'] = {t: {part: participation.hours[who][(t, year, part)] for part in PARTS_OF_WEEK.names}
-                                   for t in TYPES}
-    return {'today': today, 'first_year': first, 'years': years, 'responded': operations.responded,
-            'day_responded': operations.day_responded, 'first_pages': first_pages,
-            'status_from': status_counts.since, 'reply_hours': replies.by_hour, 'records_from': retention.records_from}
+    return {'today': today, 'first_year': first,
+            'years': {year: _unit_year(year, counts, today)
+                      for year in range(min(recorded, default=today.year), today.year + 1)},
+            'responded': operations.responded, 'day_responded': operations.day_responded, 'first_pages': first_pages,
+            'status_from': counts.by_status.since, 'reply_hours': counts.replies.by_hour,
+            'records_from': counts.retention.records_from}

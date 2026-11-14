@@ -30,7 +30,7 @@ glossary leaves to the code:
   it, and as AHC when all the time on it was as AHC.
 - Who led is entry_led's rule: a training (as TL or LL), a meeting or a
   community event when the event's leaders text names the member
-  (Event.members_named, as the event page links a leader) or their entry is
+  (members_named, as the event page links a leader) or their entry is
   flagged OL; an operation when flagged OL in the field.
 - An operation did not run once it has finished and no one in the field
   on it (so not the AHC), other than a guest, has a day attended on it up
@@ -45,6 +45,7 @@ glossary leaves to the code:
 """
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from typing import ClassVar
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 
 from django.db.models import BooleanField, Exists, ExpressionWrapper, F, OuterRef, Q
@@ -52,6 +53,7 @@ from django.template.defaultfilters import pluralize
 from django.utils import timezone
 
 from main.models import DoAvailable, Event, Member, Message, Participant
+from main.models.event import every_username, members_named
 
 # In the order they are shown.
 EVENT_TYPES = (
@@ -205,12 +207,12 @@ def end_of_today(now, tz=None):
     return timezone.make_aware(datetime.combine(now.astimezone(tz).date() + timedelta(days=1), time.min), tz)
 
 
-def entry_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, started, now, tz=None, claim=None):
+def entry_hours(en_route_at, return_home_at, signed_in_at, signed_out_at, start_at, now, tz=None, claim=None):
     """{local day: hours} an entry counts for by `now`: its day_hours (of
-    `claim`, as there) up to end_of_today, and none for an event that had
-    not started by then."""
+    `claim`, as there) up to end_of_today, and none when its event starts,
+    at `start_at`, after now."""
     tz = tz or timezone.get_current_timezone()
-    if started > now:
+    if start_at > now:
         return {}
     stop = end_of_today(now, tz).date()
     return {day: hours for day, hours
@@ -233,7 +235,7 @@ def first_claims(spans):
 
 
 def entries_hours(entries, now, tz=None):
-    """For one member's entries, each (started, en_route_at, return_home_at,
+    """For one member's entries, each (start_at, en_route_at, return_home_at,
     signed_in_at, signed_out_at), in member_entries' order so that every
     report breaks a tie alike, the hours each counts for by `now`, in that
     order: entry_hours, but with time the member logged twice (two
@@ -244,13 +246,13 @@ def entries_hours(entries, now, tz=None):
     today claims it, though it counts nothing yet."""
     tz = tz or timezone.get_current_timezone()
     spans = {}
-    for i, (started, *times) in enumerate(entries):
+    for i, (start_at, *times) in enumerate(entries):
         span = logged_span(*times)
-        if started <= now and span and not too_long(*span, tz):
+        if start_at <= now and span and not too_long(*span, tz):
             spans[i] = span
     claims = dict(zip(spans, first_claims(list(spans.values()))))
-    return [entry_hours(*times, started, now, tz, claim=(claims[i] or ()) if i in claims else None)
-            for i, (started, *times) in enumerate(entries)]
+    return [entry_hours(*times, start_at, now, tz, claim=(claims[i] or ()) if i in claims else None)
+            for i, (start_at, *times) in enumerate(entries)]
 
 
 # The reply templates of the pages for an operation: a callout asks who can
@@ -277,7 +279,10 @@ def heads_up_only(started, until):
 @dataclass(frozen=True)
 class NotRun:
     """Why an operation did not run, and when it would have."""
-    why: str            # 'heads_up' (heads_up_only) or 'called_off'
+    CALLED_OFF: ClassVar[str] = 'called_off'        # called out, then called off
+    HEADS_UP_ONLY: ClassVar[str] = 'heads_up'       # only ever a heads-up (heads_up_only)
+
+    why: str            # CALLED_OFF or HEADS_UP_ONLY
     started: date       # the local day it started
 
 
@@ -294,7 +299,7 @@ def operations_not_run(until, ran, operations=None):
     started = {event_id: timezone.localtime(start_at).date()
                for event_id, start_at in finished.values_list('id', 'start_at') if event_id not in ran}
     heads_up = heads_up_only(started, until)
-    return {event_id: NotRun('heads_up' if event_id in heads_up else 'called_off', day)
+    return {event_id: NotRun(NotRun.HEADS_UP_ONLY if event_id in heads_up else NotRun.CALLED_OFF, day)
             for event_id, day in started.items()}
 
 
@@ -314,9 +319,9 @@ def unit_days_and_events(entries):
 
 def unit_since(since, until):
     """What the unit did from the day `since` on, up to `until`, for a
-    member's report, read in one pass: unit_days_and_events, with the
-    events that started from `since` on. Some days before `since` may be
-    among the days."""
+    member's report, read in one pass: unit_days_and_events. Some days
+    before `since`, and events that started before it, may be among them,
+    for the caller to count from `since` on."""
     tz = timezone.get_current_timezone()
     start = timezone.make_aware(datetime.combine(since, time.min))
     # An entry counts for at most MAX_ENTRY, so nothing that began earlier
@@ -331,24 +336,23 @@ def unit_since(since, until):
     days, events = unit_days_and_events(
         (event_id, event_type, start_at.astimezone(tz).date(), entry_hours(*times, start_at, until, tz))
         for event_id, event_type, start_at, *times in rows)
-    return days, {t: {event_id: day for event_id, day in events[t].items() if day >= since} for t in TYPES}
+    return days, events
 
 
-def operations_that_ran(until, operations=None):
-    """The operations that ran: those started by `until`, or of the ids
-    given, at which a member other than the AHC, and not a guest, has a day
-    attended up to until's local day. One that has finished and is not
-    among them was called off. {ids}"""
+def operations_that_ran(until, operations):
+    """Those of these operations, by id, that ran by `until`: at which a
+    member other than the AHC, and not a guest, has a day attended up to
+    until's local day. One that has finished and is not among them was
+    called off. {ids}"""
     tz = timezone.get_current_timezone()
     rows = (Participant.objects
-            .filter(HAS_TIME, IN_FIELD, period__event__type='operation', period__event__in=reported_events())
+            .filter(HAS_TIME, IN_FIELD, period__event__type='operation', period__event__in=reported_events(),
+                    period__event_id__in=operations)
             .exclude(member__status__in=Member.GUESTS))
-    if operations is not None:
-        rows = rows.filter(period__event_id__in=operations)
-    return {event_id for event_id, *times, started in rows.values_list(
+    return {event_id for event_id, *times, start_at in rows.values_list(
                 'period__event_id', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at',
                 'period__event__start_at')
-            if entry_hours(*times, started, until, tz)}
+            if entry_hours(*times, start_at, until, tz)}
 
 
 def member_entries(member):
@@ -438,7 +442,7 @@ def _record(member, now, entries=None, leading=True):
     # The members each leaders text names, read once for all the member's
     # events, by the rule the event page links leaders by.
     texts = {p.period.event.leaders for p in entries if p.period.event.type != 'operation'}
-    named = Event.members_named(texts) if leading and any(texts) else {}
+    named = members_named(texts, every_username()) if leading and any(texts) else {}
     counted, no_time, timed_operations = [], {}, set()
     entries = [p for p in entries if p.period.event.type in TYPES]      # the types the reports show
     hours_of = entries_hours([(p.period.event.start_at, p.en_route_at, p.return_home_at, p.signed_in_at,
@@ -459,24 +463,33 @@ def _record(member, now, entries=None, leading=True):
                   no_time={event_id: event for event_id, event in no_time.items() if event_id not in timed_operations})
 
 
-def count_entry_days(participants, now=None):
-    """Set on each entry what the totals count of it, by the rules of the glossary:
-    `days`, its counted days up to today; `counted_hours`, the hours on
-    those days; and `left_out_hours`, the rest of its hours, which count
-    towards no total (a mistake, or time for days still to come). Two
-    entries on one day each show that day, though the totals count it once."""
-    now = now or timezone.now()
+@dataclass(frozen=True)
+class ListedEntry:
+    """One of a member's entries as their report lists it, with what the
+    totals count of it, by the rules of the glossary. Two entries on one day
+    each show that day, though the totals count it once."""
+    entry: Participant
+    days: int               # its counted days up to today
+    counted_hours: float    # the hours on those days
+    left_out_hours: float   # the rest of its hours, which count towards no total: a mistake, or days still to come
+
+
+def listed_entries(entries, now):
+    """A member's entries (member_entries) as their report lists them, by
+    `now`: [ListedEntry], in the order given."""
     # The types the reports show, as the totals read them, so that time logged twice is the same entry's.
-    shown = [p for p in participants if p.period.event.type in TYPES]
+    shown = [p for p in entries if p.period.event.type in TYPES]
     hours_of = dict(zip(shown, entries_hours([(p.period.event.start_at, p.en_route_at, p.return_home_at,
                                                p.signed_in_at, p.signed_out_at) for p in shown], now)))
-    for p in participants:
+    listed = []
+    for p in entries:
         on_days = list(hours_of.get(p, {}).values())
-        p.days = len(on_days)
         # Rounded far past the tenth shown, so that an entry's days, added up,
         # show as its own hours do: 3.78 and 23.77 make 27.549999..., not 27.55.
-        p.counted_hours = round(sum(on_days), 6)
-        p.left_out_hours = round(p.hours - sum(on_days), 6)      # from the sum before rounding: nothing, when nothing is
+        listed.append(ListedEntry(entry=p, days=len(on_days), counted_hours=round(sum(on_days), 6),
+                                  # from the sum before rounding: nothing, when nothing is
+                                  left_out_hours=round(p.hours - sum(on_days), 6)))
+    return listed
 
 
 def _ago(then, today):
@@ -509,7 +522,7 @@ def member_latest(member, now=None):
     ids = [event.id for event in candidates]
     not_run = operations_not_run(now, operations_that_ran(now, ids), ids) if candidates else {}
     called_off = {not_run[event.id].started: event
-                  for event in candidates if event.id in not_run and not_run[event.id].why == 'called_off'}
+                  for event in candidates if event.id in not_run and not_run[event.id].why == NotRun.CALLED_OFF}
 
     def last(days_to_events, after=()):
         """The most recent of these days, with its event, if it is later
@@ -571,13 +584,51 @@ class ActivityRow:
     all_hours: float
 
 
-def activity_rows(member, now=None, entries=None):
+def _started(events, keep):
+    """{event id: the day it started} for the events, {id: Attended}, kept by `keep`."""
+    return {event_id: e.day for event_id, e in events.items() if keep(e)}
+
+
+def _by_month(days, first, last):
+    """How many of these days fall in each month from `first` to `last`:
+    Counter((year, month))."""
+    return Counter((day.year, day.month) for day in days if first <= day <= last)
+
+
+def _hours_by_month(record):
+    """A member's hours, {(year, month, field, type or None): hours}, for each
+    ActivityRow figure they count towards (CountedEntry.hours_towards)."""
+    hours_by_month = defaultdict(float)
+    for entry in record.counted:
+        for day, hours in entry.hours.items():
+            for field, kind in entry.hours_towards():
+                hours_by_month[(day.year, day.month, field, kind)] += hours
+    return hours_by_month
+
+
+def _row(months, period, by_type, alone, hours_by_month):
+    """The ActivityRow for these months, each a (year, month), adding up each
+    figure's counts by month, {figure: {type: Counter}} (`by_type`) and
+    {figure: Counter} (`alone`), and the hours (_hours_by_month)."""
+    def total(counts):
+        return sum(counts[m] for m in months)
+
+    def hours(field, kind=None):
+        return sum(hours_by_month[(y, m, field, kind)] for y, m in months)
+    of_type = {field: {t: hours(field, t) for t in TYPES} for field in ('hours', 'led_hours', 'other_hours')}
+    return ActivityRow(period=period,
+                       **{name: {t: total(counts[t]) for t in TYPES} for name, counts in by_type.items()},
+                       **{name: total(counts) for name, counts in alone.items()},
+                       **of_type, ol_hours=hours('ol_hours'), ahc_hours=hours('ahc_hours'),
+                       all_hours=sum(of_type['hours'][t] for t in TYPES))
+
+
+def activity_rows(member, now, entries):
     """Count a member's days, duties and hours by year and by month, from the
     first day they were involved to today (or to the last day, for someone no
-    longer a member): {'years': [ActivityRow], 'months': [ActivityRow],
-    'total': ActivityRow}, oldest first. Returns None when there is nothing
-    to count."""
-    now = now or timezone.now()
+    longer a member), from their entries (member_entries): {'years':
+    [ActivityRow], 'months': [ActivityRow], 'total': ActivityRow}, oldest
+    first. Returns None when there is nothing to count."""
     today = timezone.localtime(now).date()
     do_days = _do_days(member, now)
     record = _record(member, now, entries)
@@ -599,7 +650,7 @@ def activity_rows(member, now=None, entries=None):
     # nobody went out or as a guest among guests; and an event they attended
     # is a unit event.
     active = {t: active[t] | days[t] for t in TYPES}
-    unit = {t: {**unit[t], **{event_id: e.day for event_id, e in events.items() if e.type == t}} for t in TYPES}
+    unit = {t: {**unit[t], **_started(events, lambda e, t=t: e.type == t)} for t in TYPES}
     # Across all types a day counts once, under the first type in the order
     # above that the member attended on it.
     first_days, earlier = {}, set()
@@ -607,59 +658,34 @@ def activity_rows(member, now=None, entries=None):
         first_days[t] = days[t] - earlier
         earlier |= days[t]
 
-    def kept(keep):
-        """{event id: the day it started} for the events kept by `keep`."""
-        return {event_id: e.day for event_id, e in events.items() if keep(e)}
-
-    def by_month(days):
-        """How many of these days fall in each month from first to last."""
-        return Counter((day.year, day.month) for day in days if first <= day <= last)
-
     # Each figure counted by month: days as a set of them, so each counts
     # once, and events as {event id: the day it started}, so each counts
     # once on that day, however many share it. A year is the sum of its months.
-    monthly_by_type = {
-        **{name: {t: by_month(of_type[t]) for t in TYPES}
+    by_type = {
+        **{name: {t: _by_month(of_type[t], first, last) for t in TYPES}
            for name, of_type in (('days', days), ('active_days', active),
                                  ('led_days', {t: set(record.days(t, led=True)) for t in TYPES}),
                                  ('first_days', first_days))},
-        **{name: {t: by_month(of_type[t].values()) for t in TYPES}
-           for name, of_type in (('events', {t: kept(lambda e, t=t: e.type == t) for t in TYPES}),
+        **{name: {t: _by_month(of_type[t].values(), first, last) for t in TYPES}
+           for name, of_type in (('events', {t: _started(events, lambda e, t=t: e.type == t) for t in TYPES}),
                                  ('unit_events', unit),
-                                 ('led_events', {t: kept(lambda e, t=t: e.type == t and e.led) for t in TYPES}))},
+                                 ('led_events', {t: _started(events, lambda e, t=t: e.type == t and e.led)
+                                                 for t in TYPES}))},
     }
-    monthly = {
-        **{name: by_month(days_of) for name, days_of in (
+    alone = {
+        **{name: _by_month(days_of, first, last) for name, days_of in (
             ('all_days', any_days), ('all_active_days', set().union(*active.values())),
             ('ol_days', record.ol_days()), ('ahc_days', ahc_days), ('do_days', do_days))},
-        **{name: by_month(events_of.values()) for name, events_of in (
-            ('ol_events', kept(lambda e: e.ol)),
-            ('ahc_events', kept(lambda e: e.type == 'operation' and not e.in_field)))},
+        **{name: _by_month(events_of.values(), first, last) for name, events_of in (
+            ('ol_events', _started(events, lambda e: e.ol)),
+            ('ahc_events', _started(events, lambda e: e.type == 'operation' and not e.in_field)))},
     }
-    monthly_hours = defaultdict(float)       # (year, month, field, type or None) -> the member's hours
-    for entry in record.counted:
-        for day, hours in entry.hours.items():
-            for field, kind in entry.hours_towards():
-                monthly_hours[(day.year, day.month, field, kind)] += hours
-
-    def row(months, period):
-        """Add up the months given, each a (year, month)."""
-        def total(counts):
-            return sum(counts[m] for m in months)
-
-        def hours(field, kind=None):
-            return sum(monthly_hours[(y, m, field, kind)] for y, m in months)
-        by_type = {field: {t: hours(field, t) for t in TYPES} for field in ('hours', 'led_hours', 'other_hours')}
-        return ActivityRow(period=period,
-                           **{name: {t: total(counts[t]) for t in TYPES} for name, counts in monthly_by_type.items()},
-                           **{name: total(counts) for name, counts in monthly.items()},
-                           **by_type, ol_hours=hours('ol_hours'), ahc_hours=hours('ahc_hours'),
-                           all_hours=sum(by_type['hours'][t] for t in TYPES))
-
+    hours_by_month = _hours_by_month(record)
     all_months = [(y, m) for y in range(first.year, last.year + 1) for m in range(1, 13)
                   if (first.year, first.month) <= (y, m) <= (last.year, last.month)]
     return {
-        'years': [row([(y, m) for m in range(1, 13)], y) for y in range(first.year, last.year + 1)],
-        'months': [row([(y, m)], (y, m)) for y, m in all_months],
-        'total': row(all_months, None),
+        'years': [_row([(y, m) for m in range(1, 13)], y, by_type, alone, hours_by_month)
+                  for y in range(first.year, last.year + 1)],
+        'months': [_row([(y, m)], (y, m), by_type, alone, hours_by_month) for y, m in all_months],
+        'total': _row(all_months, None, by_type, alone, hours_by_month),
     }

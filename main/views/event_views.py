@@ -14,6 +14,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from main.lib.gcal import get_gcal_manager
 from main.models import Member, Event, Participant, Period
+from main.models.event import every_username, leader_parts
 from main.views.api_views import EventFilter
 from main import tasks
 
@@ -80,7 +81,8 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         if event.leaders is None:
             result = [{ 'name': 'TBD', 'id': 0 }]
         else:
-            result = [{ 'name': text, 'id': member_id or 0 } for text, member_id in event.leader_parts()]
+            result = [{ 'name': text, 'id': member_id or 0 }
+                      for text, member_id in leader_parts(event.leaders, every_username())]
 
         context['leaders'] = result
         return context

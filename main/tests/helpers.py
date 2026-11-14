@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from django.test import TestCase
 
 from main.lib.activity import member_activity
-from main.lib.counting import activity_rows, member_latest, operations_not_run, operations_that_ran
+from main.lib.counting import activity_rows, member_entries, member_latest, operations_not_run, operations_that_ran
 from main.models import Event, Member, Message, Participant, Period, RsvpTemplate
 
 
@@ -17,6 +17,11 @@ def when(year, month, day):
     """20:00 UTC, the middle of the day in Pacific time (noon in winter, 1pm in
     summer), so short events stay within one local day."""
     return datetime(year, month, day, 20, 0, tzinfo=dt_timezone.utc)
+
+
+def every_operation():
+    """Every operation's id, for a test that asks about them all."""
+    return Event.objects.filter(type='operation').values_list('id', flat=True)
 
 
 class ActivityTestCase(TestCase):
@@ -49,7 +54,8 @@ class ActivityTestCase(TestCase):
         return event
 
     def years(self, member=None):
-        return {str(row.period): row for row in activity_rows(member or self.member, NOW)['years']}
+        member = member or self.member
+        return {str(row.period): row for row in activity_rows(member, NOW, member_entries(member))['years']}
 
     def days(self, row, event_type):
         """(days attended, unit active days)"""
@@ -58,8 +64,9 @@ class ActivityTestCase(TestCase):
     def chart_asked_for(self, member=None):
         """What the report gives the chart component to draw, not what that makes
         of it: (measures, views, options), as passed to charts.share_panels."""
+        member = member or self.member
         with mock.patch('main.lib.activity.charts.share_panels') as share_panels:
-            member_activity(member or self.member, NOW)
+            member_activity(member, NOW, member_entries(member))
         (measures, views), options = share_panels.call_args
         return measures, views, options
 
@@ -74,7 +81,8 @@ class ActivityTestCase(TestCase):
 
     def not_run(self):
         """Why each operation that did not run by NOW did not: {id: 'heads_up' or 'called_off'}."""
-        return {event_id: not_run.why for event_id, not_run in operations_not_run(NOW, operations_that_ran(NOW)).items()}
+        ran = operations_that_ran(NOW, every_operation())
+        return {event_id: not_run.why for event_id, not_run in operations_not_run(NOW, ran).items()}
 
     def paged(self, event, template):
         """A page for `event`, sent as it started, asking who can go ('Available?') or warning ('Heads Up')."""

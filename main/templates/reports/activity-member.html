@@ -76,7 +76,7 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
   {% include 'charts/share_panels.html' with chart=activity.chart %}
   {% endif %}
 
-  {% for label, participants in event_sections %}
+  {% for label, entries in event_sections %}
   <p></p>
   <table class="events">
     <caption>{{ label }}</caption>
@@ -85,15 +85,15 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
       <tr><th>Date</th><th>Event</th><th>Location</th><th>Leaders</th><th>Hours</th><th>Days</th></tr>
     </thead>
     <tbody>
-      {% for p in participants %}
+      {% for listed in entries %}
       <tr class="member">
-        <td>{{ p.period.event.start_at|date:"d M Y" }}</td>
-        <td><a href="{{ p.period.event.get_absolute_url }}">{{ p.period }}</a></td>
-        <td>{{ p.period.event.location }}</td>
-        <td>{{ p.period.event.leaders|default_if_none:"" }}</td>
+        <td>{{ listed.entry.period.event.start_at|date:"d M Y" }}</td>
+        <td><a href="{{ listed.entry.period.event.get_absolute_url }}">{{ listed.entry.period }}</a></td>
+        <td>{{ listed.entry.period.event.location }}</td>
+        <td>{{ listed.entry.period.event.leaders|default_if_none:"" }}</td>
         {# The hours counted, then any left out, in parentheses, as the glossary says. #}
-        <td>{% if p.counted_hours or not p.left_out_hours %}{{ p.counted_hours|hours }}{% endif %}{% if p.counted_hours and p.left_out_hours %} {% endif %}{% if p.left_out_hours %}({{ p.left_out_hours|hours }}){% endif %}</td>
-        <td>{{ p.days }}</td>
+        <td>{% if listed.counted_hours or not listed.left_out_hours %}{{ listed.counted_hours|hours }}{% endif %}{% if listed.counted_hours and listed.left_out_hours %} {% endif %}{% if listed.left_out_hours %}({{ listed.left_out_hours|hours }}){% endif %}</td>
+        <td>{{ listed.days }}</td>
       </tr>
       {% endfor %}
     </tbody>

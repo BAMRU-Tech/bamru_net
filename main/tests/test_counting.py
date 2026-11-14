@@ -3,14 +3,12 @@ import random
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone as dt_timezone
 
-from django.db import connection
 from django.test import TestCase
-from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 
 from main.lib.activity import glossary, member_activity
-from main.lib.counting import (TYPES, activity_rows, count_entry_days, day_hours, entry_hours, entry_led, first_claims,
-                               hours_by_local_day, member_entries, member_latest, reported_events, unit_since)
+from main.lib.counting import (TYPES, activity_rows, day_hours, entry_hours, entry_led, first_claims, hours_by_local_day,
+                               listed_entries, member_entries, member_latest, reported_events, unit_since)
 from main.models import DoAvailable, Event, Member, Participant, Period
 from main.tests.helpers import NOW, ActivityTestCase, when
 
@@ -115,8 +113,8 @@ class DaysTestCase(TestCase):
 class ActivityRowsTestCase(ActivityTestCase):
     def test_no_activity(self):
         self.make_event('training', when(2024, 3, 1), no_time=[self.member])
-        self.assertIsNone(activity_rows(self.member, NOW))
-        self.assertIsNone(member_activity(self.member, NOW))
+        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member)))
+        self.assertIsNone(member_activity(self.member, NOW, member_entries(self.member)))
 
     def test_days_attended_out_of_days_active(self):
         self.make_event('operation', when(2024, 1, 10), attended=[self.member, self.other])
@@ -221,19 +219,19 @@ class ActivityRowsTestCase(ActivityTestCase):
         self.make_event('operation', when(2023, 1, 10), ahc=[self.member])
         self.make_event('meeting', when(2023, 6, 10), attended=[self.member])
         self.make_event('operation', when(2024, 1, 10), ahc=[self.member])
-        rows = activity_rows(self.member, NOW)
+        rows = activity_rows(self.member, NOW, member_entries(self.member))
         self.assertEqual((rows['total'].all_days, rows['total'].all_hours), (3, 8))
         alum = self.make_member('Cat', 'MA')
         self.make_event('meeting', when(2023, 6, 10), attended=[alum])
         self.make_event('operation', when(2024, 1, 10), ahc=[alum])
-        self.assertEqual(activity_rows(alum, NOW)['total'].all_hours, 6)
+        self.assertEqual(activity_rows(alum, NOW, member_entries(alum))['total'].all_hours, 6)
 
     def test_the_unit_is_read_from_the_members_first_day(self):
         self.make_event('training', when(2020, 1, 10), attended=[self.other])
         self.make_event('training', when(2024, 1, 10), attended=[self.member])
         days, events = unit_since(date(2024, 1, 10), NOW)
         self.assertEqual((days['training'], list(events['training'].values())), ({date(2024, 1, 10)}, [date(2024, 1, 10)]))
-        self.assertEqual(self.days(activity_rows(self.member, NOW)['total'], 'training'), (1, 1))
+        self.assertEqual(self.days(activity_rows(self.member, NOW, member_entries(self.member))['total'], 'training'), (1, 1))
 
     def test_a_unit_entry_begun_seven_days_before_the_first_day_reaches_it(self):
         def local(*when):
@@ -272,14 +270,13 @@ class ActivityRowsTestCase(ActivityTestCase):
             Participant.objects.create(period=training.period_set.first(), member=member,
                                        en_route_at=tomorrow, return_home_at=tomorrow + timedelta(hours=4))
         # Time typed for tomorrow counts nothing yet, for the member or for the unit.
-        self.assertIsNone(activity_rows(self.member, evening))
+        self.assertIsNone(activity_rows(self.member, evening, member_entries(self.member)))
         self.assertEqual(unit_since(date(2024, 6, 1), evening)[1]['training'], {})
-        entries = member_entries(self.member)
-        count_entry_days(entries, evening)
-        self.assertEqual([(p.days, p.left_out_hours) for p in entries], [(0, 4)])
+        listed = listed_entries(member_entries(self.member), evening)
+        self.assertEqual([(e.days, e.left_out_hours) for e in listed], [(0, 4)])
         # The next morning it does.
         morning = tomorrow + timedelta(hours=5)
-        self.assertEqual(self.days(activity_rows(self.member, morning)['total'], 'training'), (1, 1))
+        self.assertEqual(self.days(activity_rows(self.member, morning, member_entries(self.member))['total'], 'training'), (1, 1))
 
     def test_an_event_is_placed_by_the_local_day_it_started(self):
         self.make_event('training', when(2023, 12, 1), attended=[self.member])
@@ -328,7 +325,7 @@ class ActivityRowsTestCase(ActivityTestCase):
             gone = self.make_member('Dan' + status, status)
             self.make_event('training', when(2024, 1, 10), attended=[gone])
             self.make_event('training', when(2024, 3, 10), attended=[self.other])
-            rows = activity_rows(gone, NOW)
+            rows = activity_rows(gone, NOW, member_entries(gone))
             self.assertEqual(self.days(rows['total'], 'training'), (1, 1), status)
             self.assertEqual([m.period for m in rows['months']], [(2024, 1)], status)
             Event.objects.all().delete()
@@ -371,20 +368,20 @@ class ActivityRowsTestCase(ActivityTestCase):
     def test_a_do_week_counts_from_the_hour_its_shift_starts(self):
         DoAvailable.objects.create(member=self.member, year=2024, quarter=2, week=1, assigned=True)
         start = timezone.make_aware(DoAvailable.shift_start(2024, 2, 1))
-        self.assertIsNone(activity_rows(self.member, start - timedelta(hours=2)))
-        self.assertEqual(activity_rows(self.member, start)['total'].do_days, 1)
+        self.assertIsNone(activity_rows(self.member, start - timedelta(hours=2), member_entries(self.member)))
+        self.assertEqual(activity_rows(self.member, start, member_entries(self.member))['total'].do_days, 1)
         # The same whatever timezone the time now is given in: 8am Pacific is 3pm UTC.
         half_past_seven = (start - timedelta(minutes=30)).astimezone(dt_timezone.utc)
-        self.assertIsNone(activity_rows(self.member, half_past_seven))
-        self.assertEqual(activity_rows(self.member, half_past_seven + timedelta(hours=1))['total'].do_days, 1)
+        self.assertIsNone(activity_rows(self.member, half_past_seven, member_entries(self.member)))
+        self.assertEqual(activity_rows(self.member, half_past_seven + timedelta(hours=1), member_entries(self.member))['total'].do_days, 1)
 
     def test_time_entered_for_a_day_after_today_is_not_counted_yet(self):
         event = self.make_event('training', when(2024, 6, 1), attended=[self.member])
         Participant.objects.filter(period__event=event).update(
             en_route_at=when(2025, 6, 1), return_home_at=when(2025, 6, 1) + timedelta(hours=4))
-        self.assertIsNone(activity_rows(self.member, NOW))
+        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member)))
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
-        rows = activity_rows(self.member, NOW)
+        rows = activity_rows(self.member, NOW, member_entries(self.member))
         self.assertEqual(([r.period for r in rows['years']], rows['total'].all_days), ([2024], 1))
 
     def test_events_led(self):
@@ -422,7 +419,7 @@ class ActivityRowsTestCase(ActivityTestCase):
         year = self.years()['2024']
         self.assertEqual((year.days['meeting'], year.days['community'], year.all_hours), (1, 8, 4 + 168))
         # Someone whose only entry is a slip still has a report.
-        self.assertEqual(activity_rows(self.other, NOW)['total'].all_days, 2)
+        self.assertEqual(activity_rows(self.other, NOW, member_entries(self.other))['total'].all_days, 2)
 
     def test_ahc_on_a_called_off_operation(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
@@ -436,7 +433,7 @@ class ActivityRowsTestCase(ActivityTestCase):
         event = self.make_event('operation', when(2024, 4, 10), attended=[self.other])
         Participant.objects.create(period=event.period_set.first(), member=self.member, ahc=True,
                                    en_route_at=when(2024, 4, 12), return_home_at=when(2024, 4, 12) + timedelta(hours=3))
-        rows = activity_rows(self.member, NOW)
+        rows = activity_rows(self.member, NOW, member_entries(self.member))
         year = rows['years'][0]
         self.assertEqual((self.days(year, 'operation'), year.ahc_days), ((2, 3), 2))
         self.assertEqual((year.all_days, year.all_active_days), (2, 3))
@@ -460,7 +457,7 @@ class ActivityRowsTestCase(ActivityTestCase):
             Participant.objects.create(period=event.period_set.first(), member=member,
                                        en_route_at=when(2023, 12, 20), return_home_at=when(2023, 12, 20) + timedelta(hours=4))
         self.make_event('training', when(2023, 12, 28), attended=[self.other])
-        rows = activity_rows(self.member, NOW)
+        rows = activity_rows(self.member, NOW, member_entries(self.member))
         self.assertEqual([(r.period, self.days(r, 'training')) for r in rows['years']],
                          [(2023, (1, 2)), (2024, (0, 0))])
 
@@ -497,9 +494,9 @@ class ActivityRowsTestCase(ActivityTestCase):
     def test_only_do_weeks(self):
         DoAvailable.objects.create(member=self.member, year=2024, quarter=1, week=3, assigned=True)
         self.make_event('training', when(2024, 2, 10), attended=[self.other])
-        rows = activity_rows(self.member, NOW)
+        rows = activity_rows(self.member, NOW, member_entries(self.member))
         self.assertEqual((rows['total'].do_days, self.days(rows['total'], 'training')), (1, (0, 1)))
-        self.assertEqual(member_activity(self.member, NOW)['table']['columns'][:2], ['Operations', 'DO wks'])
+        self.assertEqual(member_activity(self.member, NOW, member_entries(self.member))['table']['columns'][:2], ['Operations', 'DO wks'])
 
     def test_username_case(self):
         self.member.username = 'Ann'
@@ -512,7 +509,7 @@ class ActivityRowsTestCase(ActivityTestCase):
         self.make_event('training', when(2023, 3, 1), attended=[self.other])
         self.make_event('training', when(2023, 9, 1), attended=[self.member])
         self.make_event('training', when(2024, 2, 1), attended=[self.other])
-        rows = activity_rows(self.member, NOW)
+        rows = activity_rows(self.member, NOW, member_entries(self.member))
         self.assertEqual([(r.period, self.days(r, 'training')) for r in rows['years']],
                          [(2023, (1, 1)), (2024, (0, 1))])
         self.assertEqual(self.days(rows['total'], 'training'), (1, 2))
@@ -528,7 +525,7 @@ class ActivityRowsTestCase(ActivityTestCase):
         self.make_event('meeting', when(2022, 5, 1), attended=[alum])
         self.make_event('meeting', when(2022, 8, 1), attended=[alum])
         self.make_event('meeting', when(2023, 5, 1), attended=[self.other])
-        rows = activity_rows(alum, NOW)
+        rows = activity_rows(alum, NOW, member_entries(alum))
         self.assertEqual([(r.period, self.days(r, 'meeting')) for r in rows['years']], [(2022, (2, 2))])
         self.assertEqual(len(rows['months']), 4)
 
@@ -599,7 +596,7 @@ class EventsAttendedTestCase(ActivityTestCase):
         self.other.save()
         self.make_event('training', when(2024, 1, 10), attended=[self.member, self.other], leaders='Ann Lee (TL)')
         self.assertEqual(self.years()['2024'].led_events['training'], 0)
-        self.assertEqual(activity_rows(self.other, NOW)['total'].led_events['training'], 1)
+        self.assertEqual(activity_rows(self.other, NOW, member_entries(self.other))['total'].led_events['training'], 1)
 
 
 class ReportedEventsTestCase(ActivityTestCase):
@@ -617,7 +614,7 @@ class ReportedEventsTestCase(ActivityTestCase):
         # Only a title that is a test or a demonstration: these are training.
         for title in ('Testing anchors', 'Test event prep', 'Rope test'):
             self.titled(title, 'training', when(2024, 3, 10), attended=[self.member])
-        total = activity_rows(self.member, NOW)['total']
+        total = activity_rows(self.member, NOW, member_entries(self.member))['total']
         self.assertEqual((total.events['training'], total.days['training']), (4, 2))
         # Nor do they make the unit active.
         self.assertEqual(self.days(self.years()['2024'], 'training'), (2, 2))
@@ -671,18 +668,17 @@ class OverlappingTimeTestCase(ActivityTestCase):
         training, meeting = self.make_event('training', when(2024, 3, 10)), self.make_event('meeting', when(2024, 3, 10))
         self.entry(training, when(2024, 3, 10), 4)
         self.entry(meeting, when(2024, 3, 10) + timedelta(hours=2), 3)
-        total = activity_rows(self.member, NOW)['total']
+        total = activity_rows(self.member, NOW, member_entries(self.member))['total']
         self.assertEqual((total.hours['training'], total.hours['meeting'], total.all_hours), (4, 1, 5))
         self.assertEqual((total.days['training'], total.days['meeting'], total.all_days), (1, 1, 1))
         # Each row in the lists shows what it logged: what counts, then what is left out, here counted above.
-        participants = member_entries(self.member)
-        count_entry_days(participants, NOW)
-        self.assertEqual([(p.counted_hours, p.left_out_hours) for p in participants], [(4, 0), (1, 2)])
+        listed = listed_entries(member_entries(self.member), NOW)
+        self.assertEqual([(e.counted_hours, e.left_out_hours) for e in listed], [(4, 0), (1, 2)])
         # Two periods of one operation, 8am to 4pm and noon to 8pm: 12 hours.
         operation = self.make_event('operation', when(2024, 4, 10))
         self.entry(operation, when(2024, 4, 10) - timedelta(hours=5), 8)
         self.entry(operation, when(2024, 4, 10) - timedelta(hours=1), 8, Period.objects.create(event=operation, position=2))
-        self.assertEqual(activity_rows(self.member, NOW)['total'].hours['operation'], 12)
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member))['total'].hours['operation'], 12)
 
     def test_of_time_logged_twice_the_span_that_began_first_keeps_it(self):
         # Of two that began together, the one given first, as the lists order them (member_entries).
@@ -691,13 +687,21 @@ class OverlappingTimeTestCase(ActivityTestCase):
         self.assertEqual(first_claims([(0, 10), (2, 4), (5, 8)]), [(0, 10), None, None])
         self.assertEqual(first_claims([(0, 4), (2, 6), (8, 9)]), [(0, 4), (4, 6), (8, 9)])
 
+    def test_an_event_not_started_claims_no_time(self):
+        # Times typed for an event still to come, begun an hour before a real one's: the real one keeps its own.
+        training = self.make_event('training', when(2024, 3, 10))
+        self.entry(training, when(2024, 3, 10), 4)
+        coming = self.make_event('meeting', NOW + timedelta(days=30))
+        self.entry(coming, when(2024, 3, 10) - timedelta(hours=1), 4)
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member))['total'].hours['training'], 4)
+
     def test_the_first_to_begin_keeps_the_time_whatever_its_event_s_date(self):
         # The meeting is listed first (its event starts earlier) but its time began later.
         meeting = self.make_event('meeting', when(2024, 3, 9))
         training = self.make_event('training', when(2024, 3, 10))
         self.entry(meeting, when(2024, 3, 10) + timedelta(hours=2), 3)
         self.entry(training, when(2024, 3, 10), 4)
-        hours = activity_rows(self.member, NOW)['total'].hours
+        hours = activity_rows(self.member, NOW, member_entries(self.member))['total'].hours
         self.assertEqual((hours['training'], hours['meeting']), (4, 1))
 
 
@@ -706,11 +710,10 @@ class EntryDaysTestCase(ActivityTestCase):
         ahead = self.make_event('training', NOW + timedelta(days=3))
         Participant.objects.create(period=ahead.period_set.first(), member=self.member,
                                    en_route_at=when(2024, 6, 1), return_home_at=when(2024, 6, 1) + timedelta(hours=4))
-        self.assertIsNone(activity_rows(self.member, NOW))
-        participants = member_entries(self.member)
-        count_entry_days(participants, NOW)
+        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member)))
+        listed = listed_entries(member_entries(self.member), NOW)
         # The list shows its hours, left out, in parentheses.
-        self.assertEqual([(p.days, p.counted_hours, p.left_out_hours) for p in participants], [(0, 0, 4)])
+        self.assertEqual([(e.days, e.counted_hours, e.left_out_hours) for e in listed], [(0, 0, 4)])
 
     def test_an_entry_across_midnight_shows_its_own_hours(self):
         # 20:13 to 23:46 the next day: 3.78 hours and 23.77, which add up in floating point to just
@@ -720,15 +723,15 @@ class EntryDaysTestCase(ActivityTestCase):
         Participant.objects.create(period=event.period_set.first(), member=self.member,
                                    en_route_at=start, return_home_at=start + timedelta(hours=27, minutes=33))
         participants = member_entries(self.member)
-        count_entry_days(participants, NOW)
-        self.assertEqual((participants[0].days, participants[0].counted_hours), (2, participants[0].hours))
+        [listed] = listed_entries(participants, NOW)
+        self.assertEqual((listed.days, listed.counted_hours), (2, participants[0].hours))
         # Nor do times to the microsecond, whose hours round at the sixth decimal:
         # 06:57 to 20:08:30.3666 is 13.1917685 hours.
         start = datetime(2015, 2, 7, 14, 57, tzinfo=dt_timezone.utc)
         participants[0].en_route_at = start
         participants[0].return_home_at = start + timedelta(hours=13, minutes=11, seconds=30, microseconds=366600)
-        count_entry_days(participants, NOW)
-        self.assertEqual((participants[0].days, participants[0].left_out_hours), (1, 0))
+        [listed] = listed_entries(participants, NOW)
+        self.assertEqual((listed.days, listed.left_out_hours), (1, 0))
 
     def test_days_of_each_entry(self):
         self.make_event('training', when(2024, 1, 10), attended=[self.member], hours=30)
@@ -740,18 +743,18 @@ class EntryDaysTestCase(ActivityTestCase):
         self.make_event('training', when(2024, 7, 1), attended=[self.member])                  # not yet happened
         participants = list(Participant.objects.filter(member=self.member)
                             .select_related('period__event').order_by('period__event__start_at'))
-        count_entry_days(participants, NOW)
-        self.assertEqual([p.days for p in participants], [2, 1, 0, 1, 1, 1, 0])
+        listed = listed_entries(participants, NOW)
+        self.assertEqual([e.days for e in listed], [2, 1, 0, 1, 1, 1, 0])
         # Hours that count towards no total are marked: the slip, and time logged ahead of the event.
         # And the meeting of the 11th, all inside the training's 30 hours, which count once, for the training.
-        self.assertEqual([bool(p.left_out_hours) for p in participants], [False, True] + [False] * 3 + [True, True])
+        self.assertEqual([bool(e.left_out_hours) for e in listed], [False, True] + [False] * 3 + [True, True])
         # So is time that ends before it starts.
         backwards = participants[1]
         backwards.return_home_at = backwards.en_route_at - timedelta(hours=3)
-        count_entry_days([backwards], NOW)
-        self.assertEqual((backwards.days, backwards.left_out_hours), (0, -3))
+        [listed] = listed_entries([backwards], NOW)
+        self.assertEqual((listed.days, listed.left_out_hours), (0, -3))
         # The second day of the training is also the meeting's day: the total counts it once.
-        self.assertEqual(activity_rows(self.member, NOW)['total'].all_days, 5)
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member))['total'].all_days, 5)
 
     def test_entries_loaded_once_serve_the_lists_and_the_totals(self):
         self.make_event('training', when(2024, 1, 10), attended=[self.member], hours=30)
@@ -760,14 +763,9 @@ class EntryDaysTestCase(ActivityTestCase):
         entries = member_entries(self.member)
         self.assertEqual(len(entries), 3)
         with self.assertNumQueries(0):
-            count_entry_days(entries, NOW)
-        # Given them, the totals are the same and the member's entries are not read again.
-        self.assertEqual(activity_rows(self.member, NOW, entries), activity_rows(self.member, NOW))
-        with CaptureQueriesContext(connection) as without:
-            activity_rows(self.member, NOW)
-        with CaptureQueriesContext(connection) as given:
-            activity_rows(self.member, NOW, entries)
-        self.assertEqual(len(given), len(without) - 1)
+            listed_entries(entries, NOW)
+        # The totals, given them, read them as the lists do.
+        self.assertEqual(activity_rows(self.member, NOW, entries), activity_rows(self.member, NOW, member_entries(self.member)))
 
     def test_each_entry_shows_what_the_totals_count(self):
         # A training that has started, with times typed for five days ahead: nothing yet.
@@ -780,10 +778,9 @@ class EntryDaysTestCase(ActivityTestCase):
                                    en_route_at=when(2024, 6, 14), return_home_at=when(2024, 6, 16))
         participants = list(Participant.objects.filter(member=self.member)
                             .select_related('period__event').order_by('period__event__start_at'))
-        count_entry_days(participants, NOW)
-        self.assertEqual([(p.days, p.counted_hours, p.left_out_hours) for p in participants],
+        self.assertEqual([(e.days, e.counted_hours, e.left_out_hours) for e in listed_entries(participants, NOW)],
                          [(0, 0, 6), (2, 35, 13)])
-        total = activity_rows(self.member, NOW)['total']
+        total = activity_rows(self.member, NOW, member_entries(self.member))['total']
         self.assertEqual((total.days['training'], total.hours['training']), (2, 35))
 
 
@@ -927,7 +924,7 @@ class CountedAgainstTheRulesTestCase(ActivityTestCase):
             self.scenario(random.Random(seed))
             days_of = {p.id: self.counted_days(p, tz) for p in Participant.objects.all()}
             for now in self.NOWS:
-                rows = activity_rows(self.member, now)
+                rows = activity_rows(self.member, now, member_entries(self.member))
                 got = rows and {r.period: (r.days, r.active_days, r.events, r.unit_events,
                                             {t: round(r.hours[t], 6) for t in TYPES}, r.all_days)
                                 for r in rows['years']}

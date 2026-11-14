@@ -82,79 +82,95 @@ def _colour(name):
 COLOURS = {'1', '1-strong', '1-light', '1-pale', '2', '2-light', 'muted', 'muted-light', 'total'}
 
 
+def _fail(where, message):
+    """Refuse a chart's input: ValueError, saying where, from the chart's name
+    to the place in it, then what is wrong."""
+    name, *places = where
+    raise ValueError('chart {!r}{}: {}'.format(name, ''.join(', ' + place for place in places), message))
+
+
+def _check_colour(colour, where, key=False):
+    """A colour is one of COLOURS, a step of the ramp, or, in a key, 'marker'."""
+    ramp = re.fullmatch(r'ramp-(\d+)-(\d+)', colour)
+    if not (colour in COLOURS or (key and colour == 'marker')
+            or (ramp and 1 <= int(ramp[1]) <= int(ramp[2]) and int(ramp[2]) > 1)):
+        _fail(where, '{!r} is not a colour the charts have'.format(colour))
+
+
 def _check(name, measures, views):
     """Raise ValueError, saying where, for input share_panels would draw wrongly
     or fail on later with an error that does not say what is wrong."""
-    def fail(message, *where):
-        raise ValueError('chart {!r}{}: {}'.format(name, ''.join(', ' + place for place in where), message))
-
-    def check_colour(colour, *where, key=False):
-        ramp = re.fullmatch(r'ramp-(\d+)-(\d+)', colour)
-        if not (colour in COLOURS or (key and colour == 'marker')
-                or (ramp and 1 <= int(ramp[1]) <= int(ramp[2]) and int(ramp[2]) > 1)):
-            fail('{!r} is not a colour the charts have'.format(colour), *where)
-
     for measure in measures:
         if 'label' not in measure or 'title' not in measure:
-            fail('a measure has a label and a title')
+            _fail((name,), 'a measure has a label and a title')
     for view in views:
         if any(key not in view for key in ('label', 'periods', 'series')):
-            fail('a view has a label, periods and series')
-        in_view = 'view {!r}'.format(view['label'])
-        if any(not isinstance(period.get('short'), str) for period in view['periods']):
-            fail("every period has a short label, '' for none", in_view)
-        if view.get('max_labels', 9) < 1:
-            fail('max_labels is at least 1', in_view)
-        titles = view.get('titles', measures)
-        if not (isinstance(titles, (list, tuple)) and len(titles) == len(measures)):
-            fail('a view with titles has a list of them, one for each measure', in_view)
-        for series in view['series']:
-            in_panel = 'panel {!r}'.format(series.get('label', ''))
-            if not series.get('key'):
-                fail('every panel has a key: name what its columns count', in_view, in_panel)
-            if 'cells' not in series:
-                fail('every panel has cells', in_view, in_panel)
-            for item in series['key']:
-                if not (isinstance(item, (list, tuple)) and len(item) == 2):
-                    fail('a key names its items as (colour, label)', in_view, in_panel, 'key')
-                check_colour(item[0], in_view, in_panel, 'key', key=True)
-            if (any('marker' in entry for cell in series['cells'] for entry in cell)
-                    and 'marker' not in [colour for colour, _ in series['key']]):
-                fail("a panel with markers names them in its key, as 'marker'", in_view, in_panel)
-            if len(series['cells']) != len(view['periods']):
-                fail('{} columns for {} periods'.format(len(series['cells']), len(view['periods'])), in_view, in_panel)
-            for i, cell in enumerate(series['cells']):
-                where = (in_view, in_panel, 'column {}'.format(i + 1))
-                if len(cell) != len(measures):
-                    fail('a column has one entry for each measure', *where)
-                for entry in cell:
-                    if any(key not in entry for key in ('parts', 'total', 'tip')):
-                        fail('a column has parts, a total and a tip for each measure', *where)
-                    if len(measures) > 1 and ('marker' in entry or any(value < 0 for _, value in entry['parts'])):
-                        fail('markers and parts below zero are for a chart of one measure', *where)
-                    figures = [entry['total'], entry.get('marker') or 0] + [value for _, value in entry['parts']]
-                    if any(not isinstance(figure, (int, float)) or math.isnan(figure) for figure in figures):
-                        fail('every figure is a number', *where)
-                    tip = entry['tip']
-                    if not (isinstance(tip, str) or isinstance(tip, (list, tuple)) and all(
-                            isinstance(line, str) or isinstance(line, (list, tuple)) and len(line) == 2
-                            for line in tip)):
-                        fail('a tip is a line, or a list of a heading and lines, each text or (number, label)',
-                             *where)
-                colours = [colour for colour, _ in cell[0]['parts']]
-                if len(set(colours)) != len(colours):
-                    fail('a colour is used twice in one column', *where)
-                for colour in colours:
-                    check_colour(colour, *where)
-                for entry in cell:
-                    if [colour for colour, _ in entry['parts']] != colours:
-                        fail('the measures list different colours, or the same in another order', *where)
-                    if entry['total'] < 0:
-                        fail('a total is not below zero; parts below zero are parts', *where)
-                    reached = sum(value for _, value in entry['parts'] if value > 0)
-                    if reached > entry['total'] * (1 + 1e-9) + 1e-9:
-                        fail('the parts above zero add up to {}, more than the total {}'.format(reached, entry['total']),
-                             *where)
+            _fail((name,), 'a view has a label, periods and series')
+        _check_view(view, measures, (name, 'view {!r}'.format(view['label'])))
+
+
+def _check_view(view, measures, where):
+    """A view's periods, titles and panels."""
+    if any(not isinstance(period.get('short'), str) for period in view['periods']):
+        _fail(where, "every period has a short label, '' for none")
+    if view.get('max_labels', 9) < 1:
+        _fail(where, 'max_labels is at least 1')
+    titles = view.get('titles', measures)
+    if not (isinstance(titles, (list, tuple)) and len(titles) == len(measures)):
+        _fail(where, 'a view with titles has a list of them, one for each measure')
+    for series in view['series']:
+        _check_panel(series, len(view['periods']), measures, where + ('panel {!r}'.format(series.get('label', '')),))
+
+
+def _check_panel(series, periods, measures, where):
+    """A panel's key, and a column for each of the view's periods."""
+    if not series.get('key'):
+        _fail(where, 'every panel has a key: name what its columns count')
+    if 'cells' not in series:
+        _fail(where, 'every panel has cells')
+    for item in series['key']:
+        if not (isinstance(item, (list, tuple)) and len(item) == 2):
+            _fail(where + ('key',), 'a key names its items as (colour, label)')
+        _check_colour(item[0], where + ('key',), key=True)
+    if (any('marker' in entry for cell in series['cells'] for entry in cell)
+            and 'marker' not in [colour for colour, _ in series['key']]):
+        _fail(where, "a panel with markers names them in its key, as 'marker'")
+    if len(series['cells']) != periods:
+        _fail(where, '{} columns for {} periods'.format(len(series['cells']), periods))
+    for i, cell in enumerate(series['cells']):
+        _check_column(cell, measures, where + ('column {}'.format(i + 1),))
+
+
+def _check_column(cell, measures, where):
+    """A column's entries, one for each measure: their figures, tips and parts,
+    the same colours in the same order in each."""
+    if len(cell) != len(measures):
+        _fail(where, 'a column has one entry for each measure')
+    for entry in cell:
+        if any(key not in entry for key in ('parts', 'total', 'tip')):
+            _fail(where, 'a column has parts, a total and a tip for each measure')
+        if len(measures) > 1 and ('marker' in entry or any(value < 0 for _, value in entry['parts'])):
+            _fail(where, 'markers and parts below zero are for a chart of one measure')
+        figures = [entry['total'], entry.get('marker') or 0] + [value for _, value in entry['parts']]
+        if any(not isinstance(figure, (int, float)) or math.isnan(figure) for figure in figures):
+            _fail(where, 'every figure is a number')
+        tip = entry['tip']
+        if not (isinstance(tip, str) or isinstance(tip, (list, tuple)) and all(
+                isinstance(line, str) or isinstance(line, (list, tuple)) and len(line) == 2 for line in tip)):
+            _fail(where, 'a tip is a line, or a list of a heading and lines, each text or (number, label)')
+    colours = [colour for colour, _ in cell[0]['parts']]
+    if len(set(colours)) != len(colours):
+        _fail(where, 'a colour is used twice in one column')
+    for colour in colours:
+        _check_colour(colour, where)
+    for entry in cell:
+        if [colour for colour, _ in entry['parts']] != colours:
+            _fail(where, 'the measures list different colours, or the same in another order')
+        if entry['total'] < 0:
+            _fail(where, 'a total is not below zero; parts below zero are parts')
+        reached = sum(value for _, value in entry['parts'] if value > 0)
+        if reached > entry['total'] * (1 + 1e-9) + 1e-9:
+            _fail(where, 'the parts above zero add up to {}, more than the total {}'.format(reached, entry['total']))
 
 
 def _tip(tip):
@@ -191,6 +207,24 @@ def hours_text(hours):
 def year_label(year):
     """A year as a chart's time axis shows it: "'24"."""
     return "'{:02d}".format(year % 100)
+
+
+def _in_drawn_order(measures, views, start_measure):
+    """(switch, measures, views): the measures, and each view's titles and
+    cells, in the order they are drawn, with the one started on
+    (`start_measure`, a label; the first if None) first, which charts.css
+    shows without the switch; and the switch, the measures in the order
+    given, each with its number as drawn."""
+    labels = [measure['label'] for measure in measures]
+    if start_measure is not None and start_measure not in labels:
+        raise ValueError('a chart starts on one of its measures, {}: {!r}'.format(', '.join(labels), start_measure))
+    first = labels.index(start_measure) if start_measure else 0
+    order = [first] + [m for m in range(len(measures)) if m != first]
+    return ([dict(measure, number=order.index(m) + 1) for m, measure in enumerate(measures)],
+            [measures[m] for m in order],
+            [dict(view, titles=view.get('titles') and [view['titles'][m] for m in order],
+                  series=[dict(s, cells=[[cell[m] for m in order] for cell in s['cells']]) for s in view['series']])
+             for view in views])
 
 
 def share_panels(measures, views, note='', *, name, start_measure=None, measure_switch_label='Show',
@@ -260,22 +294,10 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
     if not 1 <= len(measures) <= 3 or not 1 <= len(views) <= 3:
         raise ValueError('share_panels draws one to three measures and one to three views')
     _check(name, measures, views)
-    labels = [measure['label'] for measure in measures]
-    if start_measure is not None and start_measure not in labels:
-        raise ValueError('a chart starts on one of its measures, {}: {!r}'.format(', '.join(labels), start_measure))
-    # The measures are numbered as drawn: the one started on is the first, which charts.css shows
-    # without the switch; the switch lists them in the order given, each with its number.
-    first = labels.index(start_measure) if start_measure else 0
-    order = [first] + [m for m in range(len(measures)) if m != first]
-    switch = [dict(measure, number=order.index(m) + 1) for m, measure in enumerate(measures)]
-    measures = [measures[m] for m in order]
-    views = [dict(view, titles=view.get('titles') and [view['titles'][m] for m in order],
-                  series=[dict(s, cells=[[cell[m] for m in order] for cell in s['cells']]) for s in view['series']])
-             for view in views]
+    switch, measures, views = _in_drawn_order(measures, views, start_measure)
     numbers = range(len(measures))
     drawn = []
     for v, view in enumerate(views):
-        titles = [view['titles'][m] if view.get('titles') else measures[m]['title'] for m in numbers]
         periods = view['periods']
         labelled = [i for i, p in enumerate(periods) if p['short']]
         step = math.ceil(len(labelled) / view.get('max_labels', 9)) if labelled else 1
@@ -299,7 +321,6 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
                         parts.append(dict(_colour(colour), sizes=up))
                     if any(down):
                         under.append(dict(_colour(colour), sizes=down))
-                markers = [c[m].get('marker') for m in numbers]
                 cell = {
                     'drawn': any(c[m]['total'] for m in numbers),
                     'tips': [_tip(c[m]['tip']) for m in numbers],
@@ -309,13 +330,11 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
                 cell.update(_sizes([c[m]['total'] for m in numbers], scales, above=True))
                 if under:
                     cell['under'] = dict(_sizes(below, scales, above=False), parts=under)
-                if any(marker is not None for marker in markers):
-                    # Where the dot sits, as a share of the whole axis, floor to top.
-                    cell['marker'] = {
-                        'on': [int(marker is not None) for marker in markers],
-                        **{which: [_percent((marker or 0) + floor, top + floor)
-                                   for marker, (top, floor, _) in zip(markers, scales[which])]
-                           for which in scales}}
+                if c[0].get('marker') is not None:
+                    # Where the dot sits, as a share of the whole axis, floor to top, on each
+                    # scale; markers are for a chart of one measure (_check).
+                    cell['marker'] = {which: _percent(c[0]['marker'] + floor, top + floor)
+                                      for which, ((top, floor, _),) in scales.items()}
                 cells.append(cell)
             panels.append({
                 'label': s.get('label', ''),
@@ -325,11 +344,10 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
                 'key': [dict(_colour(colour), label=label) for colour, label in s['key']],
                 'ticks': [{'measure': m + 1, 'scale': which, 'ticks': _ticks(*scales[which][m])}
                           for m in numbers for which in ('own', 'shared')],
-                # With parts below zero, the share of the plot above it, for each measure and scale.
-                'signed': signed and [{'measure': m + 1, 'scale': which,
-                                       'up': round(top / (top + floor), 4)}
-                                      for m in numbers for which in ('own', 'shared')
-                                      for top, floor, _ in [scales[which][m]]],
+                # With parts below zero, which a chart of one measure may have (_check), the
+                # share of the plot above zero on each scale.
+                'signed': signed and {which: round(top / (top + floor), 4)
+                                      for which, ((top, floor, _),) in scales.items()},
                 'cells': cells,
             })
         drawn.append({

@@ -262,8 +262,8 @@
 .chart-column.chart-down { flex-direction: column; height: var(--chart-size); }
 /* A value marked on a column. It keeps its place across the band without
    being given one; its height is a share of the whole plot. */
-.chart-marker { position: absolute; --chart-mark: var(--m1-shared-mark); --chart-mark-on: var(--m1-on);
-                bottom: var(--chart-mark); transform: translateY(50%) scale(var(--chart-mark-on));
+.chart-marker { position: absolute; --chart-mark: var(--m1-shared-mark);
+                bottom: var(--chart-mark); transform: translateY(50%);
                 outline: 1px solid var(--chart-surface); }
 .chart-x-axis .chart-band { height: auto; }
 .chart-panel-key { display: flex; flex-wrap: wrap; gap: 0 0.7rem; margin: 0.2rem 0 0 var(--chart-gutter);

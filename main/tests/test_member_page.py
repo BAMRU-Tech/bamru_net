@@ -4,7 +4,8 @@ from datetime import date, datetime, timedelta, timezone as dt_timezone
 from django.test import Client
 from django.urls import reverse
 
-from main.lib.counting import NotRun, activity_rows, member_latest, operations_not_run, operations_that_ran
+from main.lib.counting import (activity_rows, member_entries, member_latest, NotRun, operations_not_run,
+                               operations_that_ran)
 from main.models import Event, Participant, Period
 from main.tests.helpers import NOW, ActivityTestCase, PageTestCase, when
 
@@ -103,6 +104,12 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertEqual(not_run, {before.id: NotRun('called_off', date(2019, 2, 12)),
                                    after.id: NotRun('heads_up', date(2019, 2, 13)),
                                    evening.id: NotRun('called_off', date(2019, 2, 12))})
+
+    def test_stood_down_from_one_operation_though_another_listed_on_ran(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        self.make_event('operation', when(2024, 2, 10), attended=[self.other], no_time=[self.member])     # ran
+        called_off = self.make_event('operation', when(2024, 3, 10), no_time=[self.member, self.other])
+        self.assertEqual(self.latest().get('Operation (stood down)', {}).get('event'), called_off)
 
     def test_stood_down_once_the_operation_has_finished(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
@@ -245,7 +252,7 @@ class MemberLatestTestCase(ActivityTestCase):
         # must be the ones the report would count.
         self.make_event('operation', when(2024, 1, 10), attended=[self.other], ahc=[self.member], hours=30)
         self.make_event('training', when(2024, 2, 10), attended=[self.member], hours=30)
-        self.assertEqual(activity_rows(self.member, NOW)['total'].ahc_days, 1)
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member))['total'].ahc_days, 1)
         items = self.latest()
         self.assertEqual(items['Operation (as AHC)']['day'], date(2024, 1, 10))
         self.assertEqual(items['Training']['day'], date(2024, 2, 11))

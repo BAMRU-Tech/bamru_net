@@ -5,14 +5,14 @@
   {% for panel in view.panels %}
   <div class="chart-panel" style="--chart-count: {{ view.axis|length }}">
     {% if panel.label %}<div class="chart-panel-label">{{ panel.label }}</div>{% endif %}
-    <div class="chart-plot{% if panel.signed %} chart-signed{% endif %}" role="group" aria-label="{{ panel.name }}" tabindex="0"{% if panel.signed %} style="{% for share in panel.signed %}--m{{ share.measure }}-{{ share.scale }}-up: {{ share.up|unlocalize }}; {% endfor %}"{% endif %}>
+    <div class="chart-plot{% if panel.signed %} chart-signed{% endif %}" role="group" aria-label="{{ panel.name }}" tabindex="0"{% if panel.signed %} style="--m1-own-up: {{ panel.signed.own|unlocalize }}; --m1-shared-up: {{ panel.signed.shared|unlocalize }}; "{% endif %}>
       {% for set in panel.ticks %}{% for tick in set.ticks %}<div class="chart-tick chart-m{{ set.measure }} chart-{{ set.scale }}{% if tick.base %} chart-baseline{% endif %}" aria-hidden="true" style="bottom: {{ tick.at|unlocalize }}%"><span>{{ tick.value }}</span></div>{% endfor %}{% endfor %}
       <div class="chart-bands" role="list">
         {% for cell in panel.cells %}
         <div class="chart-band" role="listitem" tabindex="-1">
           {% if cell.drawn %}<div class="chart-column" style="{% for size in cell.own %}--m{{ forloop.counter }}-own: {{ size|unlocalize }}%; {% endfor %}{% for size in cell.shared %}--m{{ forloop.counter }}-shared: {{ size|unlocalize }}%; {% endfor %}">{% for part in cell.parts %}{% include 'charts/part.html' %}{% endfor %}</div>{% endif %}
           {% if panel.signed %}<div class="chart-under">{% if cell.under %}<div class="chart-column chart-down" style="{% for size in cell.under.own %}--m{{ forloop.counter }}-own: {{ size|unlocalize }}%; {% endfor %}{% for size in cell.under.shared %}--m{{ forloop.counter }}-shared: {{ size|unlocalize }}%; {% endfor %}">{% for part in cell.under.parts %}{% include 'charts/part.html' %}{% endfor %}</div>{% endif %}</div>{% endif %}
-          {% if cell.marker %}<div class="chart-marker" style="{% for on in cell.marker.on %}--m{{ forloop.counter }}-on: {{ on }}; {% endfor %}{% for at in cell.marker.own %}--m{{ forloop.counter }}-own-mark: {{ at|unlocalize }}%; {% endfor %}{% for at in cell.marker.shared %}--m{{ forloop.counter }}-shared-mark: {{ at|unlocalize }}%; {% endfor %}"></div>{% endif %}
+          {% if cell.marker %}<div class="chart-marker" style="--m1-own-mark: {{ cell.marker.own|unlocalize }}%; --m1-shared-mark: {{ cell.marker.shared|unlocalize }}%; "></div>{% endif %}
           <div class="chart-tip chart-tip-{{ cell.tip_at.side }}" style="--chart-tip-at: {{ cell.tip_at.at|unlocalize }}%">{% for tip in cell.tips %}<div class="chart-only-m{{ forloop.counter }}"><div><b>{% if panel.label %}{{ panel.label }} {% endif %}{{ tip.head }}</b></div>{% if tip.lines %}<div class="chart-tip-lines">{% for line in tip.lines %}{% if line.text %}<div class="chart-tip-text">{{ line.text }}</div>{% else %}<div class="chart-tip-number">{{ line.number }}</div><div>{{ line.label }}</div>{% endif %}{% endfor %}</div>{% endif %}</div>{% endfor %}</div>
         </div>
         {% endfor %}
@@ -21,11 +21,9 @@
     <div class="chart-bands chart-x-axis" aria-hidden="true">
       {% for period in view.axis %}<div class="chart-band">{% if period.shown %}<span>{{ period.label }}</span>{% endif %}</div>{% endfor %}
     </div>
-    {% if panel.key %}
     <div class="chart-panel-key">
       {% for item in panel.key %}<span class="chart-key"><i class="chart-part-{{ item.colour }}"{% if item.colour == 'ramp' %} style="--chart-ramp: {{ item.ramp|unlocalize }}%"{% endif %}></i>{{ item.label }}</span>{% endfor %}
     </div>
-    {% endif %}
   </div>
   {% endfor %}
 </div>

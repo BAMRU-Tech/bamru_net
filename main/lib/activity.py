@@ -129,7 +129,7 @@ def _keys(total):
     the foot, naming only the roles the member has been in."""
     leading = {t: [(ROLE_COLOURS['led'], 'as ' + LEADING[t])] if total.led_days[t] else [] for t in TYPES[1:]}
     leading['operation'] = ([(ROLE_COLOURS['led'], 'as ' + LEADING['operation'])]
-                            if total.ol_days or total.ol_hours else [])
+                            if total.ol_days else [])
     # AHC and in the field on one day: no AHC day, but AHC hours to pick out.
     ahc = [(ROLE_COLOURS['ahc'], 'as AHC')] if total.ahc_days or total.ahc_hours else []
     return {t: leading[t] + [(ROLE_COLOURS['other'],
@@ -202,10 +202,10 @@ def _table(years, total):
     }
 
 
-def member_activity(member, now=None, entries=None):
-    """The chart and table of a member's activity, for their activity report.
-    Returns None when there is nothing to show. `entries` are the member's
-    (member_entries), for a caller that has loaded them."""
+def member_activity(member, now, entries):
+    """The chart and table of a member's activity, for their activity report,
+    from their entries (member_entries). Returns None when there is nothing
+    to show."""
     rows = activity_rows(member, now, entries)
     if rows is None:
         return None

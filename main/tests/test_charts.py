@@ -199,6 +199,8 @@ class ChartsTestCase(TestCase):
 
     def test_hours_are_written_to_one_decimal(self):
         self.assertEqual([charts.hours_text(h) for h in (0.5, 2, 1234.56)], ['0.5', '2.0', '1,234.6'])
+        # Half up as written, whatever floating point makes of a sum: 3.78 and 23.77 are 27.549999...
+        self.assertEqual(charts.hours_text(3.78 + 23.77), '27.6')
 
     def test_a_chart_has_a_name_of_its_own(self):
         view = self.view([[(1, 2)]])
@@ -411,20 +413,20 @@ class ChartsTestCase(TestCase):
         self.assertEqual([(t['value'], t['at']) for t in panel['ticks'][0]['ticks']],
                          [(6, 100), (3, 75), (0, 50), (-3, 25), (-6, 0)])
         self.assertTrue(panel['ticks'][0]['ticks'][2]['base'])
-        self.assertEqual(panel['signed'][0], {'measure': 1, 'scale': 'own', 'up': 0.5})
+        self.assertEqual(panel['signed'], {'own': 0.5, 'shared': 0.5})
         first, second = panel['cells']
         self.assertEqual((first['own'], first['parts']), ([100], [{'colour': '1', 'sizes': [100]}]))
         self.assertEqual(first['under'], {'own': [33.33], 'shared': [33.33],
                                           'parts': [{'colour': 'muted', 'sizes': [100]}]})
-        self.assertEqual(first['marker'], {'on': [1], 'own': [83.33], 'shared': [83.33]})
+        self.assertEqual(first['marker'], {'own': 83.33, 'shared': 83.33})
         self.assertEqual((second['drawn'], second['under']['own'], second['marker']['own']),
-                         (False, [66.67], [16.67]))
+                         (False, [66.67], 16.67))
         # Uneven: 4 up and 12 down. Steps of 6 run from 6 to -12, so a third of the plot is above zero.
         uneven = share_panels(self.MEASURES, [dict(view, periods=periods[:1], series=[{
             'label': '', 'key': [('1', 'Up'), ('muted', 'Down')],
             'cells': [[{'parts': [('1', 4), ('muted', -12)], 'total': 4, 'tip': ''}]]}])])['views'][0]['panels'][0]
         self.assertEqual([t['value'] for t in uneven['ticks'][0]['ticks']], [6, 0, -6, -12])
-        self.assertEqual(uneven['signed'][0], {'measure': 1, 'scale': 'own', 'up': 0.3333})
+        self.assertEqual(uneven['signed']['own'], 0.3333)
         self.assertEqual((uneven['cells'][0]['own'], uneven['cells'][0]['under']['own']), ([66.67], [100]))
         # A step of the ramp is placed along it; the marker is named in the key.
         self.assertEqual(panel['key'], [{'colour': 'marker', 'label': 'Net'},

@@ -73,9 +73,10 @@ def members_named(texts, usernames):
             for text in set(texts) if text}
 
 
-def _every_username():
-    """Every member's (username, id), whatever their status, in id order: so
-    of two usernames alike, the member with the lower id is the leader."""
+def every_username():
+    """Every member's (username, id), whatever their status, in id order, for
+    leader_parts and members_named to read leaders texts by: so of two
+    usernames alike, the member with the lower id is the leader."""
     return Member.objects.order_by('id').values_list('username', 'id')
 
 
@@ -114,17 +115,6 @@ class Event(BaseModel):
     def save(self, *args, **kwargs):
         super(Event, self).save(*args, **kwargs)
         self.add_period(True)
-
-    def leader_parts(self):
-        """This event's leaders text cut by every member's username, for the
-        event page to link each leader: leader_parts."""
-        return leader_parts(self.leaders or '', _every_username())
-
-    @staticmethod
-    def members_named(texts):
-        """{text: the ids of the members it names} for each of these leaders
-        texts, by every member's username: members_named."""
-        return members_named(texts, _every_username())
 
     def __str__(self):
         return self.title

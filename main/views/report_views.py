@@ -8,7 +8,7 @@ from django.views import generic, View
 from django.views.decorators.gzip import gzip_page
 
 from main.lib.activity import glossary, member_activity
-from main.lib.counting import EVENT_TYPES, count_entry_days, member_entries
+from main.lib.counting import EVENT_TYPES, listed_entries, member_entries
 from main.lib.unit_activity import unit_activity
 from main.models import Cert, Member, Event, Participant, Period
 
@@ -181,12 +181,11 @@ class ReportEventMemberView(LoginRequiredMixin, generic.DetailView):
         labels = dict(EVENT_TYPES)
         now = timezone.now()      # one reading of the clock for the lists and the totals
         participants = member_entries(self.object)     # loaded once, for the lists and the totals
-        count_entry_days(participants, now)
         # One section per type, in the order of the chart.
         by_type = {event_type: [] for event_type, _ in EVENT_TYPES}
-        for p in participants:
-            if p.period.event.type in by_type:
-                by_type[p.period.event.type].append(p)
+        for listed in listed_entries(participants, now):
+            if listed.entry.period.event.type in by_type:
+                by_type[listed.entry.period.event.type].append(listed)
         context['event_sections'] = [(labels[t], by_type[t]) for t in by_type if by_type[t]]
         context['activity'] = member_activity(self.object, now, participants)
         return context

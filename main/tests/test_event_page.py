@@ -2,9 +2,8 @@
 from django.test import Client
 from django.urls import reverse
 
-from main.lib.counting import activity_rows
-from main.models import Event
-from main.models.event import leader_parts, members_named
+from main.lib.counting import activity_rows, member_entries
+from main.models.event import every_username, leader_parts, members_named
 from main.tests.helpers import NOW, ActivityTestCase, when
 
 
@@ -44,12 +43,12 @@ class EventLeadersTestCase(ActivityTestCase):
         # Whatever their status today, so that past years keep who led them.
         alum = self.make_member('Cat', 'MA')
         event = self.make_event('training', when(2024, 1, 10), attended=[alum, self.other], leaders='Cat (TL)')
-        self.assertEqual(Event.members_named(['Cat (TL)']), {'Cat (TL)': {alum.id}})
+        self.assertEqual(members_named(['Cat (TL)'], every_username()), {'Cat (TL)': {alum.id}})
         client = Client()
         client.force_login(self.other)
         self.assertContains(client.get(reverse('event_detail', args=[event.id])),
                             '<a href="{}">Cat</a> (TL)'.format(alum.get_absolute_url()))
-        self.assertEqual(activity_rows(alum, NOW)['total'].led_events['training'], 1)
+        self.assertEqual(activity_rows(alum, NOW, member_entries(alum))['total'].led_events['training'], 1)
 
     def test_the_longer_username_is_the_one_named(self):
         # Longer by its letters, not its words.
@@ -95,7 +94,7 @@ class EventLeadersTestCase(ActivityTestCase):
         self.assertContains(client.get(reverse('event_detail', args=[event.id])),
                             '<a href="{}">Bob  Fox</a>'.format(self.other.get_absolute_url()))
         # However the username is stored, capitals, odd spacing and accents
-        # included, the page links what Event.members_named says the text names.
+        # included, the page links what members_named says the text names.
         for stored, leaders in (('Bob  Fox', 'bob fox (TL)'), (' bob fox', 'BOB FOX'), ('\u00e9lan roy', '\u00c9LAN ROY (TL)')):
             self.other.username = stored
             self.other.save()
@@ -134,10 +133,10 @@ class EventLeadersTestCase(ActivityTestCase):
         self.other.username = 'ann lee'
         self.other.save()
         event = self.make_event('training', when(2024, 1, 10), attended=[self.member, self.other], leaders='Ann Lee (TL)')
-        self.assertEqual(Event.members_named(['Ann Lee (TL)']), {'Ann Lee (TL)': {self.member.id}})
+        self.assertEqual(members_named(['Ann Lee (TL)'], every_username()), {'Ann Lee (TL)': {self.member.id}})
         client = Client()
         client.force_login(self.other)
         self.assertContains(client.get(reverse('event_detail', args=[event.id])),
                             '<a href="{}">Ann Lee</a> (TL)'.format(self.member.get_absolute_url()))
-        led = {m: activity_rows(m, NOW)['total'].led_events['training'] for m in (self.member, self.other)}
+        led = {m: activity_rows(m, NOW, member_entries(m))['total'].led_events['training'] for m in (self.member, self.other)}
         self.assertEqual(led, {self.member: 1, self.other: 0})
