@@ -18,9 +18,17 @@ import re
 from django.template.defaultfilters import floatformat
 
 
+# The most measures and views a chart has, one switch each.
+MAX_MEASURES = 3
+MAX_VIEWS = 3
+
+
 def axis_top(largest):
     """The smallest round number at or above the largest value whose half is
-    a whole number, so the axis has clean ticks at the top and the middle."""
+    a whole number, so the axis has clean ticks at the top and the middle.
+    The value is first rounded far past what a chart shows, so that a sum's
+    floating-point error (20.000000000000004) does not lift the axis a step."""
+    largest = round(largest, 6)
     if largest <= 2:
         return 2
     power = 10 ** math.floor(math.log10(largest))
@@ -31,7 +39,13 @@ def axis_top(largest):
 
 
 def _percent(value, whole):
-    return round(100 * value / whole, 2) if whole else 0
+    """`value` as a percentage of `whole`, to two places, and, when it is not
+    nothing, never rounded to nothing: the stylesheet draws any size above
+    zero as at least a hairline, so a column far below the largest still shows."""
+    if not whole:
+        return 0
+    share = round(100 * value / whole, 2)
+    return share if share or not value else math.copysign(0.01, value)
 
 
 def _below(cell):
@@ -291,8 +305,8 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
     """
     if not re.fullmatch(r'[A-Za-z][\w-]*', name, re.ASCII):
         raise ValueError('a chart\'s name is a letter, then letters, digits, - or _: {!r}'.format(name))
-    if not 1 <= len(measures) <= 3 or not 1 <= len(views) <= 3:
-        raise ValueError('share_panels draws one to three measures and one to three views')
+    if not 1 <= len(measures) <= MAX_MEASURES or not 1 <= len(views) <= MAX_VIEWS:
+        raise ValueError('share_panels draws one to {} measures and one to {} views'.format(MAX_MEASURES, MAX_VIEWS))
     _check(name, measures, views)
     switch, measures, views = _in_drawn_order(measures, views, start_measure)
     numbers = range(len(measures))

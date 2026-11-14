@@ -4,8 +4,8 @@ from datetime import date, datetime, timedelta, timezone as dt_timezone
 from django.test import Client
 from django.urls import reverse
 
-from main.lib.counting import (activity_rows, member_entries, member_latest, NotRun, operations_not_run,
-                               operations_that_ran)
+from main.lib.counting import (NotRun, activity_rows, member_entries, member_latest, operations_not_run,
+                               operations_that_ran, records_from, reply_templates_from)
 from main.models import Event, Participant, Period
 from main.tests.helpers import NOW, ActivityTestCase, PageTestCase, when
 
@@ -77,6 +77,7 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertNotIn('Operation (stood down)', latest)
 
     def test_stood_down_only_from_an_operation_the_unit_was_called_out_for(self):
+        self.paging_began()        # pages recorded, and carrying reply templates, from the usual days
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
         # Nobody went out on any of these. Only a callout page ("Available?") makes standing down from one.
         unpaged = super().make_event       # an operation without the callout page this case gives the others
@@ -91,7 +92,15 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertEqual(self.latest()['Operation (stood down)']['event'], called_out)
         self.assertEqual(self.not_run(), {heads_up.id: 'heads_up', silent.id: 'heads_up', called_out.id: 'called_off'})
 
+    def test_no_stood_down_line_for_an_operation_titled_as_a_heads_up_before_pages_told_one_apart(self):
+        self.paging_began()
+        self.make_event('meeting', when(2018, 6, 10), attended=[self.member])
+        heads_up = super().make_event('operation', when(2018, 8, 10), no_time=[self.member])
+        Event.objects.filter(pk=heads_up.pk).update(title='Heads up: search')
+        self.assertNotIn('Operation (stood down)', self.latest())
+
     def test_before_pages_had_reply_templates_an_operation_not_run_was_called_off(self):
+        self.paging_began()        # pages recorded, and carrying reply templates, from the usual days
         # Pages from before 13 February 2019 had no reply template, so a heads-up cannot be told from a callout.
         self.make_event('meeting', when(2018, 6, 10), attended=[self.member])
         before = super().make_event('operation', when(2019, 2, 12), no_time=[self.member])
@@ -100,7 +109,7 @@ class MemberLatestTestCase(ActivityTestCase):
         # 8pm on the 12th, Pacific time, though the 13th in UTC.
         evening = super().make_event('operation', datetime(2019, 2, 13, 4, 0, tzinfo=dt_timezone.utc), no_time=[self.member])
         ids = [before.id, after.id, evening.id]
-        not_run = operations_not_run(NOW, operations_that_ran(NOW, ids), ids)
+        not_run = operations_not_run(NOW, operations_that_ran(NOW, ids), reply_templates_from(), ids)
         self.assertEqual(not_run, {before.id: NotRun('called_off', date(2019, 2, 12)),
                                    after.id: NotRun('heads_up', date(2019, 2, 13)),
                                    evening.id: NotRun('called_off', date(2019, 2, 12))})
@@ -110,6 +119,13 @@ class MemberLatestTestCase(ActivityTestCase):
         self.make_event('operation', when(2024, 2, 10), attended=[self.other], no_time=[self.member])     # ran
         called_off = self.make_event('operation', when(2024, 3, 10), no_time=[self.member, self.other])
         self.assertEqual(self.latest().get('Operation (stood down)', {}).get('event'), called_off)
+
+    def test_an_operation_saved_finishing_before_it_starts_has_not_finished_until_it_has_started(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        backwards = self.make_event('operation', NOW + timedelta(days=30), no_time=[self.member, self.other])
+        Event.objects.filter(pk=backwards.pk).update(finish_at=when(2024, 2, 1))
+        self.assertNotIn('Operation (stood down)', self.latest())
+        self.assertEqual(self.not_run(), {})
 
     def test_stood_down_once_the_operation_has_finished(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
@@ -179,16 +195,17 @@ class MemberLatestTestCase(ActivityTestCase):
     def test_the_unit_is_asked_only_about_operations_that_may_have_been_called_off(self):
         self.make_event('training', when(2024, 1, 10), attended=[self.member], leaders='Ann (TL)')
         self.make_event('operation', when(2024, 2, 10), attended=[self.member, self.other])
-        # The member's entries, and nothing else: no usernames for who led, no look at the unit.
-        with self.assertNumQueries(1):
+        # The member's entries, and the year the unit's records begin: no usernames for who led, no look at
+        # the unit.
+        with self.assertNumQueries(2):
             member_latest(self.member, NOW)
         # Listed without time on an operation that has finished: one more, about that operation.
         self.make_event('operation', when(2024, 3, 10), attended=[self.other], no_time=[self.member])
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             self.assertNotIn('Operation (stood down)', self.latest())
         # One still under way is not asked about.
         self.make_event('operation', NOW - timedelta(hours=2), no_time=[self.member], hours=24)
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             member_latest(self.member, NOW)
 
     def test_listed_without_time_on_one_period_of_an_operation_timed_on_another_is_not_standing_down(self):
@@ -252,7 +269,7 @@ class MemberLatestTestCase(ActivityTestCase):
         # must be the ones the report would count.
         self.make_event('operation', when(2024, 1, 10), attended=[self.other], ahc=[self.member], hours=30)
         self.make_event('training', when(2024, 2, 10), attended=[self.member], hours=30)
-        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member))['total'].ahc_days, 1)
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))['total'].ahc_days, 1)
         items = self.latest()
         self.assertEqual(items['Operation (as AHC)']['day'], date(2024, 1, 10))
         self.assertEqual(items['Training']['day'], date(2024, 2, 11))

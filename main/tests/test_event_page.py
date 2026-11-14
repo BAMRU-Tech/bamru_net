@@ -2,7 +2,7 @@
 from django.test import Client
 from django.urls import reverse
 
-from main.lib.counting import activity_rows, member_entries
+from main.lib.counting import activity_rows, member_entries, records_from
 from main.models.event import every_username, leader_parts, members_named
 from main.tests.helpers import NOW, ActivityTestCase, when
 
@@ -39,6 +39,13 @@ class EventLeadersTestCase(ActivityTestCase):
     def test_an_underscore_ends_a_username(self):
         self.assertEqual(self.named('ann_lee (TL)', 'ann'), {'ann'})
 
+    def test_a_username_is_not_named_inside_a_hyphenated_or_apostrophed_name(self):
+        for text in ('Mary-Ann Lee (TL)', 'Ann Lee-Fox (TL)', "D'Ann Lee", 'D\u2019Ann Lee'):
+            self.assertEqual(self.named(text, 'ann lee'), set(), text)
+        # A possessive is the name's own, and a hyphen with a space beside it is punctuation.
+        for text in ("Ann Lee's crew", 'Ann Lee\u2019s crew', 'Ann Lee - lead, Bo Diaz'):
+            self.assertEqual(self.named(text, 'ann lee'), {'ann lee'}, text)
+
     def test_a_former_member_named_as_a_leader_is_linked_and_credited(self):
         # Whatever their status today, so that past years keep who led them.
         alum = self.make_member('Cat', 'MA')
@@ -48,7 +55,7 @@ class EventLeadersTestCase(ActivityTestCase):
         client.force_login(self.other)
         self.assertContains(client.get(reverse('event_detail', args=[event.id])),
                             '<a href="{}">Cat</a> (TL)'.format(alum.get_absolute_url()))
-        self.assertEqual(activity_rows(alum, NOW, member_entries(alum))['total'].led_events['training'], 1)
+        self.assertEqual(activity_rows(alum, NOW, member_entries(alum), records_from(NOW))['total'].led_events['training'], 1)
 
     def test_the_longer_username_is_the_one_named(self):
         # Longer by its letters, not its words.
@@ -138,5 +145,5 @@ class EventLeadersTestCase(ActivityTestCase):
         client.force_login(self.other)
         self.assertContains(client.get(reverse('event_detail', args=[event.id])),
                             '<a href="{}">Ann Lee</a> (TL)'.format(self.member.get_absolute_url()))
-        led = {m: activity_rows(m, NOW, member_entries(m))['total'].led_events['training'] for m in (self.member, self.other)}
+        led = {m: activity_rows(m, NOW, member_entries(m), records_from(NOW))['total'].led_events['training'] for m in (self.member, self.other)}
         self.assertEqual(led, {self.member: 1, self.other: 0})

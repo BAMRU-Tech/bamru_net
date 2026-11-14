@@ -5,7 +5,8 @@ from django.test import Client
 from django.urls import reverse
 
 from main.lib.activity import glossary, member_activity
-from main.lib.counting import MAX_ENTRY, activity_rows, member_entries
+from main.lib.counting import activity_rows, member_entries, records_from, reported_events
+from main.lib.report_settings import report_settings
 from main.models import DoAvailable, Event, Participant
 from main.tests.helpers import NOW, ActivityTestCase, PageTestCase, when
 
@@ -35,6 +36,19 @@ class MemberActivityTestCase(ActivityTestCase):
             drawn = {colour for cell in series['cells'] for measure in cell for colour, amount in measure['parts'] if amount}
             self.assertEqual({colour for colour, _ in series['key']}, drawn, series['label'])
 
+    def test_a_key_names_only_what_its_panel_draws(self):
+        # Every training led: no other attendance to name.
+        self.make_event('training', when(2024, 3, 12), attended=[self.member], leaders='Ann (TL)')
+        self.assertEqual([label for _, label in self.panel('Trainings')['key']], ['as TL or LL'])
+        # In the field all day on one operation, and AHC for a while on another inside that time: no AHC day
+        # or hours, but an operation attended only as AHC, drawn in the events column, and so named.
+        self.make_event('operation', when(2024, 4, 10), attended=[self.member], hours=10)
+        other = self.make_event('operation', when(2024, 4, 10) + timedelta(hours=2), attended=[self.other])
+        Participant.objects.create(period=other.period_set.first(), member=self.member, ahc=True,
+                                   en_route_at=when(2024, 4, 10) + timedelta(hours=2),
+                                   return_home_at=when(2024, 4, 10) + timedelta(hours=4))
+        self.assertEqual([label for _, label in self.panel('Operations')['key']], ['Other attendance', 'as AHC'])
+
     def test_figures_say_days_and_events_by_the_unit_s_count(self):
         # "1 of 2 days": the noun goes with the whole, the 2.
         self.make_event('training', when(2024, 3, 10), attended=[self.member])
@@ -54,7 +68,7 @@ class MemberActivityTestCase(ActivityTestCase):
         self.assertEqual((events['parts'], events['total']), ([('1-strong', 0), ('1', 0), ('1-light', 1)], 2))
         _, all_events, _ = self.panel('All')['cells'][0]
         self.assertEqual((all_events['total'], all_events['tip'][1]), (2, ('1 of 2', 'events')))
-        self.assertEqual(dict(member_activity(self.member, NOW, member_entries(self.member))['table']['total']['cells'])['AHC days'], 2)
+        self.assertEqual(dict(member_activity(self.member, NOW, member_entries(self.member), records_from(NOW))['table']['total']['cells'])['AHC days'], 2)
 
     def test_the_led_hours_line_is_the_hours_led(self):
         # Of a year's 10 hours of training, the 4 led are picked out.
@@ -72,7 +86,7 @@ class MemberActivityTestCase(ActivityTestCase):
         self.make_event('community', when(2024, 1, 10), attended=[self.member], hours=0.5)
         hours = self.panel('Community')['cells'][0][2]['tip']
         self.assertEqual(hours, ['2024', ('0.5', 'hours')])
-        self.assertEqual(member_activity(self.member, NOW, member_entries(self.member))['table']['total']['cells'][-1], ('Total', '1 / 0.5 hours'))
+        self.assertEqual(member_activity(self.member, NOW, member_entries(self.member), records_from(NOW))['table']['total']['cells'][-1], ('Total', '1 / 0.5 hours'))
 
     def test_hours_as_ol_and_ahc_alone_leave_no_other_hours(self):
         # Half an hour as OL and forty minutes as AHC: taking both from the total
@@ -84,7 +98,7 @@ class MemberActivityTestCase(ActivityTestCase):
                                    return_home_at=when(2024, 2, 10) + timedelta(minutes=40))
         hours = [cell[2]['parts'] for cell in self.panel('Operations')['cells']]
         self.assertEqual(hours, [[('1-strong', 0.5), ('1', 0), ('1-light', 40 / 60)]])
-        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member))['total'].other_hours['operation'], 0)
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))['total'].other_hours['operation'], 0)
 
     def test_chart(self):
         self.make_event('operation', when(2023, 1, 10), ol=[self.member])
@@ -108,8 +122,9 @@ class MemberActivityTestCase(ActivityTestCase):
         def key(label):
             return [name for _, name in self.panel(label)['key']]
         self.assertEqual(key('All'), ['Operations', 'Trainings', 'Meetings', 'Community'])
-        self.assertEqual(key('Operations'), ['as OL', 'Other attendance', 'as AHC'])
-        self.assertEqual(key('Trainings'), ['as TL or LL', 'Other attendance'])
+        # Only what each panel draws: every operation was as OL or as AHC, and every training led.
+        self.assertEqual(key('Operations'), ['as OL', 'as AHC'])
+        self.assertEqual(key('Trainings'), ['as TL or LL'])
         self.assertEqual(key('Meetings'), ['Attended'])
 
         def column(label, period, view=0):
@@ -144,7 +159,7 @@ class MemberActivityTestCase(ActivityTestCase):
         self.make_event('operation', when(2024, 2, 10), attended=[self.other], ahc=[self.member])
         for week in range(7):
             self.make_event('meeting', when(2024, 3, 11) + timedelta(weeks=week), attended=[self.member], hours=160)
-        table = member_activity(self.member, NOW, member_entries(self.member))['table']
+        table = member_activity(self.member, NOW, member_entries(self.member), records_from(NOW))['table']
         self.assertEqual(table['columns'], ['Operations', 'AHC days', 'Trainings', 'Meetings', 'Community', 'Total'])
         # Each cell carries its column's heading, for a screen too narrow for columns.
         self.assertEqual(table['rows'][0]['cells'][0], ('Operations', '1 / 4.0 hours'))
@@ -156,13 +171,13 @@ class MemberActivityTestCase(ActivityTestCase):
         # Half hours show, and add up: two years of half an hour each make one hour.
         for year in (2021, 2022):
             self.make_event('community', when(year, 5, 1), attended=[self.member], hours=0.5)
-        table = member_activity(self.member, NOW, member_entries(self.member))['table']
+        table = member_activity(self.member, NOW, member_entries(self.member), records_from(NOW))['table']
         self.assertEqual([dict(r['cells'])['Community'] for r in table['rows'][:2]], ['1 / 0.5 hours', '1 / 0.5 hours'])
         self.assertEqual(dict(table['total']['cells'])['Community'], '2 / 1.0 hours')
         # Duty columns appear only for duties the member has done.
         DoAvailable.objects.create(member=self.other, year=2024, quarter=1, week=3, assigned=True)
         self.make_event('operation', when(2024, 1, 10), ol=[self.other])
-        self.assertEqual(member_activity(self.other, NOW, member_entries(self.other))['table']['columns'][:3],
+        self.assertEqual(member_activity(self.other, NOW, member_entries(self.other), records_from(NOW))['table']['columns'][:3],
                          ['Operations', 'OL days', 'DO wks'])
 
 
@@ -176,6 +191,21 @@ class ReportPagesTestCase(PageTestCase):
         self.assertContains(response, '<td>1.3</td>', html=True)
         self.assertContains(response, '1 / 1.3 hours')
         self.assertNotContains(response, '1.2')
+
+    def test_hours_left_out_show_once_they_come_to_a_tenth(self):
+        # A training from 1pm to 5pm and a meeting from 4:58pm to 6pm: the meeting's two minutes logged
+        # twice count for the training, and round to nothing.
+        training, meeting = self.make_event('training', when(2024, 3, 10)), self.make_event('meeting', when(2024, 3, 10))
+        Participant.objects.create(period=training.period_set.first(), member=self.member,
+                                   en_route_at=when(2024, 3, 10), return_home_at=when(2024, 3, 10) + timedelta(hours=4))
+        Participant.objects.create(period=meeting.period_set.first(), member=self.member,
+                                   en_route_at=when(2024, 3, 10) + timedelta(hours=3, minutes=58),
+                                   return_home_at=when(2024, 3, 10) + timedelta(hours=5))
+        client = Client()
+        client.force_login(self.other)
+        response = client.get(reverse('report_activity_member', args=[self.member.id]))
+        self.assertContains(response, '<td>1.0</td>', html=True)
+        self.assertNotContains(response, '(0.0)')
 
     def test_pages(self):
         self.make_event('operation', when(2024, 1, 10), attended=[self.member, self.other])
@@ -223,7 +253,7 @@ class ReportPagesTestCase(PageTestCase):
         unit = dict(glossary())
         self.assertNotIn('On this report', unit['Unit active day'] + unit['Unit event'])
         self.assertNotIn('parentheses', unit['Mistaken times'])
-        self.assertTrue(unit['Mistaken times'].startswith('More than {} days'.format(MAX_ENTRY.days)))
+        self.assertTrue(unit['Mistaken times'].startswith('More than {} days'.format(report_settings().MAX_ENTRY_DAYS)))
         trainee = self.make_member('Dee', 'T')
         response = client.get(trainee.get_absolute_url())
         self.assertNotContains(response, 'id="activityTbl"')
@@ -249,5 +279,6 @@ class ReportPagesTestCase(PageTestCase):
         response = client.get(reverse('report_activity_member', args=[self.member.id]))
         self.assertEqual(response.status_code, 200)
         # It is not counted, so there is nothing to show, not a year of zeros.
-        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member)))
+        self.assertNotIn(event, reported_events())
+        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW)))
         self.assertNotContains(response, 'class="chart"')

@@ -92,7 +92,8 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
         <td>{{ listed.entry.period.event.location }}</td>
         <td>{{ listed.entry.period.event.leaders|default_if_none:"" }}</td>
         {# The hours counted, then any left out, in parentheses, as the glossary says. #}
-        <td>{% if listed.counted_hours or not listed.left_out_hours %}{{ listed.counted_hours|hours }}{% endif %}{% if listed.counted_hours and listed.left_out_hours %} {% endif %}{% if listed.left_out_hours %}({{ listed.left_out_hours|hours }}){% endif %}</td>
+        {# Hours left out show once they come to a tenth, as the hours filter writes them. #}
+        <td>{% with left_out=listed.left_out_hours|hours %}{% if left_out == '0.0' %}{{ listed.counted_hours|hours }}{% else %}{% if listed.counted_hours %}{{ listed.counted_hours|hours }} {% endif %}({{ left_out }}){% endif %}{% endwith %}</td>
         <td>{{ listed.days }}</td>
       </tr>
       {% endfor %}

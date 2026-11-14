@@ -1,12 +1,14 @@
 """What the tests of counting and of the pages that show it share: a fixed now, a time of day that stays in one
 local day, and a member and another to log time with."""
 from unittest import mock
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 
 from django.test import TestCase
+from django.utils import timezone
 
 from main.lib.activity import member_activity
-from main.lib.counting import activity_rows, member_entries, member_latest, operations_not_run, operations_that_ran
+from main.lib.counting import (activity_rows, member_entries, member_latest, operations_not_run, operations_that_ran,
+                               records_from, reply_templates_from)
 from main.models import Event, Member, Message, Participant, Period, RsvpTemplate
 
 
@@ -55,7 +57,7 @@ class ActivityTestCase(TestCase):
 
     def years(self, member=None):
         member = member or self.member
-        return {str(row.period): row for row in activity_rows(member, NOW, member_entries(member))['years']}
+        return {str(row.period): row for row in activity_rows(member, NOW, member_entries(member), records_from(NOW))['years']}
 
     def days(self, row, event_type):
         """(days attended, unit active days)"""
@@ -66,7 +68,7 @@ class ActivityTestCase(TestCase):
         of it: (measures, views, options), as passed to charts.share_panels."""
         member = member or self.member
         with mock.patch('main.lib.activity.charts.share_panels') as share_panels:
-            member_activity(member, NOW, member_entries(member))
+            member_activity(member, NOW, member_entries(member), records_from(NOW))
         (measures, views), options = share_panels.call_args
         return measures, views, options
 
@@ -82,7 +84,18 @@ class ActivityTestCase(TestCase):
     def not_run(self):
         """Why each operation that did not run by NOW did not: {id: 'heads_up' or 'called_off'}."""
         ran = operations_that_ran(NOW, every_operation())
-        return {event_id: not_run.why for event_id, not_run in operations_not_run(NOW, ran).items()}
+        return {event_id: not_run.why for event_id, not_run in operations_not_run(NOW, ran, reply_templates_from()).items()}
+
+    def paging_began(self, pages=date(2016, 8, 9), templates=date(2019, 2, 13)):
+        """Pages for operations recorded from the local day `pages`, and saying whether they were a callout
+        or a heads-up from `templates`, as the reports read them from the first of each: here the pages of
+        an operation still to start, which no report counts yet."""
+        # ActivityTestCase's own make_event, as a test case may page the events its own makes.
+        first = ActivityTestCase.make_event(self, 'operation', NOW + timedelta(days=365))
+        for day, template in ((pages, None), (templates, RsvpTemplate.objects.get_or_create(name='Heads Up')[0])):
+            page = Message.objects.create(author=self.other, text='Page', format='page',
+                                          period=first.period_set.first(), rsvp_template=template)
+            Message.objects.filter(id=page.id).update(created_at=timezone.make_aware(datetime.combine(day, time(12))))
 
     def paged(self, event, template):
         """A page for `event`, sent as it started, asking who can go ('Available?') or warning ('Heads Up')."""

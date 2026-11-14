@@ -25,10 +25,11 @@ the report's glossary; this says what the code decides beyond them.
   after its first such page: a responder already out did not leave in
   answer to it.
 - Joining and leaving are read from activity, as the database holds no
-  dates for them: the rules are the glossary's (JOINED_AT, GUEST_FRIENDLY,
-  REPORTABLE, LAPSE). Whoever joined in the records' first year may have
+  dates for them: the rules are the glossary's (report_settings' JOINED_AT,
+  GUEST_FRIENDLY_TITLE and LEFT_AFTER, and REPORTABLE). Whoever joined in the records' first year may have
   joined earlier, so they are kept apart.
 """
+import calendar
 import re
 from bisect import bisect_right
 from collections import Counter, defaultdict
@@ -39,9 +40,10 @@ from django.db.models import BooleanField, ExpressionWrapper, F, Min, Q, Window
 from django.db.models.functions import Lag
 from django.utils import timezone
 
-from main.lib.counting import (CALLOUT, HAS_TIME, HEADS_UP, IN_FIELD, TYPES, NotRun, end_of_today, entries_hours,
-                               entry_led, first_claims, hours_by_local_day, logged_span, operations_not_run,
-                               reported_events, too_long, unit_days_and_events)
+from main.lib.counting import (HAS_TIME, IN_FIELD, TYPES, NotRun, end_of_today, entries_hours, entry_led, first_claims,
+                               first_year, hours_by_local_day, logged_span, operations_not_run,
+                               reply_templates_from, reported_events, too_long, unit_days_and_events)
+from main.lib.report_settings import report_settings
 from main.models import Distribution, Member, Message, Participant
 from main.models.event import every_username, members_named
 
@@ -60,71 +62,24 @@ class Cuts(tuple):
 
 
 # The categories the report counts in: what each count is split by, and the names the rows give them.
-THIN = 3                                 # the fewest responders: this many or fewer
-FULL = 8                                 # the most: this many or more
-RESPONDER_COUNTS = Cuts((('thin', THIN), ('middling', FULL - 1), ('full', None)))
-SIZES = RESPONDER_COUNTS.names
+SIZES = ('thin', 'middling', 'full')     # how many responders: report_settings' RESPONDERS_THIN and _FULL
 NOT_RUN = (NotRun.CALLED_OFF, NotRun.HEADS_UP_ONLY)   # why an operation nobody went on did not run
 OUTCOMES = SIZES + NOT_RUN
 PARTS_OF_WEEK = Cuts((('weekday', 4), ('weekend', None)))       # by date.weekday(): Monday 0 to Friday 4
-RECORDED_STATUSES = ('T', 'FM', 'TM')    # those a responder is counted under; any other is 'other'
-STATUSES_COUNTED = RECORDED_STATUSES + ('other',)
-LONG_DAY = 12                            # hours, door to door: more makes a one-day stretch a long day
+OTHER_STATUS = 'other'                   # a status without a band of its own (report_settings' BANDED_STATUSES)
+# A stretch in the field: of one day, of one long day (report_settings' LONG_DAY), of two days, or more.
 RUN_LENGTHS = ('day', 'long_day', 'two', 'more')
-REPLY_MINUTES = (5, 60)                  # how soon a reply came, in minutes: within the first, within the second
-REPLY_SPEEDS = Cuts((('minutes', REPLY_MINUTES[0] * 60), ('hour', REPLY_MINUTES[1] * 60), ('later', None)))  # s
-REPLY_KINDS = REPLY_SPEEDS.names + ('untimed', 'none')          # then a reply with no time, and none
-DEPARTURE_MINUTES = (30, 60)             # how soon the first responder left home on an immediate callout
-DEPARTURE_SPEEDS = Cuts((('half', DEPARTURE_MINUTES[0] / 60), ('hour', DEPARTURE_MINUTES[1] / 60),
-                         ('later', None)))                      # in hours
-DEPARTURE_KINDS = DEPARTURE_SPEEDS.names + ('none',)            # then no departure logged after the page
+REPLY_SPEEDS = ('minutes', 'hour', 'later')     # how soon a reply came: by report_settings' REPLY_MINUTES
+REPLY_KINDS = REPLY_SPEEDS + ('untimed', 'none')                # then a reply with no time, and none
+DEPARTURE_SPEEDS = ('half', 'hour', 'later')    # how soon the first responder left: by DEPARTURE_MINUTES
+DEPARTURE_KINDS = DEPARTURE_SPEEDS + ('none',)                  # then no departure logged after the page
 FLOW_KINDS = ('joined', 'came_back', 'left', 'left_returned')
 ROLES = ('others', 'led')                # who attended an event: those who did not lead it, and those who did
 WHOSE = ('unit', 'people')               # whose days, events and hours: the unit's (any member out), its members'
 MEASURES = ('days', 'events', 'hours')   # what participation is counted in
 
-# The pages that ask who can go, by the name of their reply template: callout pages, and heads-ups,
-# which count as callout pages here, as members are asked to reply quickly to those too.
-ASKS_AVAILABILITY = (CALLOUT, HEADS_UP)
-# The DO starts an immediate callout's page with the word. A page that repeats, answers, forwards or
-# updates one puts its own word before it, perhaps numbered, perhaps more than once: "Repage 2:",
-# "Re:", "Fwd:", "UPDATE:".
-IMMEDIATE = re.compile(r'\W*((re-?page|re|fwd?|update)\b[\s\d]*\W*)*immediate\b', re.IGNORECASE)
-
-# What keeps a member active, and how long without it before they have left.
+# What keeps a member active; report_settings' LEFT_AFTER says for how long without it they have left.
 REPORTABLE = ('operation', 'training', 'community')
-LAPSE = timedelta(days=365)
-# Leaving can also be read more slowly: the months without a reportable day before a member has left.
-LEFT_AFTER = (12, 24, 36)
-# A member has joined on this many days at an operation or a training not open to guests.
-JOINED_AT = 3
-# Trainings guests may come to: SAR Basic; those whose title says "guest", other than "no guests", "not
-# for guests" or a guest lecturer, speaker, instructor or presenter; and those marked G as titles are:
-# "* G", "*G", "G*", "(G)", or a G at the very end ("Mock Search G"). Words may have any spaces or
-# hyphens between them, so the match starts where those before "guests" (or before "for guests") do:
-# after anything but a space or a hyphen, and not after the word "no" (or "not").
-GUEST_FRIENDLY = re.compile(
-    r'(?i:sar[\s-]*basic'
-    r'|(?<![\s-])(?:(?<!\bno)(?<!\bfor)|(?<!\bnot)[\s-]*\bfor)'
-    r'[\s-]*\bguests?\b(?![\s-]+(?:lectur|speak|instruct|present))'
-    r'|\*\s*g\b|\bg\*|\(g\))'
-    r'|\sG\s*$')
-
-
-# The page starts where its records do. Years without any are shown as empty columns, but a run of this
-# many empty years cuts off what came before it: a stray early record, not the start of the records.
-STRAY_BEFORE = 3
-
-
-def first_year(years):
-    """The year a series starts: the earliest of `years` (those with data) that
-    no gap of STRAY_BEFORE empty years separates from the latest."""
-    first = max(years)
-    for year in sorted(years, reverse=True):
-        if first - year > STRAY_BEFORE:
-            break
-        first = year
-    return first
 
 
 def _named_leaders(rows):
@@ -150,7 +105,6 @@ class UnitEntry(NamedTuple):
     members_only: bool          # at an operation or a training guests may not come to: a day towards joining
     hours: dict                 # {local day: hours} it counts for by now (counting.entries_hours): its days
     span: tuple                 # the (start, end) logged, up to the end of today; None when too long to be right
-    en_route_at: object         # when the member left home, where that is logged
 
     @property
     def responder(self):
@@ -172,6 +126,7 @@ def unit_entries(now):
                      'period__event__start_at', 'member_id', 'id', 'in_field', 'ol',
                      'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at'))
     named = _named_leaders(rows)         # event -> the members its leaders text names
+    guest_friendly = re.compile(report_settings().GUEST_FRIENDLY_TITLE, re.IGNORECASE)
     start_day = {}                       # event -> the local day it started
     tz = timezone.get_current_timezone()                 # looked up once, not for every entry
     # Of time a member logged twice, on two periods or events at once, the entry that began first keeps
@@ -199,17 +154,24 @@ def unit_entries(now):
         yield UnitEntry(
             event=event_id, type=event_type, started=start_day[event_id], member=member_id, in_field=in_field,
             led=leading and not operation, ol=leading and operation,
-            members_only=operation or (event_type == 'training' and not GUEST_FRIENDLY.search(title)),
-            hours=hours, span=None if too_long(start, end, tz) else (start, min(end, counting_stops)),
-            en_route_at=times[0])
+            members_only=operation or (event_type == 'training' and not guest_friendly.search(title)),
+            hours=hours, span=None if too_long(start, end, tz) else (start, min(end, counting_stops)))
 
 
-def _spells(member_days, lapse):
-    """A member's stretches of days, oldest first, with no gap longer than `lapse`
-    between days: [first day, last day] for each."""
+def _months_after(day, months):
+    """The day `months` calendar months after `day`, or the last of its month
+    where that month is shorter (29 February to 28 February)."""
+    year, month = divmod(day.month - 1 + months, 12)
+    year, month = day.year + year, month + 1
+    return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
+
+
+def _spells(member_days, months):
+    """A member's stretches of days, oldest first, with no gap of more than
+    `months` calendar months between days: [first day, last day] for each."""
     spells = [[member_days[0], member_days[0]]]
     for day in member_days[1:]:
-        if day - spells[-1][1] > lapse:
+        if day > _months_after(spells[-1][1], months):
             spells.append([day, day])
         else:
             spells[-1][1] = day
@@ -219,7 +181,7 @@ def _spells(member_days, lapse):
 class Retention(NamedTuple):
     """Who was active in each year, who joined, who left and who came back."""
     active: dict                # year -> Counter(the year they joined: members active)
-    flows: dict                 # months of LEFT_AFTER -> flow -> Counter(year: members)
+    flows: dict                 # months of report_settings' LEFT_AFTER -> flow -> Counter(year: members)
     records_from: int           # the year the records of joining start
 
 
@@ -238,8 +200,9 @@ def _retention(entries, today, report_from):
             reportable_days[entry.member].update(entry.hours)
     # For want of three member-only days, a member joined on their first day at any event.
     joined_on = dict(first_day)
-    joined_on.update({member: sorted(days)[JOINED_AT - 1]
-                      for member, days in member_only.items() if len(days) >= JOINED_AT})
+    joined_at = report_settings().JOINED_AT
+    joined_on.update({member: sorted(days)[joined_at - 1]
+                      for member, days in member_only.items() if len(days) >= joined_at})
     # A member's reportable days since they joined; the day of joining counts, whatever the event.
     reportable = {member: {day for day in reportable_days[member] if day >= joined} | {joined}
                   for member, joined in joined_on.items()}
@@ -248,24 +211,25 @@ def _retention(entries, today, report_from):
     records_from = max(min((day.year for member_days in reportable.values() for day in member_days),
                            default=today.year), report_from)
     active_in = defaultdict(Counter)                     # year -> the year they joined -> members
-    flows = {months: {kind: Counter() for kind in FLOW_KINDS} for months in LEFT_AFTER}   # -> flow -> year -> members
+    left_after = report_settings().LEFT_AFTER
+    flows = {months: {kind: Counter() for kind in FLOW_KINDS} for months in left_after}   # -> flow -> year -> members
     for member_days in reportable.values():
         member_days = sorted(member_days)
         cohort = max(member_days[0].year, records_from)  # the year they joined, or the records' first
-        for months in LEFT_AFTER:
-            lapse = LAPSE * (months // 12)
-            spells = _spells(member_days, lapse)
+        for months in left_after:
+            spells = _spells(member_days, months)
             for number, (first, last) in enumerate(spells):
                 if number:
                     flows[months]['came_back'][first.year] += 1
                 elif cohort != records_from:             # nobody is known to have joined as the records start
                     flows[months]['joined'][first.year] += 1
-                if today - last > lapse:
+                if today > _months_after(last, months):
                     flows[months]['left' if number == len(spells) - 1 else 'left_returned'][last.year] += 1
-        for first, last in _spells(member_days, LAPSE):
-            # Active in each year of the stretch, the year of its last day included.
-            for year in range(first.year, last.year + 1):
-                active_in[year][cohort] += 1
+        # Active in each year of a stretch, the year of its last day included, and once in a year that two
+        # stretches share.
+        for year in {year for first, last in _spells(member_days, left_after[0])
+                     for year in range(first.year, last.year + 1)}:
+            active_in[year][cohort] += 1
     return Retention(active_in, flows, records_from)
 
 
@@ -286,6 +250,7 @@ def _stretches(entries):
     """Each member's stretches of days in a row in the field on operations,
     by how long they ran: Counter((the year it started, one of RUN_LENGTHS)).
     An entry too long to be right is left out."""
+    long_day = report_settings().LONG_DAY
     outings = defaultdict(list)          # member -> (its days, (start, end) logged) for each entry in the field
     for entry in entries:
         if entry.responder and entry.span:
@@ -303,7 +268,7 @@ def _stretches(entries):
                 logged = sum((end - start).total_seconds() / 3600
                              for start, end in filter(None, first_claims([span for days, span in member_outings
                                                                           if day in days])))
-                name = 'long_day' if logged > LONG_DAY else 'day'
+                name = 'long_day' if logged > long_day else 'day'
             else:
                 name = 'two' if length == 2 else 'more'
             runs[(out[first].year, name)] += 1
@@ -348,16 +313,17 @@ def _by_status(entries, responders):
     for member_id, when, status in changes.order_by(*in_order).values_list('id', 'history_date', 'status'):
         history[member_id].append((timezone.localtime(when).date(), status))
     status_from = min((member_changes[0][0] for member_changes in history.values()), default=None)
+    banded = report_settings().BANDED_STATUSES
 
     def status_on(member_id, day):
         member_changes = history[member_id]
         if status_from is None or day < status_from:
             return None
         if not member_changes:           # a member with no recorded status at all
-            return 'other'
+            return OTHER_STATUS
         # The status on the day; for someone first recorded later, their first.
         status = member_changes[max(bisect_right(member_changes, (day, chr(0x10ffff))) - 1, 0)][1]
-        return status if status in RECORDED_STATUSES else 'other'
+        return status if status in banded else OTHER_STATUS
 
     status_days = Counter()              # (year, status) -> responder-days
     status_hours = Counter()             # (year, status) -> their hours on those days
@@ -385,6 +351,8 @@ class Replies(NamedTuple):
 
 def _replies(callout_pages):
     """Replies to these callout pages, from members other than guests."""
+    first, second = report_settings().REPLY_MINUTES
+    reply_speed = Cuts(zip(REPLY_SPEEDS, (first * 60, second * 60, None)))      # in seconds
     chain_of = {}                        # page -> the first page of its chain
     sent_to = defaultdict(list)          # (chain, member) -> (when sent, replied, seconds) for each page
     for page_id, ancestry, sent_at, replied, seconds, member_id in (
@@ -402,7 +370,7 @@ def _replies(callout_pages):
         replied_at = [sent_at + timedelta(seconds=seconds) for sent_at, _, seconds in pages
                       if seconds is not None and seconds >= 0]
         if replied_at:
-            reply = REPLY_SPEEDS.name_for((min(replied_at) - first_sent).total_seconds())
+            reply = reply_speed.name_for((min(replied_at) - first_sent).total_seconds())
         else:
             reply = 'untimed' if any(replied for _, replied, _ in pages) else 'none'
         sent = timezone.localtime(first_sent)
@@ -411,23 +379,30 @@ def _replies(callout_pages):
     return Replies(replies, reply_hours)
 
 
-def _first_out(entries, callout_pages):
+def _first_out(callout_pages, now):
     """Immediate callouts by how soon the first responder left home:
     {the year the operation started: Counter(how soon: callouts)}."""
-    departures = defaultdict(list)       # operation -> when each responder left home
-    for entry in entries:
-        if entry.responder and entry.en_route_at:
-            departures[entry.event].append(entry.en_route_at)
+    first, second = report_settings().DEPARTURE_MINUTES
+    departure_speed = Cuts(zip(DEPARTURE_SPEEDS, (first / 60, second / 60, None)))     # in hours
+    starts_immediate = re.compile(report_settings().IMMEDIATE_CALLOUT, re.IGNORECASE)
     immediate = {}                       # operation -> (its year, its first immediate page)
     for event_id, start_at, sent_at, text in (callout_pages.order_by('created_at').values_list(
             'period__event_id', 'period__event__start_at', 'created_at', 'text')):
-        if IMMEDIATE.match(text) and event_id not in immediate:
+        if starts_immediate.match(text) and event_id not in immediate:
             immediate[event_id] = (timezone.localtime(start_at).year, sent_at)
+    # When each member in the field on one, not a guest, left home, as logged up to today: on any entry,
+    # whether or not it has the rest of its times yet.
+    departures = defaultdict(list)       # operation -> when each responder left home
+    for event_id, left_at in (Participant.objects.filter(IN_FIELD, period__event__in=list(immediate),
+                                                         en_route_at__lte=end_of_today(now))
+                              .exclude(member__status__in=Member.GUESTS)
+                              .values_list('period__event_id', 'en_route_at')):
+        departures[event_id].append(left_at)
     first_out = defaultdict(Counter)     # year -> how soon -> immediate callouts
     for event_id, (year, sent_at) in immediate.items():
         # The first to leave after the page: whoever was already out did not leave in answer to it.
         after = [left_at for left_at in departures[event_id] if left_at >= sent_at]
-        out = DEPARTURE_SPEEDS.name_for((min(after) - sent_at).total_seconds() / 3600) if after else 'none'
+        out = departure_speed.name_for((min(after) - sent_at).total_seconds() / 3600) if after else 'none'
         first_out[year][out] += 1
     return first_out
 
@@ -438,11 +413,15 @@ class Operations(NamedTuple):
     responded: list             # (the day it started, its responder count) for each that ran
     without_ol: Counter         # year -> operations that ran with no OL recorded
     day_responded: list         # (day, its responder count) for each day the unit was out on operations
-    days: Counter               # (year, the day's responder count, as RESPONDER_COUNTS) -> those days
+    days: Counter               # (year, the day's responder count, as SIZES) -> those days
 
 
-def _operations(entries, responders, now):
-    """Operations, from the entries counted and each operation's responders."""
+def _operations(entries, responders, now, templates_from):
+    """Operations, from the entries counted and each operation's responders,
+    those that did not run told apart from `templates_from`
+    (counting.reply_templates_from)."""
+    rules = report_settings()
+    responder_count = Cuts(zip(SIZES, (rules.RESPONDERS_THIN, rules.RESPONDERS_FULL - 1, None)))
     out_on = defaultdict(set)            # day -> responders in the field on it, on any operation
     with_ol = set()                      # operations with an OL in the field
     started = {}                         # operation with a responder -> the local day it started
@@ -460,17 +439,17 @@ def _operations(entries, responders, now):
     # today. That is counting.operations_that_ran's rule, the member page's, read from these entries.
     for event_id, members in responders.items():
         day, size = started[event_id], len(members)
-        operations[(day.year, RESPONDER_COUNTS.name_for(size))] += 1
+        operations[(day.year, responder_count.name_for(size))] += 1
         responded.append((day, size))
         if event_id not in with_ol:
             without_ol[day.year] += 1
     # One that has finished without running was called off, or was only ever a heads-up: counting's rule,
     # the member page's too. One still under way with no time logged yet waits until it finishes.
-    for not_run in operations_not_run(now, set(responders)).values():
+    for not_run in operations_not_run(now, set(responders), templates_from).values():
         operations[(not_run.started.year, not_run.why)] += 1
     responded.sort()                     # oldest first
     day_responded = [(day, len(members)) for day, members in out_on.items()]
-    operation_days = Counter((day.year, RESPONDER_COUNTS.name_for(len(members))) for day, members in out_on.items())
+    operation_days = Counter((day.year, responder_count.name_for(len(members))) for day, members in out_on.items())
     return Operations(operations, responded, without_ol, day_responded, operation_days)
 
 
@@ -524,15 +503,15 @@ class UnitYear(NamedTuple):
     without_ol: int             # operations that ran with no OL recorded
     members: dict               # {type: {one of ROLES: members}}
     participation: dict         # {one of WHOSE: {one of MEASURES: {type: {part of the week: amount}}}}
-    status_days: dict           # {one of STATUSES_COUNTED: responder-days}
-    status_hours: dict          # {one of STATUSES_COUNTED: responder-hours}
-    status_events: dict         # {one of STATUSES_COUNTED: operations attended}
+    status_days: dict           # {each of report_settings' BANDED_STATUSES, then OTHER_STATUS: responder-days}
+    status_hours: dict          # {the same: responder-hours}
+    status_events: dict         # {the same: operations attended}
     replies: dict               # {one of REPLY_KINDS: callouts to members}
     first_out: dict             # {one of DEPARTURE_KINDS: immediate callouts}
     runs: dict                  # {one of RUN_LENGTHS: stretches in the field}
     active: dict                # {the year they joined, from the year the records of joining start: members}
-    left_known: dict            # {months of LEFT_AFTER: whether who left in the year is known yet}
-    flows: dict                 # {months of LEFT_AFTER: {one of FLOW_KINDS: members}}
+    left_known: dict            # {months of report_settings' LEFT_AFTER: whether who left in the year is known yet}
+    flows: dict                 # {those months: {one of FLOW_KINDS: members}}
 
 
 class UnitCounts(NamedTuple):
@@ -549,6 +528,8 @@ class UnitCounts(NamedTuple):
 
 def _unit_year(year, counts, today):
     """The year's UnitYear, from the counts."""
+    rules = report_settings()
+    statuses = rules.BANDED_STATUSES + (OTHER_STATUS,)
     return UnitYear(
         year=year,
         operations={outcome: counts.operations.outcomes[(year, outcome)] for outcome in OUTCOMES},
@@ -559,19 +540,19 @@ def _unit_year(year, counts, today):
                                        for t, by_part in by_type.items()}
                              for measure, by_type in measures.items()}
                        for who, measures in counts.participation.items()},
-        status_days={status: counts.by_status.days[(year, status)] for status in STATUSES_COUNTED},
-        status_hours={status: counts.by_status.hours[(year, status)] for status in STATUSES_COUNTED},
-        status_events={status: counts.by_status.events[(year, status)] for status in STATUSES_COUNTED},
+        status_days={status: counts.by_status.days[(year, status)] for status in statuses},
+        status_hours={status: counts.by_status.hours[(year, status)] for status in statuses},
+        status_events={status: counts.by_status.events[(year, status)] for status in statuses},
         replies={kind: counts.replies.by_year[year][kind] for kind in REPLY_KINDS},
         first_out={kind: counts.first_out[year][kind] for kind in DEPARTURE_KINDS},
         runs={length: counts.runs[(year, length)] for length in RUN_LENGTHS},
         active={cohort: counts.retention.active[year][cohort]
                 for cohort in range(counts.retention.records_from, today.year + 1)},
-        # Who left in a year is known once more than 12 months have passed since its last day, the day
-        # after which a member last there on it has left.
-        left_known={months: date(year, 12, 31) + LAPSE * (months // 12) < today for months in LEFT_AFTER},
+        # Who left in a year is known once more than that many months have passed since its last day, the
+        # day after which a member last there on it has left.
+        left_known={months: _months_after(date(year, 12, 31), months) < today for months in rules.LEFT_AFTER},
         flows={months: {kind: counts.retention.flows[months][kind][year] for kind in FLOW_KINDS}
-               for months in LEFT_AFTER})
+               for months in rules.LEFT_AFTER})
 
 
 def unit_rows(now=None):
@@ -585,18 +566,24 @@ def unit_rows(now=None):
     'day_responded' [(day, responder count)] for operations that ran and for
     days the unit was out, 'first_pages' [local time of each operation's
     first page] and 'reply_hours' {(day sent, hour, how soon): callouts to
-    members}; and 'status_from', the day the first status was recorded, and
-    'records_from', the year the records of joining start."""
+    members}; and 'status_from', the day the first status was recorded,
+    'records_from', the year the records of joining start, and
+    'templates_from', the day pages first told a callout from a heads-up
+    (counting.reply_templates_from), None if none has."""
     now = now or timezone.now()
     today = timezone.localtime(now).date()
     entries = list(unit_entries(now))
     responders = _responders(entries)
-    # The callout pages sent up to now: pages for operations that ask who can go (ASKS_AVAILABILITY).
+    templates_from = reply_templates_from()
+    # The callout pages sent up to now: pages for operations that ask who can go, by the name of their
+    # reply template: callout pages, and heads-ups, which count as callout pages here, as members are
+    # asked to reply quickly to those too.
+    rules = report_settings()
     callout_pages = Message.objects.filter(format='page', period__event__in=reported_events(),
-                                           period__event__type='operation',
-                                           rsvp_template__name__in=ASKS_AVAILABILITY, created_at__lte=now)
+                                           period__event__type='operation', created_at__lte=now,
+                                           rsvp_template__name__in=(rules.CALLOUT_TEMPLATE, rules.HEADS_UP_TEMPLATE))
     participation = _participation(entries)
-    operations = _operations(entries, responders, now)
+    operations = _operations(entries, responders, now, templates_from)
     # A year has a row when anything is counted in it: a day attended, an event (in the year it started)
     # or an operation. The report starts in the first of them, after any stray early record, or this year
     # when there is nothing; joining is counted from then on.
@@ -605,7 +592,7 @@ def unit_rows(now=None):
                 | {year for year, _ in operations.outcomes})
     first = first_year(recorded) if recorded else today.year
     counts = UnitCounts(participation, operations, _roles(entries), _by_status(entries, responders),
-                        _replies(callout_pages), _first_out(entries, callout_pages), _stretches(entries),
+                        _replies(callout_pages), _first_out(callout_pages, now), _stretches(entries),
                         _retention(entries, today, first))
     # The local time of each operation's first page, for operations that have started.
     first_pages = [timezone.localtime(paged_at) for paged_at in (
@@ -617,4 +604,4 @@ def unit_rows(now=None):
                       for year in range(min(recorded, default=today.year), today.year + 1)},
             'responded': operations.responded, 'day_responded': operations.day_responded, 'first_pages': first_pages,
             'status_from': counts.by_status.since, 'reply_hours': counts.replies.by_hour,
-            'records_from': counts.retention.records_from}
+            'records_from': counts.retention.records_from, 'templates_from': templates_from}

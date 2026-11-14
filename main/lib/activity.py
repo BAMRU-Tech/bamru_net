@@ -5,17 +5,25 @@ share. The counting is main.lib.counting's.
 import calendar
 
 from django.template.defaultfilters import pluralize
+from django.utils.text import get_text_list
 
 from main.lib import charts
-from main.lib.counting import DAY_HOURS, EVENT_TYPES, LEADING, MAX_ENTRY, SINGLE_DAY_HOURS, TYPES, activity_rows
+from main.lib.counting import EVENT_TYPES, LEADING, TYPES, activity_rows, pages_from
+from main.lib.report_settings import report_settings
+from main.models import Member
 
 
 
-def glossary(member_report=False):
+def glossary(member_report=False, records_from=None):
     """The rules of the activity reports, stated once: the terms they share,
     as [(term, definition)], for reports/glossary.html, a table at the foot
-    of each. A report adds its own terms after these. `member_report` adds what holds only on one member's report."""
+    of each. A report adds its own terms after these. `member_report` adds
+    what holds only on one member's report, which counts from
+    `records_from` (counting.records_from)."""
     own = " On this report a member's own {} attended count too."
+    rules = report_settings()
+    paged_from = pages_from()
+    guests = get_text_list([label for code, label in Member.TYPES if code in Member.GUESTS], 'or')
     terms = [
         ('Logged time',
          'The time between Left and Returned on the event page, or between Signed in and Signed out where '
@@ -25,7 +33,8 @@ def glossary(member_report=False):
         ('Day attended',
          'A calendar day with at least {} hours logged for one event or operating period. The time logged '
          'for each counts as at least one day, and {} hours or less as one day, even across midnight. A day '
-         'counts once for each type of event and once across all types.'.format(DAY_HOURS, SINGLE_DAY_HOURS)),
+         'counts once for each type of event and once across all types.'.format(rules.DAY_HOURS,
+                                                                                  rules.SINGLE_DAY_HOURS)),
         ('Unit active day',
          'A day attended by at least one member other than the AHC, at an event of that type.'
          + (own.format('days') if member_report else '')),
@@ -37,15 +46,21 @@ def glossary(member_report=False):
          + (own.format('events') if member_report else '')),
         ('Hours',
          "Hours logged on events. Under the unit's policies, no hours are logged for administrative work or DO duty."),
-        ('Guests', 'Time logged by guests counts only on their own activity report.'),
+        ('Guests',
+         'Those whose status today is {}. Their time counts only on their own activity report; someone who has '
+         'since become a member counts as one for all their time.'.format(guests)),
         ('Events left out',
-         'Test and demonstration events, and operations never used (no page sent and nobody listed, and not '
-         'called a heads-up), are counted nowhere.'),
+         'Test and demonstration events are counted nowhere.'
+         + (' Nor are operations begun from {} {:%b %Y}, when pages were first recorded, that were never used: no '
+            'page sent, nobody listed, and not called a heads-up.'.format(paged_from.day, paged_from)
+            if paged_from else '')),
         ('Mistaken times',
-         'More than {} days logged by one member for one event or operating period counts one day and no '
+         'More than {} day{} logged by one member for one event or operating period counts one day and no '
          'hours. Hours logged for an event that has not started yet, or for a day after today, are left out.'
-         .format(MAX_ENTRY.days)
-         + (' Hours left out, and time counted on another row, are shown in parentheses.' if member_report else '')),
+         .format(rules.MAX_ENTRY_DAYS, pluralize(rules.MAX_ENTRY_DAYS))
+         + (' Hours left out, and time counted on another row, are shown in parentheses.' if member_report else '')
+         + (" Nothing dated before {}, the first year of the unit's records, counts on this report: a date that "
+            'early is taken as mistyped.'.format(records_from.year) if member_report and records_from else '')),
     ]
     if member_report:
         terms += [
@@ -125,17 +140,20 @@ def _all_cells(label, r):
 
 
 def _keys(total):
-    """The key under each type's panel, in the order the parts stack from
-    the foot, naming only the roles the member has been in."""
-    leading = {t: [(ROLE_COLOURS['led'], 'as ' + LEADING[t])] if total.led_days[t] else [] for t in TYPES[1:]}
-    leading['operation'] = ([(ROLE_COLOURS['led'], 'as ' + LEADING['operation'])]
-                            if total.ol_days else [])
-    # AHC and in the field on one day: no AHC day, but AHC hours to pick out.
-    ahc = [(ROLE_COLOURS['ahc'], 'as AHC')] if total.ahc_days or total.ahc_hours else []
-    return {t: leading[t] + [(ROLE_COLOURS['other'],
-                              'Other attendance' if leading[t] or (t == 'operation' and ahc) else 'Attended')]
-               + (ahc if t == 'operation' else [])
-            for t in TYPES}
+    """The key under each type's panel: the colours its columns draw, in any
+    period, which are those the whole of the member's record draws, in the
+    order they stack from the foot, each named. Attendance is "Other
+    attendance" beside a role picked out, and "Attended" alone, as it is too
+    for a panel that draws nothing."""
+    order = (ROLE_COLOURS['led'], ROLE_COLOURS['other'], ROLE_COLOURS['ahc'])
+    keys = {}
+    for t in TYPES:
+        drawn = {colour for column in _type_cells('', total, t) for colour, amount in column['parts'] if amount}
+        names = {ROLE_COLOURS['led']: 'as ' + LEADING[t], ROLE_COLOURS['ahc']: 'as AHC',
+                 ROLE_COLOURS['other']: 'Other attendance' if drawn - {ROLE_COLOURS['other']} else 'Attended'}
+        keys[t] = ([(colour, names[colour]) for colour in order if colour in drawn]
+                   or [(ROLE_COLOURS['other'], 'Attended')])
+    return keys
 
 
 def _periods(rows):
@@ -202,11 +220,11 @@ def _table(years, total):
     }
 
 
-def member_activity(member, now, entries):
+def member_activity(member, now, entries, since):
     """The chart and table of a member's activity, for their activity report,
-    from their entries (member_entries). Returns None when there is nothing
-    to show."""
-    rows = activity_rows(member, now, entries)
+    from their entries (member_entries), counted from `since` (records_from)
+    on. Returns None when there is nothing to show."""
+    rows = activity_rows(member, now, entries, since)
     if rows is None:
         return None
     keys = _keys(rows['total'])
@@ -220,4 +238,5 @@ def member_activity(member, now, entries):
         [_view('Years', years, keys), _view('Months', months, keys)],
         note='How often does this member take part, and how does that compare with the unit?',
         name='activity', measure_switch_label='Count')
-    return {'chart': chart, 'glossary': glossary(member_report=True), 'table': _table(years, rows['total'])}
+    return {'chart': chart, 'glossary': glossary(member_report=True, records_from=since),
+            'table': _table(years, rows['total'])}

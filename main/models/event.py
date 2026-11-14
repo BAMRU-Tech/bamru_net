@@ -30,11 +30,14 @@ def _username_pattern(usernames):
         return ids, re.compile(r'(?!)')
     alternatives = '|'.join(r'\s+'.join(re.escape(word) for word in username.split())
                             for username in sorted(ids, key=len, reverse=True))
-    # A username ends where a letter or a digit does not follow. The
-    # lookarounds are written so that an underscore ends one too, and
-    # stand once around all the usernames, which is many times quicker
-    # than once around each.
-    return ids, re.compile(r'(?<![^\W_])(?:' + alternatives + r')(?![^\W_])', re.IGNORECASE)
+    # A username stands alone: no letter or digit runs on from either end, nor
+    # a name joined to its start by a hyphen or an apostrophe, or to its end
+    # by a hyphen, so that "ann lee" is not named inside "Mary-Ann Lee",
+    # "D'Ann Lee" or "Ann Lee-Fox"; "Ann Lee's" is hers. The lookarounds are
+    # written so that an underscore ends one too, and stand once around all
+    # the usernames, which is many times quicker than once around each.
+    return ids, re.compile(r"(?<![^\W_])(?<![^\W_][-'\u2019])(?:" + alternatives + r')(?![^\W_])(?!-[^\W_])',
+                           re.IGNORECASE)
 
 
 def _cut(text, ids, pattern):

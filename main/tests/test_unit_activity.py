@@ -1,14 +1,16 @@
 import re
+import time
 from unittest import mock
 from datetime import date, datetime, timedelta, timezone as dt_timezone
 
-from django.test import Client
+from django.test import Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from main.lib.counting import TYPES, operations_that_ran
-from main.lib.unit_activity import EARLY, unit_activity
-from main.lib.unit_counting import first_year, unit_entries, unit_rows
+from main.lib.counting import TYPES, first_year, operations_that_ran
+from main.lib.report_settings import report_settings
+from main.lib.unit_activity import early_band, unit_activity
+from main.lib.unit_counting import unit_entries, unit_rows
 from main.models import Distribution, Event, Member, Message, Participant, Period, RsvpTemplate
 from main.tests.helpers import NOW, ActivityTestCase, every_operation, when
 
@@ -90,7 +92,6 @@ class UnitActivityTestCase(ActivityTestCase):
         too_long, today = got[4], got[5]
         self.assertEqual((too_long.span, too_long.hours), (None, {too_long.started: 0}))
         self.assertEqual(list(today.hours), [date(2024, 6, 14), date(2024, 6, 15)])     # the 16th is left for later
-        self.assertEqual(got[0].en_route_at, when(2024, 2, 7))
 
     def test_nothing_logged(self):
         self.assertEqual(unit_activity(NOW)['charts'], [])
@@ -192,6 +193,7 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(len(unit_rows(NOW)['responded']), len(operations_that_ran(NOW, every_operation())))
 
     def test_an_operation_that_never_became_a_callout_was_a_heads_up_only(self):
+        self.paging_began()        # pages recorded, and carrying reply templates, from the usual days
         def operation(day, pages=(), went=()):
             event = self.make_event('operation', when(2024, 2, day), no_time=[self.member], attended=list(went))
             for hours_before, (text, template) in zip((3, 2), pages):
@@ -201,25 +203,55 @@ class UnitActivityTestCase(ActivityTestCase):
         operation(7, [('Heads up: search', 'Heads Up'), ('Callout: search', 'Available?')])     # called off
         operation(8, [('Heads up: search', 'Heads Up')], went=[self.other])                     # ran all the same
         self.make_event('operation', when(2022, 2, 7), attended=[self.other])    # so that 2019 is no stray record
-        # Before 13 Feb 2019 pages do not say which they are: called off, whatever was sent.
+        # Before 13 Feb 2019 pages do not say which they are: called off, whatever was sent, unless the title
+        # calls it a heads-up.
         before = self.make_event('operation', when(2019, 2, 12), no_time=[self.member])
-        self.page(before, when(2019, 2, 12) - timedelta(hours=3), 'Heads up: search', 'Heads Up', {self.member: 60})
+        self.page(before, when(2019, 2, 12) - timedelta(hours=3), 'Heads up: search', None, {self.member: 60})
+        titled = self.make_event('operation', when(2019, 2, 10), no_time=[self.member])
+        Event.objects.filter(id=titled.id).update(title='Ridge search (heads up)')
         years = self.years()
         self.assertEqual(years[2024].operations,
                          {'thin': 1, 'middling': 0, 'full': 0, 'called_off': 1, 'heads_up': 2})
         self.assertEqual(years[2019].operations,
-                         {'thin': 0, 'middling': 0, 'full': 0, 'called_off': 1, 'heads_up': 0})
+                         {'thin': 0, 'middling': 0, 'full': 0, 'called_off': 1, 'heads_up': 1})
         tips = self.tips('operations', '')
         self.assertEqual(tips[-1], '2024 to 15 Jun: 4 operations | 1 ran | 1 with 1 to 3 responders | 0 with 4 to 7 '
                                    '| 0 with 8 or more | 1 called off | 2 heads-up only')
-        self.assertEqual(tips[0], '2019: 1 operation | 0 ran | 0 with 1 to 3 responders | 0 with 4 to 7 '
-                                  '| 0 with 8 or more | 1 called off | 0 heads-up only '
-                                  '| Before 13 Feb, heads-ups counted as called off')
-        # Two greys above the blues, the lighter on top; the key says from when heads-ups are told apart.
+        self.assertEqual(tips[0], '2019: 2 operations | 0 ran | 0 with 1 to 3 responders | 0 with 4 to 7 '
+                                  '| 0 with 8 or more | 1 called off | 1 heads-up only '
+                                  '| Before 13 Feb, heads-ups told by their titles')
+        # Two greys above the blues, the lighter on top.
         self.assertEqual([p['colour'] for p in self.panel('operations', '')['cells'][-1]['parts']],
                          ['1-light', 'muted-light', 'total'])
         self.assertEqual([k['label'] for k in self.panel('operations', '')['key']][-2:],
-                         ['Called off', 'Heads-up only, from 13 Feb 2019'])
+                         ['Called off', 'Heads-up only'])
+
+    def test_with_no_page_ever_saying_which_it_was_the_title_tells_a_heads_up(self):
+        self.make_event('operation', when(2024, 2, 7), attended=[self.member])
+        quiet = self.make_event('operation', when(2024, 3, 7), no_time=[self.member])
+        self.page(quiet, when(2024, 3, 7), 'Search', None, {self.member: 60})          # no reply template
+        titled = self.make_event('operation', when(2024, 4, 7), no_time=[self.member])
+        Event.objects.filter(id=titled.id).update(title='Ridge search (heads up)')
+        self.assertIsNone(unit_rows(NOW)['templates_from'])
+        self.assertEqual((self.years()[2024].operations['called_off'], self.years()[2024].operations['heads_up']),
+                         (1, 1))
+        self.assertEqual([k['label'] for k in self.panel('operations', '')['key']][-2:],
+                         ['Called off', 'Heads-up only'])
+        self.assertEqual(self.tips('operations', '')[-1].split(' | ')[-3:],
+                         ['1 called off', '1 heads-up only', 'Heads-ups told by their titles'])
+        not_run = 'The operation has finished with no member other than the AHC having a day attended on it up to today'
+        glossary = dict(unit_activity(NOW)['glossary'])
+        self.assertEqual((glossary['Called off'], glossary['Heads-up only']),
+                         (not_run + ', and its title does not call it a heads-up.',
+                          not_run + ', and its title calls it a heads-up.'))
+
+    def test_a_team_names_the_reply_template_of_its_heads_up_pages(self):
+        event = self.make_event('operation', when(2024, 2, 7), attended=[self.member])
+        self.page(event, when(2024, 2, 7) - timedelta(hours=6), 'Warning: search', 'Warning', {self.member: 60})
+        self.page(event, when(2024, 2, 7) - timedelta(hours=5), 'Heads up: search', 'Heads Up', {self.other: 60})
+        with override_settings(ACTIVITY_REPORTS={'HEADS_UP_TEMPLATE': 'Warning'}):
+            # The 06:00 page, the team's heads-up, is a callout page; the 07:00 one is not.
+            self.assertEqual(unit_rows(NOW)['reply_hours'], {(date(2024, 2, 7), 6, 'minutes'): 1})
 
     def test_test_and_demo_events_and_operations_never_used_count_nowhere(self):
         def event(event_type, day, title, **people):
@@ -240,7 +272,17 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(sum(row.replies.values()), 0)
         self.assertEqual(len(unit_rows(NOW)['first_pages']), 0)
 
+    def test_an_event_of_a_type_the_reports_do_not_show_counts_nowhere(self):
+        self.make_event('operation', when(2024, 2, 7), attended=[self.member])
+        other = self.make_event('training', when(2024, 2, 8), attended=[self.member])
+        Event.objects.filter(id=other.id).update(type='other')
+        row = self.years()[2024]
+        self.assertEqual({t: sum(row.participation['people']['days'][t].values()) for t in TYPES},
+                         {'operation': 1, 'training': 0, 'meeting': 0, 'community': 0})
+        self.assertEqual(unit_activity(NOW)['period'], '2024 to 15 Jun 2024')
+
     def test_events_count_whether_published_or_not(self):
+        self.paging_began()        # pages recorded, and carrying reply templates, from the usual days
         on_calendar = self.make_event('training', when(2024, 3, 4), attended=[self.member])
         on_calendar.published = True
         on_calendar.save()
@@ -296,6 +338,19 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual([m['title'] for m in self.chart('operations')['measures']],
                          ['Operations, by unique responder count, 2024',
                           'Operation days, by unique responder count, 2024'])
+
+    def test_a_team_sets_how_many_responders_are_few_and_how_many_many(self):
+        dee = self.make_member('Dee', 'T')
+        for day, went in ((7, [self.member, self.other]), (14, [self.member, self.other, self.third]),
+                          (21, [self.member, self.other, self.third, dee])):
+            self.make_event('operation', when(2024, 2, day), attended=went)
+        with override_settings(ACTIVITY_REPORTS={'RESPONDERS_THIN': 2, 'RESPONDERS_FULL': 4}):
+            row = self.years()[2024]
+            self.assertEqual((row.operations, row.operation_days),
+                             ({'thin': 1, 'middling': 1, 'full': 1, 'called_off': 0, 'heads_up': 0},
+                              {'thin': 1, 'middling': 1, 'full': 1}))
+            self.assertEqual([k['label'] for k in self.panel('operations', '')['key']][:3],
+                             ['1 to 2 responders', '3 to 3', '4 or more'])
 
     def test_responders_on_each_operation_and_each_day(self):
         self.make_event('operation', when(2020, 2, 7), attended=[self.member], ahc=[self.other])
@@ -443,6 +498,16 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(chart['measures'][1]['title'],
                          'Operations attended, by status at the start, 2024')
 
+    def test_a_team_sets_which_statuses_have_a_band_of_their_own(self):
+        self.make_event('operation', when(2024, 2, 7), attended=[self.member, self.third])     # an FM and a T
+        Member.history.model.objects.update(history_date=when(2024, 1, 1))
+        with override_settings(ACTIVITY_REPORTS={'BANDED_STATUSES': ('T', 'FM')}):
+            self.assertEqual(self.years()[2024].status_days, {'T': 1, 'FM': 1, 'other': 0})
+            self.assertEqual([(k['colour'], k['label']) for k in self.panel('status', '')['key']],
+                             [('1-light', 'Trainee'), ('1', 'Field Member'), ('muted', 'Other status')])
+        with override_settings(ACTIVITY_REPORTS={'BANDED_STATUSES': ('FM',)}):
+            self.assertEqual(self.years()[2024].status_days, {'FM': 1, 'other': 1})
+
     def test_when_operations_are_first_paged(self):
         early = self.make_event('operation', when(2024, 2, 7), attended=[self.member])        # a Wednesday
         self.make_event('operation', when(2024, 2, 20), no_time=[self.member])        # called off, never paged
@@ -464,12 +529,13 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual([o['label'] for o in chart['menu']['options']], ['All years', '2024'])
 
     def page(self, event, sent, text, template, replies, repage_of=()):
-        """Send a page for `event` at `sent`. `replies` maps each member it
-        went to onto the seconds they took to reply, or None for no reply. A
-        repage lists the pages before it, the first first, as `repage_of`."""
+        """Send a page for `event` at `sent`, with the reply template named
+        `template`, or none. `replies` maps each member it went to onto the
+        seconds they took to reply, or None for no reply. A repage lists the
+        pages before it, the first first, as `repage_of`."""
         message = Message.objects.create(author=self.member, text=text, format='page',
                                          period=event.period_set.first(),
-                                         rsvp_template=RsvpTemplate.objects.get_or_create(name=template)[0],
+                                         rsvp_template=template and RsvpTemplate.objects.get_or_create(name=template)[0],
                                          ancestry=', '.join(str(page.id) for page in repage_of) or None,
                                          linked_rsvp=repage_of[-1] if repage_of else None)
         Message.objects.filter(id=message.id).update(created_at=sent)
@@ -521,6 +587,23 @@ class UnitActivityTestCase(ActivityTestCase):
                          [('All years', 'Callouts to members, by hour and time to reply, 2021 to Present'),
                           ('2024', 'Callouts to members, by hour and time to reply, 2024')])
 
+    def test_a_team_sets_how_soon_a_reply_or_a_departure_is_quick(self):
+        event = self.make_event('operation', when(2024, 2, 7), attended=[self.member])
+        self.page(event, when(2024, 2, 7) - timedelta(hours=6), 'Callout', 'Available?',
+                  {self.member: 30, self.other: 300, self.third: 1200})
+        for month, minutes in ((3, 5), (4, 15), (5, 30)):
+            sent = when(2024, month, 7)
+            out = self.make_event('operation', sent + timedelta(minutes=minutes), attended=[self.member])
+            self.page(out, sent, 'Immediate callout', 'Available?', {})
+        with override_settings(ACTIVITY_REPORTS={'REPLY_MINUTES': (1, 10), 'DEPARTURE_MINUTES': (10, 20)}):
+            row = self.years()[2024]
+            self.assertEqual(row.replies, {'minutes': 1, 'hour': 1, 'later': 1, 'untimed': 0, 'none': 0})
+            self.assertEqual(row.first_out, {'half': 1, 'hour': 1, 'later': 1, 'none': 0})
+            self.assertEqual([k['label'] for k in self.panel('replies', '')['key']][:3],
+                             ['Within 1 minute', 'Over 1, up to 10 minutes', 'Over 10 minutes'])
+            self.assertEqual([k['label'] for k in self.panel('immediate', '')['key']][:3],
+                             ['Within 10 minutes', 'Over 10, up to 20 minutes', 'Over 20 minutes'])
+
     def test_a_page_and_its_repages_count_once_for_each_member_timed_from_the_first(self):
         event = self.make_event('operation', when(2024, 2, 7), attended=[self.member])
         dee = self.make_member('Dee', 'T')
@@ -567,6 +650,16 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(self.years()[2024].first_out, {'half': 1, 'hour': 0, 'later': 1, 'none': 2})
         self.assertEqual(self.chart('immediate')['measures'][0]['title'],
                          'Immediate callouts, by time to first departure, 2024')
+
+    def test_a_departure_counts_before_its_member_logs_a_return(self):
+        # An immediate page at noon; two members logged as left, at 12:45 and 12:10, and nothing more yet.
+        event = self.make_event('operation', when(2024, 2, 7), no_time=[self.member])
+        self.page(event, when(2024, 2, 7), 'Immediate callout', 'Available?', {self.member: 60})
+        period = event.period_set.first()
+        Participant.objects.filter(period=period, member=self.member).update(
+            en_route_at=when(2024, 2, 7) + timedelta(minutes=45))
+        Participant.objects.create(period=period, member=self.other, en_route_at=when(2024, 2, 7) + timedelta(minutes=10))
+        self.assertEqual(self.years()[2024].first_out, {'half': 1, 'hour': 0, 'later': 0, 'none': 0})
 
     def test_the_same_time_logged_on_two_periods_is_not_a_long_day(self):
         event = self.make_event('operation', when(2024, 2, 7), attended=[self.member], hours=7)
@@ -620,6 +713,13 @@ class UnitActivityTestCase(ActivityTestCase):
                           '| 1 of 2 days | 1 of 3 or more days'])
         self.assertEqual([k['label'] for k in self.chart('runs')['views'][0]['panels'][0]['key']],
                          ['1 day, up to 12 hours', '1 day, over 12 hours', '2 days', '3 or more days'])
+
+    def test_a_team_sets_how_many_hours_make_a_long_day(self):
+        self.make_event('operation', when(2024, 2, 7), attended=[self.member], hours=7)
+        with override_settings(ACTIVITY_REPORTS={'LONG_DAY': 6}):
+            self.assertEqual(self.years()[2024].runs, {'day': 0, 'long_day': 1, 'two': 0, 'more': 0})
+            self.assertEqual([k['label'] for k in self.panel('runs', '')['key']][:2],
+                             ['1 day, up to 6 hours', '1 day, over 6 hours'])
 
     def members_coming_and_going(self):
         """Ann, there as the records start in 2020, gone for more than 12 months, back in 2024. Bob, who
@@ -693,10 +793,10 @@ class UnitActivityTestCase(ActivityTestCase):
         self.make_event('training', when(2023, 1, 9), attended=[self.member, self.other])
         self.make_event('training', when(2023, 12, 31), attended=[self.member])      # a Sunday, local time
         self.make_event('training', when(2024, 6, 1), attended=[self.other])
-        for day, known, left in ((30, False, 0), (31, True, 1)):
-            row = unit_rows(when(2024, 12, day))['years'][2023]
-            # 365 days after Ann's last day she has not left yet; 366 days after, she has.
-            self.assertEqual((row.left_known[12], row.flows[12]['left']), (known, left), day)
+        for now, known, left in ((when(2024, 12, 31), False, 0), (when(2025, 1, 1), True, 1)):
+            row = unit_rows(now)['years'][2023]
+            # Twelve calendar months after Ann's last day she has not left yet; the day after, she has.
+            self.assertEqual((row.left_known[12], row.flows[12]['left']), (known, left), now)
 
     def test_the_retention_charts_say_it_in_lines(self):
         self.members_coming_and_going()
@@ -733,6 +833,42 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual([[band[(part['colour'], part.get('ramp'))] for part in cell['parts'] if part['sizes'][0]]
                           for cell in panel['cells'][-2:]],
                          [['Joined 2013 or earlier'], ['Over 10 years']])
+
+    def test_a_team_sets_on_how_many_days_a_member_has_joined(self):
+        # Records from 2020; a meeting in 2021, then one day at an operation in 2022.
+        self.make_event('training', when(2020, 3, 7), attended=[self.other])
+        self.make_event('meeting', when(2021, 3, 7), attended=[self.member])
+        self.make_event('operation', when(2022, 3, 7), attended=[self.member])
+        for joined_at, joined in ((2, 2021), (1, 2022)):            # their first event, or that day
+            with override_settings(ACTIVITY_REPORTS={'JOINED_AT': joined_at}):
+                self.assertEqual(self.years()[2022].active[joined], 1, joined_at)
+        with override_settings(ACTIVITY_REPORTS={'JOINED_AT': 2}):
+            self.assertTrue(dict(unit_activity(NOW)['glossary'])['Joined'].startswith(
+                "A member's second day at an operation or a training not open to guests; with fewer than two, "))
+
+    def test_a_team_sets_the_months_after_which_a_member_has_left(self):
+        # Trainings in January and September 2023: eight months apart, and nine before today.
+        for month in (1, 9):
+            self.make_event('training', when(2023, month, 7), attended=[self.member])
+        with override_settings(ACTIVITY_REPORTS={'LEFT_AFTER': (6, 18)}):
+            row = self.years()[2023]
+            self.assertEqual(row.flows, {6: {'joined': 0, 'came_back': 1, 'left': 1, 'left_returned': 1},
+                                         18: {'joined': 0, 'came_back': 0, 'left': 0, 'left_returned': 0}})
+            self.assertEqual(sum(row.active.values()), 1)             # active once, though in two stretches
+            self.assertEqual([v['label'] for v in self.chart('flows')['views']], ['6 months', '18 months'])
+            self.assertTrue(dict(unit_activity(NOW)['glossary'])['Left'].startswith(
+                '6 months have passed without an operation, training or community event (18 where switched). '))
+
+    def test_months_without_activity_are_calendar_months(self):
+        # Records from 2022. One member out on 1 March 2023 and 1 March 2024: twelve months to the day, across
+        # 29 February, so they never left; another out on 1 March 2023 and 2 March 2024, a day more, left.
+        self.make_event('training', when(2022, 3, 7), attended=[self.third])
+        for member, back in ((self.member, 1), (self.other, 2)):
+            self.make_event('training', when(2023, 3, 1), attended=[member])
+            self.make_event('training', when(2024, 3, back), attended=[member])
+        with override_settings(ACTIVITY_REPORTS={'LEFT_AFTER': (12,)}):
+            years = self.years()
+            self.assertEqual((years[2023].flows[12]['left_returned'], years[2024].flows[12]['came_back']), (1, 1))
 
     def test_a_member_who_leaves_and_comes_back_twice(self):
         for year in (2016, 2019, 2022):          # three years apart each time
@@ -810,30 +946,62 @@ class UnitActivityTestCase(ActivityTestCase):
                          '| 0.0 Technical Member | 0.0 Other status')
 
     def test_which_trainings_are_open_to_guests(self):
-        from main.lib.unit_counting import GUEST_FRIENDLY
-        for title in ('SAR Basic', 'sar basic 2', 'SAR-Basic', 'Map and compass *G', 'Low Angle * G - rigging',
-                      'Sign cutting G*', 'Winter skills *g', 'Navigation (g)', 'Mock rescue G',
+        # The default, read ignoring case, as patterns are.
+        guest_friendly = re.compile(report_settings().GUEST_FRIENDLY_TITLE, re.IGNORECASE)
+        for title in ('SAR Basic', 'sar basic 2', 'SAR-Basic', 'Map and compass *G', 'Steep ground * G - rigging',
+                      'Sign cutting G*', 'Ice axe drill *g', 'Map reading (g)', 'Mock rescue G',
                       'Guest mock rescue', 'First aid (Guest Friendly)', 'Ridge guest hike', 'Open to guests',
-                      'Volcano guest hike', 'Open for guests', 'For guests: navigation'):
-            self.assertTrue(GUEST_FRIENDLY.search(title), title)
+                      'Volcano guest hike', 'Open for guests', 'For guests: map reading'):
+            self.assertTrue(guest_friendly.search(title), title)
         for title in ('Map and compass *', 'Low Angle', 'Glacier travel', 'Rigging', 'Dog team night', 'Guesthouse rescue',
-                      'Sat comms', 'Tracking guest lecturer', 'Guest-lecturer night', 'Guest speaker: avalanche',
+                      'Sat comms', 'Cartography guest lecturer', 'Guest-lecturer night', 'Guest speaker: avalanche',
                       'Medical guest lecture', 'Rope rescue with guest instructor', 'Avalanche talk, guest presenter',
                       'Helicopter ops (no guests)', 'Members only, no guests', 'no  guests (members only)',
                       'No-guests drill', 'NO GUESTS', 'Not for guests', 'Rigging, not  for guests',
                       'Not-for-guests drill', '4G/LTE comms', 'Comms over 4G', 'Type G litter rigging',
-                      'G.P.S. navigation', 'Plan G drill'):
-            self.assertFalse(GUEST_FRIENDLY.search(title), title)
+                      'G.P.S. map reading', 'Plan G drill'):
+            self.assertFalse(guest_friendly.search(title), title)
+
+    def test_a_team_sets_which_trainings_are_open_to_guests(self):
+        for day, title in ((7, 'SAR Basic'), (8, 'Open day drill')):
+            event = self.make_event('training', when(2024, 2, day), attended=[self.member])
+            Event.objects.filter(id=event.id).update(title=title)
+        with override_settings(ACTIVITY_REPORTS={'GUEST_FRIENDLY_TITLE': r'open\s+day'}):
+            self.assertEqual([entry.members_only for entry in unit_entries(NOW)], [True, False])
 
     def test_which_pages_start_an_immediate_callout(self):
-        from main.lib.unit_counting import IMMEDIATE
+        # The default, read ignoring case, as patterns are, from the start of a page's text.
+        starts_immediate = re.compile(report_settings().IMMEDIATE_CALLOUT, re.IGNORECASE)
         for text in ('Immediate callout: search', 'IMMEDIATE Callout', 'Repage: Immediate callout: search',
                      'Repage: Repage: Immediate callout', 'Re: immediate callout', 'Repage 2: Immediate callout',
-                     'UPDATE: Immediate callout', 'Fwd: Immediate callout', 'FW: Re: immediate callout'):
-            self.assertTrue(IMMEDIATE.match(text), text)
+                     'UPDATE: Immediate callout', 'Fwd: Immediate callout', 'FW: Re: immediate callout',
+                     'UPDATE #1: IMMEDIATE', 'Repage #2: Immediate callout',
+                     # As the page form begins a page, and as a repage of it begins.
+                     'Ridge search OP1: Immediate callout', 'Repage: Ridge search OP2: Immediate callout'):
+            self.assertTrue(starts_immediate.match(text), text)
         for text in ('CANCELLED - immediate callout for overdue biker', 'Heads Up: may become immediate',
-                     'Delayed callout, not immediate', 'Immediately cancel the search'):
-            self.assertFalse(IMMEDIATE.match(text), text)
+                     'Delayed callout, not immediate', 'Immediately cancel the search', 'Cancel immediate callout',
+                     'Ridge search OP1: may become immediate'):
+            self.assertFalse(starts_immediate.match(text), text)
+
+    def test_a_page_of_many_words_put_before_is_read_at_once(self):
+        # Words put before that a page then does not follow with "immediate": each read once, not tried in
+        # every way the spaces between them could be split.
+        starts_immediate = re.compile(report_settings().IMMEDIATE_CALLOUT, re.IGNORECASE)
+        for crafted in ('Repage  ' * 30 + 'x', 'Repage #2 ' * 30 + 'x', 'Fwd: ' * 30 + 'Ridge search OP1: x'):
+            start = time.perf_counter()
+            self.assertFalse(starts_immediate.match(crafted))
+            self.assertLess(time.perf_counter() - start, 0.5, crafted[:20])
+
+    def test_a_team_sets_which_pages_start_an_immediate_callout_and_how_the_glossary_says_so(self):
+        for month, text in ((1, 'URGENT: search'), (2, 'Immediate callout: search')):
+            event = self.make_event('operation', when(2024, month, 7) + timedelta(minutes=20), attended=[self.member])
+            self.page(event, when(2024, month, 7), text, 'Available?', {self.member: 60})
+        with override_settings(ACTIVITY_REPORTS={'IMMEDIATE_CALLOUT': r'urgent\b',
+                                                 'IMMEDIATE_CALLOUT_SAID': 'starting "Urgent"'}):
+            self.assertEqual(self.years()[2024].first_out, {'half': 1, 'hour': 0, 'later': 0, 'none': 0})
+            self.assertTrue(dict(unit_activity(NOW)['glossary'])['Immediate callout'].startswith(
+                'An operation with a callout page starting "Urgent". Timed from'))
 
     def test_the_report_asks_the_database_a_fixed_number_of_questions(self):
         # The same questions however many events and members there are: one query for all of each.
@@ -842,8 +1010,9 @@ class UnitActivityTestCase(ActivityTestCase):
             self.page(event, when(2024, month, 7), 'Immediate callout', 'Available?', {self.member: 60})
         self.make_event('operation', when(2024, 5, 7), no_time=[self.member])       # did not run
         # Which operations ran is read from the entries already read, not asked again; one question asks
-        # which of those that did not run were only heads-ups.
-        with self.assertNumQueries(8):
+        # which of those that did not run were only heads-ups, and one when members left home on immediate
+        # callouts, from entries whether or not their times are complete.
+        with self.assertNumQueries(10):
             unit_rows(NOW)
 
     def test_days_after_today_do_not_count_yet(self):
@@ -906,22 +1075,25 @@ class UnitActivityTestCase(ActivityTestCase):
 
     def test_each_chart_band_is_a_category_the_report_counts(self):
         # The charts draw a band for each category the counting splits a count by, in its order. Every set
-        # of bands is defined once, at the top of the module, and listed here.
+        # of bands is defined once, at the top of the module, or built there from a team's rules, and listed here.
         from main.lib import unit_activity as drawn, unit_counting as counted
-        counted_in = [(drawn.WEEK, counted.PARTS_OF_WEEK.names), (drawn.SIZE_KEY, counted.SIZES),
-                      (drawn.DID_NOT_RUN, counted.NOT_RUN), (drawn.STATUSES, counted.STATUSES_COUNTED),
-                      (drawn.RUNS, counted.RUN_LENGTHS), (drawn.REPLIES, counted.REPLY_KINDS),
-                      (drawn.DEPARTED, counted.DEPARTURE_KINDS), (drawn.FLOWS, counted.FLOW_KINDS),
+        built = [drawn.size_bands(), drawn.reply_bands(), drawn.departure_bands(), drawn.run_bands(),
+                 drawn.status_bands()]
+        counted_in = [(drawn.WEEK, counted.PARTS_OF_WEEK.names), (built[0], counted.SIZES),
+                      (drawn.DID_NOT_RUN, counted.NOT_RUN),
+                      (built[4], report_settings().BANDED_STATUSES + (counted.OTHER_STATUS,)),
+                      (built[3], counted.RUN_LENGTHS), (built[1], counted.REPLY_KINDS),
+                      (built[2], counted.DEPARTURE_KINDS), (drawn.FLOWS, counted.FLOW_KINDS),
                       (drawn.TENURE, drawn.YEARS_SINCE_JOINING.names)]
         counted_in += [(drawn.MEMBERS[t], counted.ROLES) for t in TYPES]
         for bands, names in counted_in:
             self.assertEqual(tuple(band.name for band in bands), tuple(names))
-        defined = [v for v in vars(drawn).values() if isinstance(v, drawn.Bands)] + list(drawn.MEMBERS.values())
+        defined = [v for v in vars(drawn).values() if isinstance(v, drawn.Bands)] + list(drawn.MEMBERS.values()) + built
         self.assertEqual(sorted(map(id, defined)), sorted(id(bands) for bands, _ in counted_in))
-        # The only bands of no counted category split what is read from operation times at OPERATION_TIMES_FROM.
+        # Every band defined on its own is in one of those sets. Those of no counted category are built: they
+        # split what is read from operation times at OPERATION_TIMES_FROM (early_band and from_times_band).
         in_sets = {band for bands, _ in counted_in for band in bands}
-        self.assertEqual({v for v in vars(drawn).values() if isinstance(v, drawn.Band)} - in_sets,
-                         {drawn.EARLY, drawn.FROM_TIMES})
+        self.assertEqual({v for v in vars(drawn).values() if isinstance(v, drawn.Band)} - in_sets, set())
         self.assertLess(set(drawn.DEPARTURES), set(counted.FLOW_KINDS))
         self.assertEqual(tuple(drawn.WHO), counted.WHOSE)
         self.assertEqual(tuple(drawn.COUNTED), counted.MEASURES)
@@ -932,6 +1104,12 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(first_year({2019, 2022, 2024}), 2019)
         self.assertEqual(first_year({2018, 2022, 2024}), 2022)
         self.assertEqual(first_year({2024}), 2024)
+
+    def test_a_team_sets_how_many_empty_years_mark_a_stray_record(self):
+        # Three empty years after 2016, then one after 2020.
+        for stray_before, first in ((1, 2022), (2, 2020), (4, 2016)):
+            with override_settings(ACTIVITY_REPORTS={'STRAY_BEFORE': stray_before}):
+                self.assertEqual(first_year({2016, 2020, 2022}), first, stray_before)
 
     def test_a_stray_record_does_not_size_the_responders_chart(self):
         # Four out on a stray operation in 1995; two at most since 2022. The columns run to 2 responders.
@@ -1047,6 +1225,16 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertFalse(grey(self.panel('members', 'Trainings')['cells'][0]))
         self.assertNotIn(since, [k['label'] for k in self.panel('members', 'Trainings')['key']])
 
+    def test_a_team_sets_the_year_from_which_operation_times_were_logged(self):
+        for year in (2019, 2021):
+            self.make_event('operation', when(year, 2, 7), attended=[self.member])
+        with override_settings(ACTIVITY_REPORTS={'OPERATION_TIMES_FROM': 2020}):
+            cells = self.panel('operations', '')['cells']
+            self.assertEqual([[part['colour'] for part in cell['parts'] if part['sizes'][0]] for cell in cells[:3]],
+                             [['muted'], [], ['1-light']])               # 2019 grey; 2020 empty; 2021 by size
+            self.assertEqual(self.panel('operations', '')['key'][-1]['label'], 'Before 2020')
+            self.assertIn(('Before 2020', 'Few operations had their times logged.'), unit_activity(NOW)['glossary'])
+
     def test_the_activity_reports_paths_are_theirs_and_not_activity_types(self):
         from django.urls import resolve
         from main.views import ReportEventMemberView, ReportUnitActivityView
@@ -1059,6 +1247,15 @@ class UnitActivityTestCase(ActivityTestCase):
     def local(self, year, month, day, hour, minute=0):
         """A time on the local clock, in California."""
         return timezone.make_aware(datetime(year, month, day, hour, minute))
+
+    def test_the_responders_menu_takes_in_operation_days_before_any_operation_started(self):
+        # An operation from just after midnight on New Year's Day 2016, its responder out from 30 December.
+        event = self.make_event('operation', self.local(2016, 1, 1, 0, 30), no_time=[self.member])
+        Participant.objects.filter(period=event.period_set.first()).update(
+            en_route_at=self.local(2015, 12, 30, 12), return_home_at=self.local(2016, 1, 2, 12))
+        chart = self.chart('responders')
+        self.assertEqual([o['label'] for o in chart['menu']['options']], ['All years', '2016', '2015'])
+        self.assertEqual(self.drawn('responders', '', view=1, option='2015'), [True])      # its two days in 2015
 
     def test_an_entry_flagged_both_ahc_and_ol_is_the_ahc_and_does_not_lead(self):
         event = self.make_event('operation', when(2024, 2, 7), attended=[self.member])
@@ -1167,7 +1364,7 @@ class UnitActivityTestCase(ActivityTestCase):
                          [['muted'], ['1-light']])
         responders = self.panel('responders', '')['cells'][0]
         self.assertEqual(responders['tips'][0]['lines'][:2], [{'number': 1, 'label': 'from 2013'},
-                                                              {'number': 1, 'label': EARLY.said}])
+                                                              {'number': 1, 'label': early_band().said}])
 
     def test_the_days_and_status_charts_start_on_hours(self):
         # Each starts on Hours, its title the hours one, and its switch still reads Days, Events, Hours.
@@ -1187,6 +1384,7 @@ class UnitActivityTestCase(ActivityTestCase):
             self.assertIn('<input type="radio" name="{}-measure" checked><span>Hours</span>'.format(name), html)
 
     def test_page(self):
+        self.paging_began()
         self.make_event('operation', when(2024, 2, 7), attended=[self.member])
         self.member.set_password('password')
         self.member.save()
@@ -1212,15 +1410,15 @@ class UnitActivityTestCase(ActivityTestCase):
         # One glossary at the foot: the terms both activity reports share, then this report's own.
         self.assertContains(response, '<caption>Glossary</caption>')
         self.assertContains(response, '<th scope="row">Day attended</th>')
-        self.assertContains(response, '<th scope="row">Called off</th><td>The operation was called out with an '
-                                      'availability page, and has finished with no member other than the AHC having '
-                                      'a day attended on it up to today. Before 13 Feb 2019, when pages first said '
-                                      'which they were, every operation that did not run counts here, pages or '
-                                      'not.</td>')
-        self.assertContains(response, '<th scope="row">Heads-up only</th><td>The operation has finished with no '
-                                      'availability page sent, only heads-ups or no page at all, and no member other '
-                                      'than the AHC has a day attended on it up to today. Told apart from 13 Feb '
-                                      '2019.</td>')
+        self.assertContains(response, '<th scope="row">Called off</th><td>The operation has finished with no member '
+                                      'other than the AHC having a day attended on it up to today, and was called out '
+                                      'with an availability page. Before 13 Feb 2019, when pages first said which '
+                                      'they were, every operation that did not run counts here, pages or not, unless '
+                                      'its title calls it a heads-up or it was never used (Events left out).</td>')
+        self.assertContains(response, '<th scope="row">Heads-up only</th><td>The operation has finished with no member '
+                                      'other than the AHC having a day attended on it up to today, and no availability '
+                                      'page was sent: only heads-ups, or no page at all. Before 13 Feb 2019, it counts '
+                                      'here if its title calls it a heads-up.</td>')
         # Every control says what it sets.
         self.assertEqual([(c['name'], c['measure_switch_label'], c['view_switch_label'])
                           for c in response.context['activity']['charts'] if c['name'] in ('days', 'flows')],

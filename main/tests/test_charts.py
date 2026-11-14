@@ -17,6 +17,8 @@ class ChartsTestCase(TestCase):
     def test_axis_top(self):
         self.assertEqual([axis_top(n) for n in (0, 1, 3, 7, 13, 38, 54, 96, 103)],
                          [2, 2, 4, 8, 20, 40, 60, 100, 120])
+        # Hours added up in floating point top the axis where their sum does.
+        self.assertEqual(axis_top(0.1 * 3 * 66.66666666666667), 20)
 
     MEASURES = [{'label': 'Days', 'title': 'Days'}]
 
@@ -447,6 +449,12 @@ class ChartsTestCase(TestCase):
         html = render_to_string('charts/share_panels.html', {'chart': share_panels(self.MEASURES, [view])})
         self.assertIn('<input type="radio" name="chart-scale" class="chart-pick-own"><span>Separate</span>', html)
         self.assertIn('<input type="radio" name="chart-scale" checked><span>Shared</span>', html)
+
+    def test_a_column_far_below_the_largest_is_drawn_as_a_hairline(self):
+        # One of 100,000 is 0.001% of the shared axis, which two places would make nothing.
+        chart = share_panels(self.MEASURES, [self.view([[(1, 1)], [(100000, 100000)]])])
+        small = chart['views'][0]['panels'][0]['cells'][0]
+        self.assertEqual((small['shared'], small['own']), ([0.01], [50]))
 
     def test_one_scale(self):
         # With one scale, a small series is drawn against the largest total.
