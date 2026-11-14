@@ -44,6 +44,19 @@ class ReportSettingsTestCase(SimpleTestCase):
             "'TEST_TITLE'] has *+": {'TEST_TITLE': r'(test )*+event'},
             "'TEST_TITLE'] has [:": {'TEST_TITLE': r'^[[:alpha:]]+$'},
             "'TEST_TITLE'] has \\1": {'TEST_TITLE': r'(test)\1'},
+            # Braces only as a bound both read: {n}, {n,} or {n,m}, each up to 255, with nothing else between them.
+            "'TEST_TITLE'] has {,3}": {'TEST_TITLE': r'^\W*test\W{,3}$'},
+            "'TEST_TITLE'] has {0,300}": {'TEST_TITLE': r'^te{0,300}st'},
+            "'TEST_TITLE'] has {1, which": {'TEST_TITLE': r'test{1'},
+            "'HEADS_UP_TITLE'] has {1, 2}": {'HEADS_UP_TITLE': r"head(s|['’]s)[\s-]{1, 2}up"},
+            # And no quantifier after a lookaround, which Postgres refuses.
+            "'TEST_TITLE'] has )*": {'TEST_TITLE': r'^(?:test|drill)(?=\W)*'},
+            "'TEST_TITLE'] has )?": {'TEST_TITLE': r'(?<=\W)?test'},
+            # A pattern too large to compile is refused as one, not by an error the check does not catch.
+            "'IMMEDIATE_CALLOUT'] is not a pattern": {'IMMEDIATE_CALLOUT': 'a{4294967296}'},
+            # Months that a date can be counted forward by.
+            "'LEFT_AFTER'] is at most 120 months": {'LEFT_AFTER': (12, 24, 120000)},
+            "'MAX_ENTRY_DAYS'] is at most 366 days": {'MAX_ENTRY_DAYS': 10 ** 9},
             "'SINGLE_DAY_HOURS'] is above zero": {'SINGLE_DAY_HOURS': 0},
             "'GUEST_FRIENDLY_TITLE'] is not a pattern": {'GUEST_FRIENDLY_TITLE': 'guests ('},
             "'LEFT_AFTER'] is one or more numbers above zero, each more than the last": {'LEFT_AFTER': (24, 12)},
@@ -63,7 +76,9 @@ class ReportSettingsTestCase(SimpleTestCase):
             self.assertIn('is a dict of the keys to change', check_report_settings(None)[0].msg)
         self.assertEqual(check_report_settings(None), [])
         # A pattern that only Python reads may use what Python has, and a title pattern what both read alike.
-        with override_settings(ACTIVITY_REPORTS={'GUEST_FRIENDLY_TITLE': r'(?-i:\sG$)', 'TEST_TITLE': r'^(?:drill|test)(?=\W|$)'}):
+        with override_settings(ACTIVITY_REPORTS={
+                'GUEST_FRIENDLY_TITLE': r'(?-i:\sG$)', 'TEST_TITLE': r'^(?:drill|test)(?=\W|$)',
+                'HEADS_UP_TITLE': r"^\W{0,3}head(s|['’]s)?[\s-]{1,}up\{1\}(\W{2}|$)"}):
             self.assertEqual(check_report_settings(None), [])
 
 
@@ -120,6 +135,10 @@ class TeamRulesTestCase(ActivityTestCase):
         with override_settings(ACTIVITY_REPORTS={'DAY_HOURS': 3, 'SINGLE_DAY_HOURS': 10}):
             self.assertIn('at least 3 hours', dict(glossary())['Day attended'])
             self.assertIn('10 hours or less as one day', dict(glossary())['Day attended'])
+        # A setting of one is written in the singular.
+        with override_settings(ACTIVITY_REPORTS={'DAY_HOURS': 1, 'SINGLE_DAY_HOURS': 1}):
+            self.assertIn('at least 1 hour logged', dict(glossary())['Day attended'])
+            self.assertIn('1 hour or less as one day', dict(glossary())['Day attended'])
 
     def test_max_entry_days(self):
         # Three days by the clock: a mistake, one day and no hours, where the limit is two.

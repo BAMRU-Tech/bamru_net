@@ -29,7 +29,6 @@ the report's glossary; this says what the code decides beyond them.
   GUEST_FRIENDLY_TITLE and LEFT_AFTER, and REPORTABLE). Whoever joined in the records' first year may have
   joined earlier, so they are kept apart.
 """
-import calendar
 import re
 from bisect import bisect_right
 from collections import Counter, defaultdict
@@ -41,7 +40,7 @@ from django.db.models.functions import Lag
 from django.utils import timezone
 
 from main.lib.counting import (HAS_TIME, IN_FIELD, TYPES, NotRun, end_of_today, entries_hours, entry_led, first_claims,
-                               first_year, hours_by_local_day, logged_span, operations_not_run,
+                               hours_by_local_day, logged_span, months_after, operations_not_run, records_from,
                                reply_templates_from, reported_events, too_long, unit_days_and_events)
 from main.lib.report_settings import report_settings
 from main.models import Distribution, Member, Message, Participant
@@ -112,13 +111,14 @@ class UnitEntry(NamedTuple):
         return self.type == 'operation' and self.in_field
 
 
-def unit_entries(now):
+def unit_entries(now, since=None):
     """The entries this report counts, as UnitEntry records: each member's
-    logged time on an event with a day it counts for by now. Guests' time is
-    left out. Every event counts, published on the calendar or not: members
-    can see them all."""
+    logged time on an event with a day it counts for by now, of events begun
+    from `since` (counting.records_from), which none dated earlier claims.
+    Guests' time is left out. Every event counts, published on the calendar
+    or not: members can see them all."""
     rows = list(
-        Participant.objects.filter(HAS_TIME, period__event__in=reported_events())
+        Participant.objects.filter(HAS_TIME, period__event__in=reported_events(since))
         .exclude(member__status__in=Member.GUESTS)
         .annotate(in_field=ExpressionWrapper(IN_FIELD, output_field=BooleanField()))
         .order_by('period__event__start_at', 'period__event_id', 'period__position', 'id')   # member_entries'
@@ -138,7 +138,8 @@ def unit_entries(now):
     claimed_hours = {}                   # entry -> {local day: hours} it counts for by now
     for logged in by_member.values():
         claimed_hours.update(zip([entry_id for entry_id, _, _ in logged],
-                           entries_hours([(start_at, *times) for _, start_at, times in logged], now, tz)))
+                           entries_hours([(start_at, *times) for _, start_at, times in logged], now, tz,
+                                         since)))
     # Time after today counts nothing yet: an entry's hours stop at today (entries_hours), and the time
     # it logged where counting stops (counting.end_of_today), so no total counts it.
     counting_stops = end_of_today(now, tz)
@@ -158,20 +159,14 @@ def unit_entries(now):
             hours=hours, span=None if too_long(start, end, tz) else (start, min(end, counting_stops)))
 
 
-def _months_after(day, months):
-    """The day `months` calendar months after `day`, or the last of its month
-    where that month is shorter (29 February to 28 February)."""
-    year, month = divmod(day.month - 1 + months, 12)
-    year, month = day.year + year, month + 1
-    return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
-
-
 def _spells(member_days, months):
     """A member's stretches of days, oldest first, with no gap of more than
     `months` calendar months between days: [first day, last day] for each."""
     spells = [[member_days[0], member_days[0]]]
     for day in member_days[1:]:
-        if day > _months_after(spells[-1][1], months):
+        # No calendar month is shorter than 28 days, so only a longer gap needs the calendar.
+        gap = (day - spells[-1][1]).days
+        if gap > 28 * months and day > months_after(spells[-1][1], months):
             spells.append([day, day])
         else:
             spells[-1][1] = day
@@ -223,7 +218,7 @@ def _retention(entries, today, report_from):
                     flows[months]['came_back'][first.year] += 1
                 elif cohort != records_from:             # nobody is known to have joined as the records start
                     flows[months]['joined'][first.year] += 1
-                if today > _months_after(last, months):
+                if today > months_after(last, months):
                     flows[months]['left' if number == len(spells) - 1 else 'left_returned'][last.year] += 1
         # Active in each year of a stretch, the year of its last day included, and once in a year that two
         # stretches share.
@@ -250,7 +245,7 @@ def _stretches(entries):
     """Each member's stretches of days in a row in the field on operations,
     by how long they ran: Counter((the year it started, one of RUN_LENGTHS)).
     An entry too long to be right is left out."""
-    long_day = report_settings().LONG_DAY
+    long_day = timedelta(hours=report_settings().LONG_DAY)
     outings = defaultdict(list)          # member -> (its days, (start, end) logged) for each entry in the field
     for entry in entries:
         if entry.responder and entry.span:
@@ -264,10 +259,10 @@ def _stretches(entries):
                 continue
             length = at - first + 1
             if length == 1:
-                # Time logged twice, on two periods say, counts once.
-                logged = sum((end - start).total_seconds() / 3600
-                             for start, end in filter(None, first_claims([span for days, span in member_outings
-                                                                          if day in days])))
+                # Time logged twice, on two periods say, counts once. Added up as times, which are exact, as
+                # fractions of an hour are not: 12 hours in three parts may come to a little over 12.
+                claims = first_claims([span for days, span in member_outings if day in days])
+                logged = sum((end - start for start, end in filter(None, claims)), timedelta())
                 name = 'long_day' if logged > long_day else 'day'
             else:
                 name = 'two' if length == 2 else 'more'
@@ -550,7 +545,7 @@ def _unit_year(year, counts, today):
                 for cohort in range(counts.retention.records_from, today.year + 1)},
         # Who left in a year is known once more than that many months have passed since its last day, the
         # day after which a member last there on it has left.
-        left_known={months: _months_after(date(year, 12, 31), months) < today for months in rules.LEFT_AFTER},
+        left_known={months: months_after(date(year, 12, 31), months) < today for months in rules.LEFT_AFTER},
         flows={months: {kind: counts.retention.flows[months][kind][year] for kind in FLOW_KINDS}
                for months in rules.LEFT_AFTER})
 
@@ -559,9 +554,10 @@ def unit_rows(now=None):
     """Count the unit's days, hours, operations and the people on them by
     year. The entries are read once (unit_entries), and each kind of figure is
     counted from them by a function of its own; _unit_year puts the counts
-    into a row for each year from the earliest record to this one. Returns
-    {'today': ..., 'first_year': the year the report starts, after any stray
-    early record (first_year), 'years': {year: UnitYear}, ...}, and what the
+    into a row for each year from the unit's first year of records to this
+    one. Nothing dated before that year counts (counting.records_from): no
+    event begun earlier, no day and no page sent. Returns {'today': ...,
+    'first_year': that year, 'years': {year: UnitYear}, ...}, and what the
     charts without years add up, each with its day: 'responded' and
     'day_responded' [(day, responder count)] for operations that ran and for
     days the unit was out, 'first_pages' [local time of each operation's
@@ -572,36 +568,35 @@ def unit_rows(now=None):
     (counting.reply_templates_from), None if none has."""
     now = now or timezone.now()
     today = timezone.localtime(now).date()
-    entries = list(unit_entries(now))
+    since = records_from(now)
+    first = since.year if since else today.year
+    events = reported_events(since)
+    entries = list(unit_entries(now, since))
     responders = _responders(entries)
     templates_from = reply_templates_from()
     # The callout pages sent up to now: pages for operations that ask who can go, by the name of their
     # reply template: callout pages, and heads-ups, which count as callout pages here, as members are
     # asked to reply quickly to those too.
     rules = report_settings()
-    callout_pages = Message.objects.filter(format='page', period__event__in=reported_events(),
+    callout_pages = Message.objects.filter(format='page', period__event__in=events,
                                            period__event__type='operation', created_at__lte=now,
                                            rsvp_template__name__in=(rules.CALLOUT_TEMPLATE, rules.HEADS_UP_TEMPLATE))
     participation = _participation(entries)
     operations = _operations(entries, responders, now, templates_from)
-    # A year has a row when anything is counted in it: a day attended, an event (in the year it started)
-    # or an operation. The report starts in the first of them, after any stray early record, or this year
-    # when there is nothing; joining is counted from then on.
-    recorded = ({year for measure in ('days', 'events') for by_part in participation['people'][measure].values()
-                 for year, _ in by_part}
-                | {year for year, _ in operations.outcomes})
-    first = first_year(recorded) if recorded else today.year
     counts = UnitCounts(participation, operations, _roles(entries), _by_status(entries, responders),
                         _replies(callout_pages), _first_out(callout_pages, now), _stretches(entries),
                         _retention(entries, today, first))
-    # The local time of each operation's first page, for operations that have started.
-    first_pages = [timezone.localtime(paged_at) for paged_at in (
-        Message.objects.filter(format='page', period__event__in=reported_events(), period__event__type='operation',
+    # The local time of each operation's first page, for operations that have started; a page sent in the
+    # year before the records, for an operation begun as they start, is left out with the rest of that year.
+    first_pages = [paged for paged in (timezone.localtime(paged_at) for paged_at in (
+        Message.objects.filter(format='page', period__event__in=events, period__event__type='operation',
                                period__event__start_at__lte=now)
-        .values('period__event_id').annotate(paged_at=Min('created_at')).values_list('paged_at', flat=True))]
+        .values('period__event_id').annotate(paged_at=Min('created_at')).values_list('paged_at', flat=True)))
+        if paged.year >= first]
     return {'today': today, 'first_year': first,
-            'years': {year: _unit_year(year, counts, today)
-                      for year in range(min(recorded, default=today.year), today.year + 1)},
+            'years': {year: _unit_year(year, counts, today) for year in range(first, today.year + 1)},
             'responded': operations.responded, 'day_responded': operations.day_responded, 'first_pages': first_pages,
-            'status_from': counts.by_status.since, 'reply_hours': counts.replies.by_hour,
+            'status_from': counts.by_status.since,
+            'reply_hours': {sent: callouts for sent, callouts in counts.replies.by_hour.items()
+                            if sent[0].year >= first},
             'records_from': counts.retention.records_from, 'templates_from': templates_from}

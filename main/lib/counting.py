@@ -44,6 +44,7 @@ glossary leaves to the code:
   from it.
 - DO weeks are assigned duty officer shifts that have started.
 """
+import calendar
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import ClassVar
@@ -71,9 +72,11 @@ TYPES = [event_type for event_type, _ in EVENT_TYPES]
 LEADING = {'operation': 'OL', 'training': 'TL or LL', 'meeting': 'leader', 'community': 'leader'}
 
 def _first_operation_page():
-    """The local day of the first page sent for an operation, as a one-row
-    queryset: pages for operations were recorded from that day."""
+    """The local day of the first page sent for an operation, but for a test
+    or demonstration's (TEST_TITLE), which may have tried paging out first,
+    as a one-row queryset: pages for operations were recorded from that day."""
     return (Message.objects.filter(format='page', period__event__type='operation')
+            .exclude(period__event__title__iregex=report_settings().TEST_TITLE)
             .order_by('created_at').annotate(day=TruncDate('created_at')).values('day')[:1])
 
 
@@ -85,11 +88,12 @@ def pages_from():
     return first and first['day']
 
 
-def reported_events():
+def reported_events(since=None):
     """The events the reports count, for every query that reads events or
     entries to count: those of the types they show (TYPES), but for tests and
     demonstrations, by their title (TEST_TITLE), and operations never used:
-    a queryset of Event."""
+    a queryset of Event. With `since` (records_from), only those begun from
+    that day: one dated earlier counts nowhere."""
     rules = report_settings()
     # Pages for operations were recorded from the local day of the first, which the database finds once for
     # each query that reads this. An operation begun from then with no page sent and nobody listed was never
@@ -100,8 +104,14 @@ def reported_events():
               & ~Exists(Message.objects.filter(format='page', period__event=OuterRef('pk')))
               & ~Exists(Participant.objects.filter(period__event=OuterRef('pk')))
               & ~Q(title__iregex=rules.HEADS_UP_TITLE))
-    return (Event.objects.filter(type__in=TYPES, start_at__gte=EARLIEST).alias(start_day=TruncDate('start_at'))
-            .exclude(title__iregex=rules.TEST_TITLE).exclude(unused))
+    events = (Event.objects.filter(type__in=TYPES, start_at__gte=EARLIEST).alias(start_day=TruncDate('start_at'))
+              .exclude(title__iregex=rules.TEST_TITLE).exclude(unused))
+    return events if since is None else events.filter(start_at__gte=_midnight(since))
+
+
+def _midnight(day, tz=None):
+    """The local midnight that begins `day`."""
+    return timezone.make_aware(datetime.combine(day, time.min), tz or timezone.get_current_timezone())
 
 
 # The same rule as Participant.timedelta > 0, for use in queries.
@@ -128,17 +138,21 @@ def entry_led(event_type, ol, in_field, named):
 # earlier counts nowhere, and time logged earlier is no time, as a date typed
 # into year 1 can be read in none of them.
 EARLIEST = datetime(1, 1, 2, tzinfo=dt_timezone.utc)
+# And the last whose local day ends, in every time zone, at a midnight a date
+# can hold: time logged later is no time, as a day of 31 December 9999 cannot
+# be counted to its end.
+LATEST = datetime(9999, 12, 30, tzinfo=dt_timezone.utc)
 
 
 def logged_span(en_route_at, return_home_at, signed_in_at, signed_out_at):
     """An entry's logged time as (start, end): the travel times where both
     are given, otherwise the sign-in and sign-out times. None without time
-    logged, the rule of HAS_TIME, or from before EARLIEST."""
+    logged, the rule of HAS_TIME, or outside EARLIEST to LATEST."""
     if en_route_at is not None and return_home_at is not None:
         start, end = en_route_at, return_home_at
     else:
         start, end = signed_in_at, signed_out_at
-    if start is None or end is None or end <= start or start < EARLIEST:
+    if start is None or end is None or end <= start or start < EARLIEST or end > LATEST:
         return None
     return start, end
 
@@ -252,7 +266,7 @@ def first_claims(spans):
     return claims
 
 
-def entries_hours(entries, now, tz=None):
+def entries_hours(entries, now, tz=None, since=None):
     """For one member's entries, each (start_at, en_route_at, return_home_at,
     signed_in_at, signed_out_at), in member_entries' order so that every
     report breaks a tie alike, the hours each counts for by `now`, in that
@@ -261,16 +275,30 @@ def entries_hours(entries, now, tz=None):
     first (first_claims). An entry's days are its own, by the day rule over
     all its time; only its hours are the part it claims. An entry of an
     event not started, or too long to be right, claims no time; time after
-    today claims it, though it counts nothing yet."""
+    today claims it, though it counts nothing yet. Counted from `since`
+    (records_from) on: days before it count nothing, and an entry of an
+    event begun before it counts nowhere and claims no time, None in its
+    place."""
     tz = tz or timezone.get_current_timezone()
+    begins = since and _midnight(since, tz)
+    counts = [not begins or start_at >= begins for start_at, *_ in entries]
     spans = {}
     for i, (start_at, *times) in enumerate(entries):
         span = logged_span(*times)
-        if start_at <= now and span and not too_long(*span, tz):
+        if counts[i] and start_at <= now and span and not too_long(*span, tz):
             spans[i] = span
     claims = dict(zip(spans, first_claims(list(spans.values()))))
-    return [entry_hours(*times, start_at, now, tz, claim=(claims[i] or ()) if i in claims else None)
-            for i, (start_at, *times) in enumerate(entries)]
+    hours = []
+    for i, (start_at, *times) in enumerate(entries):
+        claim = (claims[i] or ()) if i in claims else None
+        hours.append(_counted_from(entry_hours(*times, start_at, now, tz, claim), since) if counts[i] else None)
+    return hours
+
+
+def _counted_from(hours, since):
+    """An entry's {day: hours} from the day `since` (records_from) on: the
+    days before it count nothing. All of them when `since` is None."""
+    return hours if since is None else {day: h for day, h in hours.items() if day >= since}
 
 
 def reply_templates_from():
@@ -342,7 +370,7 @@ def operations_not_run(until, ran, templates_from, operations=None):
 
 def first_year(years):
     """The year a series starts: the earliest of `years` (those with data) that
-    no gap of more than STRAY_BEFORE empty years separates from the latest, so
+    no run of STRAY_BEFORE or more empty years separates from the latest, so
     that a stray early record, such as a mistyped year, does not start it."""
     stray_before = report_settings().STRAY_BEFORE
     first = max(years)
@@ -354,28 +382,30 @@ def first_year(years):
 
 
 def records_from(now):
-    """The first day a member's report counts from: 1 January of the unit's
-    first year (first_year) of those in which an event of the types the
-    reports show had started by `now`, or a duty officer week was assigned,
-    so that a date mistyped long before the rest (0024 for 2024) counts on no
-    member's report. None with no records. One query of the years, which a
-    report makes once."""
-    years = set(Event.objects.filter(type__in=TYPES, start_at__gte=EARLIEST, start_at__lte=now)
-                .annotate(year=ExtractYear('start_at'))
-                .values_list('year', flat=True)
-                .union(DoAvailable.objects.filter(assigned=True).values_list('year', flat=True)))
+    """The first day both reports count from: 1 January of the unit's first
+    year (first_year) of those in which a report counts something by `now`:
+    an event it counts (reported_events) begun with time logged on it by a
+    member, not a guest; an operation it counts that has finished, which the
+    unit report counts as run, called off or a heads-up; or the day a duty
+    officer week counts on (_do_shift_days). So a date mistyped long before
+    the rest (0024 for 2024) counts on neither report, and what neither
+    counts, a week assigned for years ahead among them, moves nothing. None
+    with no records. One query, which a report makes once."""
+    timed = Participant.objects.filter(HAS_TIME, period__event=OuterRef('pk')).exclude(member__status__in=Member.GUESTS)
+    # The events' years, each as (year, 0, 0), and the shifts, each (year, quarter, week), in one query.
+    rows = (reported_events().filter(start_at__lte=now)
+            .filter(Q(Exists(timed)) | Q(type='operation', finish_at__lte=now))
+            .annotate(year=ExtractYear('start_at'), quarter=Value(0), week=Value(0))
+            .values_list('year', 'quarter', 'week')
+            .union(_shifts(DoAvailable.objects.filter(assigned=True), now)))
+    years, shifts = set(), []
+    for year, quarter, week in rows:
+        if quarter:
+            shifts.append((year, quarter, week))
+        else:
+            years.add(year)
+    years |= {day.year for day in _do_shift_days(shifts, now)}
     return date(first_year(years), 1, 1) if years else None
-
-
-def _from_records(hours, start_at, since):
-    """An entry's {day: hours} (entries_hours) from `since` (records_from) on,
-    or None for one of an event begun before it, which counts nowhere. As
-    given when `since` is None."""
-    if since is None:
-        return hours
-    if timezone.localtime(start_at).date() < since:
-        return None
-    return {day: h for day, h in hours.items() if day >= since}
 
 
 def unit_days_and_events(entries):
@@ -392,25 +422,27 @@ def unit_days_and_events(entries):
     return days, events
 
 
-def unit_since(since, until):
-    """What the unit did from the day `since` on, up to `until`, for a
-    member's report, read in one pass: unit_days_and_events. Some days
-    before `since`, and events that started before it, may be among them,
-    for the caller to count from `since` on."""
+def unit_since(first, until, since):
+    """What the unit did from the day `first` on, up to `until`, for a
+    member's report, read in one pass: unit_days_and_events, counted from
+    `since` (records_from) on. Some days before `first`, and events that
+    started before it, may be among them, for the caller to count from
+    `first` on."""
     tz = timezone.get_current_timezone()
-    start = timezone.make_aware(datetime.combine(since, time.min))
+    start = _midnight(first, tz)
     # An entry counts for at most MAX_ENTRY_DAYS, so nothing that began earlier
     # than this can reach the day asked for.
     reach = timedelta(days=report_settings().MAX_ENTRY_DAYS + 1)
     earliest = start - reach if start - EARLIEST > reach else EARLIEST
     rows = (Participant.objects
-            .filter(HAS_TIME, IN_FIELD, period__event__in=reported_events())
+            .filter(HAS_TIME, IN_FIELD, period__event__in=reported_events(since))
             .filter(Q(en_route_at__gte=earliest) | Q(signed_in_at__gte=earliest) | Q(period__event__start_at__gte=start))
             .exclude(member__status__in=Member.GUESTS)
             .values_list('period__event_id', 'period__event__type', 'period__event__start_at',
                          'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at'))
     days, events = unit_days_and_events(
-        (event_id, event_type, start_at.astimezone(tz).date(), entry_hours(*times, start_at, until, tz))
+        (event_id, event_type, start_at.astimezone(tz).date(),
+         _counted_from(entry_hours(*times, start_at, until, tz), since))
         for event_id, event_type, start_at, *times in rows)
     return days, events
 
@@ -509,10 +541,18 @@ class MemberRecord:
                 for event_id, entries in by_event.items()}
 
 
-def _record(member, now, since, entries=None, leading=True):
+def counted_hours(entries, now, since):
+    """The hours each of a member's entries (member_entries) counts for by
+    `now`, from `since` (records_from) on, in their order: entries_hours.
+    A page that shows both the lists and the totals works it out once."""
+    return entries_hours([(p.period.event.start_at, p.en_route_at, p.return_home_at, p.signed_in_at,
+                           p.signed_out_at) for p in entries], now, since=since)
+
+
+def _record(member, now, since, entries=None, leading=True, hours=None):
     """A member's MemberRecord, from their entries (member_entries, loaded here
-    unless given), each with the hours it counts for by `now` (entry_hours)
-    from `since` (records_from) on.
+    unless given), each with the hours it counts for by `now` (counted_hours,
+    worked out here unless given) from `since` (records_from) on.
     Without `leading`, what they led by being named in an event's leaders
     text is not worked out, for a caller that does not read it."""
     entries = member_entries(member) if entries is None else entries
@@ -521,11 +561,8 @@ def _record(member, now, since, entries=None, leading=True):
     texts = {p.period.event.leaders for p in entries if p.period.event.type != 'operation'}
     named = members_named(texts, every_username()) if leading and any(texts) else {}
     counted, no_time, timed_operations = [], {}, set()
-    hours_of = entries_hours([(p.period.event.start_at, p.en_route_at, p.return_home_at, p.signed_in_at,
-                               p.signed_out_at) for p in entries], now)
-    for p, hours_by_day in zip(entries, hours_of):
+    for p, hours_by_day in zip(entries, counted_hours(entries, now, since) if hours is None else hours):
         event = p.period.event
-        hours_by_day = _from_records(hours_by_day, event.start_at, since)
         if hours_by_day is None:
             continue            # begun before the unit's records: counted nowhere, not even as stood down from
         operation = event.type == 'operation'
@@ -553,15 +590,14 @@ class ListedEntry:
     left_out_hours: float   # the rest of its hours, which count towards no total: a mistake, or days still to come
 
 
-def listed_entries(entries, now, since):
+def listed_entries(entries, now, since, hours=None):
     """A member's entries (member_entries) as their report lists them, by
-    `now`, counted from `since` (records_from) on as the totals are:
+    `now`, counted from `since` (records_from) on as the totals are, with
+    the hours each counts for (counted_hours, worked out here unless given):
     [ListedEntry], in the order given."""
-    hours_of = entries_hours([(p.period.event.start_at, p.en_route_at, p.return_home_at, p.signed_in_at,
-                               p.signed_out_at) for p in entries], now)
     listed = []
-    for p, hours in zip(entries, hours_of):
-        on_days = list((_from_records(hours, p.period.event.start_at, since) or {}).values())
+    for p, by_day in zip(entries, counted_hours(entries, now, since) if hours is None else hours):
+        on_days = list((by_day or {}).values())
         # Rounded far past the tenth shown, so that an entry's days, added up,
         # show as its own hours do: 3.78 and 23.77 make 27.549999..., not 27.55.
         listed.append(ListedEntry(entry=p, days=len(on_days), counted_hours=round(sum(on_days), 6),
@@ -570,10 +606,20 @@ def listed_entries(entries, now, since):
     return listed
 
 
+def months_after(day, months):
+    """The day `months` calendar months after `day`, or the last of its month
+    where that month is shorter (29 February to 28 February), for both
+    reports."""
+    year, month = divmod(day.month - 1 + months, 12)
+    year, month = day.year + year, month + 1
+    return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
+
+
 def _ago(then, today):
-    """How long ago, in whole months, or whole years from two years on."""
+    """How long ago, in whole calendar months (months_after), or whole years
+    from two years on."""
     months = (today.year - then.year) * 12 + today.month - then.month
-    if today.day < then.day:
+    if months_after(then, months) > today:
         months -= 1
     if months < 1:
         return 'Under a month'
@@ -595,8 +641,12 @@ def member_latest(member, now=None):
     # Operations the member was listed on without time that have finished, so
     # perhaps called off: usually none, and then the unit is not asked. A
     # member stands down from an operation called off, not one that was
-    # only a heads-up.
-    candidates = [event for event in record.no_time.values() if has_finished(event.start_at, event.finish_at, now)]
+    # only a heads-up. Before OPERATION_TIMES_FROM most operations have
+    # nobody's times, so whether one ran is not known (the unit report
+    # greys it), and none of them is said to have been stood down from.
+    times_from = report_settings().OPERATION_TIMES_FROM
+    candidates = [event for event in record.no_time.values() if has_finished(event.start_at, event.finish_at, now)
+                  and timezone.localtime(event.start_at).year >= times_from]
     ids = [event.id for event in candidates]
     ran = operations_that_ran(now, ids)
     not_run = operations_not_run(now, ran, reply_templates_from(), ids) if set(ids) - ran else {}
@@ -624,17 +674,26 @@ def member_latest(member, now=None):
     return latest if any('event' in item for item in latest) else []
 
 
-def _do_days(member, now):
-    """The day each of the member's assigned duty officer shifts counts on,
-    for those started by now: its fourth, so that a week split across two
-    months or years counts in the one that holds most of its seven days, or
-    today, for a shift begun less than three days ago."""
+def _shifts(assigned, now):
+    """Of these duty officer shifts (DoAvailable), those that may have begun
+    by now, as (year, quarter, week): a DO year begins in the last week of the
+    year before at the earliest, so no later one has a shift begun."""
+    return assigned.filter(year__lte=timezone.localtime(now).year + 1).values_list('year', 'quarter', 'week')
+
+
+def _do_shift_days(shifts, now):
+    """The day each of these duty officer shifts, (year, quarter, week),
+    counts on, for those begun by now: its fourth, so that a week split
+    across two months or years counts in the one that holds most of its seven
+    days, or today, for a shift begun less than three days ago. {days}"""
     local_now = timezone.localtime(now).replace(tzinfo=None)    # shifts start at a local time
-    return {min(start + timedelta(days=3), local_now).date() for start in (
-        DoAvailable.shift_start(year, quarter, week)
-        for year, quarter, week in DoAvailable.objects.filter(member=member, assigned=True)
-                                                      .values_list('year', 'quarter', 'week'))
-        if start <= local_now}
+    return {min(start + timedelta(days=3), local_now).date()
+            for start in (DoAvailable.shift_start(*shift) for shift in shifts) if start <= local_now}
+
+
+def _do_days(member, now):
+    """The days the member's assigned duty officer shifts count on (_do_shift_days)."""
+    return _do_shift_days(_shifts(DoAvailable.objects.filter(member=member, assigned=True), now), now)
 
 
 @dataclass(frozen=True)
@@ -705,16 +764,17 @@ def _row(months, period, by_type, alone, hours_by_month):
                        all_hours=sum(of_type['hours'][t] for t in TYPES))
 
 
-def activity_rows(member, now, entries, since):
+def activity_rows(member, now, entries, since, hours=None):
     """Count a member's days, duties and hours by year and by month, from the
     first day they were involved to today (or to the last day, for someone no
     longer a member), from their entries (member_entries), counting nothing
-    before `since` (records_from): {'years': [ActivityRow], 'months':
-    [ActivityRow], 'total': ActivityRow}, oldest first. Returns None when
-    there is nothing to count."""
+    before `since` (records_from), with the hours each entry counts for
+    (counted_hours, worked out here unless given): {'years': [ActivityRow],
+    'months': [ActivityRow], 'total': ActivityRow}, oldest first. Returns
+    None when there is nothing to count."""
     today = timezone.localtime(now).date()
     do_days = {day for day in _do_days(member, now) if since is None or day >= since}
-    record = _record(member, now, since, entries)
+    record = _record(member, now, since, entries, hours=hours)
 
     # Days as AHC are days attended on operations, apart from days in the field.
     days = {t: set(record.days(t)) for t in TYPES}
@@ -728,7 +788,7 @@ def activity_rows(member, now, entries, since):
     first = min(involved)
     last = today if member.status in Member.CURRENT_MEMBERS else max(involved)
     # The unit's days matter only from the member's first day on.
-    active, unit = unit_since(first, now)
+    active, unit = unit_since(first, now, since)
     # A day the member attended is a unit active day for them, as AHC when
     # nobody went out or as a guest among guests; and an event they attended
     # is a unit event.

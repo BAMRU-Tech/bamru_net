@@ -1,10 +1,13 @@
 """A member's activity report: its chart and table (main.lib.activity), and the page."""
 from datetime import timedelta
+from unittest import mock
 
 from django.test import Client
 from django.urls import reverse
 
+from main.lib import counting
 from main.lib.activity import glossary, member_activity
+from main.lib.charts import hours_text
 from main.lib.counting import activity_rows, member_entries, records_from, reported_events
 from main.lib.report_settings import report_settings
 from main.models import DoAvailable, Event, Participant
@@ -205,7 +208,35 @@ class ReportPagesTestCase(PageTestCase):
         client.force_login(self.other)
         response = client.get(reverse('report_activity_member', args=[self.member.id]))
         self.assertContains(response, '<td>1.0</td>', html=True)
-        self.assertNotContains(response, '(0.0)')
+        self.assertNotContains(response, '({})'.format(hours_text(0)))
+        # Decided on the number, not on how it is written: the same where a tenth is written with a comma.
+        with self.settings(LANGUAGE_CODE='de'):
+            self.assertEqual((hours_text(1), hours_text(0)), ('1,0', '0,0'))
+            response = client.get(reverse('report_activity_member', args=[self.member.id]))
+            self.assertContains(response, '<td>1,0</td>', html=True)
+            self.assertNotContains(response, '({})'.format(hours_text(0)))
+
+    def test_the_page_works_out_its_entries_hours_once_for_the_lists_and_the_totals(self):
+        self.make_event('training', when(2024, 3, 10), attended=[self.member])
+        self.make_event('meeting', when(2024, 4, 10), attended=[self.member])
+        client = Client()
+        client.force_login(self.other)
+        with mock.patch('main.lib.counting.entries_hours', wraps=counting.entries_hours) as entries_hours:
+            response = client.get(reverse('report_activity_member', args=[self.member.id]))
+        self.assertEqual(entries_hours.call_count, 1)
+        self.assertContains(response, '1 / 4.0 hours')
+
+    def test_the_glossary_explains_the_lists_when_there_is_nothing_to_chart(self):
+        # Only time logged for a training still to come: no chart or table, but the list shows it in brackets,
+        # and the glossary says what they mean.
+        self.make_event('training', NOW + timedelta(days=2), attended=[self.member])
+        client = Client()
+        client.force_login(self.other)
+        response = client.get(reverse('report_activity_member', args=[self.member.id]))
+        self.assertIsNone(response.context['activity'])
+        self.assertContains(response, '({})'.format(hours_text(4)))
+        self.assertContains(response, '<th scope="row">Mistaken times</th>', html=True)
+        self.assertContains(response, 'are shown in parentheses')
 
     def test_pages(self):
         self.make_event('operation', when(2024, 1, 10), attended=[self.member, self.other])

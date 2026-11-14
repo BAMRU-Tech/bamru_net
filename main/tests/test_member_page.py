@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone as dt_timezone
 from django.test import Client
 from django.urls import reverse
 
-from main.lib.counting import (NotRun, activity_rows, member_entries, member_latest, operations_not_run,
+from main.lib.counting import (NotRun, activity_rows, member_entries, member_latest, months_after, operations_not_run,
                                operations_that_ran, records_from, reply_templates_from)
 from main.models import Event, Participant, Period
 from main.tests.helpers import NOW, ActivityTestCase, PageTestCase, when
@@ -113,6 +113,14 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertEqual(not_run, {before.id: NotRun('called_off', date(2019, 2, 12)),
                                    after.id: NotRun('heads_up', date(2019, 2, 13)),
                                    evening.id: NotRun('called_off', date(2019, 2, 12))})
+
+    def test_no_stood_down_line_for_an_operation_begun_before_operation_times_were_logged(self):
+        # Before OPERATION_TIMES_FROM most operations have nobody's times, so whether one ran is not known, as the
+        # unit report shows it: nobody listed on one is said to have stood down from it.
+        operation = self.make_event('operation', when(2011, 8, 12), no_time=[self.member, self.other])
+        self.assertNotIn('Operation (stood down)', self.latest())
+        with self.settings(ACTIVITY_REPORTS={'OPERATION_TIMES_FROM': 2011}):
+            self.assertEqual(self.latest()['Operation (stood down)']['event'], operation)
 
     def test_stood_down_from_one_operation_though_another_listed_on_ran(self):
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
@@ -255,6 +263,17 @@ class MemberLatestTestCase(ActivityTestCase):
         self.make_event('meeting', when(2022, 6, 16), attended=[under])
         self.assertEqual((self.latest(two)['Meeting']['ago'], self.latest(under)['Meeting']['ago']),
                          ('2 years', '23 months'))
+
+    def test_how_long_ago_reads_a_month_s_end_as_the_unit_report_does(self):
+        # A calendar month after the 29th, 30th or 31st is the last day of a shorter month (months_after):
+        # 29 February 2024 is a year before 28 February 2025, and 31 January a month before it.
+        leap, january = self.make_member('Leap', 'FM'), self.make_member('January', 'FM')
+        self.make_event('meeting', when(2024, 2, 29), attended=[leap])
+        self.make_event('meeting', when(2025, 1, 31), attended=[january])
+        now = when(2025, 2, 28)
+        self.assertEqual([{i['label']: i for i in member_latest(m, now)}['Meeting']['ago'] for m in (leap, january)],
+                         ['12 months', '1 month'])
+        self.assertEqual(months_after(date(2024, 2, 29), 12), date(2025, 2, 28))
 
     def test_how_long_ago(self):
         self.make_event('operation', when(2021, 11, 10), attended=[self.member])    # 31 months

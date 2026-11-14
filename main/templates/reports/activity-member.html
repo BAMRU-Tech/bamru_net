@@ -93,7 +93,7 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
         <td>{{ listed.entry.period.event.leaders|default_if_none:"" }}</td>
         {# The hours counted, then any left out, in parentheses, as the glossary says. #}
         {# Hours left out show once they come to a tenth, as the hours filter writes them. #}
-        <td>{% with left_out=listed.left_out_hours|hours %}{% if left_out == '0.0' %}{{ listed.counted_hours|hours }}{% else %}{% if listed.counted_hours %}{{ listed.counted_hours|hours }} {% endif %}({{ left_out }}){% endif %}{% endwith %}</td>
+        <td>{% if listed.left_out_hours|hours_tenths %}{% if listed.counted_hours %}{{ listed.counted_hours|hours }} {% endif %}({{ listed.left_out_hours|hours }}){% else %}{{ listed.counted_hours|hours }}{% endif %}</td>
         <td>{{ listed.days }}</td>
       </tr>
       {% endfor %}
@@ -101,8 +101,8 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
   </table>
   {% endfor %}
 
-  {% if activity %}
-  {% include 'reports/glossary.html' with glossary=activity.glossary %}
+  {% if activity or event_sections %}
+  {% include 'reports/glossary.html' %}
   {% endif %}
 
 </body>

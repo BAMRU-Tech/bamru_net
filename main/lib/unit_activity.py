@@ -2,10 +2,10 @@
 main.lib.unit_counting counts. What the terms mean is in the glossary at the
 page's foot (unit_glossary, after the terms shared with a member's report).
 
-- The page starts in the report's first year with something to show, after
-  any stray early record (unit_rows' first_year); each chart shows all it has
-  from that year on, from its own first year with data to this year, empty
-  years included.
+- The page starts in the unit's first year of records, after any stray
+  early record (counting.records_from, which unit_rows reads); each chart
+  shows all it has from that year on, from its own first year with data to
+  this year, empty years included.
 - A chart whose columns are months, days of the week, hours or numbers of
   responders adds up every year on record, or the one year the reader picks
   from its menu.
@@ -165,7 +165,8 @@ def status_bands():
 def run_bands():
     """A member's stretches in the field, shortest first and lightest, a
     one-day stretch split at LONG_DAY."""
-    up_to, over = ('{} {} hours'.format(edge, report_settings().LONG_DAY) for edge in ('up to', 'over'))
+    hours = report_settings().LONG_DAY
+    up_to, over = ('{} {} hour{}'.format(edge, hours, pluralize(hours)) for edge in ('up to', 'over'))
     return Bands((Band('1-pale', 'day', '1 day, ' + up_to, 'of one day, ' + up_to),
                   Band('1-light', 'long_day', '1 day, ' + over, 'of one day, ' + over),
                   Band('1', 'two', '2 days', 'of 2 days'),
@@ -257,20 +258,24 @@ def _days_chart(years, today):
     if not rows:
         return None
     period = _span(rows[0].year, today.year, today.year)
+    before, times_from = early_band(), report_settings().OPERATION_TIMES_FROM
+    # Operations' days, events and hours are read from their times, few of them logged before
+    # OPERATION_TIMES_FROM: grey before it.
+    operations = Bands(WEEK + (before,))
 
     def cell(r, t, who):
+        bands, early = (operations, r.year < times_from) if t == 'operation' else (WEEK, False)
         counted = []
         for measure, (write, units) in COUNTED.items():
-            amount = r.participation[who][measure][t]
+            amount = Counter(r.participation[who][measure][t])
             total = sum(amount.values())
-            counted.append({
-                'parts': WEEK.stack(amount), 'total': total,
-                'tip': ['{}: {} {}'.format(_in_full(r.year, today), write(total), units[who].format(pluralize(total)))]
-                       + WEEK.lines(amount, write)})
+            head = '{}: {} {}'.format(_in_full(r.year, today), write(total), units[who].format(pluralize(total)))
+            counted.append({'parts': bands.stack(Counter({before.name: total}) if early else amount), 'total': total,
+                            'tip': [head, FEW_TIMES] if early else [head] + WEEK.lines(amount, write)})
         return counted
 
-    key = WEEK.key()
-    views = [_year_view(rows, [{'label': label, 'key': key, 'cells': [cell(r, t, who) for r in rows]}
+    keys = {t: (operations if t == 'operation' and rows[0].year < times_from else WEEK).key() for t in TYPES}
+    views = [_year_view(rows, [{'label': label, 'key': keys[t], 'cells': [cell(r, t, who) for r in rows]}
                           for t, label in EVENT_TYPES],
                    label=view.switch,
                    titles=[title + ', by type and part of the week, ' + period for title in view.titles])
@@ -344,6 +349,9 @@ def _responders_chart(responded, day_responded, today):
             early = Counter(size for day, size in counted if counts(day) and day.year < times_from)
 
             bands = Bands((since._replace(label=named_in_key), before))
+            # The key names what this choice draws, a year before OPERATION_TIMES_FROM only the grey; or, where it
+            # draws nothing, what it counts.
+            key = (Bands(band for band, drawn in zip(bands, (count, early)) if drawn) or Bands(bands[:1])).key()
 
             def tip(size):
                 total = count[size] + early[size]
@@ -357,7 +365,7 @@ def _responders_chart(responded, day_responded, today):
             views.append({
                 'label': label, 'name': title.rstrip(', '), 'max_labels': 12, 'titles': [title + named],
                 'periods': [{'short': str(size)} for size in sizes],
-                'series': [{'label': '', 'key': (bands if early else Bands(bands[:1])).key(), 'cells': [
+                'series': [{'label': '', 'key': key, 'cells': [
                     [{'parts': bands.stack(Counter({since.name: count[size], before.name: early[size]})),
                       'total': count[size] + early[size], 'tip': tip(size)}]
                     for size in sizes]}]})
@@ -400,26 +408,33 @@ def _status_chart(years, today):
     rows = _since(years, today.year, lambda r: any(r.status_days.values()))
     if not rows:
         return None
-    bands = status_bands()
+    bands, times_from = status_bands(), report_settings().OPERATION_TIMES_FROM
+    # Time in the field is read from operation times, few of them logged before OPERATION_TIMES_FROM: grey
+    # before it, the lighter grey, as Other status is the darker.
+    before = early_band()._replace(colour='muted-light')
+    with_before = Bands(bands + (before,))
 
     def cell(r):
         named, days, hours, events = _in_full(r.year, today), r.status_days, r.status_hours, r.status_events
-        on_days, attended = sum(days.values()), sum(events.values())
-        return [{'parts': bands.stack(days), 'total': on_days,
-                 'tip': ['{}: {} responder-day{}'.format(named, on_days, pluralize(on_days))]
-                        + bands.lines(days)},
-                {'parts': bands.stack(events), 'total': attended,
-                 'tip': ['{}: {} operation{} attended in the field'.format(named, attended, pluralize(attended))]
-                        + bands.lines(events)},
-                {'parts': bands.stack(hours), 'total': sum(hours.values()),
-                 'tip': ['{}: {} responder-hours'.format(named, charts.hours_text(sum(hours.values())))]
-                        + bands.lines(hours, charts.hours_text)}]
+        on_days, attended, in_field = sum(days.values()), sum(events.values()), sum(hours.values())
+        measures = [  # (count by status, total, head, a line for each status)
+            (days, on_days, '{}: {} responder-day{}'.format(named, on_days, pluralize(on_days)), bands.lines(days)),
+            (events, attended, '{}: {} operation{} attended in the field'.format(named, attended, pluralize(attended)),
+             bands.lines(events)),
+            (hours, in_field, '{}: {} responder-hours'.format(named, charts.hours_text(in_field)),
+             bands.lines(hours, charts.hours_text))]
+        if r.year < times_from:
+            return [{'parts': with_before.stack(Counter({before.name: total})), 'total': total,
+                     'tip': [head, FEW_TIMES]} for _, total, head, _ in measures]
+        return [{'parts': with_before.stack(Counter(count)), 'total': total, 'tip': [head] + lines}
+                for count, total, head, lines in measures]
 
+    key = (with_before if rows[0].year < times_from else bands).key()
     return _yearly_chart(
         rows, today, [('Days', 'Responder-days, by status on the day'),
                       ('Events', 'Operations attended, by status at the start'),
                       ('Hours', 'Responder-hours, by status on the day')],
-        'Time in the field, by status', [{'label': '', 'key': bands.key(), 'cells': [cell(r) for r in rows]}],
+        'Time in the field, by status', [{'label': '', 'key': key, 'cells': [cell(r) for r in rows]}],
         note='How is time in the field split by status?',
         name='status', start_measure='Hours', measure_switch_label='Count')
 
@@ -613,8 +628,9 @@ def _flows_chart(rows, today):
     return charts.share_panels(
         [{'label': 'Members', 'title': title}],
         [_year_view(rows, [{'label': '', 'key': key, 'cells': [cell(r, months) for r in rows]}],
-               label='{} months'.format(months), titles=[title],
-               name='Members joining and leaving, left after {} months of no activity'.format(months))
+               label='{} month{}'.format(months, pluralize(months)), titles=[title],
+               name='Members joining and leaving, left after {} month{} of no activity'.format(months,
+                                                                                              pluralize(months)))
          for months in report_settings().LEFT_AFTER],
         note='How many members join or come back each year, and how many leave?',
         name='flows', view_switch_label='Left after no activity for')
@@ -729,8 +745,8 @@ def unit_glossary(status_from, templates_from):
          'The year shown less the year a member joined. Members who joined in the records\' first year or '
          'earlier are shown apart until all of them have over {} years.'.format(YEARS_SINCE_JOINING[-2][1])),
         ('Left',
-         '{} months have passed without an operation, training or community event{}. '.format(
-             rules.LEFT_AFTER[0], slower)
+         '{} month{} {} passed without an operation, training or community event{}. '.format(
+             rules.LEFT_AFTER[0], pluralize(rules.LEFT_AFTER[0]), pluralize(rules.LEFT_AFTER[0], 'has,have'), slower)
          + 'Counted in the year of the last one. A member still counts as active in that year, so the net change '
          'dot and the active-members chart show their leaving a year apart.'),
         ('Came back', 'The year of a member\'s next operation, training or community event after leaving.'),
@@ -744,14 +760,9 @@ def unit_activity(now=None):
     side as tiles, as many to a row as charts.css fits. Scales are shared
     from the start, so that panels read against each other."""
     rows = unit_rows(now)
-    today = rows['today']
-    # The page starts in the report's first year (unit_rows), and every chart shows what it has from then on.
-    first = rows['first_year']
-    years = {year: r for year, r in rows['years'].items() if year >= first}
-    responded = [(day, size) for day, size in rows['responded'] if day.year >= first]
-    day_responded = [(day, size) for day, size in rows['day_responded'] if day.year >= first]
-    first_pages = [paged for paged in rows['first_pages'] if paged.year >= first]
-    reply_hours = {sent: callouts for sent, callouts in rows['reply_hours'].items() if sent[0].year >= first}
+    # The page starts in the unit's first year of records (unit_rows), and every chart shows what it has from
+    # then on.
+    today, years = rows['today'], rows['years']
     # The retention charts cover the same years, so that they read against each other.
     left_after = report_settings().LEFT_AFTER
     retention = _since(years, today.year, lambda r: any(r.active.values()) or any(r.flows[left_after[0]].values()))
@@ -759,13 +770,13 @@ def unit_activity(now=None):
     themes = [
         ('Operations', [
             _operations_chart(years, today, rows['templates_from']),
-            _responders_chart(responded, day_responded, today),
+            _responders_chart(rows['responded'], rows['day_responded'], today),
             _runs_chart(years, today),
             _status_chart(years, today)]),
         ('Pages for operations', [
-            _calls_chart(first_pages, today),
+            _calls_chart(rows['first_pages'], today),
             _replies_chart(years, today),
-            _reply_hours_chart(reply_hours, today),
+            _reply_hours_chart(rows['reply_hours'], today),
             _immediate_chart(years, today)]),
         ('Participation', [
             _days_chart(years, today),
@@ -781,4 +792,4 @@ def unit_activity(now=None):
             chart['wide'] = any(len(view['panels']) > 1 for view in chart['views'])
     return {'sections': sections, 'charts': [chart for section in sections for chart in section['charts']],
             'glossary': unit_glossary(rows['status_from'], rows['templates_from']),
-            'period': '{} to {}'.format(first, today.strftime('%d %b %Y'))}
+            'period': '{} to {}'.format(rows['first_year'], today.strftime('%d %b %Y'))}

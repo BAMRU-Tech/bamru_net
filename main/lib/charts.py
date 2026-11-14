@@ -14,6 +14,7 @@ Columns run left to right in the order given: periods of time, or categories.
 """
 import math
 import re
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.template.defaultfilters import floatformat
 
@@ -209,13 +210,21 @@ def _tip_at(i, n):
     return {'side': 'centre', 'at': round(100 * middle, 2)}
 
 
+def hours_tenths(hours):
+    """Hours as the reports write them (hours_text), as a number: to one
+    decimal, half up as written, so an hour and a quarter is 1.3. Rounded far
+    past the tenth first, so that a sum's floating-point error (27.55 added up
+    as 27.549999...) does not tip it. A Decimal, for deciding what to write
+    whatever the language writes a tenth in (the template filter
+    `hours_tenths`): zero when the hours are written as nothing."""
+    return Decimal(str(round(hours, 6))).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
+
+
 def hours_text(hours):
     """Hours as the reports write them, in tables, charts and an entry's row
-    (the template filter `hours`): to one decimal, half up as written, so an
-    hour and a quarter is '1.3', with thousands grouped: '1,234.5'. Rounded
-    far past the tenth first, so that a sum's floating-point error (27.55
-    added up as 27.549999...) does not tip it."""
-    return floatformat(round(hours, 6), '1g')
+    (the template filter `hours`): hours_tenths, with thousands grouped:
+    '1,234.5'."""
+    return floatformat(hours_tenths(hours), '1g')
 
 
 def year_label(year):

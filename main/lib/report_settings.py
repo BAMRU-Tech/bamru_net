@@ -30,7 +30,8 @@ def _rising(value, report_settings):
 
 def _a_view_each(value, report_settings):
     return _rising(value, report_settings) or (None if len(value) <= MAX_VIEWS else (
-        'is at most {} numbers, one for each view the chart can switch between'.format(MAX_VIEWS)))
+        'is at most {} numbers, one for each view the chart can switch between'.format(MAX_VIEWS))) or (
+        None if max(value) <= 120 else 'is at most 120 months, ten years, each')
 
 
 def _beyond_thin(value, report_settings):
@@ -41,6 +42,13 @@ def _beyond_thin(value, report_settings):
 def _two_rising(value, report_settings):
     return None if len(value) == 2 and not _rising(value, report_settings) else (
         'is two numbers above zero, the second more than the first')
+
+
+def _up_to(most, unit):
+    """The check of a number above zero and at most `most` (of `unit`)."""
+    def check(value, report_settings):
+        return _above_zero(value, report_settings) or (None if value <= most else 'is at most {} {}'.format(most, unit))
+    return check
 
 
 def _member_statuses(value, report_settings):
@@ -54,15 +62,21 @@ def _escape_unsafe(letter):
     return letter.isalnum() and letter not in 'sSwWdD'
 
 
+# A bound both read alike: {n}, {n,} or {n,m}, with no spaces, as Postgres bounds go up to 255.
+_BOUND = re.compile(r'\{(\d{1,3})(?:,(\d{0,3}))?\}')
+
+
 def _sql_unsafe(pattern):
     """What in a pattern the database would read otherwise than Python's re,
     or None. A pattern that a query runs (title__iregex) keeps to what both
     read alike, on Postgres and on SQLite, which runs Python's re: literal
     text, escaped punctuation, \s \S \w \W \d \D, classes, groups (...) and
-    (?:...), lookaround, alternation, anchors and quantifiers, greedy or lazy.
-    Not \b, which is a backspace to Postgres, or any other escaped letter or
-    digit; not named or flagged groups, possessive repeats or POSIX classes."""
-    i = 0
+    (?:...), lookaround, alternation, anchors and quantifiers, greedy or lazy,
+    braces only as a bound (_BOUND) up to 255. Not \b, which is a backspace
+    to Postgres, or any other escaped letter or digit; not named or flagged
+    groups, possessive repeats, a repeated lookaround, other braces, such as
+    {,3}, which Postgres reads as text, or POSIX classes."""
+    i, lookaround = 0, []           # whether each group open is a lookaround
     while i < len(pattern):
         char, after = pattern[i], pattern[i + 1:i + 2]
         if char == '\\':
@@ -82,9 +96,22 @@ def _sql_unsafe(pattern):
                     return pattern[end:end + 2]
                 end += 1
             i = end + 1
-        elif char == '(' and after == '?' and not pattern.startswith(('(?:', '(?=', '(?!', '(?<=', '(?<!'), i):
-            return pattern[i:i + 3]
-        elif char in '*+?}' and after == '+':
+        elif char == '(':
+            if after == '?' and not pattern.startswith(('(?:', '(?=', '(?!', '(?<=', '(?<!'), i):
+                return pattern[i:i + 3]
+            lookaround.append(pattern.startswith(('(?=', '(?!', '(?<=', '(?<!'), i))
+            i += 1
+        elif char == ')' and lookaround and lookaround.pop() and after and after in '*+?{':
+            return char + after
+        elif char == '{':
+            bound = _BOUND.match(pattern, i)
+            if not bound or max(int(n or 0) for n in bound.groups()) > 255:
+                end = pattern.find('}', i)
+                return pattern[i:] if end < 0 else pattern[i:end + 1]
+            i = bound.end()
+            if pattern[i:i + 1] == '+':
+                return '}+'
+        elif char in '*+?' and after == '+':
             return char + after
         else:
             i += 1
@@ -116,7 +143,7 @@ class ReportSettings:
     # An entry of at most this many hours is one day attended, even across midnight.
     SINGLE_DAY_HOURS: float = _rule(12, check=_above_zero)
     # An entry longer than this many days by the local clock is a mistake: one day, and no hours.
-    MAX_ENTRY_DAYS: int = _rule(7, check=_above_zero)
+    MAX_ENTRY_DAYS: int = _rule(7, check=_up_to(366, 'days'))
 
     # The unit report.
     # Trainings guests may come to, by their title, so that a day at one is no day towards joining: SAR Basic;
@@ -181,7 +208,7 @@ class ReportSettings:
                         key.name))
                 try:
                     re.compile(value, re.IGNORECASE)
-                except re.error as error:
+                except (re.error, OverflowError, RecursionError) as error:
                     raise ImproperlyConfigured('ACTIVITY_REPORTS[{!r}] is not a pattern: {}'.format(key.name, error))
                 unsafe = key.metadata['pattern'] == 'sql' and _sql_unsafe(value)
                 if unsafe:

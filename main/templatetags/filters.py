@@ -1,10 +1,11 @@
 from django import template
 from django.utils.safestring import mark_safe
 
-from main.lib.charts import hours_text
+from main.lib.charts import hours_tenths, hours_text
 
 register = template.Library()
 register.filter('hours', hours_text)
+register.filter('hours_tenths', hours_tenths)
 
 @register.filter
 def define(val=None):

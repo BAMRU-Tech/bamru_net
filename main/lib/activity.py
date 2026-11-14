@@ -31,10 +31,10 @@ def glossary(member_report=False, records_from=None):
          'counts, even on operations where nobody else logged time. Time logged twice, on two periods or '
          'events at once, counts once, for the one that began first.'),
         ('Day attended',
-         'A calendar day with at least {} hours logged for one event or operating period. The time logged '
-         'for each counts as at least one day, and {} hours or less as one day, even across midnight. A day '
-         'counts once for each type of event and once across all types.'.format(rules.DAY_HOURS,
-                                                                                  rules.SINGLE_DAY_HOURS)),
+         'A calendar day with at least {} hour{} logged for one event or operating period. The time logged '
+         'for each counts as at least one day, and {} hour{} or less as one day, even across midnight. A day '
+         'counts once for each type of event and once across all types.'.format(
+             rules.DAY_HOURS, pluralize(rules.DAY_HOURS), rules.SINGLE_DAY_HOURS, pluralize(rules.SINGLE_DAY_HOURS))),
         ('Unit active day',
          'A day attended by at least one member other than the AHC, at an event of that type.'
          + (own.format('days') if member_report else '')),
@@ -220,11 +220,12 @@ def _table(years, total):
     }
 
 
-def member_activity(member, now, entries, since):
+def member_activity(member, now, entries, since, hours=None):
     """The chart and table of a member's activity, for their activity report,
     from their entries (member_entries), counted from `since` (records_from)
-    on. Returns None when there is nothing to show."""
-    rows = activity_rows(member, now, entries, since)
+    on, with the hours each counts for (counting.counted_hours) if worked out
+    already. Returns None when there is nothing to show."""
+    rows = activity_rows(member, now, entries, since, hours)
     if rows is None:
         return None
     keys = _keys(rows['total'])
@@ -238,5 +239,4 @@ def member_activity(member, now, entries, since):
         [_view('Years', years, keys), _view('Months', months, keys)],
         note='How often does this member take part, and how does that compare with the unit?',
         name='activity', measure_switch_label='Count')
-    return {'chart': chart, 'glossary': glossary(member_report=True, records_from=since),
-            'table': _table(years, rows['total'])}
+    return {'chart': chart, 'table': _table(years, rows['total'])}
