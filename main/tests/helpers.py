@@ -1,0 +1,91 @@
+"""What the tests of counting and of the pages that show it share: a fixed now, a time of day that stays in one
+local day, and a member and another to log time with."""
+from unittest import mock
+from datetime import datetime, timedelta, timezone as dt_timezone
+
+from django.test import TestCase
+
+from main.lib.activity import member_activity
+from main.lib.counting import activity_rows, member_latest, operations_not_run, operations_that_ran
+from main.models import Event, Member, Message, Participant, Period, RsvpTemplate
+
+
+NOW = datetime(2024, 6, 15, 20, 0, tzinfo=dt_timezone.utc)
+
+
+def when(year, month, day):
+    """20:00 UTC, the middle of the day in Pacific time (noon in winter, 1pm in
+    summer), so short events stay within one local day."""
+    return datetime(year, month, day, 20, 0, tzinfo=dt_timezone.utc)
+
+
+class ActivityTestCase(TestCase):
+    def setUp(self):
+        self.member = self.make_member('Ann', 'FM')
+        self.other = self.make_member('Bob', 'FM')
+
+    def make_member(self, name, status):
+        return Member.objects.create(first_name=name, last_name='Test',
+                                     username=name.lower(), status=status)
+
+    def make_event(self, event_type, start, attended=(), no_time=(), ahc=(), ol=(), hours=4,
+                   leaders=''):
+        """Create a one-period event. `attended` and `ol` members log `hours`
+        (the `ol` ones flagged OL); `no_time` members are listed without times;
+        `ahc` members log two hours as AHC."""
+        event = Event.objects.create(type=event_type, title='Event', location='Here', leaders=leaders,
+                                     start_at=start, finish_at=start + timedelta(hours=hours))
+        # Saving an event creates its first period.
+        period = event.period_set.first() or Period.objects.create(event=event, position=1)
+        for member in list(attended) + list(ol):
+            Participant.objects.create(period=period, member=member, ol=member in ol,
+                                       en_route_at=start,
+                                       return_home_at=start + timedelta(hours=hours))
+        for member in no_time:
+            Participant.objects.create(period=period, member=member)
+        for member in ahc:
+            Participant.objects.create(period=period, member=member, ahc=True, en_route_at=start,
+                                       return_home_at=start + timedelta(hours=2))
+        return event
+
+    def years(self, member=None):
+        return {str(row.period): row for row in activity_rows(member or self.member, NOW)['years']}
+
+    def days(self, row, event_type):
+        """(days attended, unit active days)"""
+        return row.days[event_type], row.active_days[event_type]
+
+    def chart_asked_for(self, member=None):
+        """What the report gives the chart component to draw, not what that makes
+        of it: (measures, views, options), as passed to charts.share_panels."""
+        with mock.patch('main.lib.activity.charts.share_panels') as share_panels:
+            member_activity(member or self.member, NOW)
+        (measures, views), options = share_panels.call_args
+        return measures, views, options
+
+    def panel(self, label, view=0, member=None):
+        """One panel as the report asks for it: {'label', 'key', 'cells'}, each
+        cell a column for days, events and hours with its parts and its figures."""
+        _, views, _ = self.chart_asked_for(member)
+        return next(series for series in views[view]['series'] if series['label'] == label)
+
+    def latest(self, member=None):
+        return {i['label']: i for i in member_latest(member or self.member, NOW)}
+
+    def not_run(self):
+        """Why each operation that did not run by NOW did not: {id: 'heads_up' or 'called_off'}."""
+        return {event_id: not_run.why for event_id, not_run in operations_not_run(NOW, operations_that_ran(NOW)).items()}
+
+    def paged(self, event, template):
+        """A page for `event`, sent as it started, asking who can go ('Available?') or warning ('Heads Up')."""
+        page = Message.objects.create(author=self.other, text='Page', format='page', period=event.period_set.first(),
+                                      rsvp_template=RsvpTemplate.objects.get_or_create(name=template)[0])
+        Message.objects.filter(id=page.id).update(created_at=event.start_at)
+
+
+class PageTestCase(ActivityTestCase):
+    """For tests of the pages, which read the clock: it is held at NOW, so that they do not grow as the tests age."""
+
+    def setUp(self):
+        super().setUp()
+        self.enterContext(mock.patch('django.utils.timezone.now', return_value=NOW))

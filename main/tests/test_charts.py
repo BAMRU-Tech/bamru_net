@@ -243,6 +243,11 @@ class ChartsTestCase(TestCase):
             'every figure is a number': chart([[cell([('1', float('nan'))])]]),
             'a tip is a line': chart([[dict(cell([('1', 1)]), tip=12)]]),
             "names them in its key, as 'marker'": chart([[cell([('1', 1)], marker=1)]]),
+            # Markers and parts below zero are drawn for one measure, the only one the stylesheet places them for.
+            'markers and parts below zero are for a chart of one measure': chart(
+                [[cell([('1', 1)], marker=1), cell([('1', 1)])]], measures=two, key=[('1', 'Up'), ('marker', 'Net')]),
+            'parts below zero are for a chart of one measure': chart(
+                [[cell([('1', 1), ('2', 0)]), cell([('1', 1), ('2', -1)])]], measures=two, key=[('1', 'Up'), ('2', 'Down')]),
         }
         for message, draw in wrong.items():
             # Each says which chart, view, panel and column.
@@ -321,31 +326,33 @@ class ChartsTestCase(TestCase):
         share. Draw a chart that uses everything and check that each class and
         each custom property in the page has a rule or a use in charts.css."""
         colours = sorted(charts.COLOURS) + ['ramp-2-5']
-        measures = [{'label': 'M{}'.format(m), 'title': 'Measure {}'.format(m), 'total_label': 'Whole'}
-                    for m in range(1, 4)]
 
-        def view(label):
-            cells = [[{'parts': [(colour, 1) for colour in colours], 'total': 20,
-                       'tip': ['Head', (1, 'counted'), 'a line'], 'marker': 3} for _ in measures]
-                     for _ in range(3)]
-            signed = [[{'parts': [('1', 4), ('2', -3)], 'total': 5, 'tip': 'x', 'marker': 1} for _ in measures]
-                      for _ in range(3)]
+        def view(label, measures):
+            # Markers and parts below zero are for a chart of one measure.
+            one = len(measures) == 1
+            cells = [[dict({'parts': [(colour, 1) for colour in colours], 'total': 20,
+                            'tip': ['Head', (1, 'counted'), 'a line']}, **({'marker': 3} if one else {}))
+                      for _ in measures] for _ in range(3)]
+            series = [{'label': 'Every colour', 'cells': cells,
+                       'key': [(colour, colour) for colour in colours] + ([('marker', 'Net')] if one else [])}]
+            if one:
+                series.append({'label': 'Below zero', 'key': [('1', 'Up'), ('2', 'Down'), ('marker', 'Net')],
+                               'cells': [[{'parts': [('1', 4), ('2', -3)], 'total': 5, 'tip': 'x', 'marker': 1}]
+                                         for _ in range(3)]})
             return {'label': label, 'periods': [{'short': 'a'}, {'short': ''}, {'short': 'c'}],
-                    'titles': ['{} {}'.format(label, m) for m in range(1, 4)],
-                    'series': [{'label': 'Every colour', 'cells': cells,
-                                'key': [(colour, colour) for colour in colours] + [('marker', 'Net')]},
-                               {'label': 'Below zero', 'key': [('1', 'Up'), ('2', 'Down'), ('marker', 'Net')],
-                                'cells': signed}]}
-        chart = with_menu([(option, share_panels(measures, [view('A'), view('B'), view('C')], note='A note',
-                                                 name='everything'))
+                    'titles': ['{} {}'.format(label, m) for m in range(1, len(measures) + 1)], 'series': series}
+        three = [{'label': 'M{}'.format(m), 'title': 'Measure {}'.format(m), 'total_label': 'Whole'} for m in range(1, 4)]
+        chart = with_menu([(option, share_panels(three, [view(v, three) for v in 'ABC'], note='A note', name='everything'))
                            for option in ('All years', '2026')], label='Year')
-        html = render_to_string('charts/share_panels.html', {'chart': chart})
+        net = [{'label': 'Net', 'title': 'Net', 'total_label': 'Whole'}]
+        signed = share_panels(net, [view(v, net) for v in 'AB'], note='A note', name='signed')
+        html = ''.join(render_to_string('charts/share_panels.html', {'chart': c}) for c in (chart, signed))
         css = open(finders.find('css/charts.css')).read()
         css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
         classes = {name for names in re.findall(r'class="([^"]*)"', html) for name in names.split() if name.startswith('chart')}
         properties = set(re.findall(r'(--[\w-]+)\s*:', html))
         self.assertGreater(len(classes), 25)
-        self.assertGreater(len(properties), 20)
+        self.assertGreater(len(properties), 15)
         # A class needs a rule. Three only mark a place: for the page's own
         # style (the head), for the tiles' rows (main), and the view shown first.
         marks = {'chart-head', 'chart-main', 'chart-v1'}
@@ -353,6 +360,8 @@ class ChartsTestCase(TestCase):
                                 if not re.search(r'\.' + re.escape(name) + r'(?![\w-])', css)), [])
         self.assertEqual(sorted(name for name in properties
                                 if not re.search(r'var\(' + re.escape(name) + r'(?![\w-])', css)), [])
+        # And every measure's property the stylesheet reads is one a chart sets: no rule for what none draws.
+        self.assertEqual(sorted(set(re.findall(r'var\((--m\d-[\w-]+)', css)) - properties), [])
         # And the other way: every class the stylesheet styles is one the page has, but for those a
         # page or the script puts there, and those only the page's states give (the measure and view picked).
         styled = set(re.findall(r'\.(chart-[\w-]+)', css))

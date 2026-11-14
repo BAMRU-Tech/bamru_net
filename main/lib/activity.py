@@ -61,7 +61,7 @@ def glossary(member_report=False):
 # type, strongest for operations and grey for community events; each type's
 # own panel shows the role it was attended in, in three blues, darkest at
 # the foot: leading, the attendance not picked out under a role, then AHC.
-TYPE_COLOURS = dict(zip(TYPES, ['1-strong', '1', '1-light', 'muted']))
+TYPE_COLOURS = {'operation': '1-strong', 'training': '1', 'meeting': '1-light', 'community': 'muted'}
 ROLE_COLOURS = {'led': '1-strong', 'other': '1', 'ahc': '1-light'}
 
 
@@ -96,44 +96,42 @@ def _type_cells(label, r, event_type):
     whatever the type, with what was led (as OL, or as TL or LL) picked out
     at the foot of the column, where it can be compared from one period to
     the next."""
-    days, events = r['days'][event_type], r['events'][event_type]
-    active_days, unit_events = r['active_days'][event_type], r['unit_events'][event_type]
+    days, events = r.days[event_type], r.events[event_type]
+    active_days, unit_events = r.active_days[event_type], r.unit_events[event_type]
+    other_hours = r.other_hours[event_type]
     if event_type == 'operation':
-        ol, ahc = r['duty']['ol'], r['duty']['ahc']
-        ol_events, ahc_events = r['event_duty']['ol'], r['event_duty']['ahc']
-        ol_hours, ahc_hours = r['hours']['ol'], r['hours']['ahc']
+        ol, ahc = r.ol_days, r.ahc_days
         return [_counted(label, days, _by_role(ol, days - ol - ahc, ahc), active_days, 'day',
                          _lines(LEADING['operation'], ol) + _lines('AHC', ahc)),
-                _counted(label, events, _by_role(ol_events, events - ol_events - ahc_events, ahc_events),
-                         unit_events, 'event', _lines(LEADING['operation'], ol_events) + _lines('AHC', ahc_events)),
-                _logged(label, _by_role(ol_hours, r['hours']['other_operation'], ahc_hours),
-                        _lines(LEADING['operation'], ol_hours, hours=True) + _lines('AHC', ahc_hours, hours=True))]
-    led, led_events, led_hours = r['led_days'][event_type], r['led_events'][event_type], r['hours']['led_' + event_type]
+                _counted(label, events, _by_role(r.ol_events, events - r.ol_events - r.ahc_events, r.ahc_events),
+                         unit_events, 'event', _lines(LEADING['operation'], r.ol_events) + _lines('AHC', r.ahc_events)),
+                _logged(label, _by_role(r.ol_hours, other_hours, r.ahc_hours),
+                        _lines(LEADING['operation'], r.ol_hours, hours=True) + _lines('AHC', r.ahc_hours, hours=True))]
+    led, led_events, led_hours = r.led_days[event_type], r.led_events[event_type], r.led_hours[event_type]
     role = LEADING[event_type]
     return [_counted(label, days, _by_role(led, days - led), active_days, 'day', _lines(role, led)),
             _counted(label, events, _by_role(led_events, events - led_events), unit_events, 'event',
                      _lines(role, led_events)),
-            _logged(label, _by_role(led_hours, r['hours']['other_' + event_type]), _lines(role, led_hours, hours=True))]
+            _logged(label, _by_role(led_hours, other_hours), _lines(role, led_hours, hours=True))]
 
 
 def _all_cells(label, r):
     """Every type in one column, shaded by type."""
     def by_type(amounts):
         return [(TYPE_COLOURS[t], amounts[t]) for t in TYPES]
-    return [_counted(label, r['all_days'], by_type(r['first_days']), r['all_active_days'], 'day'),
-            _counted(label, sum(r['events'].values()), by_type(r['events']),
-                     sum(r['unit_events'].values()), 'event'),
-            _logged(label, by_type(r['hours']))]
+    return [_counted(label, r.all_days, by_type(r.first_days), r.all_active_days, 'day'),
+            _counted(label, sum(r.events.values()), by_type(r.events), sum(r.unit_events.values()), 'event'),
+            _logged(label, by_type(r.hours))]
 
 
 def _keys(total):
     """The key under each type's panel, in the order the parts stack from
     the foot, naming only the roles the member has been in."""
-    leading = {t: [(ROLE_COLOURS['led'], 'as ' + LEADING[t])] if total['led_days'][t] else [] for t in TYPES[1:]}
+    leading = {t: [(ROLE_COLOURS['led'], 'as ' + LEADING[t])] if total.led_days[t] else [] for t in TYPES[1:]}
     leading['operation'] = ([(ROLE_COLOURS['led'], 'as ' + LEADING['operation'])]
-                            if total['duty']['ol'] or total['hours']['ol'] else [])
+                            if total.ol_days or total.ol_hours else [])
     # AHC and in the field on one day: no AHC day, but AHC hours to pick out.
-    ahc = [(ROLE_COLOURS['ahc'], 'as AHC')] if total['duty']['ahc'] or total['hours']['ahc'] else []
+    ahc = [(ROLE_COLOURS['ahc'], 'as AHC')] if total.ahc_days or total.ahc_hours else []
     return {t: leading[t] + [(ROLE_COLOURS['other'],
                               'Other attendance' if leading[t] or (t == 'operation' and ahc) else 'Attended')]
                + (ahc if t == 'operation' else [])
@@ -146,7 +144,7 @@ def _periods(rows):
     row)], the label for the figures and the table, the short one for the
     chart's time axis. The axis names each month of up to nine, each
     quarter of up to two years, and otherwise each January, by its year."""
-    years = [(str(r['year']), charts.year_label(r['year']), r) for r in rows['years']]
+    years = [(str(r.period), charts.year_label(r.period), r) for r in rows['years']]
     every = 1 if len(rows['months']) <= 9 else 3 if len(rows['months']) <= 24 else 0
 
     def short(year, month):
@@ -154,8 +152,8 @@ def _periods(rows):
             return charts.year_label(year)
         return calendar.month_abbr[month] if every and (month - 1) % every == 0 else ''
     months = [('{} {}'.format(calendar.month_abbr[m], y), short(y, m), r)
-              for r in rows['months'] for y, m in [r['month']]]
-    first, last = rows['years'][0]['year'], rows['years'][-1]['year']
+              for r in rows['months'] for y, m in [r.period]]
+    first, last = rows['years'][0].period, rows['years'][-1].period
     return years, months, str(first) if first == last else '{} to {}'.format(first, last)
 
 
@@ -184,12 +182,13 @@ def _table(years, total):
     for each year, of [(label, short, row)], and the total."""
     columns = []
     for t, label in EVENT_TYPES:
-        columns.append((label, lambda r, t=t: _pair(r['days'][t], r['hours'][t])))
+        columns.append((label, lambda r, t=t: _pair(r.days[t], r.hours[t])))
         if t == 'operation':
-            columns += [(duty_label, lambda r, key=key: r['duty'][key] or '')
-                        for key, duty_label in (('ol', 'OL days'), ('ahc', 'AHC days'), ('do', 'DO wks'))
-                        if total['duty'][key]]
-    columns.append(('Total', lambda r: _pair(r['all_days'], r['all_hours'])))
+            columns += [(duty_label, lambda r, field=field: getattr(r, field) or '')
+                        for field, duty_label in (('ol_days', 'OL days'), ('ahc_days', 'AHC days'),
+                                                  ('do_days', 'DO wks'))
+                        if getattr(total, field)]
+    columns.append(('Total', lambda r: _pair(r.all_days, r.all_hours)))
 
     def table_row(label, r):
         # Each cell with its column's heading, for a screen too narrow for columns.

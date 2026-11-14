@@ -52,6 +52,14 @@ def _scale(cells, m):
     return math.ceil(up / step) * step, math.ceil(down / step) * step, step
 
 
+def _sizes(amounts, scales, above):
+    """Each measure's amount as a share of its axis above zero, or below it,
+    on each of a panel's scales, {'own': axes, 'shared': axes} as _scale
+    gives them: {'own': [...], 'shared': [...]}."""
+    return {which: [_percent(amount, top if above else floor) for amount, (top, floor, _) in zip(amounts, axes)]
+            for which, axes in scales.items()}
+
+
 def _ticks(top, floor, step):
     ticks = [{'value': value, 'at': _percent(value + floor, top + floor)}
              for value in range(top, -floor - 1, -step)]
@@ -122,6 +130,8 @@ def _check(name, measures, views):
                 for entry in cell:
                     if any(key not in entry for key in ('parts', 'total', 'tip')):
                         fail('a column has parts, a total and a tip for each measure', *where)
+                    if len(measures) > 1 and ('marker' in entry or any(value < 0 for _, value in entry['parts'])):
+                        fail('markers and parts below zero are for a chart of one measure', *where)
                     figures = [entry['total'], entry.get('marker') or 0] + [value for _, value in entry['parts']]
                     if any(not isinstance(figure, (int, float)) or math.isnan(figure) for figure in figures):
                         fail('every figure is a number', *where)
@@ -215,10 +225,11 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
       of lines, the first a heading and the rest (number, label) pairs,
       such as (5, 'joined'), or plain text. Its parts stack bottom
       up in the order given, and must be in the same order in every measure.
-      A part with a negative value hangs below zero, and those stack downward
-      in the order given; the total is the whole above zero only. marker,
-      which may be left out, is a value marked on the column with a small
-      dark dot (a net, say); name it in the key with the colour 'marker'.
+      On a chart of one measure, a part with a negative value hangs below
+      zero, and those stack downward in the order given; the total is the
+      whole above zero only. marker, which may be left out, is a value marked
+      on the column of a chart of one measure with a small dark dot (a net,
+      say); name it in the key with the colour 'marker'.
     A colour is the name of a chart-part-... class in charts.css: '1' and '2'
       for the series colours, '1-strong' and '1-light' for a darker and a
       lighter step of the first, '2-light' for a lighter step of the second,
@@ -275,14 +286,6 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
         for s in view['series']:
             scales = {'own': [_scale(s['cells'], m) for m in numbers], 'shared': shared_scales}
             signed = any(floor for which in scales.values() for _, floor, _ in which)
-
-            def sizes(amounts, above):
-                """Each measure's amount as a share of the axis above zero, or
-                below it, on the panel's own scale and the shared one."""
-                return {which: [_percent(amount, top if above else floor)
-                                for amount, (top, floor, _) in zip(amounts, scales[which])]
-                        for which in scales}
-
             cells = []
             for i, c in enumerate(s['cells']):
                 colours = [colour for colour, _ in c[0]['parts']]      # the same in every measure (_check)
@@ -303,9 +306,9 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
                     'tip_at': _tip_at(i, len(s['cells'])),
                     'parts': parts,
                 }
-                cell.update(sizes([c[m]['total'] for m in numbers], above=True))
+                cell.update(_sizes([c[m]['total'] for m in numbers], scales, above=True))
                 if under:
-                    cell['under'] = dict(sizes(below, above=False), parts=under)
+                    cell['under'] = dict(_sizes(below, scales, above=False), parts=under)
                 if any(marker is not None for marker in markers):
                     # Where the dot sits, as a share of the whole axis, floor to top.
                     cell['marker'] = {
@@ -319,7 +322,7 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
                 # For readers who cannot see the plot: which panel and view this
                 # is. The chart itself is named by its title as shown.
                 'name': ', '.join(part for part in (s.get('label'), view.get('name') or view['label']) if part),
-                'key': [dict(_colour(colour), label=label) for colour, label in s.get('key', ())],
+                'key': [dict(_colour(colour), label=label) for colour, label in s['key']],
                 'ticks': [{'measure': m + 1, 'scale': which, 'ticks': _ticks(*scales[which][m])}
                           for m in numbers for which in ('own', 'shared')],
                 # With parts below zero, the share of the plot above it, for each measure and scale.

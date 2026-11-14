@@ -214,7 +214,10 @@
 /* A chart of five panels (the member report's) is laid out by the room its
    plots have: packed from the left, five across where five fit, and where
    they do not, three and two rather than four and one. A chart on a page of
-   tiles is laid out by the page's grid instead (.chart-grid, above). */
+   tiles is laid out by the page's grid instead (.chart-grid, above), so that
+   its panels stand over the tiles; that grid has one, two or four columns,
+   as wide as a tile, so it cannot give five across or three and two, and
+   the two layouts are needed. */
 .chart-plots { container-type: inline-size; }
 @container (min-width: 26.25rem) and (max-width: 39.99rem) {   /* two panels fit, not three */
   .chart-panels:has(> .chart-panel:nth-child(5):last-child) { grid-template-columns: repeat(2, minmax(0, var(--chart-panel))); }
@@ -247,7 +250,9 @@
                 background: var(--chart-total); box-shadow: inset 0 0 0 1px var(--chart-total-edge); }
 /* Parts are flat blocks, flush against each other; they cover the total's edge. */
 .chart-column div { width: 100%; flex: none; height: var(--m1); }
-/* A plot with parts below zero (.chart-signed): --chart-up is the share of
+/* Parts below zero and markers are drawn on a chart of one measure only
+   (charts.py refuses them on more), so their rules are for the first.
+   A plot with parts below zero (.chart-signed): --chart-up is the share of
    its height above zero. Each band stacks the column above zero on a region
    below it, in which the parts below zero hang from the top. */
 .chart-plot { --chart-up: var(--m1-shared-up, 1); }
@@ -292,15 +297,7 @@
 .chart:has(.chart-pick-m2:checked) .chart-column div { height: var(--m2); }
 .chart:has(.chart-pick-m3:checked) .chart-column div { height: var(--m3); }
 .chart:has(.chart-pick-own:checked) .chart-plot { --chart-up: var(--m1-own-up, 1); }
-.chart:has(.chart-pick-m2:checked) .chart-plot { --chart-up: var(--m2-shared-up, 1); }
-.chart:has(.chart-pick-m3:checked) .chart-plot { --chart-up: var(--m3-shared-up, 1); }
-.chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-plot { --chart-up: var(--m2-own-up, 1); }
-.chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-plot { --chart-up: var(--m3-own-up, 1); }
 .chart:has(.chart-pick-own:checked) .chart-marker { --chart-mark: var(--m1-own-mark); }
-.chart:has(.chart-pick-m2:checked) .chart-marker { --chart-mark: var(--m2-shared-mark); --chart-mark-on: var(--m2-on); }
-.chart:has(.chart-pick-m3:checked) .chart-marker { --chart-mark: var(--m3-shared-mark); --chart-mark-on: var(--m3-on); }
-.chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-marker { --chart-mark: var(--m2-own-mark); }
-.chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-marker { --chart-mark: var(--m3-own-mark); }
 /* The title follows both the measure and the view. Every variant sits in the same grid cell, so the head is as tall as the
    longest one and nothing below moves when a switch changes the title. */
 .chart-title { display: grid; }

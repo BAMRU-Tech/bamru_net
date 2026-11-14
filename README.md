@@ -1,0 +1,7 @@
+# BAMRU.net
+
+## Running the tests
+
+1. Install the requirements, with Python 3.13: `pip install -r requirements/test.txt`.
+2. Copy `dot_env.sample` to `.env`. Its settings use SQLite, so no database server is needed.
+3. Run `python manage.py test main`. The few tests that need API keys are skipped.

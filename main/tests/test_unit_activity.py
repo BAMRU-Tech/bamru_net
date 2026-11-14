@@ -1,3 +1,4 @@
+import re
 from unittest import mock
 from datetime import date, datetime, timedelta, timezone as dt_timezone
 
@@ -9,11 +10,10 @@ from main.lib.counting import TYPES, operations_that_ran
 from main.lib.unit_activity import EARLY, unit_activity
 from main.lib.unit_counting import first_year, unit_entries, unit_rows
 from main.models import Distribution, Event, Member, Message, Participant, Period, RsvpTemplate
-from main.tests import test_activity
-from main.tests.test_activity import NOW, when
+from main.tests.helpers import NOW, ActivityTestCase, when
 
 
-class UnitActivityTestCase(test_activity.ActivityTestCase):
+class UnitActivityTestCase(ActivityTestCase):
     def setUp(self):
         super().setUp()
         self.third = self.make_member('Cat', 'T')
@@ -48,6 +48,15 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         # A column's figures are in the order the measures are drawn, the one started on first.
         number = next(m['number'] for m in self.chart(name)['measures'] if m['label'] == measure) if measure else 1
         return [said(c['tips'][number - 1]) for c in self.panel(name, label, view, option)['cells']]
+
+    def served_page(self):
+        """The report's page as a member signed in is served it, on the tests' today."""
+        self.member.set_password('password')
+        self.member.save()
+        client = Client()
+        client.login(username=self.member.username, password='password')
+        with mock.patch('django.utils.timezone.now', return_value=NOW):
+            return client.get(reverse('report_activity_unit')).content.decode()
 
     def test_each_entry_as_the_report_counts_it(self):
         self.make_event('operation', when(2024, 2, 7), ol=[self.member], ahc=[self.other])
@@ -753,6 +762,19 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.assertIn('Stretches in the field, by days in a row', names)
         self.assertIn('Operations, members and how many led', names)
 
+    def test_no_two_charts_on_the_page_share_a_name(self):
+        # A chart's name makes the ids its figure is labelled by and the names of its switches, so each
+        # chart has one of its own: one figure for each title, and outside the menus' templates, one title.
+        self.members_coming_and_going()
+        event = self.make_event('operation', when(2024, 2, 7), attended=[self.member])
+        self.page(event, when(2024, 2, 7), 'Immediate callout: search', 'Available?', {self.member: 60})
+        html = self.served_page()
+        titles = re.findall(r'<figure class="chart" aria-labelledby="([^"]+)"', html)
+        self.assertEqual(len(titles), len(set(titles)), titles)
+        self.assertEqual(set(titles), {chart['name'] + '-title' for chart in unit_activity(NOW)['charts']})
+        shown = re.sub(r'<template\b.*?</template>', '', html, flags=re.S)
+        self.assertEqual([title for title in titles if shown.count('id="{}"'.format(title)) != 1], [])
+
     def test_the_sections_and_the_glossary_follow_the_page(self):
         self.members_coming_and_going()
         self.make_event('operation', when(2024, 2, 7), attended=[self.member])
@@ -1153,12 +1175,7 @@ class UnitActivityTestCase(test_activity.ActivityTestCase):
         self.assertEqual(self.chart('operations')['titles'][0]['text'],
                          'Operations, by unique responder count, 2024')
         # As drawn, before any script: Hours is the option on.
-        self.member.set_password('password')
-        self.member.save()
-        client = Client()
-        client.login(username=self.member.username, password='password')
-        with mock.patch('django.utils.timezone.now', return_value=NOW):
-            html = client.get(reverse('report_activity_unit')).content.decode()
+        html = self.served_page()
         for name in ('days', 'status'):
             self.assertIn('<input type="radio" name="{}-measure" checked><span>Hours</span>'.format(name), html)
 
