@@ -12,8 +12,10 @@ from django.views import generic
 from django.forms import widgets
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
+from dynamic_preferences.registries import global_preferences_registry
+
 from main.lib.gcal import get_gcal_manager
-from main.models import Member, Event, Participant, Period
+from main.models import DoAvailable, Member, Event, Participant, Period
 from main.views.api_views import EventFilter
 from main import tasks
 
@@ -67,6 +69,7 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         return super().get_queryset().prefetch_related(
             Member.prefetch_unavailable('period_set__participant_set__member'),
             'period_set__participant_set__member__email_set',
+            'period_set__participant_set__member__phone_set',
         )
 
     def get_object(self, queryset=None):
@@ -88,6 +91,9 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
             result.append({ 'name': 'TBD', 'id': 0})
 
         context['leaders'] = result
+        context['current_do'] = DoAvailable.current_scheduled_do()
+        context['esb_spreadsheet_url'] = (
+            global_preferences_registry.manager()['general__esb_spreadsheet_url'])
         return context
 
     def post(self, request, *args, **kwargs):
