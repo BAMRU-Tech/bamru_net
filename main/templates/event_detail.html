@@ -54,11 +54,11 @@
         <i class="fa fa-map-marker"></i>
       </a>
       {% endif %}
-      {% if event.lat != None %}
-      <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
-      {% endif %}
-      {% if event.lon != None %}
-      <strong>Lon:</strong> {{ event.lon|floatformat:8 }}
+      {% if event.lat and event.lon %}
+      {% if event.location_private %}<br>{% endif %}
+      <strong>Lat/Long:</strong> <span id="event-lat-long">{{ event.lat }}, {{ event.lon }}</span>
+      <button type="button" id="copy-lat-long" class="btn btn-link btn-sm p-0 ml-1 align-baseline"
+              aria-label="Copy Lat/Long"><i class="fa fa-copy"></i> Copy</button>
       {% endif %}
       </p></p>
     <p><strong>Leaders:</strong>
@@ -1233,5 +1233,23 @@ function MarkRow ( e, dt, type, indices ) {
             });
 }
 
+</script>
+<script type="text/javascript">
+// Copy the event's Lat/Long as one item, ready to paste into Google Maps or CalTopo. Where the
+// browser won't copy, select it so the member can.
+$(document).ready(function() {
+    $('#copy-lat-long').on('click', function() {
+        var button = this, point = document.getElementById('event-lat-long');
+        navigator.clipboard.writeText(point.textContent).then(function() {
+            button.innerHTML = '<i class="fa fa-check"></i> Copied';
+            setTimeout(function() { button.innerHTML = '<i class="fa fa-copy"></i> Copy'; }, 2000);
+        }, function() {
+            var range = document.createRange();
+            range.selectNodeContents(point);
+            getSelection().removeAllRanges();
+            getSelection().addRange(range);
+        });
+    });
+});
 </script>
 {% endblock js %}

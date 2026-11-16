@@ -211,6 +211,22 @@ class EventLatLongPageTestCase(TestCase):
         self.assertNotContains(response, 'name="lon"')
         self.assertNotContains(response, 'geopicker')
 
+    def test_event_page_shows_the_point_to_copy(self):
+        self.event.lat, self.event.lon = '39.3157', '-120.3277'
+        self.event.save()
+        self.client.force_login(self.member)
+        response = self.client.get('/event/{}/'.format(self.event.id))
+        self.assertContains(response, '<strong>Lat/Long:</strong> <span id="event-lat-long">39.3157, -120.3277</span>',
+                            html=False)
+        self.assertContains(response, 'id="copy-lat-long"')
+        self.assertNotContains(response, '<strong>Lat:</strong>')
+
+    def test_event_page_without_a_point_shows_none(self):
+        self.client.force_login(self.member)
+        response = self.client.get('/event/{}/'.format(self.event.id))
+        self.assertNotContains(response, 'Lat/Long:')
+        self.assertNotContains(response, 'id="copy-lat-long"')
+
     def test_reading_converts_a_utm_point(self):
         self.client.force_login(self.member)
         response = self.client.post('/event/lat_long/', {'text': '10S 727330 4355390'})
