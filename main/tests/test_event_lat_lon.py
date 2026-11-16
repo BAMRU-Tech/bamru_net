@@ -6,13 +6,14 @@ from django.utils import timezone
 from dynamic_preferences.registries import global_preferences_registry
 
 from main.dynamic_preferences_registry import EventArea
-from main.lib.lat_lon import EXAMPLES, UNREADABLE, NotAPoint, area_edges, outside_usual_area, read_point
+from main.lib.lat_lon import EXAMPLES, UNREADABLE, NotAPoint, area_edges, area_warning, read_point
 from main.models import Event, Member
 from main.views.event_views import EventForm
 
 # Public places only. Donner Summit is inside the team's usual area; the Grand Canyon is outside it.
 DONNER = (39.3157, -120.3277)
 GRAND_CANYON = (36.0544, -112.1401)
+OUTSIDE = 'This point is outside the area the team usually works in. Check its numbers and minus signs.'
 # Within about 2 m. The UTM and USNG answers below come from pyproj 3.8 and the mgrs package,
 # run separately, so these tests check the conversions against an independent source.
 CLOSE = 2e-5
@@ -100,9 +101,10 @@ class ReadPointTestCase(TestCase):
                 ('Lat: ' * 20 + '39.3157 Long: -120.3277', UNREADABLE),           # over 100 characters
                 ('10S' + ' ' * 5000 + '727330' + ' ' * 5000 + 'x', UNREADABLE),
                 ('N 37.7456 W', UNREADABLE),
-                ('95.5, -120.3', 'Latitude runs from -90 to 90.'),
+                ('95.5, -120.3', 'Latitude comes first, and runs from -90 to 90.'),
+                ('-120.3277, 39.3157', 'Latitude comes first, and runs from -90 to 90.'),
                 ('39.3, -190.5', 'Longitude runs from -180 to 180.'),
-                ('9' * 90 + ', 5', 'Latitude runs from -90 to 90.'),
+                ('9' * 90 + ', 5', 'Latitude comes first, and runs from -90 to 90.'),
                 ('N39 N120', 'Give one latitude (N or S) and one longitude (E or W).'),
                 ('39.3157, -120.3277 E', 'A minus sign and E disagree: use one or the other.'),
                 ("39°18'10' N 120°19' W", 'Write degrees, then minutes, then seconds, such as 37°44\'44.2"N.'),
@@ -114,42 +116,24 @@ class ReadPointTestCase(TestCase):
             with self.assertRaises(NotAPoint, msg=text) as raised:
                 read_point(text)
             self.assertEqual(str(raised.exception), message, msg=text)
-            self.assertIsNone(raised.exception.suggestion, msg=text)
-
-    def test_longitude_first_suggests_the_swap(self):
-        with self.assertRaises(NotAPoint) as raised:
-            read_point('-120.3277, 39.3157')
-        self.assertEqual(str(raised.exception), 'Latitude comes first. Did you mean 39.3157, -120.3277?')
-        self.assertEqual(raised.exception.suggestion, '39.3157, -120.3277')
 
 
 class UsualAreaTestCase(TestCase):
     """Points outside the team's usual area, which the form warns of."""
 
     def test_inside_the_area(self):
-        self.assertIsNone(outside_usual_area(*DONNER))
+        self.assertIsNone(area_warning(*DONNER))
 
     def test_each_edge_of_the_area(self):
         for inside, outside in (((32.41, -120.0), (32.39, -120.0)), ((46.39, -120.0), (46.41, -120.0)),
                                 ((39.0, -124.79), (39.0, -124.81)), ((39.0, -114.01), (39.0, -113.99))):
-            self.assertIsNone(outside_usual_area(*inside), msg=inside)
-            self.assertIsNotNone(outside_usual_area(*outside), msg=outside)
+            self.assertIsNone(area_warning(*inside), msg=inside)
+            self.assertIsNotNone(area_warning(*outside), msg=outside)
 
-    def test_missing_minus_sign_suggests_the_fix(self):
-        problem = outside_usual_area(39.3157, 120.3277)
-        self.assertEqual(problem.message, 'Did you mean 39.3157, -120.3277? The point as typed is outside '
-                                          'the area the team usually works in.')
-        self.assertEqual(problem.suggestion, '39.3157, -120.3277')
-
-    def test_wrong_latitude_sign_suggests_the_fix(self):
-        self.assertEqual(outside_usual_area(-39.3157, -120.3277).suggestion, '39.3157, -120.3277')
-        self.assertEqual(outside_usual_area(-39.3157, 120.3277).suggestion, '39.3157, -120.3277')
-
-    def test_far_from_the_area(self):
-        problem = outside_usual_area(*GRAND_CANYON)
-        self.assertEqual(problem.message, 'This point is outside the area the team usually works in. '
-                                          'Check it on a map.')
-        self.assertIsNone(problem.suggestion)
+    def test_outside_the_area_asks_for_a_check(self):
+        # A sign slip on Donner Summit lands outside the area, as does the Grand Canyon.
+        for point in ((39.3157, 120.3277), (-39.3157, -120.3277), GRAND_CANYON):
+            self.assertEqual(area_warning(*point), OUTSIDE, msg=point)
 
     def test_area_comes_from_the_site_setting(self):
         preferences = global_preferences_registry.manager()
@@ -157,7 +141,7 @@ class UsualAreaTestCase(TestCase):
         preferences['general__event_area'] = '32.4, 46.4, -124.8, -110.0'
         # Preferences are cached outside the test's database transaction, so put it back.
         self.addCleanup(preferences.__setitem__, 'general__event_area', usual)
-        self.assertIsNone(outside_usual_area(*GRAND_CANYON))
+        self.assertIsNone(area_warning(*GRAND_CANYON))
 
     def test_area_setting_takes_four_edges(self):
         self.assertEqual(area_edges(EventArea.default), [32.4, 46.4, -124.8, -114.0])
@@ -264,28 +248,14 @@ class EventLatLonPageTestCase(TestCase):
 
     def test_reading_converts_a_utm_point(self):
         self.assertEqual(self.reading('10S 727330 4355390'), {'value': '39.318069, -120.36303',
-                                                             'note': 'Converted from UTM.',
-                                                             'warning': None, 'suggestion': None})
-
-    def test_reading_warns_of_a_wrong_sign(self):
-        reading = self.reading('39.3157, 120.3277')
-        self.assertEqual(reading['value'], '39.3157, 120.3277')
-        self.assertIn('Did you mean 39.3157, -120.3277?', reading['warning'])
-        self.assertEqual(reading['suggestion'], '39.3157, -120.3277')
+                                                             'note': 'Converted from UTM.', 'warning': None})
 
     def test_reading_warns_of_a_point_outside_the_area(self):
-        reading = self.reading('39.45817, -110.97440')
-        self.assertEqual(reading['value'], '39.45817, -110.9744')
-        self.assertEqual(reading['warning'], 'This point is outside the area the team usually works in. '
-                                             'Check it on a map.')
-        self.assertIsNone(reading['suggestion'])
-
-    def test_reading_suggests_the_swap(self):
-        self.assertEqual(self.reading('-120.3277, 39.3157'), {
-            'error': 'Latitude comes first. Did you mean 39.3157, -120.3277?', 'suggestion': '39.3157, -120.3277'})
+        self.assertEqual(self.reading('39.45817, -110.97440'), {'value': '39.45817, -110.9744', 'note': '',
+                                                               'warning': OUTSIDE})
 
     def test_reading_reports_what_cannot_be_read(self):
-        self.assertEqual(self.reading('Donner Summit'), {'error': UNREADABLE, 'suggestion': None})
+        self.assertEqual(self.reading('Donner Summit'), {'error': UNREADABLE})
 
     def test_reading_an_empty_box(self):
         self.assertEqual(self.reading(''), {'value': ''})

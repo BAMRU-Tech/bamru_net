@@ -15,18 +15,12 @@ from collections import namedtuple
 from dynamic_preferences.registries import global_preferences_registry
 
 Point = namedtuple('Point', 'lat lon form')
-Problem = namedtuple('Problem', 'message suggestion')
 # Longer than any point written out, such as Latitude: N 37° 44' 44.2" Longitude: W 119° 35' 37.0".
 LONGEST = 100
 
 
 class NotAPoint(ValueError):
-    """Text that can't be read as a point. The message says why, for the member; the suggestion,
-    when there is one, is the point they probably meant."""
-
-    def __init__(self, message, suggestion=None):
-        super().__init__(message)
-        self.suggestion = suggestion
+    """Text that can't be read as a point; the message says why, for the member."""
 
 
 def degrees_text(degrees):
@@ -156,9 +150,6 @@ def degrees_point(text):
         letters.reverse()
     if letters[0] in ('E', 'W') or letters[1] in ('N', 'S'):
         raise NotAPoint('Give one latitude (N or S) and one longitude (E or W).')
-    if 90 < abs(values[0]) <= 180 and abs(values[1]) <= 90 and not any(letters):
-        raise NotAPoint('Latitude comes first. Did you mean {}?'.format(point_text(values[1], values[0])),
-                        suggestion=point_text(values[1], values[0]))
     return checked(values[0], values[1], FORMS[max(places)])
 
 
@@ -218,7 +209,7 @@ def part_value(numbers, letter):
 
 def checked(lat, lon, form):
     if abs(lat) > 90:
-        raise NotAPoint('Latitude runs from -90 to 90.')
+        raise NotAPoint('Latitude comes first, and runs from -90 to 90.')
     if abs(lon) > 180:
         raise NotAPoint('Longitude runs from -180 to 180.')
     return Point(round(lat, 6), round(lon, 6), form)
@@ -237,19 +228,10 @@ def area_edges(text):
     return edges
 
 
-def outside_usual_area(lat, lon):
-    """Why a point outside the area the team usually works in looks wrong, with the point the
-    member probably meant when a sign slip explains it; None for a point inside the area."""
+def area_warning(lat, lon):
+    """None for a point inside the area the team usually works in, from the site setting; for a
+    point outside it, a warning that asks the member to check it."""
     south, north, west, east = area_edges(global_preferences_registry.manager()['general__event_area'])
-
-    def inside(lat, lon):
-        return south <= lat <= north and west <= lon <= east
-
-    if inside(lat, lon):
+    if south <= lat <= north and west <= lon <= east:
         return None
-    for fixed in ((lat, -lon), (-lat, lon), (-lat, -lon)):
-        if inside(*fixed):
-            fixed_text = point_text(*fixed)
-            return Problem('Did you mean {}? The point as typed is outside the area the team usually '
-                           'works in.'.format(fixed_text), fixed_text)
-    return Problem('This point is outside the area the team usually works in. Check it on a map.', None)
+    return 'This point is outside the area the team usually works in. Check its numbers and minus signs.'

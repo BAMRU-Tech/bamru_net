@@ -90,18 +90,6 @@ $(document).ready(function() {
             shown = read.value !== undefined ? read.value : null;
             if (read.value !== undefined) box.value = read.value;
             say(read.error || read.warning || read.note, read.error || read.warning);
-            if (read.suggestion) {
-                var use = document.createElement('a');
-                use.href = '#';
-                use.setAttribute('role', 'button');
-                use.textContent = 'Use ' + read.suggestion;
-                use.addEventListener('click', function(event) {
-                    event.preventDefault();
-                    box.value = read.suggestion;
-                    readLatLon();
-                });
-                note.append(' ', use);
-            }
         }).catch(function() {
             if (box.value.trim() !== text) return;
             shown = null;
