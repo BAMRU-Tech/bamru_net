@@ -5,11 +5,8 @@ The forms read:
 - decimal degrees: 37.7456, -119.5936 · 37.7456 N 119.5936 W · N37.7456 W119.5936
 - degrees and decimal minutes, as GPS units show them: N 37° 44.736' W 119° 35.616'
 - degrees, minutes and seconds, as Google Maps shows them: 37°44'44.2"N 119°35'37.0"W
-- UTM: 11S 271234 4180567 · 11 271234mE 4180567mN
-- USNG, which is MGRS for the US: 11S KB 71234 80567 · 11SKB7123480567
-- a map link that holds the point: Google Maps, CalTopo or Apple Maps
-
-Text around the point, such as a sentence or the rest of CalTopo's point panel, is left out.
+- UTM: 11S 271485 4180757 · 11 271485mE 4180757mN
+- USNG, which is MGRS for the US: 11S KB 71484 80756 · 11SKB7148480756
 """
 import math
 import re
@@ -17,9 +14,10 @@ from collections import namedtuple
 
 from dynamic_preferences.registries import global_preferences_registry
 
-# trimmed: whether text around the point was left out.
-Point = namedtuple('Point', 'lat lon form trimmed', defaults=(False,))
+Point = namedtuple('Point', 'lat lon form')
 Problem = namedtuple('Problem', 'message suggestion')
+# Longer than any point written out, such as Latitude: N 37° 44' 44.2" Longitude: W 119° 35' 37.0".
+LONGEST = 100
 
 
 class NotAPoint(ValueError):
@@ -29,13 +27,6 @@ class NotAPoint(ValueError):
     def __init__(self, message, suggestion=None):
         super().__init__(message)
         self.suggestion = suggestion
-
-
-class NoPoint(NotAPoint):
-    """Text with no point in it at all, rather than a point with something wrong with it."""
-
-    def __init__(self):
-        super().__init__(UNREADABLE)
 
 
 def degrees_text(degrees):
@@ -49,29 +40,12 @@ def point_text(lat, lon):
 
 def read_point(text):
     """The point the text gives, or None for an empty box; NotAPoint when it can't be read."""
-    text = (text or '').strip()
+    text = ' '.join((text or '').split())           # one space between words, however it was pasted
     if not text:
         return None
-    try:
-        return read_whole(text)
-    except NoPoint:
-        return point_in_text(text)
-
-
-def reading_note(point):
-    """What the box did to the member's text, for the note under it; empty when nothing changed."""
-    converted = point.form != 'decimal degrees'
-    if point.trimmed:
-        return 'Left out the text around the point{}.'.format(
-            ', and converted it from ' + point.form if converted else '')
-    return 'Converted from {}.'.format(point.form) if converted else ''
-
-
-def read_whole(text):
-    """The point that the whole text gives."""
-    if re.match(r'https?://', text, re.IGNORECASE):
-        return checked(*link_point(text), 'a map link')
-    text = text.translate(TYPOGRAPHY).upper()
+    if len(text) > LONGEST:
+        raise NotAPoint(UNREADABLE)
+    text = text.translate(TYPOGRAPHY).replace("''", '"').upper()
     for pattern, read in ((USNG, usng_point), (UTM, utm_point)):
         found = pattern.fullmatch(text)
         if found:
@@ -79,63 +53,9 @@ def read_whole(text):
     return degrees_point(text)
 
 
-# ---- a point in longer text -------------------------------------------------------------------
-
-MOST_WORDS = 12                 # the longest a point runs, as in Lat: N 37 44 44.2 Long: W 119 35 37.0
-SAME_POINT = 50                 # metres: CalTopo's forms of one point, each rounded, differ by up to 20
-AROUND = '.,;:!?()[]{}<>'       # punctuation that ends a sentence or brackets a point
-MOST_SEARCHED = 1000            # words: a page of text, which takes a tenth of a second
-
-
-def point_in_text(text):
-    """The one point in longer text: the longest runs of words that read as a point. The forms of
-    one point that CalTopo lists read as that point, in decimal degrees when given, as they need no
-    converting; two different points are an error."""
-    words = text.split()[:MOST_SEARCHED]
-    runs = []
-    for start in range(len(words)):
-        for end in range(start + 1, min(start + MOST_WORDS, len(words)) + 1):
-            try:
-                runs.append((start, end, read_whole(' '.join(words[start:end]).strip(AROUND))))
-            except NotAPoint:
-                pass
-    # A run inside a longer one, such as a latitude and part of a longitude, isn't a point of its own.
-    points = [point for start, end, point in runs
-              if not any(s <= start and end <= e and (s, e) != (start, end) for s, e, _ in runs)]
-    if not points:
-        raise NoPoint()
-    for point in points:
-        if metres_apart(points[0], point) > SAME_POINT:
-            raise NotAPoint('This text holds more than one point: {} and {}. Enter just one.'.format(
-                point_text(points[0].lat, points[0].lon), point_text(point.lat, point.lon)))
-    point = next((point for point in points if point.form == 'decimal degrees'), points[0])
-    return point._replace(trimmed=True)
-
-
-def metres_apart(one, other):
-    """Roughly, which is enough to tell two points apart."""
-    north = (one.lat - other.lat) * 111195
-    east = (one.lon - other.lon) * 111195 * math.cos(math.radians(one.lat))
-    return math.hypot(north, east)
-
-
-# ---- map links -------------------------------------------------------------------------------
-
-LINK_POINTS = (
-    re.compile(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)'),                      # Google Maps: the pin
-    re.compile(r'[?&#](?:q|ll|query|center)=(-?\d+\.\d+)(?:,|%2C)\+?(-?\d+\.\d+)', re.IGNORECASE),
-    re.compile(r'/(?:search|place)/(-?\d+\.\d+),\+?(-?\d+\.\d+)'),       # Google Maps: a searched point
-    re.compile(r'@(-?\d+\.\d+),(-?\d+\.\d+)'),                          # Google Maps: the view's centre
-)
-
-
-def link_point(link):
-    for pattern in LINK_POINTS:
-        found = pattern.search(link)
-        if found:
-            return float(found.group(1)), float(found.group(2))
-    raise NotAPoint("This link doesn't hold a point. Short links, such as maps.app.goo.gl ones, "
-                    "can't be read: open the link and copy the coordinates instead.")
+def reading_note(point):
+    """What the box did to the member's text, for the note under it; empty when nothing changed."""
+    return '' if point.form == 'decimal degrees' else 'Converted from {}.'.format(point.form)
 
 
 # ---- UTM and USNG ------------------------------------------------------------------------------
@@ -163,7 +83,7 @@ def usng_point(zone, band, column, row, digits):
         parts = [digits[:len(digits) // 2], digits[len(digits) // 2:]]
     if len(parts) != 2 or len(parts[0]) != len(parts[1]) or len(parts[0]) > 5:
         raise NotAPoint('A USNG point needs as many easting digits as northing digits, '
-                        'such as 11S KB 71234 80567.')
+                        'such as 11S KB 71484 80756.')
     easting, northing = (int(part) * 10 ** (5 - len(part)) for part in parts)
     columns = COLUMNS[(zone - 1) % 3]
     if column not in columns:
@@ -213,47 +133,48 @@ def utm_to_lat_lon(zone, south, easting, northing):
 # ---- degrees -----------------------------------------------------------------------------------
 
 TYPOGRAPHY = str.maketrans({'º': '°', '˚': '°', '′': "'", '’': "'", '‘': "'", '´': "'", '`': "'",
-                            '″': '"', '“': '"', '”': '"', '−': '-'})
+                            '″': '"', '“': '"', '”': '"', '−': '-', '–': '-'})
 LABELS = re.compile(r'\b(?:LATITUDE|LONGITUDE|LAT|LONG|LON|LNG)\b\s*[:=]?|\b(?:DEGREES|DEG)\b')
 TOKENS = re.compile(r'([NSEW])|([-+]?\d+(?:\.\d+)?)\s*([°\'"])?|([,;/])|(\S)')
-FORMS = {1: 'decimal degrees', 2: 'degrees and minutes', 3: 'degrees, minutes and seconds'}
+FORMS = ('decimal degrees', 'degrees and minutes', 'degrees, minutes and seconds')
+PLACES = {"'": 1, '"': 2}                       # minutes and seconds, by their marks
+ORDER = 'Write degrees, then minutes, then seconds, such as 37°44\'44.2"N.'
 # One point, Yosemite Valley, in each form the box reads, for when a member's text can't be read.
 EXAMPLES = ('37.7456, -119.5936', "N 37° 44.736' W 119° 35.616'", '37°44\'44.2"N 119°35\'37.0"W',
             'UTM 11S 271485 4180757', 'USNG 11S KB 71484 80756')
-UNREADABLE = 'Enter a point in any of these forms: {}; {}; {}; {}; or {}. A map link works too.'.format(*EXAMPLES)
+UNREADABLE = 'Enter a point in any of these forms: {}; {}; {}; {}; or {}.'.format(*EXAMPLES)
 
 
 def degrees_point(text):
     parts = degree_parts(LABELS.sub(' ', text))
     if len(parts) != 2 or not all(numbers for numbers, _ in parts):
-        raise NoPoint()
-    values = [part_value(numbers, letter) for numbers, letter in parts]
-    letters = [letter for _, letter in parts]
+        raise NotAPoint(UNREADABLE)
+    values, places = zip(*(part_value(numbers, letter) for numbers, letter in parts))
+    values, letters = list(values), [letter for _, letter in parts]
     if letters[0] in ('E', 'W') or letters[1] in ('N', 'S'):
         values.reverse()
         letters.reverse()
     if letters[0] in ('E', 'W') or letters[1] in ('N', 'S'):
         raise NotAPoint('Give one latitude (N or S) and one longitude (E or W).')
-    form = FORMS[max(len(numbers) for numbers, _ in parts)]
-    if abs(values[0]) > 90 and abs(values[1]) <= 90 and not any(letters):
+    if 90 < abs(values[0]) <= 180 and abs(values[1]) <= 90 and not any(letters):
         raise NotAPoint('Latitude comes first. Did you mean {}?'.format(point_text(values[1], values[0])),
                         suggestion=point_text(values[1], values[0]))
-    return checked(values[0], values[1], form)
+    return checked(values[0], values[1], FORMS[max(places)])
 
 
 def degree_parts(text):
     """The text's numbers grouped into a latitude and a longitude: [(numbers, hemisphere letter)]."""
-    parts, numbers, letter, letter_first = [], [], None, False
+    parts, numbers, letter = [], [], None
 
     def close():
-        nonlocal numbers, letter, letter_first
+        nonlocal numbers, letter
         if numbers or letter:
             parts.append((numbers, letter))
-        numbers, letter, letter_first = [], None, False
+        numbers, letter = [], None
 
     for hemisphere, number, symbol, separator, other in TOKENS.findall(text):
         if other:
-            raise NoPoint()
+            raise NotAPoint(UNREADABLE)
         if separator:
             close()
         elif hemisphere:
@@ -262,7 +183,7 @@ def degree_parts(text):
                 close()
             else:                                   # before them: N 37.7456
                 close()
-                letter, letter_first = hemisphere, True
+                letter = hemisphere
         else:
             if numbers and starts_a_part(numbers, number, symbol):
                 close()
@@ -279,12 +200,20 @@ def starts_a_part(numbers, number, symbol):
 
 
 def part_value(numbers, letter):
-    symbols = [symbol for _, symbol in numbers if symbol]
-    if symbols != sorted(symbols, key='°\'"'.index) or (numbers[0][1] and numbers[0][1] != '°'):
-        raise NotAPoint('Write degrees, then minutes, then seconds, such as 37°44\'44.2"N.')
-    degrees = numbers[0][0]
-    value = abs(float(degrees)) + sum(float(n) / 60 ** place for place, (n, _) in enumerate(numbers[1:], 1))
-    return -value if degrees.startswith('-') or letter in ('S', 'W') else value
+    """A latitude or longitude, and its last place (0 degrees, 1 minutes, 2 seconds). Minutes and
+    seconds are placed by their marks, or else in order."""
+    (degrees, symbol), value, last = numbers[0], abs(float(numbers[0][0])), 0
+    if symbol not in ('', '°'):
+        raise NotAPoint(ORDER)
+    for number, symbol in numbers[1:]:
+        place = PLACES.get(symbol, last + 1)
+        if not last < place <= 2:
+            raise NotAPoint(ORDER)
+        value, last = value + float(number) / 60 ** place, place
+    negative = degrees.startswith('-')
+    if negative and letter in ('N', 'E'):
+        raise NotAPoint('A minus sign and {} disagree: use one or the other.'.format(letter))
+    return (-value if negative or letter in ('S', 'W') else value), last
 
 
 def checked(lat, lon, form):
@@ -297,12 +226,21 @@ def checked(lat, lon, form):
 
 # ---- the team's usual area ---------------------------------------------------------------------
 
+def area_edges(text):
+    """The usual area's south, north, west and east edges, from the site setting's text."""
+    try:
+        edges = [float(edge) for edge in text.split(',')]
+    except ValueError:
+        edges = []
+    if len(edges) != 4 or not (edges[0] < edges[1] and edges[2] < edges[3]):
+        raise ValueError('Enter the south, north, west and east edges, such as 32.4, 46.4, -124.8, -114.0.')
+    return edges
+
+
 def outside_usual_area(lat, lon):
     """Why a point outside the area the team usually works in looks wrong, with the point the
     member probably meant when a sign slip explains it; None for a point inside the area."""
-    preferences = global_preferences_registry.manager()
-    south, north, west, east = (preferences['general__event_area_' + edge]
-                                for edge in ('south', 'north', 'west', 'east'))
+    south, north, west, east = area_edges(global_preferences_registry.manager()['general__event_area'])
 
     def inside(lat, lon):
         return south <= lat <= north and west <= lon <= east

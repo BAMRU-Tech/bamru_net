@@ -1241,15 +1241,17 @@ $(document).ready(function() {
     $('#copy-lat-lon').on('click', function(event) {
         event.preventDefault();
         var link = this, point = document.getElementById('event-lat-lon');
-        navigator.clipboard.writeText(point.textContent).then(function() {
-            link.innerHTML = '<i class="fa fa-check"></i> Copied';
-            setTimeout(function() { link.innerHTML = '<i class="fa fa-copy"></i> Copy'; }, 2000);
-        }, function() {
+        function select() {
             var range = document.createRange();
             range.selectNodeContents(point);
             getSelection().removeAllRanges();
             getSelection().addRange(range);
-        });
+        }
+        if (!navigator.clipboard) return select();
+        navigator.clipboard.writeText(point.textContent).then(function() {
+            link.innerHTML = '<i class="fa fa-check"></i> Copied';
+            setTimeout(function() { link.innerHTML = '<i class="fa fa-copy"></i> Copy'; }, 2000);
+        }, select);
     });
 });
 </script>

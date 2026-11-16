@@ -1,8 +1,11 @@
 # Preferences using django-dynamic-preferences
 
+from django.core.exceptions import ValidationError
 from dynamic_preferences import types
 from dynamic_preferences.preferences import Section
 from dynamic_preferences.registries import global_preferences_registry
+
+from main.lib.lat_lon import area_edges
 
 general = Section('general')
 google = Section('google')
@@ -30,36 +33,20 @@ class EsbSpreadsheetUrl(types.StringPreference):
     verbose_name = 'ESB spreadsheet opened after copying ESB details on an event'
     default = ''
 
-# The area the team's events usually fall in: California, Nevada and Oregon. A new point
-# outside it is questioned on the event form before it is saved.
-
 @global_preferences_registry.register
-class EventAreaSouth(types.FloatPreference):
+class EventArea(types.StringPreference):
     section = general
-    name = 'event_area_south'
-    verbose_name = "Southern edge of the team's usual event area (latitude)"
-    default = 32.4
+    name = 'event_area'
+    verbose_name = "The team's usual event area: its south, north, west and east edges in degrees"
+    help_text = ('A point outside it gets a warning on the event form. '
+                 'The default covers California, Nevada and Oregon.')
+    default = '32.4, 46.4, -124.8, -114.0'
 
-@global_preferences_registry.register
-class EventAreaNorth(types.FloatPreference):
-    section = general
-    name = 'event_area_north'
-    verbose_name = "Northern edge of the team's usual event area (latitude)"
-    default = 46.4
-
-@global_preferences_registry.register
-class EventAreaWest(types.FloatPreference):
-    section = general
-    name = 'event_area_west'
-    verbose_name = "Western edge of the team's usual event area (longitude)"
-    default = -124.8
-
-@global_preferences_registry.register
-class EventAreaEast(types.FloatPreference):
-    section = general
-    name = 'event_area_east'
-    verbose_name = "Eastern edge of the team's usual event area (longitude)"
-    default = -114.0
+    def validate(self, value):
+        try:
+            area_edges(value)
+        except ValueError as problem:
+            raise ValidationError(str(problem))
 
 ###############################################################################
 # Google section

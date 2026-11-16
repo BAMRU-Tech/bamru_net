@@ -102,6 +102,10 @@ $(document).ready(function() {
                 });
                 note.append(' ', use);
             }
+        }).catch(function() {
+            if (box.value.trim() !== text) return;
+            shown = null;
+            say("Couldn't check this point now. It will be read when you save.");
         });
     }
 

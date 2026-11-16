@@ -120,15 +120,12 @@ class EventForm(ModelForm):
     # One box for the event's point, read in any common form and saved as lat and lon.
     lat_lon = forms.CharField(
         required=False, label='Lat/Lon',
-        help_text='Any form: decimal degrees, degrees and minutes, UTM, USNG or a map link.')
-    # Confirms a new point outside the team's usual area; a checkbox only once one is entered.
-    point_is_right = forms.BooleanField(
-        required=False, widget=HiddenInput, label='This point is right: save it anyway')
+        help_text='Any form: decimal degrees, degrees and minutes, UTM or USNG.')
 
     class Meta:
         model = Event
         fields = ['title', 'description', 'description_private', 'type',
-                  'location', 'location_private', 'lat_lon', 'point_is_right', 'leaders',
+                  'location', 'location_private', 'lat_lon', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
@@ -155,16 +152,19 @@ class EventForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.point = None
         if self.instance.lat and self.instance.lon:
             self.initial['lat_lon'] = '{}, {}'.format(self.instance.lat, self.instance.lon)
 
     def clean_lat_lon(self):
+        """The point as lat and lon text to store, or None for no point. A saved point the member
+        left untouched is kept exactly as stored."""
+        if 'lat_lon' not in self.changed_data:
+            return None
         try:
-            self.point = read_point(self.cleaned_data['lat_lon'])
+            point = read_point(self.cleaned_data['lat_lon'])
         except NotAPoint as problem:
             raise forms.ValidationError(str(problem))
-        return point_text(self.point.lat, self.point.lon) if self.point else ''
+        return point and (degrees_text(point.lat), degrees_text(point.lon))
 
     def clean(self):
         cleaned_data = super().clean()
@@ -172,25 +172,11 @@ class EventForm(ModelForm):
         finish = cleaned_data.get('finish_at')
         if finish and finish < start:
             self.add_error('finish_at', 'Finish time must not be earlier than start time')
-        point = self.point
-        if point and not cleaned_data.get('point_is_right') and self.point_is_new(point):
-            problem = outside_usual_area(point.lat, point.lon)
-            if problem:
-                self.fields['point_is_right'].widget = forms.CheckboxInput()
-                self.add_error('point_is_right', problem.message)
         return cleaned_data
 
-    def point_is_new(self, point):
-        """Whether the point differs from the one saved, so a point already accepted isn't questioned again."""
-        try:
-            return (float(self.instance.lat), float(self.instance.lon)) != (point.lat, point.lon)
-        except (TypeError, ValueError):
-            return True
-
     def save(self, commit=True):
-        point = self.point
-        self.instance.lat, self.instance.lon = (
-            (degrees_text(point.lat), degrees_text(point.lon)) if point else (None, None))
+        if 'lat_lon' in self.changed_data:
+            self.instance.lat, self.instance.lon = self.cleaned_data['lat_lon'] or (None, None)
         return super().save(commit)
 
 
@@ -198,7 +184,7 @@ class EventForm(ModelForm):
 @require_POST
 def event_lat_lon(request):
     """The Lat/Lon box's text read as the event form reads it, so the form can show the point
-    converted in place, and question it, before the member saves."""
+    converted in place, and warn of one outside the team's usual area, before the member saves."""
     try:
         point = read_point(request.POST.get('text'))
     except NotAPoint as problem:
