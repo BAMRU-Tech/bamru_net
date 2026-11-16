@@ -1,4 +1,4 @@
-"""A point as a member types or pastes it into an event's Lat/Long box, in any common form, read
+"""A point as a member types or pastes it into an event's Lat/Lon box, in any common form, read
 as decimal latitude and longitude on WGS84 (which NAD83 matches to within a metre or two).
 
 The forms read:

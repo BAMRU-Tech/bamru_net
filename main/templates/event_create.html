@@ -63,10 +63,10 @@ $(document).ready(function() {
 
 });
 
-// Once a member pastes into the Lat/Long box or leaves it, rewrite what they typed, in whatever
+// Once a member pastes into the Lat/Lon box or leaves it, rewrite what they typed, in whatever
 // form, as decimal latitude and longitude, and say what it was read as or what looks wrong.
 $(document).ready(function() {
-    var box = document.getElementById('id_lat_long');
+    var box = document.getElementById('id_lat_lon');
     var note = document.createElement('small');
     box.insertAdjacentElement('afterend', note);
     var shown = box.value.trim();
@@ -76,11 +76,11 @@ $(document).ready(function() {
         note.textContent = text || '';
     }
 
-    function readLatLong() {
+    function readLatLon() {
         var text = box.value.trim();
         if (text === shown) return;
         say('');
-        fetch('{% url "event_lat_long" %}', {
+        fetch('{% url "event_lat_lon" %}', {
             method: 'POST',
             headers: {'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()},
             body: new URLSearchParams({text: text}),
@@ -92,18 +92,22 @@ $(document).ready(function() {
             var converted = read.form && read.form !== 'decimal degrees' ? 'Converted from ' + read.form + '.' : '';
             say(read.error || read.warning || converted, read.error || read.warning);
             if (read.suggestion) {
-                var use = document.createElement('button');
-                use.type = 'button';
-                use.className = 'btn btn-link btn-sm p-0 ml-1 align-baseline';
+                var use = document.createElement('a');
+                use.href = '#';
+                use.setAttribute('role', 'button');
                 use.textContent = 'Use ' + read.suggestion;
-                use.addEventListener('click', function() { box.value = read.suggestion; readLatLong(); });
+                use.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    box.value = read.suggestion;
+                    readLatLon();
+                });
                 note.append(' ', use);
             }
         });
     }
 
-    box.addEventListener('change', readLatLong);
-    box.addEventListener('paste', function() { setTimeout(readLatLong); });
+    box.addEventListener('change', readLatLon);
+    box.addEventListener('paste', function() { setTimeout(readLatLon); });
 });
 
 function ValidateDateRange () {

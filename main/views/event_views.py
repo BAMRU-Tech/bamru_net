@@ -15,7 +15,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 from dynamic_preferences.registries import global_preferences_registry
 
 from main.lib.gcal import get_gcal_manager
-from main.lib.lat_long import NotAPoint, degrees_text, outside_usual_area, point_text, read_point
+from main.lib.lat_lon import NotAPoint, degrees_text, outside_usual_area, point_text, read_point
 from main.models import DoAvailable, Member, Event, Participant, Period
 from main.views.api_views import EventFilter
 from main import tasks
@@ -118,8 +118,8 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
 class EventForm(ModelForm):
     # One box for the event's point, read in any common form and saved as lat and lon.
-    lat_long = forms.CharField(
-        required=False, label='Lat/Long',
+    lat_lon = forms.CharField(
+        required=False, label='Lat/Lon',
         help_text='Any form: decimal degrees, degrees and minutes, UTM, USNG or a map link.')
     # Confirms a new point outside the team's usual area; a checkbox only once one is entered.
     point_is_right = forms.BooleanField(
@@ -128,7 +128,7 @@ class EventForm(ModelForm):
     class Meta:
         model = Event
         fields = ['title', 'description', 'description_private', 'type',
-                  'location', 'location_private', 'lat_long', 'point_is_right', 'leaders',
+                  'location', 'location_private', 'lat_lon', 'point_is_right', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
@@ -157,11 +157,11 @@ class EventForm(ModelForm):
         super().__init__(*args, **kwargs)
         self.point = None
         if self.instance.lat and self.instance.lon:
-            self.initial['lat_long'] = '{}, {}'.format(self.instance.lat, self.instance.lon)
+            self.initial['lat_lon'] = '{}, {}'.format(self.instance.lat, self.instance.lon)
 
-    def clean_lat_long(self):
+    def clean_lat_lon(self):
         try:
-            self.point = read_point(self.cleaned_data['lat_long'])
+            self.point = read_point(self.cleaned_data['lat_lon'])
         except NotAPoint as problem:
             raise forms.ValidationError(str(problem))
         return point_text(self.point.lat, self.point.lon) if self.point else ''
@@ -196,8 +196,8 @@ class EventForm(ModelForm):
 
 @login_required
 @require_POST
-def event_lat_long(request):
-    """The Lat/Long box's text read as the event form reads it, so the form can show the point
+def event_lat_lon(request):
+    """The Lat/Lon box's text read as the event form reads it, so the form can show the point
     converted in place, and question it, before the member saves."""
     try:
         point = read_point(request.POST.get('text'))

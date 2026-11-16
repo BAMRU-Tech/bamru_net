@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from dynamic_preferences.registries import global_preferences_registry
 
-from main.lib.lat_long import EXAMPLES, NotAPoint, outside_usual_area, read_point
+from main.lib.lat_lon import EXAMPLES, NotAPoint, outside_usual_area, read_point
 from main.models import Event, Member
 from main.views.event_views import EventForm
 
@@ -18,7 +18,7 @@ CLOSE = 2e-5
 
 
 class ReadPointTestCase(TestCase):
-    """Every form the Lat/Long box reads, and what it reads each as."""
+    """Every form the Lat/Lon box reads, and what it reads each as."""
 
     def assertReads(self, text, lat, lon, form):
         point = read_point(text)
@@ -126,8 +126,8 @@ class UsualAreaTestCase(TestCase):
         self.assertIsNone(outside_usual_area(*GRAND_CANYON))
 
 
-class EventFormLatLongTestCase(TestCase):
-    """The Lat/Long box on the event form: what it saves to the event's lat and lon."""
+class EventFormLatLonTestCase(TestCase):
+    """The Lat/Lon box on the event form: what it saves to the event's lat and lon."""
 
     def setUp(self):
         start = timezone.localtime().replace(hour=9, minute=0, second=0, microsecond=0)
@@ -135,14 +135,14 @@ class EventFormLatLongTestCase(TestCase):
             type='training', title='Snow travel', location='Donner Summit',
             start_at=start, finish_at=start + timedelta(hours=8))
 
-    def form(self, lat_long, point_is_right=False):
+    def form(self, lat_lon, point_is_right=False):
         start = timezone.localtime(self.event.start_at)
         finish = timezone.localtime(self.event.finish_at)
         data = {
             'title': self.event.title, 'type': self.event.type, 'location': self.event.location,
             'start_at_0': start.strftime('%Y-%m-%d'), 'start_at_1': start.strftime('%H:%M'),
             'finish_at_0': finish.strftime('%Y-%m-%d'), 'finish_at_1': finish.strftime('%H:%M'),
-            'lat_long': lat_long,
+            'lat_lon': lat_lon,
         }
         if point_is_right:
             data['point_is_right'] = 'on'
@@ -168,12 +168,12 @@ class EventFormLatLongTestCase(TestCase):
     def test_shows_the_saved_point(self):
         self.event.lat, self.event.lon = '39.3157', '-120.3277'
         self.event.save()
-        self.assertEqual(EventForm(instance=self.event).initial['lat_long'], '39.3157, -120.3277')
+        self.assertEqual(EventForm(instance=self.event).initial['lat_lon'], '39.3157, -120.3277')
 
     def test_unreadable_text_is_an_error(self):
         form = self.form('Donner Summit')
         self.assertFalse(form.is_valid())
-        self.assertIn('Enter a point in any of these forms', form.errors['lat_long'][0])
+        self.assertIn('Enter a point in any of these forms', form.errors['lat_lon'][0])
 
     def test_point_outside_the_area_is_questioned(self):
         form = self.form('39.3157, 120.3277')
@@ -191,7 +191,7 @@ class EventFormLatLongTestCase(TestCase):
         self.assertEqual(self.saved(self.form('36.0544, -112.1401')), ('36.0544', '-112.1401'))
 
 
-class EventLatLongPageTestCase(TestCase):
+class EventLatLonPageTestCase(TestCase):
     """The event edit page and the reading it asks for as a member fills in the box."""
 
     def setUp(self):
@@ -202,11 +202,11 @@ class EventLatLongPageTestCase(TestCase):
             type='training', title='Snow travel', location='Donner Summit',
             start_at=start, finish_at=start + timedelta(hours=8))
 
-    def test_edit_page_has_one_lat_long_box(self):
+    def test_edit_page_has_one_lat_lon_box(self):
         self.client.force_login(self.member)
         response = self.client.get('/event/{}/edit/'.format(self.event.id))
-        self.assertContains(response, 'Lat/Long')
-        self.assertContains(response, 'type="text" name="lat_long"')
+        self.assertContains(response, 'Lat/Lon')
+        self.assertContains(response, 'type="text" name="lat_lon"')
         self.assertNotContains(response, 'name="lat"')
         self.assertNotContains(response, 'name="lon"')
         self.assertNotContains(response, 'geopicker')
@@ -216,34 +216,34 @@ class EventLatLongPageTestCase(TestCase):
         self.event.save()
         self.client.force_login(self.member)
         response = self.client.get('/event/{}/'.format(self.event.id))
-        self.assertContains(response, '<strong>Lat/Long:</strong> <span id="event-lat-long">39.3157, -120.3277</span>',
+        self.assertContains(response, '<strong>Lat/Lon:</strong> <span id="event-lat-lon">39.3157, -120.3277</span>',
                             html=False)
-        self.assertContains(response, 'id="copy-lat-long"')
+        self.assertContains(response, '<a href="#" id="copy-lat-lon" role="button"')
         self.assertNotContains(response, '<strong>Lat:</strong>')
 
     def test_event_page_without_a_point_shows_none(self):
         self.client.force_login(self.member)
         response = self.client.get('/event/{}/'.format(self.event.id))
-        self.assertNotContains(response, 'Lat/Long:')
-        self.assertNotContains(response, 'id="copy-lat-long"')
+        self.assertNotContains(response, 'Lat/Lon:')
+        self.assertNotContains(response, 'id="copy-lat-lon"')
 
     def test_reading_converts_a_utm_point(self):
         self.client.force_login(self.member)
-        response = self.client.post('/event/lat_long/', {'text': '10S 727330 4355390'})
+        response = self.client.post('/event/lat_lon/', {'text': '10S 727330 4355390'})
         self.assertEqual(response.json(), {'value': '39.318069, -120.36303', 'form': 'UTM',
                                            'warning': None, 'suggestion': None})
 
     def test_reading_questions_a_wrong_sign(self):
         self.client.force_login(self.member)
-        response = self.client.post('/event/lat_long/', {'text': '39.3157, 120.3277'})
+        response = self.client.post('/event/lat_lon/', {'text': '39.3157, 120.3277'})
         self.assertEqual(response.json()['suggestion'], '39.3157, -120.3277')
         self.assertIn('Did you mean 39.3157, -120.3277?', response.json()['warning'])
 
     def test_reading_reports_what_cannot_be_read(self):
         self.client.force_login(self.member)
-        response = self.client.post('/event/lat_long/', {'text': 'Donner Summit'})
+        response = self.client.post('/event/lat_lon/', {'text': 'Donner Summit'})
         self.assertIn('Enter a point in any of these forms', response.json()['error'])
 
     def test_reading_needs_a_signed_in_member(self):
-        response = self.client.post('/event/lat_long/', {'text': '39.3157, -120.3277'})
+        response = self.client.post('/event/lat_lon/', {'text': '39.3157, -120.3277'})
         self.assertEqual(response.status_code, 302)

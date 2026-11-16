@@ -56,9 +56,9 @@
       {% endif %}
       {% if event.lat and event.lon %}
       {% if event.location_private %}<br>{% endif %}
-      <strong>Lat/Long:</strong> <span id="event-lat-long">{{ event.lat }}, {{ event.lon }}</span>
-      <button type="button" id="copy-lat-long" class="btn btn-link btn-sm p-0 ml-1 align-baseline"
-              aria-label="Copy Lat/Long"><i class="fa fa-copy"></i> Copy</button>
+      <strong>Lat/Lon:</strong> <span id="event-lat-lon">{{ event.lat }}, {{ event.lon }}</span>
+      <a href="#" id="copy-lat-lon" role="button" aria-label="Copy Lat/Lon">
+        <i class="fa fa-copy"></i> Copy</a>
       {% endif %}
       </p></p>
     <p><strong>Leaders:</strong>
@@ -1235,14 +1235,15 @@ function MarkRow ( e, dt, type, indices ) {
 
 </script>
 <script type="text/javascript">
-// Copy the event's Lat/Long as one item, ready to paste into Google Maps or CalTopo. Where the
+// Copy the event's Lat/Lon as one item, ready to paste into Google Maps or CalTopo. Where the
 // browser won't copy, select it so the member can.
 $(document).ready(function() {
-    $('#copy-lat-long').on('click', function() {
-        var button = this, point = document.getElementById('event-lat-long');
+    $('#copy-lat-lon').on('click', function(event) {
+        event.preventDefault();
+        var link = this, point = document.getElementById('event-lat-lon');
         navigator.clipboard.writeText(point.textContent).then(function() {
-            button.innerHTML = '<i class="fa fa-check"></i> Copied';
-            setTimeout(function() { button.innerHTML = '<i class="fa fa-copy"></i> Copy'; }, 2000);
+            link.innerHTML = '<i class="fa fa-check"></i> Copied';
+            setTimeout(function() { link.innerHTML = '<i class="fa fa-copy"></i> Copy'; }, 2000);
         }, function() {
             var range = document.createRange();
             range.selectNodeContents(point);
