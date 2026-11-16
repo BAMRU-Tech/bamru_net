@@ -8,6 +8,8 @@ The forms read:
 - UTM: 11S 271234 4180567 · 11 271234mE 4180567mN
 - USNG, which is MGRS for the US: 11S KB 71234 80567 · 11SKB7123480567
 - a map link that holds the point: Google Maps, CalTopo or Apple Maps
+
+Text around the point, such as a sentence or the rest of CalTopo's point panel, is left out.
 """
 import math
 import re
@@ -15,7 +17,8 @@ from collections import namedtuple
 
 from dynamic_preferences.registries import global_preferences_registry
 
-Point = namedtuple('Point', 'lat lon form')
+# trimmed: whether text around the point was left out.
+Point = namedtuple('Point', 'lat lon form trimmed', defaults=(False,))
 Problem = namedtuple('Problem', 'message suggestion')
 
 
@@ -26,6 +29,13 @@ class NotAPoint(ValueError):
     def __init__(self, message, suggestion=None):
         super().__init__(message)
         self.suggestion = suggestion
+
+
+class NoPoint(NotAPoint):
+    """Text with no point in it at all, rather than a point with something wrong with it."""
+
+    def __init__(self):
+        super().__init__(UNREADABLE)
 
 
 def degrees_text(degrees):
@@ -42,6 +52,23 @@ def read_point(text):
     text = (text or '').strip()
     if not text:
         return None
+    try:
+        return read_whole(text)
+    except NoPoint:
+        return point_in_text(text)
+
+
+def reading_note(point):
+    """What the box did to the member's text, for the note under it; empty when nothing changed."""
+    converted = point.form != 'decimal degrees'
+    if point.trimmed:
+        return 'Left out the text around the point{}.'.format(
+            ', and converted it from ' + point.form if converted else '')
+    return 'Converted from {}.'.format(point.form) if converted else ''
+
+
+def read_whole(text):
+    """The point that the whole text gives."""
     if re.match(r'https?://', text, re.IGNORECASE):
         return checked(*link_point(text), 'a map link')
     text = text.translate(TYPOGRAPHY).upper()
@@ -50,6 +77,46 @@ def read_point(text):
         if found:
             return read(*found.groups())
     return degrees_point(text)
+
+
+# ---- a point in longer text -------------------------------------------------------------------
+
+MOST_WORDS = 12                 # the longest a point runs, as in Lat: N 37 44 44.2 Long: W 119 35 37.0
+SAME_POINT = 50                 # metres: CalTopo's forms of one point, each rounded, differ by up to 20
+AROUND = '.,;:!?()[]{}<>'       # punctuation that ends a sentence or brackets a point
+MOST_SEARCHED = 1000            # words: a page of text, which takes a tenth of a second
+
+
+def point_in_text(text):
+    """The one point in longer text: the longest runs of words that read as a point. The forms of
+    one point that CalTopo lists read as that point, in decimal degrees when given, as they need no
+    converting; two different points are an error."""
+    words = text.split()[:MOST_SEARCHED]
+    runs = []
+    for start in range(len(words)):
+        for end in range(start + 1, min(start + MOST_WORDS, len(words)) + 1):
+            try:
+                runs.append((start, end, read_whole(' '.join(words[start:end]).strip(AROUND))))
+            except NotAPoint:
+                pass
+    # A run inside a longer one, such as a latitude and part of a longitude, isn't a point of its own.
+    points = [point for start, end, point in runs
+              if not any(s <= start and end <= e and (s, e) != (start, end) for s, e, _ in runs)]
+    if not points:
+        raise NoPoint()
+    for point in points:
+        if metres_apart(points[0], point) > SAME_POINT:
+            raise NotAPoint('This text holds more than one point: {} and {}. Enter just one.'.format(
+                point_text(points[0].lat, points[0].lon), point_text(point.lat, point.lon)))
+    point = next((point for point in points if point.form == 'decimal degrees'), points[0])
+    return point._replace(trimmed=True)
+
+
+def metres_apart(one, other):
+    """Roughly, which is enough to tell two points apart."""
+    north = (one.lat - other.lat) * 111195
+    east = (one.lon - other.lon) * 111195 * math.cos(math.radians(one.lat))
+    return math.hypot(north, east)
 
 
 # ---- map links -------------------------------------------------------------------------------
@@ -158,8 +225,8 @@ UNREADABLE = 'Enter a point in any of these forms: {}; {}; {}; {}; or {}. A map 
 
 def degrees_point(text):
     parts = degree_parts(LABELS.sub(' ', text))
-    if len(parts) != 2:
-        raise NotAPoint(UNREADABLE)
+    if len(parts) != 2 or not all(numbers for numbers, _ in parts):
+        raise NoPoint()
     values = [part_value(numbers, letter) for numbers, letter in parts]
     letters = [letter for _, letter in parts]
     if letters[0] in ('E', 'W') or letters[1] in ('N', 'S'):
@@ -186,7 +253,7 @@ def degree_parts(text):
 
     for hemisphere, number, symbol, separator, other in TOKENS.findall(text):
         if other:
-            raise NotAPoint(UNREADABLE)
+            raise NoPoint()
         if separator:
             close()
         elif hemisphere:

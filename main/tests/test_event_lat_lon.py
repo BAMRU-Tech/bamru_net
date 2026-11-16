@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from dynamic_preferences.registries import global_preferences_registry
 
-from main.lib.lat_lon import EXAMPLES, NotAPoint, outside_usual_area, read_point
+from main.lib.lat_lon import EXAMPLES, NotAPoint, Point, outside_usual_area, read_point
 from main.models import Event, Member
 from main.views.event_views import EventForm
 
@@ -15,6 +15,86 @@ GRAND_CANYON = (36.0544, -112.1401)
 # Within about 2 m. The UTM and USNG answers below come from pyproj 3.8 and the mgrs package,
 # run separately, so these tests check the conversions against an independent source.
 CLOSE = 2e-5
+# CalTopo's point panel, copied whole: one point in five forms, after its elevation, slope and
+# aspect. The first three are inside the team's usual area; the last, in Utah, is outside it.
+CALTOPO_PANELS = {
+    'a': """Position
+
+Elevation
+235'
+Slope
+6°
+Aspect
+122°
+UTM
+10S 0565602E 4147764N
+USNG
+10S EG 65602 47764
+DD
+37.47444, -122.25807
+DDM
+37°28.466', -122°15.484'
+DMS
+37°28'28", -122°15'29"
+""",
+    'b': """Position
+
+Elevation
+5075'
+Slope
+1°
+Aspect
+237°
+UTM
+10T 0666031E 4463443N
+USNG
+10T FK 66031 63443
+DD
+40.30501, -121.04626
+DDM
+40°18.301', -121°02.776'
+DMS
+40°18'18", -121°02'47"
+""",
+    'c': """Position
+
+Elevation
+790'
+Slope
+10°
+Aspect
+188°
+UTM
+10T 0392601E 4476122N
+USNG
+10T CK 92601 76122
+DD
+40.42881, -124.26613
+DDM
+40°25.729', -124°15.968'
+DMS
+40°25'44", -124°15'58"
+""",
+    'd': """Position
+
+Elevation
+6766'
+Slope
+10°
+Aspect
+204°
+UTM
+12S 0502202E 4367623N
+USNG
+12S WJ 02202 67623
+DD
+39.45817, -110.97440
+DDM
+39°27.490', -110°58.464'
+DMS
+39°27'29", -110°58'28"
+""",
+}
 
 
 class ReadPointTestCase(TestCase):
@@ -62,6 +142,34 @@ class ReadPointTestCase(TestCase):
                      'https://maps.apple.com/?ll=39.3157,-120.3277&q=Pin'):
             self.assertReads(link, *DONNER, 'a map link')
 
+    def test_text_around_a_point_is_left_out(self):
+        for text, lat, lon, form in (
+                ('Meet at 39.3157, -120.3277 by the gate', *DONNER, 'decimal degrees'),
+                ('Trailhead: 39.3157, -120.3277.', *DONNER, 'decimal degrees'),
+                ('(39.3157, -120.3277)', *DONNER, 'decimal degrees'),
+                ('Camp 2 at 39.3157, -120.3277, 3 miles in', *DONNER, 'decimal degrees'),
+                ("Meet at N 37° 44.736' W 119° 35.616' at the bridge", 37.7456, -119.5936, 'degrees and minutes'),
+                ('Point 10S 727330 4355390 near the lake', 39.318069, -120.36303, 'UTM'),
+                ('See https://www.google.com/maps/@39.3157,-120.3277,15z for it', *DONNER, 'a map link')):
+            self.assertReads(text, lat, lon, form)
+            self.assertTrue(read_point(text).trimmed, msg=text)
+        self.assertFalse(read_point('39.3157, -120.3277').trimmed)
+
+    def test_caltopo_point_panel_reads_as_its_decimal_degrees(self):
+        for name, lat, lon in (('a', 37.47444, -122.25807), ('b', 40.30501, -121.04626),
+                               ('c', 40.42881, -124.26613), ('d', 39.45817, -110.9744)):
+            self.assertEqual(read_point(CALTOPO_PANELS[name]), Point(lat, lon, 'decimal degrees', True), msg=name)
+
+    def test_caltopo_point_panel_without_decimal_degrees_reads_its_first_form(self):
+        panel = CALTOPO_PANELS['a'].replace('DD\n37.47444, -122.25807\n', '')
+        self.assertReads(panel, 37.474439, -122.258071, 'UTM')
+
+    def test_different_points_in_one_text_are_an_error(self):
+        for text in ('39.3157, -120.3277 and 37.7456, -119.5936',
+                     'From 10S 727330 4355390 to 10S 737330 4355390'):
+            with self.assertRaisesMessage(NotAPoint, 'This text holds more than one point: '):
+                read_point(text)
+
     def test_every_example_in_the_message_reads_as_the_same_point(self):
         for example, form in zip(EXAMPLES, ('decimal degrees', 'degrees and minutes',
                                              'degrees, minutes and seconds', 'UTM', 'USNG')):
@@ -77,6 +185,8 @@ class ReadPointTestCase(TestCase):
         for text, message in (
                 ('39.3157', unreadable),
                 ('Donner Summit', unreadable),
+                ('N 37.7456 W', unreadable),
+                ("Elevation 235' Slope 6°", unreadable),
                 ('95.5, -120.3', 'Latitude runs from -90 to 90.'),
                 ('39.3, -190.5', 'Longitude runs from -180 to 180.'),
                 ('N39 N120', 'Give one latitude (N or S) and one longitude (E or W).'),
@@ -157,6 +267,15 @@ class EventFormLatLonTestCase(TestCase):
     def test_saves_decimal_degrees_to_lat_and_lon(self):
         self.assertEqual(self.saved(self.form('39.3157, -120.3277')), ('39.3157', '-120.3277'))
 
+    def test_saves_the_point_from_a_caltopo_point_panel(self):
+        self.assertEqual(self.saved(self.form(CALTOPO_PANELS['a'])), ('37.47444', '-122.25807'))
+
+    def test_point_outside_the_area_from_a_caltopo_point_panel_is_questioned(self):
+        form = self.form(CALTOPO_PANELS['d'])
+        self.assertFalse(form.is_valid())
+        self.assertEqual(form.errors['point_is_right'],
+                         ['This point is outside the area the team usually works in. Check it on a map.'])
+
     def test_saves_a_utm_point_converted(self):
         self.assertEqual(self.saved(self.form('10S 727330 4355390')), ('39.318069', '-120.36303'))
 
@@ -230,8 +349,24 @@ class EventLatLonPageTestCase(TestCase):
     def test_reading_converts_a_utm_point(self):
         self.client.force_login(self.member)
         response = self.client.post('/event/lat_lon/', {'text': '10S 727330 4355390'})
-        self.assertEqual(response.json(), {'value': '39.318069, -120.36303', 'form': 'UTM',
+        self.assertEqual(response.json(), {'value': '39.318069, -120.36303', 'note': 'Converted from UTM.',
                                            'warning': None, 'suggestion': None})
+
+    def test_reading_leaves_out_the_text_around_the_point(self):
+        self.client.force_login(self.member)
+        response = self.client.post('/event/lat_lon/', {'text': CALTOPO_PANELS['a']})
+        self.assertEqual(response.json(), {'value': '37.47444, -122.25807',
+                                           'note': 'Left out the text around the point.',
+                                           'warning': None, 'suggestion': None})
+        response = self.client.post('/event/lat_lon/', {'text': 'Point 10S 727330 4355390 near the lake'})
+        self.assertEqual(response.json()['note'], 'Left out the text around the point, and converted it from UTM.')
+
+    def test_reading_questions_a_caltopo_point_outside_the_area(self):
+        self.client.force_login(self.member)
+        response = self.client.post('/event/lat_lon/', {'text': CALTOPO_PANELS['d']})
+        self.assertEqual(response.json()['value'], '39.45817, -110.9744')
+        self.assertEqual(response.json()['warning'],
+                         'This point is outside the area the team usually works in. Check it on a map.')
 
     def test_reading_questions_a_wrong_sign(self):
         self.client.force_login(self.member)

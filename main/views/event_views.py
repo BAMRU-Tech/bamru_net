@@ -15,7 +15,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 from dynamic_preferences.registries import global_preferences_registry
 
 from main.lib.gcal import get_gcal_manager
-from main.lib.lat_lon import NotAPoint, degrees_text, outside_usual_area, point_text, read_point
+from main.lib.lat_lon import NotAPoint, degrees_text, outside_usual_area, point_text, read_point, reading_note
 from main.models import DoAvailable, Member, Event, Participant, Period
 from main.views.api_views import EventFilter
 from main import tasks
@@ -206,7 +206,7 @@ def event_lat_lon(request):
     if not point:
         return JsonResponse({'value': ''})
     problem = outside_usual_area(point.lat, point.lon)
-    return JsonResponse({'value': point_text(point.lat, point.lon), 'form': point.form,
+    return JsonResponse({'value': point_text(point.lat, point.lon), 'note': reading_note(point),
                          'warning': problem and problem.message, 'suggestion': problem and problem.suggestion})
 
 

@@ -89,8 +89,7 @@ $(document).ready(function() {
             // After an error nothing is known to be read, so the next text is always read.
             shown = read.value !== undefined ? read.value : null;
             if (read.value !== undefined) box.value = read.value;
-            var converted = read.form && read.form !== 'decimal degrees' ? 'Converted from ' + read.form + '.' : '';
-            say(read.error || read.warning || converted, read.error || read.warning);
+            say(read.error || read.warning || read.note, read.error || read.warning);
             if (read.suggestion) {
                 var use = document.createElement('a');
                 use.href = '#';
