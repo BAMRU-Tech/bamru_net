@@ -74,9 +74,9 @@ def link_point(link):
 # ---- UTM and USNG ------------------------------------------------------------------------------
 
 BANDS = 'CDEFGHJKLMNPQRSTUVWX'                  # 8° latitude bands from 80°S; N and after are north
-UTM = re.compile(r'(?:ZONE\s*)?(\d{1,2})\s*([C-HJ-NP-X])?\s+0?(\d{6}(?:\.\d+)?)\s*(?:M?\s*E)?\s*[,;]?\s*'
+UTM = re.compile(r'(?:UTM\s*)?(?:ZONE\s*)?(\d{1,2})\s*([C-HJ-NP-X])?\s+0?(\d{6}(?:\.\d+)?)\s*(?:M?\s*E)?\s*[,;]?\s*'
                  r'(\d{7}(?:\.\d+)?)\s*(?:M?\s*N)?')
-USNG = re.compile(r'(\d{1,2})\s*([C-HJ-NP-X])\s*([A-HJ-NP-Z])\s*([A-HJ-NP-V])\s*(\d+(?:\s+\d+)?)')
+USNG = re.compile(r'(?:USNG\s*|MGRS\s*)?(\d{1,2})\s*([C-HJ-NP-X])\s*([A-HJ-NP-Z])\s*([A-HJ-NP-V])\s*(\d+(?:\s+\d+)?)')
 # The 100 km square letters: columns by zone (zone 1 uses the first set), and rows, which repeat
 # every 2,000 km and start five letters on in even zones.
 COLUMNS = ('ABCDEFGH', 'JKLMNPQR', 'STUVWXYZ')
@@ -150,8 +150,10 @@ TYPOGRAPHY = str.maketrans({'º': '°', '˚': '°', '′': "'", '’': "'", '‘
 LABELS = re.compile(r'\b(?:LATITUDE|LONGITUDE|LAT|LONG|LON|LNG)\b\s*[:=]?|\b(?:DEGREES|DEG)\b')
 TOKENS = re.compile(r'([NSEW])|([-+]?\d+(?:\.\d+)?)\s*([°\'"])?|([,;/])|(\S)')
 FORMS = {1: 'decimal degrees', 2: 'degrees and minutes', 3: 'degrees, minutes and seconds'}
-UNREADABLE = ('Enter a latitude and a longitude, such as 37.7456, -119.5936, '
-              'or a UTM or USNG point.')
+# One point, Yosemite Valley, in each form the box reads, for when a member's text can't be read.
+EXAMPLES = ('37.7456, -119.5936', "N 37° 44.736' W 119° 35.616'", '37°44\'44.2"N 119°35\'37.0"W',
+            'UTM 11S 271485 4180757', 'USNG 11S KB 71484 80756')
+UNREADABLE = 'Enter a point in any of these forms: {}; {}; {}; {}; or {}. A map link works too.'.format(*EXAMPLES)
 
 
 def degrees_point(text):

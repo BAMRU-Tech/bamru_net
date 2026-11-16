@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 from dynamic_preferences.registries import global_preferences_registry
 
-from main.lib.lat_long import NotAPoint, outside_usual_area, read_point
+from main.lib.lat_long import EXAMPLES, NotAPoint, outside_usual_area, read_point
 from main.models import Event, Member
 from main.views.event_views import EventForm
 
@@ -62,11 +62,18 @@ class ReadPointTestCase(TestCase):
                      'https://maps.apple.com/?ll=39.3157,-120.3277&q=Pin'):
             self.assertReads(link, *DONNER, 'a map link')
 
+    def test_every_example_in_the_message_reads_as_the_same_point(self):
+        for example, form in zip(EXAMPLES, ('decimal degrees', 'degrees and minutes',
+                                             'degrees, minutes and seconds', 'UTM', 'USNG')):
+            self.assertReads(example, 37.7456, -119.5936, form)
+
     def test_empty_box_is_no_point(self):
         self.assertIsNone(read_point('  '))
 
     def test_what_cannot_be_read(self):
-        unreadable = 'Enter a latitude and a longitude, such as 37.7456, -119.5936, or a UTM or USNG point.'
+        unreadable = ('Enter a point in any of these forms: 37.7456, -119.5936; N 37° 44.736\' W 119° 35.616\'; '
+                      '37°44\'44.2"N 119°35\'37.0"W; UTM 11S 271485 4180757; or USNG 11S KB 71484 80756. '
+                      'A map link works too.')
         for text, message in (
                 ('39.3157', unreadable),
                 ('Donner Summit', unreadable),
@@ -166,7 +173,7 @@ class EventFormLatLongTestCase(TestCase):
     def test_unreadable_text_is_an_error(self):
         form = self.form('Donner Summit')
         self.assertFalse(form.is_valid())
-        self.assertIn('Enter a latitude and a longitude', form.errors['lat_long'][0])
+        self.assertIn('Enter a point in any of these forms', form.errors['lat_long'][0])
 
     def test_point_outside_the_area_is_questioned(self):
         form = self.form('39.3157, 120.3277')
@@ -219,7 +226,7 @@ class EventLatLongPageTestCase(TestCase):
     def test_reading_reports_what_cannot_be_read(self):
         self.client.force_login(self.member)
         response = self.client.post('/event/lat_long/', {'text': 'Donner Summit'})
-        self.assertIn('Enter a latitude and a longitude', response.json()['error'])
+        self.assertIn('Enter a point in any of these forms', response.json()['error'])
 
     def test_reading_needs_a_signed_in_member(self):
         response = self.client.post('/event/lat_long/', {'text': '39.3157, -120.3277'})
