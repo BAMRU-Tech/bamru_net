@@ -9,7 +9,6 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from django.forms import widgets
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from dynamic_preferences.registries import global_preferences_registry
@@ -21,6 +20,7 @@ from main import tasks
 
 from datetime import timedelta
 import datetime
+import re
 
 import logging
 logger = logging.getLogger(__name__)
@@ -115,14 +115,37 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         return HttpResponseBadRequest('Error: No action set.')
 
 
+# Latitude or longitude in decimal degrees, as a member types it: 37.7456 or -119.5936.
+DEGREES = re.compile(r'[-+]?\d{1,3}(?:\.\d+)?')
+# Both together, as a map copies them ("37.7456, -119.5936") or a Google Maps link holds them
+# (".../@37.7456,-119.5936,15z").
+LAT_LON = re.compile(r'([-+]?\d{1,3}\.\d+)\s*[,\s]\s*([-+]?\d{1,3}\.\d+)')
+DEGREES_EXAMPLE = {'lat': '37.7456', 'lon': '-119.5936'}
+
+
+def flip_sign(degrees):
+    return degrees[1:] if degrees.startswith('-') else '-' + degrees.lstrip('+')
+
+
 class EventForm(ModelForm):
+    # Confirms a new point outside the team's usual area; a checkbox only once one is entered.
+    point_is_right = forms.BooleanField(
+        required=False, widget=HiddenInput, label='This point is right: save it anyway')
+
     class Meta:
         model = Event
         fields = ['title', 'description', 'description_private', 'type',
-                  'location', 'location_private', 'lat', 'lon', 'leaders',
+                  'location', 'location_private', 'lat', 'lon', 'point_is_right', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
+        labels = {'lat': 'Latitude', 'lon': 'Longitude'}
+        help_texts = {
+            'lat': 'Decimal degrees, such as 37.7456. A point copied from a map, such as '
+                   '37.7456, -119.5936, can be pasted here to fill in both.',
+            'lon': 'Decimal degrees, such as -119.5936. Longitude is negative west of Greenwich, '
+                   'as all of California is.',
+        }
         field_classes = {
             'start_at': forms.SplitDateTimeField,
             'finish_at': forms.SplitDateTimeField,
@@ -142,9 +165,6 @@ class EventForm(ModelForm):
                 time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
                             'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
-            'lat': widgets.HiddenInput(),
-            'lon': widgets.HiddenInput(),
-                
         }
 
     def clean(self):
@@ -153,7 +173,54 @@ class EventForm(ModelForm):
         finish = cleaned_data.get('finish_at')
         if finish and finish < start:
             self.add_error('finish_at', 'Finish time must not be earlier than start time')
+        self.clean_lat_lon(cleaned_data)
         return cleaned_data
+
+    def clean_lat_lon(self, cleaned_data):
+        """Latitude and longitude in decimal degrees, both or neither. A new point outside the
+        team's usual area is saved once the member confirms it, as it is most often a slip
+        such as a missing minus sign."""
+        lat, lon = cleaned_data.get('lat'), cleaned_data.get('lon')
+        pasted = LAT_LON.search(lat or '')
+        if pasted and not lon:
+            lat, lon = pasted.groups()
+            cleaned_data['lat'], cleaned_data['lon'] = lat, lon
+        if not lat and not lon:
+            return
+        for name, value in (('lat', lat), ('lon', lon)):
+            if not value:
+                self.add_error(name, 'Enter both latitude and longitude, or neither.')
+            elif not DEGREES.fullmatch(value):
+                self.add_error(name, 'Enter decimal degrees, such as {}.'.format(DEGREES_EXAMPLE[name]))
+        if self.has_error('lat') or self.has_error('lon'):
+            return
+        if abs(float(lat)) > 90:
+            self.add_error('lat', 'Latitude and longitude look swapped.' if abs(float(lon)) <= 90
+                           else 'Enter a latitude from -90 to 90.')
+        elif abs(float(lon)) > 180:
+            self.add_error('lon', 'Enter a longitude from -180 to 180.')
+        elif {'lat', 'lon'} & set(self.changed_data) and not cleaned_data.get('point_is_right'):
+            problem = self.point_problem(lat, lon)
+            if problem:
+                self.fields['point_is_right'].widget = forms.CheckboxInput()
+                self.add_error('point_is_right', problem)
+
+    def point_problem(self, lat, lon):
+        """What to check about a point outside the team's usual area; None for a point inside it."""
+        preferences = global_preferences_registry.manager()
+        south, north, west, east = (preferences['general__event_area_' + edge]
+                                    for edge in ('south', 'north', 'west', 'east'))
+
+        def inside(lat, lon):
+            return south <= float(lat) <= north and west <= float(lon) <= east
+
+        if inside(lat, lon):
+            return None
+        for fixed in ((lat, flip_sign(lon)), (flip_sign(lat), lon), (flip_sign(lat), flip_sign(lon))):
+            if inside(*fixed):
+                return ('Did you mean {}, {}? The point as typed is outside the area the team '
+                        'usually works in.'.format(*fixed))
+        return 'This point is outside the area the team usually works in. Check it on a map.'
 
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):

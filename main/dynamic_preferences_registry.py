@@ -30,6 +30,37 @@ class EsbSpreadsheetUrl(types.StringPreference):
     verbose_name = 'ESB spreadsheet opened after copying ESB details on an event'
     default = ''
 
+# The area the team's events usually fall in: California, Nevada and Oregon. A new point
+# outside it is questioned on the event form before it is saved.
+
+@global_preferences_registry.register
+class EventAreaSouth(types.FloatPreference):
+    section = general
+    name = 'event_area_south'
+    verbose_name = "Southern edge of the team's usual event area (latitude)"
+    default = 32.4
+
+@global_preferences_registry.register
+class EventAreaNorth(types.FloatPreference):
+    section = general
+    name = 'event_area_north'
+    verbose_name = "Northern edge of the team's usual event area (latitude)"
+    default = 46.4
+
+@global_preferences_registry.register
+class EventAreaWest(types.FloatPreference):
+    section = general
+    name = 'event_area_west'
+    verbose_name = "Western edge of the team's usual event area (longitude)"
+    default = -124.8
+
+@global_preferences_registry.register
+class EventAreaEast(types.FloatPreference):
+    section = general
+    name = 'event_area_east'
+    verbose_name = "Eastern edge of the team's usual event area (longitude)"
+    default = -114.0
+
 ###############################################################################
 # Google section
 
