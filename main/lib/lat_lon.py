@@ -224,7 +224,8 @@ def area_edges(text):
     except ValueError:
         edges = []
     if len(edges) != 4 or not (edges[0] < edges[1] and edges[2] < edges[3]):
-        raise ValueError('Enter the south, north, west and east edges, such as 32.4, 46.4, -124.8, -114.0.')
+        raise ValueError('Enter four numbers in this order: south, north, west and east edges, such as '
+                         '32.4, 46.4, -124.8, -114.0. South must be less than north, and west less than east.')
     return edges
 
 

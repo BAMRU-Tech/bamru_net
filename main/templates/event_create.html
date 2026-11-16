@@ -90,10 +90,6 @@ $(document).ready(function() {
             shown = read.value !== undefined ? read.value : null;
             if (read.value !== undefined) box.value = read.value;
             say(read.error || read.warning || read.note, read.error || read.warning);
-        }).catch(function() {
-            if (box.value.trim() !== text) return;
-            shown = null;
-            say("Couldn't check this point now. It will be read when you save.");
         });
     }
 
