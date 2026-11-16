@@ -55,9 +55,10 @@ def reading_note(point):
 # ---- UTM and USNG ------------------------------------------------------------------------------
 
 BANDS = 'CDEFGHJKLMNPQRSTUVWX'                  # 8° latitude bands from 80°S; N and after are north
-UTM = re.compile(r'(?:UTM\s*)?(?:ZONE\s*)?(\d{1,2})\s*([C-HJ-NP-X])?\s+0?(\d{6}(?:\.\d+)?)\s*(?:M?\s*E)?\s*[,;]?\s*'
+UTM = re.compile(r'(?:UTM:?\s*)?(?:ZONE\s*)?(\d{1,2})\s*([C-HJ-NP-X])?\s+0?(\d{6}(?:\.\d+)?)\s*(?:M?\s*E)?\s*[,;]?\s*'
                  r'(\d{7}(?:\.\d+)?)\s*(?:M?\s*N)?')
-USNG = re.compile(r'(?:USNG\s*|MGRS\s*)?(\d{1,2})\s*([C-HJ-NP-X])\s*([A-HJ-NP-Z])\s*([A-HJ-NP-V])\s*(\d+(?:\s+\d+)?)')
+USNG = re.compile(r'(?:(?:USNG|MGRS):?\s*)?(\d{1,2})\s*([C-HJ-NP-X])\s*([A-HJ-NP-Z])\s*([A-HJ-NP-V])\s*'
+                  r'(\d+(?:\s+\d+)?)')
 # The 100 km square letters: columns by zone (zone 1 uses the first set), and rows, which repeat
 # every 2,000 km and start five letters on in even zones.
 COLUMNS = ('ABCDEFGH', 'JKLMNPQR', 'STUVWXYZ')
@@ -88,7 +89,7 @@ def usng_point(zone, band, column, row, digits):
     band_edge = -80 + 8 * BANDS.index(band)
     band_top = band_edge + (12 if band == 'X' else 8)
     # The row letters repeat every 2,000 km; the latitude band says which repeat it is.
-    for repeat in range(5):
+    for repeat in (range(4, -1, -1) if south else range(5)):
         lat, lon = utm_to_lat_lon(zone, south, easting, northing + repeat * 2000000)
         if band_edge - 0.5 <= lat <= band_top + 0.5:
             return checked(lat, lon, 'USNG')
@@ -127,7 +128,9 @@ def utm_to_lat_lon(zone, south, easting, northing):
 # ---- degrees -----------------------------------------------------------------------------------
 
 TYPOGRAPHY = str.maketrans({'º': '°', '˚': '°', '′': "'", '’': "'", '‘': "'", '´': "'", '`': "'",
-                            '″': '"', '“': '"', '”': '"', '−': '-', '–': '-'})
+                            '″': '"', '“': '"', '”': '"', '−': '-', '–': '-',
+                            '\u200b': None, '\u200e': None, '\ufeff': None})
+LONGITUDE_FIRST = re.compile(r'\b(?:LONGITUDE|LONG|LON|LNG)\b.*\bLAT')
 LABELS = re.compile(r'\b(?:LATITUDE|LONGITUDE|LAT|LONG|LON|LNG)\b\s*[:=]?|\b(?:DEGREES|DEG)\b')
 TOKENS = re.compile(r'([NSEW])|([-+]?\d+(?:\.\d+)?)\s*([°\'"])?|([,;/])|(\S)')
 FORMS = ('decimal degrees', 'degrees and minutes', 'degrees, minutes and seconds')
@@ -140,6 +143,8 @@ UNREADABLE = 'Enter a point in any of these forms: {}; {}; {}; {}; or {}.'.forma
 
 
 def degrees_point(text):
+    if LONGITUDE_FIRST.search(text):
+        raise NotAPoint('Latitude comes first.')
     parts = degree_parts(LABELS.sub(' ', text))
     if len(parts) != 2 or not all(numbers for numbers, _ in parts):
         raise NotAPoint(UNREADABLE)
@@ -150,6 +155,8 @@ def degrees_point(text):
         letters.reverse()
     if letters[0] in ('E', 'W') or letters[1] in ('N', 'S'):
         raise NotAPoint('Give one latitude (N or S) and one longitude (E or W).')
+    if any(abs(value) > 180 for value in values):
+        raise NotAPoint(UNREADABLE)                 # not degrees, such as a UTM point without its zone
     return checked(values[0], values[1], FORMS[max(places)])
 
 
@@ -185,9 +192,8 @@ def degree_parts(text):
 
 def starts_a_part(numbers, number, symbol):
     """Whether a number starts the next latitude or longitude rather than adding minutes or seconds."""
-    last, last_symbol = numbers[-1]
-    return (len(numbers) == 3 or '.' in last or last_symbol == '"' or symbol == '°'
-            or number[0] in '+-' or float(number) >= 60)
+    last = numbers[-1][0]
+    return len(numbers) == 3 or '.' in last or symbol == '°' or number[0] in '+-' or float(number) >= 60
 
 
 def part_value(numbers, letter):
@@ -208,11 +214,13 @@ def part_value(numbers, letter):
 
 
 def checked(lat, lon, form):
-    if abs(lat) > 90:
-        raise NotAPoint('Latitude comes first, and runs from -90 to 90.')
-    if abs(lon) > 180:
-        raise NotAPoint('Longitude runs from -180 to 180.')
-    return Point(round(lat, 6), round(lon, 6), form)
+    """The point, if it's on the map. Degrees over 180 were refused already, so only their latitude
+    can be out of range here."""
+    if abs(lat) <= 90 and abs(lon) <= 180:
+        return Point(lat, lon, form)
+    if form in ('UTM', 'USNG'):
+        raise NotAPoint('This {} point is off the map. Check its easting and northing.'.format(form))
+    raise NotAPoint('Latitude comes first, and runs from -90 to 90.')
 
 
 # ---- the team's usual area ---------------------------------------------------------------------

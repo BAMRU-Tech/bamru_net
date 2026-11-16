@@ -45,6 +45,7 @@ class EventArea(types.StringPreference):
                  'check it, and still saves. West and east are negative in the US. The default covers '
                  'California, Nevada and Oregon.')
     default = '32.4, 46.4, -124.8, -114.0'
+    required = True
     widget = forms.TextInput(attrs={'size': 30})
 
     def validate(self, value):

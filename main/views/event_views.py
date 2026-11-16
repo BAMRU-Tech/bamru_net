@@ -1,5 +1,6 @@
 from django import forms
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
@@ -120,7 +121,7 @@ class EventForm(ModelForm):
     # One box for the event's point, read in any common form and saved as lat and lon.
     lat_lon = forms.CharField(
         required=False, label='Lat/Lon',
-        help_text='Any form: decimal degrees, degrees and minutes, UTM or USNG.')
+        help_text='Any form, such as decimal degrees, degrees and minutes, UTM or USNG.')
 
     class Meta:
         model = Event
@@ -154,6 +155,9 @@ class EventForm(ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.lat and self.instance.lon:
             self.initial['lat_lon'] = '{}, {}'.format(self.instance.lat, self.instance.lon)
+        # An edit page opened before the box existed posts no box; it leaves the point as stored.
+        if self.is_bound and 'lat_lon' not in self.data:
+            self.fields['lat_lon'].disabled = True
 
     def clean_lat_lon(self):
         """The point as lat and lon text to store, or None for no point. A saved point the member
@@ -164,6 +168,7 @@ class EventForm(ModelForm):
             point = read_point(self.cleaned_data['lat_lon'])
         except NotAPoint as problem:
             raise forms.ValidationError(str(problem))
+        self.point_warning = point and area_warning(point.lat, point.lon)
         return point and (degrees_text(point.lat), degrees_text(point.lon))
 
     def clean(self):
@@ -173,6 +178,8 @@ class EventForm(ModelForm):
         if finish and finish < start:
             self.add_error('finish_at', 'Finish time must not be earlier than start time')
         return cleaned_data
+
+    point_warning = None
 
     def save(self, commit=True):
         if 'lat_lon' in self.changed_data:
@@ -211,6 +218,11 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
 
         return form
 
+    def form_valid(self, form):
+        if form.point_warning:
+            messages.warning(self.request, 'Lat/Lon: ' + form.point_warning)
+        return super().form_valid(form)
+
     # Abuse get_success_url to do a calendar update after updating the object.
     def get_success_url(self, *args, **kwargs):
         get_gcal_manager().sync_event(self.object)
@@ -242,6 +254,11 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
         form.fields['description'].widget.attrs = { 'rows':4 }
 
         return form
+
+    def form_valid(self, form):
+        if form.point_warning:
+            messages.warning(self.request, 'Lat/Lon: ' + form.point_warning)
+        return super().form_valid(form)
 
     # Abuse get_success_url to do a calendar update after creating the object.
     def get_success_url(self, *args, **kwargs):

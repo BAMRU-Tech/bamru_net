@@ -80,17 +80,13 @@ $(document).ready(function() {
         var text = box.value.trim();
         if (text === shown) return;
         say('');
-        fetch('{% url "event_lat_lon" %}', {
-            method: 'POST',
-            headers: {'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()},
-            body: new URLSearchParams({text: text}),
-        }).then(function(response) { return response.json(); }).then(function(read) {
+        $.post('{% url "event_lat_lon" %}', {text: text}, function(read) {
             if (box.value.trim() !== text) return;
             // After an error nothing is known to be read, so the next text is always read.
             shown = read.value !== undefined ? read.value : null;
             if (read.value !== undefined) box.value = read.value;
             say(read.error || read.warning || read.note, read.error || read.warning);
-        });
+        }, 'json');
     }
 
     box.addEventListener('change', readLatLon);
