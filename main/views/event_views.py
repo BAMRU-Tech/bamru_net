@@ -4,23 +4,24 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
+from django.views.decorators.http import require_POST
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from dynamic_preferences.registries import global_preferences_registry
 
 from main.lib.gcal import get_gcal_manager
+from main.lib.lat_long import NotAPoint, degrees_text, outside_usual_area, point_text, read_point
 from main.models import DoAvailable, Member, Event, Participant, Period
 from main.views.api_views import EventFilter
 from main import tasks
 
 from datetime import timedelta
 import datetime
-import re
 
 import logging
 logger = logging.getLogger(__name__)
@@ -115,19 +116,11 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         return HttpResponseBadRequest('Error: No action set.')
 
 
-# Latitude or longitude in decimal degrees, as a member types it: 37.7456 or -119.5936.
-DEGREES = re.compile(r'[-+]?\d{1,3}(?:\.\d+)?')
-# Both together, as a map copies them ("37.7456, -119.5936") or a Google Maps link holds them
-# (".../@37.7456,-119.5936,15z").
-LAT_LON = re.compile(r'([-+]?\d{1,3}\.\d+)\s*[,\s]\s*([-+]?\d{1,3}\.\d+)')
-DEGREES_EXAMPLE = {'lat': '37.7456', 'lon': '-119.5936'}
-
-
-def flip_sign(degrees):
-    return degrees[1:] if degrees.startswith('-') else '-' + degrees.lstrip('+')
-
-
 class EventForm(ModelForm):
+    # One box for the event's point, read in any common form and saved as lat and lon.
+    lat_long = forms.CharField(
+        required=False, label='Lat/Long',
+        help_text='Any form: decimal degrees, degrees and minutes, UTM, USNG or a map link.')
     # Confirms a new point outside the team's usual area; a checkbox only once one is entered.
     point_is_right = forms.BooleanField(
         required=False, widget=HiddenInput, label='This point is right: save it anyway')
@@ -135,17 +128,10 @@ class EventForm(ModelForm):
     class Meta:
         model = Event
         fields = ['title', 'description', 'description_private', 'type',
-                  'location', 'location_private', 'lat', 'lon', 'point_is_right', 'leaders',
+                  'location', 'location_private', 'lat_long', 'point_is_right', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
-        labels = {'lat': 'Latitude', 'lon': 'Longitude'}
-        help_texts = {
-            'lat': 'Decimal degrees, such as 37.7456. A point copied from a map, such as '
-                   '37.7456, -119.5936, can be pasted here to fill in both.',
-            'lon': 'Decimal degrees, such as -119.5936. Longitude is negative west of Greenwich, '
-                   'as all of California is.',
-        }
         field_classes = {
             'start_at': forms.SplitDateTimeField,
             'finish_at': forms.SplitDateTimeField,
@@ -167,60 +153,61 @@ class EventForm(ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.point = None
+        if self.instance.lat and self.instance.lon:
+            self.initial['lat_long'] = '{}, {}'.format(self.instance.lat, self.instance.lon)
+
+    def clean_lat_long(self):
+        try:
+            self.point = read_point(self.cleaned_data['lat_long'])
+        except NotAPoint as problem:
+            raise forms.ValidationError(str(problem))
+        return point_text(self.point.lat, self.point.lon) if self.point else ''
+
     def clean(self):
         cleaned_data = super().clean()
         start = cleaned_data.get('start_at')
         finish = cleaned_data.get('finish_at')
         if finish and finish < start:
             self.add_error('finish_at', 'Finish time must not be earlier than start time')
-        self.clean_lat_lon(cleaned_data)
-        return cleaned_data
-
-    def clean_lat_lon(self, cleaned_data):
-        """Latitude and longitude in decimal degrees, both or neither. A new point outside the
-        team's usual area is saved once the member confirms it, as it is most often a slip
-        such as a missing minus sign."""
-        lat, lon = cleaned_data.get('lat'), cleaned_data.get('lon')
-        pasted = LAT_LON.search(lat or '')
-        if pasted and not lon:
-            lat, lon = pasted.groups()
-            cleaned_data['lat'], cleaned_data['lon'] = lat, lon
-        if not lat and not lon:
-            return
-        for name, value in (('lat', lat), ('lon', lon)):
-            if not value:
-                self.add_error(name, 'Enter both latitude and longitude, or neither.')
-            elif not DEGREES.fullmatch(value):
-                self.add_error(name, 'Enter decimal degrees, such as {}.'.format(DEGREES_EXAMPLE[name]))
-        if self.has_error('lat') or self.has_error('lon'):
-            return
-        if abs(float(lat)) > 90:
-            self.add_error('lat', 'Latitude and longitude look swapped.' if abs(float(lon)) <= 90
-                           else 'Enter a latitude from -90 to 90.')
-        elif abs(float(lon)) > 180:
-            self.add_error('lon', 'Enter a longitude from -180 to 180.')
-        elif {'lat', 'lon'} & set(self.changed_data) and not cleaned_data.get('point_is_right'):
-            problem = self.point_problem(lat, lon)
+        point = self.point
+        if point and not cleaned_data.get('point_is_right') and self.point_is_new(point):
+            problem = outside_usual_area(point.lat, point.lon)
             if problem:
                 self.fields['point_is_right'].widget = forms.CheckboxInput()
-                self.add_error('point_is_right', problem)
+                self.add_error('point_is_right', problem.message)
+        return cleaned_data
 
-    def point_problem(self, lat, lon):
-        """What to check about a point outside the team's usual area; None for a point inside it."""
-        preferences = global_preferences_registry.manager()
-        south, north, west, east = (preferences['general__event_area_' + edge]
-                                    for edge in ('south', 'north', 'west', 'east'))
+    def point_is_new(self, point):
+        """Whether the point differs from the one saved, so a point already accepted isn't questioned again."""
+        try:
+            return (float(self.instance.lat), float(self.instance.lon)) != (point.lat, point.lon)
+        except (TypeError, ValueError):
+            return True
 
-        def inside(lat, lon):
-            return south <= float(lat) <= north and west <= float(lon) <= east
+    def save(self, commit=True):
+        point = self.point
+        self.instance.lat, self.instance.lon = (
+            (degrees_text(point.lat), degrees_text(point.lon)) if point else (None, None))
+        return super().save(commit)
 
-        if inside(lat, lon):
-            return None
-        for fixed in ((lat, flip_sign(lon)), (flip_sign(lat), lon), (flip_sign(lat), flip_sign(lon))):
-            if inside(*fixed):
-                return ('Did you mean {}, {}? The point as typed is outside the area the team '
-                        'usually works in.'.format(*fixed))
-        return 'This point is outside the area the team usually works in. Check it on a map.'
+
+@login_required
+@require_POST
+def event_lat_long(request):
+    """The Lat/Long box's text read as the event form reads it, so the form can show the point
+    converted in place, and question it, before the member saves."""
+    try:
+        point = read_point(request.POST.get('text'))
+    except NotAPoint as problem:
+        return JsonResponse({'error': str(problem), 'suggestion': problem.suggestion})
+    if not point:
+        return JsonResponse({'value': ''})
+    problem = outside_usual_area(point.lat, point.lon)
+    return JsonResponse({'value': point_text(point.lat, point.lon), 'form': point.form,
+                         'warning': problem and problem.message, 'suggestion': problem and problem.suggestion})
 
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
