@@ -1,0 +1,414 @@
+"""The member page's table of the last day of each type attended (counting.member_latest)."""
+from datetime import date, datetime, timedelta, timezone as dt_timezone
+
+from django.test import Client
+from django.urls import reverse
+
+from main.lib.counting import (NotRun, activity_rows, departures, member_entries, member_latest, months_after,
+                               operations_not_run, operations_that_ran, records_from, reply_templates_from)
+from main.lib.unit_counting import unit_rows
+from main.models import Event, Participant, Period
+from main.tests.helpers import NOW, ActivityTestCase, PageTestCase, when
+
+
+class MemberLatestTestCase(ActivityTestCase):
+    def make_event(self, event_type, start, *args, **kwargs):
+        """As for every test; and an operation is called out for, with a callout page, as most are."""
+        event = super().make_event(event_type, start, *args, **kwargs)
+        if event_type == 'operation':
+            self.paged(event, 'Available?')
+        return event
+
+    def test_no_events(self):
+        self.make_event('training', when(2024, 3, 1), no_time=[self.member])
+        self.assertEqual(member_latest(self.member, NOW), [])
+
+    def test_latest(self):
+        self.make_event('operation', when(2023, 1, 1), attended=[self.member])
+        latest = self.make_event('operation', when(2024, 3, 20), attended=[self.member])
+        self.make_event('operation', when(2024, 5, 1), attended=[self.other], no_time=[self.member])
+        items = self.latest()
+        self.assertEqual(list(items), ['Operation (in the field)', 'Training', 'Meeting', 'Community'])
+        self.assertEqual(items['Operation (in the field)']['event'], latest)
+        self.assertEqual(items['Operation (in the field)']['ago'], '2 months')
+        self.assertIsNone(items['Meeting'].get('event'))
+
+    def test_a_day_after_today_is_not_the_last(self):
+        # A meeting in January with its times typed a year ahead, and a real one in May.
+        slip = self.make_event('meeting', when(2024, 1, 10))
+        Participant.objects.create(period=slip.period_set.first(), member=self.member,
+                                   en_route_at=when(2025, 1, 10), return_home_at=when(2025, 1, 10) + timedelta(hours=2))
+        self.assertEqual(member_latest(self.member, NOW), [])
+        real = self.make_event('meeting', when(2024, 5, 10), attended=[self.member])
+        meeting = self.latest()['Meeting']
+        self.assertEqual((meeting['event'], meeting['day'], meeting['ago']), (real, date(2024, 5, 10), '1 month'))
+        # A training under way: yesterday and today count, the days still to come do not.
+        training = self.make_event('training', when(2024, 6, 14))
+        Participant.objects.create(period=training.period_set.first(), member=self.member,
+                                   en_route_at=when(2024, 6, 14), return_home_at=when(2024, 6, 18))
+        self.assertEqual(self.latest()['Training']['day'], date(2024, 6, 15))
+
+    def test_the_last_operation_as_ol_is_a_line_of_its_own(self):
+        # Never OL: no line.
+        self.make_event('operation', when(2024, 2, 10), attended=[self.member])
+        self.assertNotIn('Operation (as OL)', self.latest())
+        # In the field as OL in January, then in the field in February: the OL line, under the in-the-field one,
+        # with its own event, day and how long ago, from the member's entries alone.
+        led = self.make_event('operation', when(2024, 1, 10), ol=[self.member])
+        with self.assertNumQueries(2):
+            items = {i['label']: i for i in member_latest(self.member, NOW)}
+        self.assertEqual(list(items), ['Operation (in the field)', 'Operation (as OL)', 'Training', 'Meeting',
+                                       'Community'])
+        self.assertEqual((items['Operation (as OL)']['event'], items['Operation (as OL)']['day'],
+                          items['Operation (as OL)']['ago']), (led, date(2024, 1, 10), '5 months'))
+        self.assertEqual(items['Operation (in the field)']['day'], date(2024, 2, 10))
+        # As OL on the latest operation too: both lines, alike, so the table says when they last led without the
+        # reader comparing lines.
+        latest = self.make_event('operation', when(2024, 3, 10), ol=[self.member])
+        items = self.latest()
+        self.assertEqual((items['Operation (as OL)']['event'], items['Operation (in the field)']['event']),
+                         (latest, latest))
+        # Above the AHC and stood-down lines, which follow as before.
+        ahc = self.make_event('operation', when(2024, 4, 10), attended=[self.other], ahc=[self.member])
+        self.assertEqual([label for label in self.latest() if label.startswith('Operation')],
+                         ['Operation (in the field)', 'Operation (as OL)', 'Operation (as AHC)'])
+        self.assertEqual(self.latest()['Operation (as AHC)']['event'], ahc)
+
+    def test_ol_is_counted_as_the_other_lines_are(self):
+        # Flagged OL but as AHC: not in the field, so not as OL, as the report counts who led.
+        operation = self.make_event('operation', when(2024, 3, 10), attended=[self.other])
+        Participant.objects.create(period=operation.period_set.first(), member=self.member, ahc=True, ol=True,
+                                   en_route_at=when(2024, 3, 10), return_home_at=when(2024, 3, 10) + timedelta(hours=2))
+        self.assertNotIn('Operation (as OL)', self.latest())
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))['total'].ol_days, 0)
+        # As OL with times typed a year ahead: a day after today, so not yet.
+        slip = self.make_event('operation', when(2024, 4, 10))
+        Participant.objects.create(period=slip.period_set.first(), member=self.member, ol=True,
+                                   en_route_at=when(2025, 4, 10), return_home_at=when(2025, 4, 10) + timedelta(hours=2))
+        self.assertNotIn('Operation (as OL)', self.latest())
+        # A test operation is left out, as on the report.
+        test = self.make_event('operation', when(2024, 5, 10), ol=[self.member])
+        Event.objects.filter(pk=test.pk).update(title='Test')
+        self.assertNotIn('Operation (as OL)', self.latest())
+        # As OL in the field: the day the report counts as an OL day.
+        led = self.make_event('operation', when(2024, 5, 20), ol=[self.member], hours=30)
+        rows = activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))
+        self.assertEqual(rows['total'].ol_days, 2)
+        self.assertEqual((self.latest()['Operation (as OL)']['event'], self.latest()['Operation (as OL)']['day']),
+                         (led, date(2024, 5, 21)))
+
+    def test_ahc_shown_only_when_more_recent(self):
+        self.make_event('operation', when(2024, 1, 10), attended=[self.other], ahc=[self.member])
+        self.make_event('operation', when(2024, 2, 10), attended=[self.member])
+        self.assertNotIn('Operation (as AHC)', self.latest())
+        ahc = self.make_event('operation', when(2024, 3, 10), attended=[self.other], ahc=[self.member])
+        items = self.latest()
+        self.assertEqual(items['Operation (as AHC)']['event'], ahc)
+        self.assertEqual(items['Operation (in the field)']['day'], date(2024, 2, 10))
+
+    def test_stood_down_shown_only_when_more_recent(self):
+        self.make_event('operation', when(2024, 1, 10), no_time=[self.member])
+        self.make_event('operation', when(2024, 2, 10), attended=[self.member])
+        self.assertNotIn('Operation (stood down)', self.latest())
+        called_off = self.make_event('operation', when(2024, 4, 10), no_time=[self.member, self.other])
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], called_off)
+        # A later AHC duty comes first, and hides it.
+        self.make_event('operation', when(2024, 5, 10), attended=[self.other], ahc=[self.member])
+        self.assertEqual([label for label in self.latest() if label.startswith('Operation')],
+                         ['Operation (in the field)', 'Operation (as AHC)'])
+
+    def test_ahc_time_on_a_called_off_operation_is_not_standing_down(self):
+        # The AHC's time is the day before the operation's date.
+        event = self.make_event('operation', when(2024, 3, 10), no_time=[self.other])
+        Participant.objects.create(period=event.period_set.first(), member=self.member, ahc=True,
+                                   en_route_at=when(2024, 3, 9), return_home_at=when(2024, 3, 9) + timedelta(hours=2))
+        latest = self.latest()
+        self.assertEqual(latest['Operation (as AHC)']['day'], date(2024, 3, 9))
+        self.assertNotIn('Operation (stood down)', latest)
+
+    def test_stood_down_only_from_an_operation_the_unit_was_called_out_for(self):
+        self.paging_began()        # pages recorded, and carrying reply templates, from the usual days
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        # Nobody went out on any of these. Only a callout page ("Available?") makes standing down from one.
+        unpaged = super().make_event       # an operation without the callout page this case gives the others
+        heads_up = unpaged('operation', when(2024, 2, 10), no_time=[self.member])
+        self.paged(heads_up, 'Heads Up')
+        self.assertNotIn('Operation (stood down)', self.latest())
+        silent = unpaged('operation', when(2024, 3, 10), no_time=[self.member])     # no page at all
+        self.assertNotIn('Operation (stood down)', self.latest())
+        called_out = unpaged('operation', when(2024, 1, 20), no_time=[self.member])
+        self.paged(called_out, 'Heads Up')
+        self.paged(called_out, 'Available?')
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], called_out)
+        self.assertEqual(self.not_run(), {heads_up.id: 'heads_up', silent.id: 'heads_up', called_out.id: 'called_off'})
+
+    def test_no_stood_down_line_for_an_operation_titled_as_a_heads_up_before_pages_told_one_apart(self):
+        self.paging_began()
+        self.make_event('meeting', when(2018, 6, 10), attended=[self.member])
+        heads_up = super().make_event('operation', when(2018, 8, 10), no_time=[self.member])
+        Event.objects.filter(pk=heads_up.pk).update(title='Heads up: search')
+        self.assertNotIn('Operation (stood down)', self.latest())
+
+    def test_before_pages_had_reply_templates_an_operation_not_run_was_called_off(self):
+        self.paging_began()        # pages recorded, and carrying reply templates, from the usual days
+        # Pages from before 13 February 2019 had no reply template, so a heads-up cannot be told from a callout.
+        self.make_event('meeting', when(2018, 6, 10), attended=[self.member])
+        before = super().make_event('operation', when(2019, 2, 12), no_time=[self.member])
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], before)
+        after = super().make_event('operation', when(2019, 2, 13), no_time=[self.member])
+        # 8pm on the 12th, Pacific time, though the 13th in UTC.
+        evening = super().make_event('operation', datetime(2019, 2, 13, 4, 0, tzinfo=dt_timezone.utc), no_time=[self.member])
+        ids = [before.id, after.id, evening.id]
+        not_run = operations_not_run(NOW, operations_that_ran(NOW, ids, records_from(NOW)), reply_templates_from(), ids)
+        self.assertEqual(not_run, {before.id: NotRun('called_off', date(2019, 2, 12)),
+                                   after.id: NotRun('heads_up', date(2019, 2, 13)),
+                                   evening.id: NotRun('called_off', date(2019, 2, 12))})
+
+    def test_no_stood_down_line_for_an_operation_begun_before_operation_times_were_logged(self):
+        # Before OPERATION_TIMES_FROM most operations have nobody's times, so whether one ran is not known, as the
+        # unit report shows it: nobody listed on one is said to have stood down from it.
+        operation = self.make_event('operation', when(2011, 8, 12), no_time=[self.member, self.other])
+        self.assertNotIn('Operation (stood down)', self.latest())
+        with self.settings(ACTIVITY_REPORTS={'OPERATION_TIMES_FROM': 2011}):
+            self.assertEqual(self.latest()['Operation (stood down)']['event'], operation)
+
+    def test_stood_down_from_one_operation_though_another_listed_on_ran(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        self.make_event('operation', when(2024, 2, 10), attended=[self.other], no_time=[self.member])     # ran
+        called_off = self.make_event('operation', when(2024, 3, 10), no_time=[self.member, self.other])
+        self.assertEqual(self.latest().get('Operation (stood down)', {}).get('event'), called_off)
+
+    def test_an_operation_saved_finishing_before_it_starts_has_not_finished_until_it_has_started(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        backwards = self.make_event('operation', NOW + timedelta(days=30), no_time=[self.member, self.other])
+        Event.objects.filter(pk=backwards.pk).update(finish_at=when(2024, 2, 1))
+        self.assertNotIn('Operation (stood down)', self.latest())
+        self.assertEqual(self.not_run(), {})
+
+    def test_stood_down_once_the_operation_has_finished(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        # Under way, with nobody's time logged yet: not called off.
+        self.make_event('operation', NOW - timedelta(hours=2), no_time=[self.member, self.other], hours=24)
+        self.assertNotIn('Operation (stood down)', self.latest())
+        # Yesterday's, finished, with no time logged: called off at once.
+        yesterday = self.make_event('operation', when(2024, 6, 14), no_time=[self.member, self.other])
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], yesterday)
+        # One finishing at this very moment has finished.
+        this_morning = self.make_event('operation', NOW - timedelta(hours=4), no_time=[self.member, self.other])
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], this_morning)
+
+    def test_whether_an_operation_ran_is_read_from_the_unit_s_first_year_on_as_the_unit_report_reads_it(self):
+        # The records start in 2022. On each operation the member is listed without time, and the other signed
+        # in and out (so no departure is logged), with no day counted from 2022 on: on 1 May 2024, by a sign-in
+        # typed in 0024; and on the first, begun at 01:00 on 1 January 2022 local time, by an evening out that
+        # began the day before and has most of its hours then. Neither ran, on either report: the member stood down.
+        for year in (2023, 2024):
+            self.make_event('training', when(year, 3, 10), attended=[self.member])
+        first = self.make_event('operation', datetime(2022, 1, 1, 9, tzinfo=dt_timezone.utc), no_time=[self.member])
+        Participant.objects.create(period=first.period_set.first(), member=self.other,
+                                   signed_in_at=first.start_at - timedelta(hours=5),
+                                   signed_out_at=first.start_at + timedelta(hours=1))
+        self.assertEqual(records_from(NOW), date(2022, 1, 1))
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], first)
+        mistyped = self.make_event('operation', when(2024, 5, 1), no_time=[self.member])
+        Participant.objects.create(period=mistyped.period_set.first(), member=self.other,
+                                   signed_in_at=datetime(24, 5, 1, 18, tzinfo=dt_timezone.utc),
+                                   signed_out_at=when(2024, 5, 1) + timedelta(hours=2))
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], mistyped)
+        years = unit_rows(NOW)['years']
+        self.assertEqual((years[2022].operations['called_off'], years[2024].operations['called_off']), (1, 1))
+
+    def test_an_operation_ran_whatever_slips_were_made_in_its_times(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        # Someone else's time on it runs eight days, a slip: it still ran, and nobody stood down from it.
+        slip = self.make_event('operation', when(2024, 3, 1), attended=[self.other], no_time=[self.member],
+                               hours=24 * 8)
+        self.assertNotIn('Operation (stood down)', self.latest())
+        self.assertEqual(self.latest(self.other)['Operation (in the field)']['event'], slip)
+
+    def test_ahc_on_a_called_off_operation_is_duty_and_the_listed_stood_down(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member, self.other])
+        called_off = self.make_event('operation', when(2024, 3, 10), ahc=[self.member], no_time=[self.other])
+        latest = self.latest()
+        self.assertEqual(latest['Operation (as AHC)']['event'], called_off)
+        self.assertNotIn('Operation (stood down)', latest)
+        self.assertEqual(self.latest(self.other)['Operation (stood down)']['event'], called_off)
+
+    def test_an_operation_whose_only_time_is_after_today_did_not_run(self):
+        # As on both reports: time for a day after today is left out, so nobody went yet.
+        self.make_event('training', when(2024, 1, 10), attended=[self.member])
+        called_off = self.make_event('operation', when(2024, 3, 1), no_time=[self.member])
+        Participant.objects.create(period=called_off.period_set.first(), member=self.other,
+                                   en_route_at=when(2025, 3, 1), return_home_at=when(2025, 3, 1) + timedelta(hours=4))
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], called_off)
+        self.assertEqual(operations_that_ran(NOW, [called_off.id], records_from(NOW)), set())
+        self.assertEqual(self.years()['2024'].unit_events['operation'], 0)
+
+    def test_an_operation_ran_by_the_local_day_its_time_falls_on(self):
+        # Attended only today, from 7am Pacific: it ran.
+        today = self.make_event('operation', when(2024, 6, 15) - timedelta(hours=6), attended=[self.other])
+        self.assertEqual(operations_that_ran(NOW, [today.id], records_from(NOW)), {today.id})
+        # At 03:00 UTC on the 15th it is the evening of the 14th in Pacific time, so time logged
+        # after midnight Pacific has not come yet, though its UTC date has.
+        evening = datetime(2024, 6, 15, 3, 0, tzinfo=dt_timezone.utc)
+        late = self.make_event('operation', when(2024, 6, 14))
+        Participant.objects.create(period=late.period_set.first(), member=self.other,
+                                   en_route_at=datetime(2024, 6, 15, 7, 30, tzinfo=dt_timezone.utc),
+                                   return_home_at=datetime(2024, 6, 15, 9, 30, tzinfo=dt_timezone.utc))
+        self.assertEqual(operations_that_ran(evening, [late.id], records_from(evening)), set())
+
+    def test_a_member_whose_only_time_on_an_operation_is_after_today_stood_down(self):
+        # Time dated after today counts nothing yet, so the member was listed on an operation nobody went out on.
+        self.make_event('training', when(2024, 1, 10), attended=[self.member])
+        operation = self.make_event('operation', when(2024, 3, 10))
+        Participant.objects.create(period=operation.period_set.first(), member=self.member,
+                                   en_route_at=when(2025, 3, 10), return_home_at=when(2025, 3, 10) + timedelta(hours=4))
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], operation)
+
+    def test_an_operation_only_a_guest_logged_time_on_did_not_run(self):
+        guest = self.make_member('Gus', 'G')
+        self.make_event('training', when(2024, 1, 10), attended=[self.member])
+        self.make_event('operation', when(2024, 4, 20), attended=[guest], no_time=[self.member])
+        self.assertIn('Operation (stood down)', self.latest())
+
+    def test_a_departure_logged_with_no_return_yet_means_the_operation_ran(self):
+        # Yesterday's, saved as finished, with the other's Left logged and no return yet, as the reply to a
+        # "Left?" page writes it: it ran, though no day of it counts yet, and the member did not stand down.
+        self.make_event('training', when(2024, 1, 10), attended=[self.member])
+        operation = self.make_event('operation', when(2024, 6, 14), no_time=[self.member])
+        Participant.objects.create(period=operation.period_set.first(), member=self.other,
+                                   en_route_at=when(2024, 6, 14) + timedelta(hours=1))
+        since = records_from(NOW)
+        self.assertEqual(departures(NOW, since), {operation.id: {self.other.id}})
+        self.assertEqual(operations_that_ran(NOW, [operation.id], since), {operation.id})
+        self.assertNotIn('Operation (stood down)', self.latest())
+        self.assertNotIn('Operation (in the field)', {k for k, v in self.latest(self.other).items() if 'event' in v})
+        # A guest's departure, the AHC's, one dated after today, and one for an operation not begun are not.
+        Participant.objects.filter(member=self.other, period__event=operation).delete()
+        guest, ahc = self.make_member('Gus', 'G'), self.make_member('Al', 'FM')
+        period = operation.period_set.first()
+        Participant.objects.create(period=period, member=guest, en_route_at=operation.start_at)
+        Participant.objects.create(period=period, member=ahc, ahc=True, en_route_at=operation.start_at)
+        Participant.objects.create(period=period, member=self.other, en_route_at=when(2024, 6, 16))
+        ahead = self.make_event('operation', NOW + timedelta(days=1))
+        Participant.objects.create(period=ahead.period_set.first(), member=self.other, en_route_at=NOW)
+        self.assertEqual(departures(NOW, since), {})
+        self.assertEqual(self.latest()['Operation (stood down)']['event'], operation)
+
+    def test_the_unit_is_asked_only_about_operations_that_may_have_been_called_off(self):
+        self.make_event('training', when(2024, 1, 10), attended=[self.member], leaders='Ann (TL)')
+        self.make_event('operation', when(2024, 2, 10), attended=[self.member, self.other])
+        # The member's entries, and the year the unit's records begin: no usernames for who led, no look at
+        # the unit.
+        with self.assertNumQueries(2):
+            member_latest(self.member, NOW)
+        # Listed without time on an operation that has finished: one more, about that operation.
+        self.make_event('operation', when(2024, 3, 10), attended=[self.other], no_time=[self.member])
+        with self.assertNumQueries(3):
+            self.assertNotIn('Operation (stood down)', self.latest())
+        # One still under way is not asked about.
+        self.make_event('operation', NOW - timedelta(hours=2), no_time=[self.member], hours=24)
+        with self.assertNumQueries(3):
+            member_latest(self.member, NOW)
+
+    def test_listed_without_time_on_one_period_of_an_operation_timed_on_another_is_not_standing_down(self):
+        operation = self.make_event('operation', when(2024, 3, 10), no_time=[self.member])
+        second = Period.objects.create(event=operation, position=2)
+        Participant.objects.create(period=second, member=self.member,
+                                   en_route_at=when(2024, 3, 11), return_home_at=when(2024, 3, 11) + timedelta(hours=4))
+        latest = self.latest()
+        self.assertNotIn('Operation (stood down)', latest)
+        self.assertEqual(latest['Operation (in the field)']['event'], operation)
+        # The same when that time was as AHC, the day before the operation's date: AHC duty, not standing down.
+        ahc = self.make_event('operation', when(2024, 4, 10), no_time=[self.member])
+        Participant.objects.create(period=Period.objects.create(event=ahc, position=2), member=self.member, ahc=True,
+                                   en_route_at=when(2024, 4, 9), return_home_at=when(2024, 4, 9) + timedelta(hours=2))
+        latest = self.latest()
+        self.assertNotIn('Operation (stood down)', latest)
+        self.assertEqual(latest['Operation (as AHC)']['event'], ahc)
+
+    def test_a_line_on_the_same_day_as_one_above_it_is_not_shown(self):
+        self.make_event('operation', when(2024, 3, 10), attended=[self.member])
+        self.make_event('operation', when(2024, 3, 10), attended=[self.other], ahc=[self.member])
+        self.assertNotIn('Operation (as AHC)', self.latest())
+        self.make_event('operation', when(2024, 3, 10), no_time=[self.member])     # called off the same day
+        self.assertNotIn('Operation (stood down)', self.latest())
+
+    def test_an_operation_stood_down_from_is_placed_on_the_day_it_started(self):
+        self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
+        self.make_event('operation', when(2024, 3, 10), no_time=[self.member], hours=60)   # finished on the 13th
+        self.assertEqual(self.latest()['Operation (stood down)']['day'], date(2024, 3, 10))
+
+    def test_today_on_the_member_page_is_the_local_day(self):
+        # 03:00 UTC on 15 June is the evening of the 14th in Pacific time: time on the 15th has not come.
+        evening = datetime(2024, 6, 15, 3, 0, tzinfo=dt_timezone.utc)
+        self.make_event('training', when(2024, 6, 14), attended=[self.member])         # the afternoon of the 14th
+        ahead = self.make_event('training', when(2024, 6, 14) + timedelta(hours=1))
+        Participant.objects.create(period=ahead.period_set.first(), member=self.member,
+                                   en_route_at=when(2024, 6, 15), return_home_at=when(2024, 6, 15) + timedelta(hours=4))
+        self.make_event('meeting', when(2024, 5, 15), attended=[self.member])
+        latest = {i['label']: i for i in member_latest(self.member, evening)}
+        self.assertEqual(latest['Training']['day'], date(2024, 6, 14))
+        # And how long ago is counted to the 14th: the 15th of May is not yet a month ago.
+        self.assertEqual(latest['Meeting']['ago'], 'Under a month')
+
+    def test_how_long_ago_is_in_years_from_two(self):
+        two, under = self.make_member('Two', 'FM'), self.make_member('Under', 'FM')
+        self.make_event('meeting', when(2022, 6, 15), attended=[two])
+        self.make_event('meeting', when(2022, 6, 16), attended=[under])
+        self.assertEqual((self.latest(two)['Meeting']['ago'], self.latest(under)['Meeting']['ago']),
+                         ('2 years', '23 months'))
+
+    def test_how_long_ago_reads_a_month_s_end_as_the_unit_report_does(self):
+        # A calendar month after the 29th, 30th or 31st is the last day of a shorter month (months_after):
+        # 29 February 2024 is a year before 28 February 2025, and 31 January a month before it.
+        leap, january = self.make_member('Leap', 'FM'), self.make_member('January', 'FM')
+        self.make_event('meeting', when(2024, 2, 29), attended=[leap])
+        self.make_event('meeting', when(2025, 1, 31), attended=[january])
+        now = when(2025, 2, 28)
+        self.assertEqual([{i['label']: i for i in member_latest(m, now)}['Meeting']['ago'] for m in (leap, january)],
+                         ['12 months', '1 month'])
+        self.assertEqual(months_after(date(2024, 2, 29), 12), date(2025, 2, 28))
+
+    def test_how_long_ago(self):
+        self.make_event('operation', when(2021, 11, 10), attended=[self.member])    # 31 months
+        self.make_event('training', when(2023, 5, 20), attended=[self.member])      # 12 months and some days
+        self.make_event('meeting', when(2024, 6, 10), attended=[self.member])
+        self.make_event('community', when(2024, 5, 10), attended=[self.member])
+        self.assertEqual([i['ago'] for i in member_latest(self.member, NOW)],
+                         ['2 years', '12 months', 'Under a month', '1 month'])
+
+    def test_matches_the_report(self):
+        # The member page looks only at the member's own operations; the dates
+        # must be the ones the report would count.
+        self.make_event('operation', when(2024, 1, 10), attended=[self.other], ahc=[self.member], hours=30)
+        self.make_event('training', when(2024, 2, 10), attended=[self.member], hours=30)
+        self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))['total'].ahc_days, 1)
+        items = self.latest()
+        self.assertEqual(items['Operation (as AHC)']['day'], date(2024, 1, 10))
+        self.assertEqual(items['Training']['day'], date(2024, 2, 11))
+
+
+class MemberPageTestCase(PageTestCase):
+    def test_member_page_table(self):
+        event = self.make_event('operation', when(2024, 1, 10), attended=[self.member, self.other])
+        Event.objects.filter(pk=event.pk).update(title='<b>Search</b>')
+        client = Client()
+        client.force_login(self.other)
+        response = client.get(self.member.get_absolute_url())
+        # A line with its event linked, its title escaped, its day and how long ago; one with none, its cells blank.
+        link = reverse('event_detail', args=[event.id])
+        self.assertContains(response, '<tr><td>Operation (in the field)</td><td><a href="{}">&lt;b&gt;Search&lt;/b&gt;</a>'
+                            '</td><td>10 Jan 2024</td><td>5 months</td></tr>'.format(link),
+                            html=True)
+        self.assertContains(response, '<tr><td>Training</td><td>None</td><td></td><td></td></tr>', html=True)
+        self.assertNotContains(response, 'Operation (as OL)')
+        # As OL: its line, under the one in the field.
+        self.make_event('operation', when(2024, 2, 10), ol=[self.member])
+        response = client.get(self.member.get_absolute_url())
+        page = response.content.decode()
+        self.assertContains(response, '<tr><td>Operation (as OL)</td><td><a href="{}">Event</a></td><td>10 Feb 2024</td>'
+                            '<td>4 months</td></tr>'.format(reverse('event_detail', args=[Event.objects.latest('id').id])),
+                            html=True)
+        self.assertLess(page.index('<td>Operation (in the field)</td>'), page.index('<td>Operation (as OL)</td>'))
+

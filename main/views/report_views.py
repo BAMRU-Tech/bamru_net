@@ -3,8 +3,14 @@ from django.db.models import F, Min
 from django.http import HttpResponse, Http404
 from django.template import loader
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views import generic, View
+from django.views.decorators.gzip import gzip_page
 
+from main.lib.activity import glossary, member_activity
+from main.lib.charts import hours_tenths
+from main.lib import report_cache
+from main.lib.counting import EVENT_TYPES, counted_hours, listed_entries, member_entries
 from main.models import Cert, Member, Event, Participant, Period
 
 import collections
@@ -70,7 +76,7 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
         # (G, GA, GN) are not listed.
         members = list(
             Member.objects
-            .exclude(status__in=('G', 'GA', 'GN'))
+            .exclude(status__in=Member.GUESTS)
             .annotate(first_participated_at=Min(
                 'participant__period__event__start_at')))
         events = (Event.objects
@@ -165,18 +171,45 @@ class ReportEventView(LoginRequiredMixin, BaseReportView):
         return self.render(report_filename, context)
 
 
+# Compressed: the page is mostly chart markup, and shrinks to a twentieth.
+@method_decorator(gzip_page, name='dispatch')
 class ReportEventMemberView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'reports/activity-member.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        events = {}
-        for t in Event.TYPES:
-            events[t] = (Participant.objects
-                         .filter(member__id=self.kwargs['pk'], period__event__type=t[0])
-                         .order_by('period__event__start_at', 'period__position'))
-        context['events'] = events
+        labels = dict(EVENT_TYPES)
+        now = timezone.now()      # one reading of the clock for the lists and the totals
+        participants = member_entries(self.object)     # loaded once, for the lists and the totals
+        # The day both count from and what the unit did from it, as kept between loads.
+        since, unit_days = report_cache.member_report(now)
+        hours = counted_hours(participants, now, since)  # and the hours each counts for
+        # One section per type, in the order of the chart.
+        by_type = {event_type: [] for event_type, _ in EVENT_TYPES}
+        for listed in listed_entries(participants, now, since, hours):
+            by_type[listed.entry.period.event.type].append(listed)
+        # With each, whether a row marks hours or days another row counts, and hours left out, for the lines under it.
+        context['event_sections'] = [(labels[t], by_type[t],
+                                      any(hours_tenths(e.elsewhere_hours) or e.elsewhere_days for e in by_type[t]),
+                                      any(hours_tenths(e.left_out_hours) for e in by_type[t]))
+                                     for t in by_type if by_type[t]]
+        context['activity'] = member_activity(self.object, now, participants, since, hours, unit_days)
+        # What the chart, the table and the lists say, wherever any of them is shown.
+        context['glossary'] = glossary(member_report=True, records_from=since)
+        return context
+
+
+# Every figure of every chart is in the page, which compresses to a few per cent of its size.
+@method_decorator(gzip_page, name='dispatch')
+class ReportUnitActivityView(LoginRequiredMixin, generic.TemplateView):
+    template_name = 'reports/activity-unit.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['activity'] = report_cache.unit_activity()       # its figures, kept between loads
+        # The terms both activity reports share, then this report's own.
+        context['glossary'] = glossary() + context['activity']['glossary']
         return context
 
 

@@ -113,6 +113,8 @@
   <table id="dTbl" class="display table-bordered compact"
          cellpadding="0" cellspacing="0" style="width:100%">
   </table>
+
+  {% include 'member_latest.html' %}
 </main>
 {% endblock %}
 
@@ -163,6 +165,9 @@ $(document).ready( function() {
         language: { emptyTable: 'No active certifications' },
 
     });
+
+    // The member's latest activity of each type, styled like the certifications above.
+    $('#activityTbl').DataTable({dom: 'rt', paging: false, info: false, ordering: false});
 
     const url = new URL(window.location.href);
     var rx = url.searchParams.get('returnx');
