@@ -1,13 +1,21 @@
 """The member page's table of the last day of each type attended (counting.member_latest)."""
+import time
+from contextlib import nullcontext
 from datetime import date, datetime, timedelta, timezone as dt_timezone
+from unittest import mock, skipIf, skipUnless
 
-from django.test import Client
+from django.core.cache import cache, caches
+from django.core.cache.backends.db import BaseDatabaseCache
+from django.db import connection
+from django.db.models.expressions import RawSQL
+from django.test import Client, TestCase, TransactionTestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from main.lib.counting import (NotRun, activity_rows, departures, member_entries, member_latest, months_after,
                                operations_not_run, operations_that_ran, records_from, reply_templates_from)
 from main.lib.unit_counting import unit_rows
-from main.models import Event, Participant, Period
+from main.models import Address, EmergencyContact, Event, Participant, Period, Phone
 from main.tests.helpers import NOW, ActivityTestCase, PageTestCase, when
 
 
@@ -412,3 +420,158 @@ class MemberPageTestCase(PageTestCase):
                             html=True)
         self.assertLess(page.index('<td>Operation (in the field)</td>'), page.index('<td>Operation (as OL)</td>'))
 
+
+
+LOGGER = 'main.views.member_views'
+POSTGRES = connection.vendor == 'postgresql'
+
+
+def database_error(*args):
+    """A real error from the database, which on Postgres also aborts the transaction it is in."""
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT * FROM no_such_table')
+
+
+class LastTableGuard:
+    """The member page holds a member's addresses, phones and emergency contacts, so its Activity section, the Last
+    table, never breaks or stalls it: if building the table fails, or on Postgres its queries run, between them,
+    past the team's limit (LAST_TABLE_SECONDS), the page shows without the section, as before the reports, and the
+    error is logged. Run inside a test's transaction, where the section's own is a savepoint
+    (MemberPageGuardTestCase), and outside one, as the site serves the page, its views not atomic
+    (MemberPageGuardOwnTransactionTestCase)."""
+    make_member, make_event = ActivityTestCase.make_member, ActivityTestCase.make_event
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+        self.enterContext(mock.patch('django.utils.timezone.now', return_value=NOW))
+        self.member, self.other = self.make_member('Ann', 'FM'), self.make_member('Bob', 'FM')
+        self.make_event('operation', when(2024, 1, 10), attended=[self.member])
+        Phone.objects.create(member=self.member, number='4155550100')
+        Address.objects.create(member=self.member, type='Home', address1='1 Main Street', city='Town', state='CA',
+                               zip='94000')
+        EmergencyContact.objects.create(member=self.member, name='Kin Test', number='4155550199', type='Mobile')
+        self.client.force_login(self.other)
+        self.limits = []
+
+    def page(self):
+        """The member page, which shows, whatever the section does, with the member's contact details."""
+        response = self.client.get(self.member.get_absolute_url())
+        for detail in ('415-555-0100', '1 Main Street', 'Kin Test: 415-555-0199'):
+            self.assertContains(response, detail)
+        return response
+
+    def assertShown(self, response):
+        self.assertContains(response, '<strong>Activity</strong>')
+        self.assertContains(response, '<td>Operation (in the field)</td>', html=True)
+
+    def assertLeftOut(self, response, logs, cause):
+        """The page as before the reports, no Activity section, and the error logged with the member's id and its
+        traceback, which names `cause`."""
+        self.assertNotContains(response, '<strong>Activity</strong>')
+        self.assertNotContains(response, 'id="activityTbl"')
+        [record] = logs.records
+        self.assertIn('member {}'.format(self.member.id), record.getMessage())
+        self.assertIsNotNone(record.exc_info)
+        self.assertIn('Traceback', logs.output[0])
+        self.assertIn(cause, logs.output[0])
+
+    def slowed(self, *waits):
+        """member_latest, after each of `waits`, seconds waited in the database, as the test's data is too small
+        for any of the table's queries to take long; the limit in force is read before each."""
+        def slowed(*args):
+            for wait in waits:
+                self.limits.append(self.limit())
+                with connection.cursor() as cursor:
+                    cursor.execute('SELECT pg_sleep(%s)', [wait])
+            return member_latest(*args)
+        return mock.patch('main.views.member_views.member_latest', slowed)
+
+    def limit(self):
+        """The time limit of the next statement, in seconds; 0 for none."""
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT EXTRACT(EPOCH FROM current_setting('statement_timeout')::interval)")
+            return float(cursor.fetchone()[0])
+
+    def test_a_failure_in_building_the_last_table_leaves_the_section_out(self):
+        # A database error in each place: the cache's read of its tables, records_from, member_latest, and the
+        # template, which meets a query left lazy in the table's data.
+        lazy = Event.objects.filter(id__in=RawSQL('SELECT id FROM no_such_table', []))
+        for place, failure in (('main.lib.report_cache._read', database_error),
+                               ('main.lib.counting.records_from', database_error),
+                               ('main.views.member_views.member_latest', database_error),
+                               ('main.views.member_views.member_latest', lambda *args: [{'label': 'Meeting',
+                                                                                         'event': lazy}])):
+            with self.subTest(place):
+                cache.clear()       # so that records_from is built, not read from the cache
+                with mock.patch(place, failure), self.assertLogs(LOGGER, 'ERROR') as logs:
+                    self.assertLeftOut(self.page(), logs, 'no_such_table')
+                # The next load, on the same connection, works, section and all.
+                self.assertShown(self.page())
+
+    @skipUnless(POSTGRES, "statement_timeout is Postgres's")
+    def test_a_query_past_the_time_limit_leaves_the_section_out(self):
+        # The maintainer's test: a limit too short for the table's queries.
+        with self.slowed(0.2):
+            with override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': 0.05}), \
+                    self.assertLogs(LOGGER, 'ERROR') as logs:
+                self.assertLeftOut(self.page(), logs, 'canceling statement due to statement timeout')
+            # With the default, 2 seconds, the same wait shows the section.
+            self.assertShown(self.page())
+        short, default = self.limits
+        self.assertTrue(0 < short <= 0.05 and 1 < default <= 2, self.limits)
+
+    @skipUnless(POSTGRES, "statement_timeout is Postgres's")
+    def test_the_time_limit_is_for_the_table_s_queries_together(self):
+        # Two queries, each within the limit, are past it together: the second has only what the first left.
+        with self.slowed(0.2, 0.2), override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': 0.3}), \
+                self.assertLogs(LOGGER, 'ERROR') as logs:
+            self.assertLeftOut(self.page(), logs, 'canceling statement due to statement timeout')
+        first, second = self.limits
+        self.assertTrue(0 < second <= 0.1 < first <= 0.3, self.limits)
+        # Time between the queries counts: with none left, the next is not run.
+        with mock.patch('main.views.member_views.member_latest', lambda *args: time.sleep(0.1) or member_latest(*args)), \
+                override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': 0.05}), \
+                self.assertLogs(LOGGER, 'ERROR') as logs:
+            self.assertLeftOut(self.page(), logs, 'No time left of 0.05 seconds')
+
+    @skipUnless(POSTGRES, "statement_timeout is Postgres's")
+    def test_a_team_may_set_no_time_limit(self):
+        own = self.limit()
+        with self.slowed(0.2), override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': 0}):
+            self.assertShown(self.page())
+        self.assertEqual(self.limits, [own])
+
+    @skipUnless(POSTGRES, "statement_timeout is Postgres's")
+    def test_the_time_limit_ends_with_the_section(self):
+        # Whether the table's queries ran within the limit or one was cut off, the connection's own limit is back
+        # after it, so that a slow statement after it runs to its end.
+        own = self.limit()
+        with override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': 0.1}):
+            for slowed in (False, True):
+                with self.slowed(0.2) if slowed else nullcontext(), \
+                        self.assertLogs(LOGGER, 'ERROR') if slowed else self.assertNoLogs(LOGGER, 'ERROR'):
+                    response = self.page()
+                self.assertEqual('<strong>Activity</strong>' in response.content.decode(), not slowed)
+                self.assertEqual(self.limit(), own)
+                with connection.cursor() as cursor:
+                    cursor.execute('SELECT pg_sleep(0.2)')
+
+    @skipIf(POSTGRES, "statement_timeout is Postgres's")
+    def test_the_time_limit_is_nothing_on_other_databases(self):
+        with override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': 0.001}), \
+                CaptureQueriesContext(connection) as queries:
+            self.assertShown(self.page())
+        self.assertFalse([query for query in queries if 'statement_timeout' in query['sql']])
+
+    def test_the_reports_cache_is_not_in_the_database(self):
+        # The section is rolled back, which would undo what a cache kept in the database was given in it.
+        self.assertNotIsInstance(caches['default'], BaseDatabaseCache)
+
+
+class MemberPageGuardTestCase(LastTableGuard, TestCase):
+    pass
+
+
+class MemberPageGuardOwnTransactionTestCase(LastTableGuard, TransactionTestCase):
+    pass

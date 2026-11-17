@@ -28,6 +28,12 @@ class ReportSettingsTestCase(SimpleTestCase):
         # And back to the defaults once the setting is.
         self.assertEqual(report_settings(), ReportSettings())
 
+    def test_a_team_sets_the_member_page_s_time_limit_or_none(self):
+        self.assertEqual(report_settings().LAST_TABLE_SECONDS, 2)
+        for seconds in (0, 0.001, 0.5, 20):
+            with override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': seconds}):
+                self.assertEqual((check_report_settings(None), report_settings().LAST_TABLE_SECONDS), ([], seconds))
+
     def test_a_wrong_value_is_refused_at_start_up_naming_its_key(self):
         wrong = {
             'has no key': {'DAY_HOUR': 2},
@@ -83,6 +89,11 @@ class ReportSettingsTestCase(SimpleTestCase):
                                                                               'RESPONDERS_FULL': 6},
             "'REPLY_MINUTES'] is two numbers above zero, the second more than the first": {'REPLY_MINUTES': [5]},
             "'BANDED_STATUSES'] is one to four statuses of members, each once": {'BANDED_STATUSES': ('T', 'T')},
+            # The member page's time limit: seconds up to 20, under the server's own 30, or 0 for none; not None,
+            # nor a time below 0.
+            "'LAST_TABLE_SECONDS'] is a float, not None": {'LAST_TABLE_SECONDS': None},
+            "'LAST_TABLE_SECONDS'] is 0, for no limit, or a number of seconds up to 20: -1": {'LAST_TABLE_SECONDS': -1},
+            "'LAST_TABLE_SECONDS'] is 0, for no limit, or a number of seconds up to 20: 21": {'LAST_TABLE_SECONDS': 21},
         }
         defaults = ReportSettings()
         for message, setting in wrong.items():

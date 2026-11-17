@@ -521,20 +521,19 @@ class ReportCacheTestCase(ActivityTestCase):
         # until time logged by another member in the years between ends it being one.
         self.make_event('community', when(2015, 6, 6), attended=[self.member])
         with mock.patch('django.utils.timezone.now', return_value=self.now):
-            page = client.get(reverse('member_detail', args=[self.member.id])).context['latest']
+            page = client.get(reverse('member_detail', args=[self.member.id]))
             for year in (2018, 2021):
                 self.make_event('training', when(year, 3, 7), attended=[self.other])
-            again = client.get(reverse('member_detail', args=[self.member.id])).context['latest']
-        def community(latest):
-            return next(line for line in latest if line['label'] == 'Community')
-        self.assertNotIn('event', community(page))
-        self.assertEqual(community(again)['day'], date(2015, 6, 6))
+            again = client.get(reverse('member_detail', args=[self.member.id]))
+        self.assertContains(page, '<tr><td>Community</td><td>None</td><td></td><td></td></tr>', html=True)
+        self.assertContains(again, '<td>06 Jun 2015</td>', html=True)
 
     # A write that does not go through a model's save is not seen until the expiry passes. This is a tripwire for
     # the common ways of making one, in the site's code and its migrations, so that the next person finds out
     # (docs/activity-reports.md); not a proof: a queryset's update or bulk_update, a save of chosen fields, SQL
     # through a cursor or a migration's RunSQL, loaddata and a raw save. The lines it lets pass are the updates of
-    # sets and dicts, the Google APIs' updates, and the cache's own read, as they are today.
+    # sets and dicts, the Google APIs' updates, the cache's own read, and the member page's time limit for its Last
+    # table, as they are today.
     KNOWN = {
         ('main/lib/admin.py', 'return self.directory.users().update('),
         ('main/lib/gcal.py', 'event = self.client.events().update('),
@@ -554,6 +553,8 @@ class ReportCacheTestCase(ActivityTestCase):
          "counted['people']['events'][t].update(map(_year_and_part, attended[t].values()))"),
         ('main/views/api_views.py', 'context.update({'),
         ('main/views/member_views.py', 'context.update(self.get_forms(member))'),
+        ('main/views/member_views.py',
+         'context[\'cursor\'].cursor.execute("SELECT set_config(\'statement_timeout\', %s, true)", [milliseconds])'),
     }
 
     def test_no_code_of_the_site_writes_past_save(self):

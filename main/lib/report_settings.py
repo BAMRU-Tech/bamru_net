@@ -56,6 +56,10 @@ def _up_to(most, unit):
     return check
 
 
+def _no_limit_or_up_to_20_seconds(value, report_settings):
+    return None if 0 <= value <= 20 else 'is 0, for no limit, or a number of seconds up to 20'
+
+
 def _member_statuses(value, report_settings):
     # Not a guest's, as guests are not counted with members; nor a no-contact status, whose name the reports never
     # show (Member.NO_CONTACT), as the status chart names each status banded.
@@ -189,6 +193,10 @@ class ReportSettings:
     SINGLE_DAY_HOURS: float = _rule(12, check=_above_zero)
     # An entry longer than this many days by the local clock is a mistake: one day, and no hours.
     MAX_ENTRY_DAYS: int = _rule(7, check=_up_to(366, 'days'))
+    # The member page's Last table: the longest, in seconds, that its queries may run between them, on Postgres,
+    # before the page shows without it: up to 20, as the server ends a page at 30 (gunicorn's timeout,
+    # deploy/azure_startup.sh), or 0 for no limit but the server's.
+    LAST_TABLE_SECONDS: float = _rule(2, check=_no_limit_or_up_to_20_seconds)
 
     # The unit report.
     # Trainings guests may come to, by their title, so that a day at one is no day towards joining: SAR Basic;
