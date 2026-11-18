@@ -24,11 +24,12 @@ from main.tests.helpers import ActivityTestCase, when
 class ReportCacheTestCase(ActivityTestCase):
     """The data is written with the clock running, as on the site, so that each write moves updated_at. The cache
     is asked at one moment throughout (self.now), so that only a change in what a value was built from rebuilds
-    it, not the clock passing into another span of the expiry."""
+    it, not the clock passing into another span of the expiry: noon today by the local clock, so that an hour
+    logged from then, or from the next span, stays within its local day whenever the tests run."""
 
     def setUp(self):
         super().setUp()
-        self.now = timezone.now()
+        self.now = timezone.localtime().replace(hour=12, minute=0, second=0, microsecond=0)
         self.third = self.make_member('Cat', 'T')
         self.callout = RsvpTemplate.objects.create(name='Available?')
         self.operation = self.make_event('operation', when(2024, 2, 7), attended=[self.member])
