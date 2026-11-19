@@ -1,0 +1,13 @@
+{# The terms an activity report uses, as a table at its foot, in the style of the report's other tables. `glossary` is [(term, definition)]: activity.glossary() and then the report's own. #}
+<p></p>
+<table class="glossary">
+  <caption>Glossary</caption>
+  <colgroup><col class="glossary-term"><col></colgroup>
+  <thead>
+    <tr><th>Term</th><th>Meaning</th></tr>
+  </thead>
+  <tbody>
+    {% for term, definition in glossary %}<tr class="member"><th scope="row">{{ term }}</th><td>{{ definition }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

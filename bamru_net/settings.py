@@ -218,6 +218,11 @@ USE_L10N = True
 
 USE_TZ = True
 
+# The activity reports' rules that differ from team to team, such as the hours that make a day attended:
+# set only the keys to change. The keys, each with its default, are in main/lib/report_settings.py. A key or
+# value the reports cannot use is named in a warning at start-up (main.W001) and keeps its default.
+ACTIVITY_REPORTS = {}
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/

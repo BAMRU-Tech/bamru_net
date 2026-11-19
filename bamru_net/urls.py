@@ -149,7 +149,9 @@ urlpatterns = [
     path('reports/roster/BAMRU-roster.csv', views.ReportRosterCsvView.as_view()),
     path('reports/roster/BAMRU-roster.vcf', views.ReportRosterVcfView.as_view()),
     path('reports/roster/BAMRU-<str:roster_type>', views.ReportRosterView.as_view()),
+    # The two activity reports come before activity-<type>, which would take their paths as types.
     path('reports/activity-member/<int:pk>/', views.ReportEventMemberView.as_view(), name='report_activity_member'),
+    path('reports/activity-unit/', views.ReportUnitActivityView.as_view(), name='report_activity_unit'),
     path('reports/activity-<str:activity_type>/', views.ReportEventView.as_view(), name='report_activity'),
     path('reports/event/errors/', views.ReportEventErrorsView.as_view(), name='report_event_errors'),
     path('reports/cert/expire/', views.CertExpireView.as_view(), name='report_cert_expire'),

@@ -51,6 +51,10 @@ class Member(AbstractBaseUser, PermissionsMixin, BaseModel):
         )
 
     CURRENT_MEMBERS = ('TM', 'FM', 'T', 'R', 'S', 'A') # Current member of the unit
+    GUESTS = ('G', 'GA', 'GN')                         # Never a member; not counted in the unit's activity
+    # Member No-contact and Guest No-contact are sensitive: the activity reports never show their names (or codes)
+    # to people, though they count them as any other status; GN is still a guest.
+    NO_CONTACT = ('MN', 'GN')
     AVAILABLE_MEMBERS = ('TM', 'FM', 'T', 'S')         # Available for operations
     PRO_MEMBERS = ('TM', 'FM', 'T', 'S')               # Available for pro-deals
     DO_SHIFT_MEMBERS = ('TM', 'FM', 'T', 'S')          # Notify for DO shift changes
