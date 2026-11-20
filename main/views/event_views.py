@@ -18,6 +18,7 @@ from dynamic_preferences.registries import global_preferences_registry
 from main.lib.county import county_text
 from main.lib.gcal import get_gcal_manager
 from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
+from main.lib.sun import sun_times
 from main.models import DoAvailable, Member, Event, Participant, Period
 from main.models.event import every_username, leader_parts
 from main.views.api_views import EventFilter
@@ -91,6 +92,8 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
                       for text, member_id in leader_parts(event.leaders, every_username())]
 
         context['leaders'] = result
+        if event.lat and event.lon:
+            context['sun'] = sun_times(event.lat, event.lon, timezone.localtime(event.start_at).date())
         context['current_do'] = DoAvailable.current_scheduled_do()
         context['esb_spreadsheet_url'] = (
             global_preferences_registry.manager()['general__esb_spreadsheet_url'])

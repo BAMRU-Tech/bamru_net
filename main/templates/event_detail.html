@@ -59,6 +59,13 @@
     </p>
     {% if event.lat and event.lon %}
     <p>
+      {% if sun %}
+      <strong title="On {{ event.start_at|date:'M j' }}, for a flat horizon: the sun goes behind ridges and canyon walls earlier.">Daylight:</strong>
+      <span title="Sunrise"><i class="fa fa-sun-o" aria-hidden="true"></i><i class="fa fa-long-arrow-up" aria-hidden="true"></i><span class="sr-only">Sunrise</span> {{ sun.sunrise|time:'H:i' }}</span>
+      &nbsp;<span title="Sunset"><i class="fa fa-sun-o" aria-hidden="true"></i><i class="fa fa-long-arrow-down" aria-hidden="true"></i><span class="sr-only">Sunset</span> {{ sun.sunset|time:'H:i' }}</span>
+      &nbsp;<span title="Dark by: the end of civil twilight"><i class="fa fa-moon-o" aria-hidden="true"></i><span class="sr-only">Dark by</span> {{ sun.dark_by|time:'H:i' }}</span>
+      <br>
+      {% endif %}
       <strong>Weather:</strong>
       <a target="_blank" title="The weather.gov forecast for the Lat/Lon"
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
