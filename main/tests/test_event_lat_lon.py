@@ -83,6 +83,7 @@ class ReadPointTestCase(TestCase):
                      'UTM 10S 727330 4355390', 'UTM: 10S 727330 4355390', 'UTM Zone 10 727330 4355390'):
             self.assertReads(text, 39.318069, -120.36303, 'UTM')
         self.assertReads('34H 261878 6243186', -33.924866, 18.424062, 'UTM')        # southern hemisphere
+        self.assertReads('11N 271485 4180757', 37.745602, -119.593597, 'UTM')        # N for north, as GIS tools write it
         self.assertReads('37M 317255 9660817', -3.0674, 37.3556, 'UTM')             # Kilimanjaro, just south
 
     def test_usng(self):

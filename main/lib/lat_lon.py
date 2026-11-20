@@ -72,7 +72,8 @@ def utm_point(zone, band, easting, northing):
     # A zone is 6° wide; half a degree more allows a point read just across its edge.
     if abs((lon - (6 * zone - 183) + 180) % 360 - 180) > 3.5:
         raise NotAPoint('Easting {} is outside zone {}. Check the zone and the easting.'.format(easting, zone))
-    if band and not in_band(band, lat):
+    # N is also how GIS tools write the northern hemisphere, as in "UTM zone 11N".
+    if band and band != 'N' and not in_band(band, lat):
         raise NotAPoint('This point is not in latitude band {}. Check the band letter and the northing.'.format(band))
     return point
 

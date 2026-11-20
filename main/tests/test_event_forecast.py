@@ -167,7 +167,7 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
         for period in unreadable:
             caches['lookups'].clear()
             with service_answers([period]), self.assertLogs('main.lib.lookups', 'INFO'), \
-                    mock.patch.object(caches['lookups'], 'set', wraps=caches['lookups'].set) as kept:
+                    mock.patch.object(caches['lookups'], 'add', wraps=caches['lookups'].add) as kept:
                 self.assertEqual(forecast_for(date(2026, 11, 20), date(2026, 11, 20)), [], period)
             self.assertEqual(kept.call_args.args[1:], ({'value': None}, RETRY_AFTER), period)
 

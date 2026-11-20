@@ -9,7 +9,10 @@ import requests
 from django.core.cache import caches
 
 SECONDS = 10            # how long the page keeps asking for an answer before it shows nothing
-TIMEOUT = 10            # seconds an outside service has to connect, and to send each part of its answer
+# Seconds an outside service has to connect, and then to send each part of its answer. A short connect
+# leaves time, within the page's SECONDS, to ask a second service when the first doesn't answer.
+TIMEOUT = (4, 10)
+MARKED = 30             # seconds the 'fetching' mark holds off a second fetch of the same key
 AT_ONCE = 4             # fetches running at once in one server process
 
 logger = logging.getLogger(__name__)
@@ -24,10 +27,19 @@ def answer(key, fetch, kept_for, retry_after):
     found = lookups.get(key)
     if found is not None:
         return True, found['value']
-    if running.acquire(blocking=False):
-        if lookups.add('fetching:' + key, True, 3 * TIMEOUT):
-            start(fetched, key, fetch, kept_for, retry_after)
-        else:
+    if not running.acquire(blocking=False):
+        return False, None
+    started = False
+    try:
+        if lookups.add('fetching:' + key, True, MARKED):
+            try:
+                start(fetched, key, fetch, kept_for, retry_after)
+                started = True
+            finally:
+                if not started:
+                    lookups.delete('fetching:' + key)
+    finally:
+        if not started:         # the fetch, once started, gives its place back itself
             running.release()
     return False, None
 
@@ -37,16 +49,22 @@ def start(target, *args):
 
 
 def fetched(key, fetch, kept_for, retry_after):
-    lookups = caches['lookups']
+    """Fetch and keep the answer; on a failure, keep None, but never in place of an answer kept already
+    (another fetch of the same key may have succeeded). Always gives its place back, even when the cache
+    itself fails."""
     try:
-        lookups.set(key, {'value': fetch()}, kept_for)
-    except (requests.RequestException, ValueError, KeyError, TypeError, AttributeError) as problem:
-        # No answer, or one in a shape this can't read: the page shows nothing, and an outage isn't an error.
-        logger.info('No answer for %s: %s', key, problem)
-        lookups.set(key, {'value': None}, retry_after)
+        try:
+            caches['lookups'].set(key, {'value': fetch()}, kept_for)
+        except (requests.RequestException, ValueError, KeyError, TypeError, AttributeError) as problem:
+            # No answer, or one in a shape this can't read: the page shows nothing, and an outage isn't an error.
+            logger.info('No answer for %s: %s', key, problem)
+            caches['lookups'].add(key, {'value': None}, retry_after)
+        except Exception:
+            logger.exception('Fetching %s failed', key)
+            caches['lookups'].add(key, {'value': None}, retry_after)
+        finally:
+            caches['lookups'].delete('fetching:' + key)
     except Exception:
-        logger.exception('Fetching %s failed', key)
-        lookups.set(key, {'value': None}, retry_after)
+        logger.exception('Keeping the answer for %s failed', key)
     finally:
-        lookups.delete('fetching:' + key)
         running.release()

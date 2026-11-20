@@ -55,7 +55,7 @@ class ElevationTestCase(FetchedAtOnce, TestCase):
         for problem in (requests.Timeout('slow'), requests.HTTPError('503'), requests.ConnectionError('down')):
             caches['lookups'].clear()
             with usgs_answers(problem=problem) as get, \
-                    mock.patch.object(caches['lookups'], 'set', wraps=caches['lookups'].set) as kept:
+                    mock.patch.object(caches['lookups'], 'add', wraps=caches['lookups'].add) as kept:
                 elevation_feet(*MOUNT_DIABLO)
                 self.assertEqual(elevation_feet(*MOUNT_DIABLO), (True, None), problem)
             get.assert_called_once()

@@ -40,16 +40,19 @@ def county_text(lat, lon):
 
 def ask_counties(lat, lon, miles):
     """The text for the point, from the first service that answers. Its two questions, the county the
-    point is in and those near it, are asked at once."""
+    point is in and those near it, are asked at once; when one fails, the next service is asked without
+    waiting for the other."""
     for url, name_field, state_field in SERVICES:
+        both = ThreadPoolExecutor(2)
         try:
-            with ThreadPoolExecutor(2) as both:
-                inside, near = both.map(lambda within: counties(url, name_field, state_field, lat, lon, within),
-                                        (0, miles) if miles else (0, 0))
+            inside, near = both.map(lambda within: counties(url, name_field, state_field, lat, lon, within),
+                                    (0, miles) if miles else (0, 0))
             return text_for(inside, near)
         except (requests.RequestException, ValueError, KeyError, TypeError) as problem:
             logger.info('No counties from %s for %s, %s: %s', url, lat, lon, problem)
             last_problem = problem
+        finally:
+            both.shutdown(wait=False)
     raise last_problem
 
 

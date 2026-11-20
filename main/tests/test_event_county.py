@@ -1,3 +1,5 @@
+import threading
+import time
 from datetime import timedelta
 from unittest import mock
 
@@ -118,9 +120,30 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
             self.assertIn(asked.count(USGS), (1, 2), problem)
             self.assertEqual(asked.count(CENSUS), 2, problem)
 
+    def test_the_census_bureau_without_waiting_for_usgs_s_other_question(self):
+        # USGS hangs on one question and, once that one is under way, refuses the other: the Census Bureau
+        # is asked at once.
+        hanging, near_asked = threading.Event(), threading.Event()
+        self.addCleanup(hanging.set)
+        answers = services_answer().new.side_effect
+
+        def get(url, params, timeout):
+            if url == USGS:
+                if 'distance' in params:
+                    near_asked.set()
+                    hanging.wait(10)
+                else:
+                    near_asked.wait(5)
+                raise requests.ConnectionError('refused')
+            return answers(url, params, timeout)
+        started = time.monotonic()
+        with mock.patch.object(county.requests, 'get', mock.Mock(side_effect=get)), self.assertLogs('main.lib.county', 'INFO'):
+            self.assertEqual(county_for(*DONNER_SUMMIT), 'Placer, bordering Nevada')
+        self.assertLess(time.monotonic() - started, 2)
+
     def test_neither_answering_gives_none_kept_briefly(self):
         with services_answer(failing=(USGS, CENSUS)), self.assertLogs('main.lib.lookups', 'INFO'), \
-                mock.patch.object(caches['lookups'], 'set', wraps=caches['lookups'].set) as kept:
+                mock.patch.object(caches['lookups'], 'add', wraps=caches['lookups'].add) as kept:
             self.assertIsNone(county_for(*DONNER_SUMMIT))
         self.assertEqual(kept.call_args.args[1:], ({'value': None}, RETRY_AFTER))
 
