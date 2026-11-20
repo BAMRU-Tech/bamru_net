@@ -42,24 +42,18 @@
     <p><strong>Private Description:</strong> {{ event.description_private|urlize }}</p>
     {% endif %}
     <p><strong>Location:</strong> <span class="copy-on-tap">{{ event.location|urlize }}</span>
-      <a target="_blank"
-         href="https://google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
+      <a target="_blank" aria-label="Google Maps"
+         title="Google Maps: the Lat/Lon if there is one, else the Private Location, else the Location"
+         href="https://google.com/maps/search/?api=1&query={% if event.lat and event.lon %}{{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}{% else %}{{ event.location_private|default:event.location|urlencode }}{% endif %}">
         <i class="fa fa-map-marker"></i>
       </a>
       <p>
       {% if event.location_private %}
       <strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
-      <a target="_blank"
-         href="https://google.com/maps/search/?api=1&query={{ event.location_private|urlencode }}">
-        <i class="fa fa-map-marker"></i>
-      </a>
       {% endif %}
       {% if event.lat and event.lon %}
       {% if event.location_private %}<br>{% endif %}
       <strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
-      <a target="_blank" aria-label="Google Maps" title="Google Maps"
-         href="https://google.com/maps/search/?api=1&query={{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}">
-        <i class="fa fa-map-marker"></i></a>
       <a target="_blank" title="NOAA forecast"
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
         <i class="fa fa-cloud"></i> NOAA</a>

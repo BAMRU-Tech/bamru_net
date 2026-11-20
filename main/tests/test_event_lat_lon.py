@@ -292,14 +292,28 @@ class EventLatLonPageTestCase(TestCase):
         self.assertContains(response, '<strong>Private Location:</strong> <span class="copy-on-tap">Trailhead gate</span>')
         self.assertContains(response, '<br>\n      <strong>Lat/Lon:</strong>')
 
-    def test_event_page_links_the_point_to_google_maps_and_the_noaa_forecast(self):
+    def test_one_map_pin_goes_to_the_most_precise_place(self):
+        def pins():
+            response = self.client.get('/event/{}/'.format(self.event.id))
+            self.assertContains(response, 'aria-label="Google Maps"', count=1)
+            self.assertContains(response, 'title="Google Maps: the Lat/Lon if there is one, '
+                                          'else the Private Location, else the Location"')
+            return response
+        self.assertContains(pins(), 'href="https://google.com/maps/search/?api=1&query=Donner%20Summit">')
+        self.event.location_private = 'Trailhead gate'
+        self.event.save()
+        self.assertContains(pins(), 'href="https://google.com/maps/search/?api=1&query=Trailhead%20gate">')
+        self.event.lat, self.event.lon = '39.3157', '-120.3277'
+        self.event.save()
+        self.assertContains(pins(), 'href="https://google.com/maps/search/?api=1&query=39.3157%2C-120.3277">')
+
+    def test_event_page_links_the_point_to_the_noaa_forecast(self):
         self.event.lat, self.event.lon = '39.3157', '-120.3277'
         self.event.save()
         response = self.client.get('/event/{}/'.format(self.event.id))
-        self.assertContains(response, '<a target="_blank" aria-label="Google Maps" title="Google Maps"\n'
-                                      '         href="https://google.com/maps/search/?api=1&query=39.3157%2C-120.3277">\n'
-                                      '        <i class="fa fa-map-marker"></i></a>')
-        self.assertContains(response, 'href="https://forecast.weather.gov/MapClick.php?lat=39.3157&lon=-120.3277">\n'
+        self.assertContains(response, '<span class="copy-on-tap">39.3157, -120.3277</span>\n'
+                                      '      <a target="_blank" title="NOAA forecast"\n'
+                                      '         href="https://forecast.weather.gov/MapClick.php?lat=39.3157&lon=-120.3277">\n'
                                       '        <i class="fa fa-cloud"></i> NOAA</a>')
 
     def test_event_page_without_a_whole_point_shows_none(self):
@@ -308,7 +322,7 @@ class EventLatLonPageTestCase(TestCase):
             self.event.save()
             response = self.client.get('/event/{}/'.format(self.event.id))
             self.assertNotContains(response, 'Lat/Lon:', msg_prefix=str(lat))
-            self.assertNotContains(response, 'aria-label="Google Maps"', msg_prefix=str(lat))
+            self.assertContains(response, 'query=Donner%20Summit">', msg_prefix=str(lat))
             self.assertNotContains(response, 'forecast.weather.gov', msg_prefix=str(lat))
 
     def test_saving_a_new_point_outside_the_area_warns_on_the_event_page(self):
