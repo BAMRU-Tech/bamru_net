@@ -10,14 +10,17 @@ from dynamic_preferences.registries import global_preferences_registry
 
 from main.dynamic_preferences_registry import EventCountyBorderMiles
 from main.lib import county
-from main.lib.county import RETRY_AFTER, SERVICES, county_text, text_for
+from main.lib.county import RETRY_AFTER, county_text, text_for
 from main.models import Event, Member
 from main.tests.lookup_support import FetchedAtOnce, in_memory
 
 # Public places only. The tests never call USGS or the Census Bureau: each answer is mocked, as the
 # services answered for these points on 20 Nov 2026, with the field names each sends.
 DONNER_SUMMIT = (39.3157, -120.3277)
-USGS, CENSUS = SERVICES[0][0], SERVICES[1][0]
+USGS = 'https://carto.nationalmap.gov/arcgis/rest/services/govunits/MapServer/23/query'
+CENSUS = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/82/query'
+# The fields each service's replies hold the county's name and state FIPS code in: USGS's are in lower case.
+FIELDS = {USGS: ('county_name', 'state_fipscode'), CENSUS: ('BASENAME', 'STATE')}
 
 # The services' counties for a point (distance 0) and within 3 miles of it, by (lat, lon).
 COUNTIES = {
@@ -43,7 +46,7 @@ def services_answer(failing=(), refusing=()):
             return response
         lon, lat = (float(degrees) for degrees in params['geometry'].split(','))
         inside, near = COUNTIES[(lat, lon)]
-        _, name_field, state_field = next(service for service in SERVICES if service[0] == url)
+        name_field, state_field = FIELDS[url]
         response.json.return_value = {'features': [{'attributes': {name_field: name, state_field: state}}
                                                    for name, state in (near if 'distance' in params else inside)]}
         return response
