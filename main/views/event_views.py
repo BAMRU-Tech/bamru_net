@@ -17,6 +17,7 @@ from dynamic_preferences.registries import global_preferences_registry
 
 from main.lib.county import county_text
 from main.lib.elevation import elevation_feet
+from main.lib.forecast import DAYS_COVERED, forecast_days
 from main.lib.gcal import get_gcal_manager
 from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
 from main.lib.sun import sun_times
@@ -95,6 +96,9 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         context['leaders'] = result
         if event.lat and event.lon:
             context['sun'] = sun_times(event.lat, event.lon, timezone.localtime(event.start_at).date())
+            first_day, last_day = event_days(event)
+            today = timezone.localdate()
+            context['forecast_wanted'] = last_day >= today and first_day < today + timedelta(days=DAYS_COVERED)
         context['current_do'] = DoAvailable.current_scheduled_do()
         context['esb_spreadsheet_url'] = (
             global_preferences_registry.manager()['general__esb_spreadsheet_url'])
@@ -206,6 +210,24 @@ def event_lat_lon(request):
         return JsonResponse({'value': ''})
     return JsonResponse({'value': point_text(point.lat, point.lon), 'note': reading_note(point),
                          'warning': area_warning(point.lat, point.lon)})
+
+
+def event_days(event):
+    """The event's first and last days, in local time."""
+    first_day = timezone.localtime(event.start_at).date()
+    last_day = timezone.localtime(event.finish_at).date() if event.finish_at else first_day
+    return first_day, max(first_day, last_day)
+
+
+@login_required
+def event_forecast(request, pk):
+    """The forecast at the event's point for each of its days, for the event page to show once it has loaded."""
+    event = get_object_or_404(Event, pk=pk)
+    try:
+        lat, lon = float(event.lat), float(event.lon)
+    except (TypeError, ValueError):
+        return JsonResponse({'days': []})
+    return JsonResponse({'days': forecast_days(lat, lon, *event_days(event))})
 
 
 @login_required

@@ -70,6 +70,7 @@
       <a target="_blank" title="The weather.gov forecast for the Lat/Lon"
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
         <i class="fa fa-cloud"></i> NOAA Forecast</a>
+      {% if forecast_wanted %}<span id="event-forecast"></span>{% endif %}
       <span id="event-elevation-line" hidden><br><strong>Elevation:</strong>
       <span id="event-elevation" title="Elevation at the point, from USGS"></span></span>
     </p>
@@ -1273,6 +1274,18 @@ $(document).ready(function() {
             $('#event-elevation-line').prop('hidden', false);
         }
     });
+    {% if forecast_wanted %}
+    // Each event day's forecast, from the National Weather Service, for the days it covers.
+    $.getJSON('{% url "event_forecast" event.id %}', function(answer) {
+        answer.days.forEach(function(day) {
+            var parts = [];
+            if (day.high !== null) parts.push('high ' + day.high + '°');
+            if (day.low !== null) parts.push('low ' + day.low + '°');
+            parts.push(day.precip + '% precip', 'wind ' + day.wind);
+            $('#event-forecast').append('<br>', $('<span>').attr('title', day.summary).text(day.label + ': ' + parts.join(', ')));
+        });
+    });
+    {% endif %}
 });
 </script>
 {% endif %}
