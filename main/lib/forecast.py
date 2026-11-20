@@ -75,7 +75,7 @@ def periods(lat, lon):
 def forecast_days(lat, lon, first_day, last_day):
     """Each day from first_day to last_day that the forecast covers: the high of its daytime period
     (None once that has passed), the low of the night that follows, the higher of their chances of
-    precipitation, and the wind and summary of the daytime period, else of the night."""
+    precipitation, and the wind speed, wind direction and summary of the daytime period, else of the night."""
     by_day = {}
     for period in periods(lat, lon) or []:
         start = datetime.fromisoformat(period['startTime'])
@@ -95,7 +95,7 @@ def forecast_days(lat, lon, first_day, last_day):
             'high': high, 'high_band': high_band, 'high_note': high_note,
             'low': low, 'low_band': low_band, 'low_note': low_note,
             'precip': max((p.get('probabilityOfPrecipitation') or {}).get('value') or 0 for p in (daytime, night) if p),
-            'wind': '{} {}'.format(lead['windSpeed'], lead['windDirection']).strip(),
+            'wind_speed': lead['windSpeed'], 'wind_direction': lead['windDirection'],
             'summary': lead['shortForecast'],
         })
     return days

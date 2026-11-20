@@ -70,10 +70,11 @@ class EventPageCountyTestCase(TestCase):
     def page(self):
         return self.client.get('/event/{}/'.format(self.event.id))
 
-    def test_the_event_page_names_the_county_under_the_point(self):
+    def test_the_event_page_names_the_county_first_under_location(self):
         self.event.lat, self.event.lon = (str(degrees) for degrees in DONNER_SUMMIT)
         self.event.save()
-        self.assertContains(self.page(), '<br><strong>County:</strong> Border of Placer and Nevada\n')
+        self.assertContains(self.page(), '<div class="location-details-body">\n'
+                                         '      <div><strong>County:</strong> Border of Placer and Nevada</div>')
 
     def test_no_county_line_without_a_point_in_a_county(self):
         for lat, lon in ((None, None), ('39.3157', None), ('39.3157', 'west'), (str(GRAND_CANYON[0]), str(GRAND_CANYON[1]))):

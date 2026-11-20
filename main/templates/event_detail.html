@@ -6,8 +6,18 @@
 
 {% block css %}{{ block.super }}
 <style>
-  .event-conditions { margin-bottom: 1rem; }
-  .event-forecast th, .event-forecast td { padding: 0 1em 0 0; white-space: nowrap; }
+  .location-details { margin-bottom: 1rem; }
+  .location-details > summary:focus-visible { outline: revert; }   /* style.css hides it on every summary */
+  .location-details-body { margin-left: 1.05em; }                  /* level with the summary's text, after its triangle */
+  .event-forecast th, .event-forecast td { padding: 0 .7em 0 0; white-space: nowrap; }
+  .event-forecast .forecast-name { display: inline-block; min-width: 5.5em; }
+  .event-forecast td.wind span { white-space: nowrap; }
+  .event-forecast td.forecast-summary { white-space: normal; }
+  .event-forecast tr.forecast-day td { padding-top: .6em; }
+  @media (max-width: 767.98px) {
+    .event-forecast .number { width: 1%; }      /* as narrow as their numbers; the wind takes the rest */
+    .event-forecast td.wind { white-space: normal; }
+  }
   .event-forecast th { font-weight: normal; font-size: .85em; color: #6c757d; }
   .event-forecast .number { text-align: right; }
   .event-forecast .number span { padding: 0 .3em; border-radius: 3px; }
@@ -56,7 +66,8 @@
     {% if event.description_private %}
     <p><strong>Private Description:</strong> {{ event.description_private|urlize }}</p>
     {% endif %}
-    <p><strong>Location:</strong> <span class="copy-on-tap">{{ event.location|urlize }}</span>
+    <p><strong>Location:</strong>
+      <span class="copy-on-tap">{{ event.location|urlize }}</span>
       <a target="_blank" aria-label="Google Maps"
          title="Google Maps: the Lat/Lon if there is one, else the Private Location, else the Location"
          href="https://google.com/maps/search/?api=1&query={% if event.lat and event.lon %}{{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}{% else %}{{ event.location_private|default:event.location|urlencode }}{% endif %}">
@@ -65,15 +76,15 @@
       {% if event.location_private %}
       <br><strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
       {% endif %}
-      {% if county %}
-      <br><strong>County:</strong> {{ county }}
-      {% endif %}
       {% if event.lat and event.lon %}
       <br><strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
       {% endif %}
     </p>
     {% if event.lat and event.lon %}
-    <div class="event-conditions">
+    <details id="location-details" class="location-details">
+      <summary title="The County, Elevation, Daylight and Weather at the Lat/Lon"><strong>Weather and location information</strong></summary>
+      <div class="location-details-body">
+      {% if county %}<div><strong>County:</strong> {{ county }}</div>{% endif %}
       <div id="event-elevation-line" hidden><strong>Elevation:</strong>
       <span id="event-elevation" title="Elevation at the point, from USGS"></span></div>
       {% if sun %}
@@ -87,7 +98,8 @@
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
         NOAA Forecast</a></div>
       {% if forecast_wanted %}<table id="event-forecast" class="event-forecast" hidden></table>{% endif %}
-    </div>
+      </div>
+    </details>
     {% endif %}
     <p><strong>Leaders:</strong>
       {% for leader in leaders %}{% if leader.id != 0 %}<a href="{% url 'member_detail' leader.id %}">{{ leader.name }}</a>{% else %}{{ leader.name }}{% endif %}{% endfor %}
@@ -1280,7 +1292,8 @@ $(document).ready(function() {
 </script>
 {% if event.lat and event.lon %}
 <script type="text/javascript">
-// The point's elevation, asked of USGS through the site once the page has loaded.
+// The elevation and forecast are asked for once the page has loaded, so they are ready when a member
+// opens Weather and location information.
 $(document).ready(function() {
     $.getJSON('{% url "event_elevation" event.id %}', function(answer) {
         if (answer.feet !== null) {
@@ -1289,11 +1302,16 @@ $(document).ready(function() {
         }
     });
     {% if forecast_wanted %}
-    // Each event day's forecast, from the National Weather Service, for the days it covers, in columns.
+    // The forecast, from the National Weather Service, for the day before and each event day it covers.
+    // From tablet width up, one row a day: the day, high, low, precipitation, wind and the service's summary.
+    // Narrower, each day is three lines: the day, then the numbers under their headings, then the summary.
     $.getJSON('{% url "event_forecast" event.id %}', function(answer) {
         if (!answer.days.length) return;
+        var WIDE = 'd-none d-md-table-cell', NARROW = 'd-md-none';
         var table = $('#event-forecast').append($('<tr>').append(
-            ['', 'High', 'Low', 'Precip', 'Wind'].map(function(heading) { return $('<th>').text(heading); })));
+            $('<th>').addClass(WIDE),
+            ['High', 'Low', 'Precip'].map(function(heading) { return $('<th class="number">').text(heading); }),
+            $('<th>').text('Wind'), $('<th>').addClass(WIDE)));
         function temperature(degrees, band, note) {
             var cell = $('<td class="number">');
             if (degrees !== null) {
@@ -1302,12 +1320,17 @@ $(document).ready(function() {
             return cell;
         }
         answer.days.forEach(function(day) {
-            table.append($('<tr>').attr('title', day.summary).append(
-                $('<td>').text(day.label),
-                temperature(day.high, day.high_band, day.high_note),
-                temperature(day.low, day.low_band, day.low_note),
-                $('<td class="number">').text(day.precip + '%'),
-                $('<td>').text(day.wind)));
+            table.append(
+                $('<tr class="forecast-day">').addClass(NARROW).append(
+                    $('<td colspan="4">').append($('<strong>').text(day.name), ' ' + day.label)),
+                $('<tr>').append(
+                    $('<td>').addClass(WIDE).append($('<span class="forecast-name">').text(day.name), ' ' + day.label),
+                    temperature(day.high, day.high_band, day.high_note),
+                    temperature(day.low, day.low_band, day.low_note),
+                    $('<td class="number">').text(day.precip + '%'),
+                    $('<td class="wind">').append($('<span>').text(day.wind_speed), ' ', $('<span>').text(day.wind_direction)),
+                    $('<td class="forecast-summary">').addClass(WIDE).text(day.summary)),
+                $('<tr>').addClass(NARROW).append($('<td class="forecast-summary" colspan="4">').text(day.summary)));
         });
         table.prop('hidden', false);
     });

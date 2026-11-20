@@ -13,6 +13,10 @@ MOUNT_DIABLO = ('37.8817', '-121.9142')
 JPL = {
     date(2026, 6, 21): ('05:45:44', '20:33:20', '21:04:45'),
     date(2026, 12, 21): ('07:19:46', '16:52:00', '17:21:29'),
+    date(2026, 3, 7): ('06:30:22', '18:07:18', '18:33:34'),
+    date(2026, 3, 8): ('07:28:54', '19:08:17', '19:34:31'),       # the clocks go forward
+    date(2026, 10, 31): ('07:32:21', '18:09:39', '18:36:50'),
+    date(2026, 11, 1): ('06:33:24', '17:08:34', '17:35:47'),      # the clocks go back
 }
 
 
@@ -44,20 +48,27 @@ class EventSunPageTestCase(TestCase):
                                      start_at=start, finish_at=start, lat=lat_lon[0], lon=lat_lon[1])
         return self.client.get('/event/{}/'.format(event.id))
 
+    def assertShows(self, response, sunrise, sunset, dark_by):
+        for label, time_text in (('Sunrise', sunrise), ('Sunset', sunset), ('Dark by', dark_by)):
+            self.assertContains(response, '<span class="sr-only">{}</span> {}</span>'.format(label, time_text))
+
     def test_event_page_shows_the_sun_on_the_start_day(self):
-        def shown(response, sunrise, sunset, dark_by):
-            for label, time_text in (('Sunrise', sunrise), ('Sunset', sunset), ('Dark by', dark_by)):
-                self.assertContains(response, '<span class="sr-only">{}</span> {}</span>'.format(label, time_text))
-        shown(self.page(local(date(2026, 12, 21), 9)), '07:20', '16:52', '17:22')
+        self.assertShows(self.page(local(date(2026, 12, 21), 9)), '07:20', '16:52', '17:22')
         response = self.page(local(date(2026, 6, 21), 9))
-        shown(response, '05:46', '20:33', '21:05')
+        self.assertShows(response, '05:46', '20:33', '21:05')
         self.assertContains(response, '<strong title="On Jun 21, for a flat horizon: the sun goes behind ridges and '
                                       'canyon walls earlier.">Daylight:</strong>')
         for tooltip in ('Sunrise', 'Sunset', 'Dark by: the end of civil twilight'):
             self.assertContains(response, '<span title="{}">'.format(tooltip))
         page = response.content.decode()
-        self.assertLess(page.index('<strong>Lat/Lon:</strong>'), page.index('Daylight:</strong>'))
+        self.assertLess(page.index('<details id="location-details"'), page.index('Daylight:</strong>'))
         self.assertLess(page.index('Daylight:</strong>'), page.index('<strong>Weather:</strong>'))
+
+    def test_the_clocks_changing(self):
+        # The clocks change at 2 a.m., before sunrise, so the whole day is on the new time.
+        for day, times in ((date(2026, 3, 7), ('06:31', '18:07', '18:34')), (date(2026, 3, 8), ('07:29', '19:08', '19:35')),
+                           (date(2026, 10, 31), ('07:33', '18:09', '18:37')), (date(2026, 11, 1), ('06:34', '17:08', '17:36'))):
+            self.assertShows(self.page(local(day, 9)), *times)
 
     def test_a_late_start_reads_the_local_day(self):
         # At 23:30 here it's already the next day in UTC. Near the equinox sunrise moves a minute or more a day.

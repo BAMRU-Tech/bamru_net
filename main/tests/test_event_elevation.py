@@ -93,7 +93,7 @@ class EventElevationPageTestCase(TestCase):
         self.assertContains(response, '<div id="event-elevation-line" hidden><strong>Elevation:</strong>\n'
                                       '      <span id="event-elevation" title="Elevation at the point, from USGS"></span></div>')
         page_text = response.content.decode()
-        self.assertLess(page_text.index('<strong>Lat/Lon:</strong>'), page_text.index('<strong>Elevation:</strong>'))
+        self.assertLess(page_text.index('<strong>County:</strong>'), page_text.index('<strong>Elevation:</strong>'))
         self.assertLess(page_text.index('<strong>Elevation:</strong>'), page_text.index('Daylight:</strong>'))
         self.assertLess(page_text.index('Daylight:</strong>'), page_text.index('<strong>Weather:</strong>'))
         self.assertContains(response, "$.getJSON('{}'".format(self.url))

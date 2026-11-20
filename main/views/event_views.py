@@ -96,7 +96,7 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         context['leaders'] = result
         if event.lat and event.lon:
             context['sun'] = sun_times(event.lat, event.lon, timezone.localtime(event.start_at).date())
-            first_day, last_day = event_days(event)
+            first_day, last_day = forecast_span(event)
             today = timezone.localdate()
             context['forecast_wanted'] = last_day >= today and first_day < today + timedelta(days=DAYS_COVERED)
         context['current_do'] = DoAvailable.current_scheduled_do()
@@ -212,22 +212,29 @@ def event_lat_lon(request):
                          'warning': area_warning(point.lat, point.lon)})
 
 
-def event_days(event):
-    """The event's first and last days, in local time."""
+def forecast_span(event):
+    """The days the event's forecast covers, in local time: from the day before the event, for anyone
+    driving up or camping the night before, to its last day."""
     first_day = timezone.localtime(event.start_at).date()
     last_day = timezone.localtime(event.finish_at).date() if event.finish_at else first_day
-    return first_day, max(first_day, last_day)
+    return first_day - timedelta(days=1), max(first_day, last_day)
 
 
 @login_required
 def event_forecast(request, pk):
-    """The forecast at the event's point for each of its days, for the event page to show once it has loaded."""
+    """The forecast at the event's point for the day before the event and each of its days, named
+    Day before, OP1, OP2 and so on, for the event page to show once it has loaded."""
     event = get_object_or_404(Event, pk=pk)
     try:
         lat, lon = float(event.lat), float(event.lon)
     except (TypeError, ValueError):
         return JsonResponse({'days': []})
-    return JsonResponse({'days': forecast_days(lat, lon, *event_days(event))})
+    day_before, last_day = forecast_span(event)
+    days = forecast_days(lat, lon, day_before, last_day)
+    for day in days:
+        op = (datetime.date.fromisoformat(day['date']) - day_before).days
+        day['name'] = 'OP{}'.format(op) if op else 'Day before'
+    return JsonResponse({'days': days})
 
 
 @login_required

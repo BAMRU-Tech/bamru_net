@@ -282,7 +282,7 @@ class EventLatLonPageTestCase(TestCase):
         self.event.save()
         response = self.client.get('/event/{}/'.format(self.event.id))
         self.assertContains(response, '<strong>Lat/Lon:</strong> <span class="copy-on-tap">39.3157, -120.3277</span>')
-        self.assertContains(response, '<strong>Location:</strong> <span class="copy-on-tap">Donner Summit</span>')
+        self.assertContains(response, '<p><strong>Location:</strong>\n      <span class="copy-on-tap">Donner Summit</span>')
         self.assertContains(response, "$('.copy-on-tap').on('click'")
         self.assertNotContains(response, '<strong>Lat:</strong>')
         # Under a private location, on its own line.
@@ -316,17 +316,25 @@ class EventLatLonPageTestCase(TestCase):
                             '         href="https://forecast.weather.gov/MapClick.php?lat=39.3157&lon=-120.3277">\n'
                             '        NOAA Forecast</a></div>')
 
-    def test_event_page_groups_the_place_then_the_weather_then_the_leaders(self):
+    def test_weather_and_location_information_opens_the_county_elevation_daylight_and_weather(self):
         self.event.lat, self.event.lon, self.event.location_private = '39.3157', '-120.3277', 'Trailhead gate'
         self.event.save()
-        page = self.client.get('/event/{}/'.format(self.event.id)).content.decode()
+        response = self.client.get('/event/{}/'.format(self.event.id))
+        # Closed until a member opens it, on its own line under the Lat/Lon.
+        self.assertContains(response, '<details id="location-details" class="location-details">\n'
+                                      '      <summary title="The County, Elevation, Daylight and Weather at the Lat/Lon">'
+                                      '<strong>Weather and location information</strong></summary>\n'
+                                      '      <div class="location-details-body">')
+        page = response.content.decode()
         place = page[page.index('<strong>Location:</strong>'):page.index('</p>', page.index('<strong>Location:</strong>'))]
-        for label in ('<strong>Private Location:</strong>', '<strong>County:</strong>', '<strong>Lat/Lon:</strong>'):
-            self.assertIn(label, place)
-        self.assertLess(place.index('Private Location:'), place.index('County:'))
-        self.assertLess(place.index('County:'), place.index('Lat/Lon:'))
-        self.assertLess(page.index('<strong>Lat/Lon:</strong>'), page.index('<strong>Weather:</strong>'))
-        self.assertLess(page.index('<strong>Weather:</strong>'), page.index('<strong>Leaders:</strong>'))
+        details = page[page.index('<details id="location-details"'):page.index('</details>')]
+        self.assertLess(page.index('</p>', page.index('<strong>Lat/Lon:</strong>')), page.index('<details id="location-details"'))
+        self.assertLess(page.index('</details>'), page.index('<strong>Leaders:</strong>'))
+        labels = ('Private Location:', 'Lat/Lon:', 'County:', 'Elevation:', 'Daylight:', 'Weather:')
+        self.assertEqual([label for label in labels if label in place], ['Private Location:', 'Lat/Lon:'])
+        self.assertEqual(sorted((details.index(label), label) for label in labels[2:]),
+                         [(details.index(label), label) for label in labels[2:]])
+        self.assertLess(place.index('Private Location:'), place.index('Lat/Lon:'))
 
     def test_event_page_without_a_whole_point_shows_none(self):
         for lat in (None, '39.3157'):
@@ -334,6 +342,9 @@ class EventLatLonPageTestCase(TestCase):
             self.event.save()
             response = self.client.get('/event/{}/'.format(self.event.id))
             self.assertNotContains(response, 'Lat/Lon:', msg_prefix=str(lat))
+            self.assertContains(response, '<p><strong>Location:</strong>\n      <span class="copy-on-tap">Donner Summit</span>',
+                                msg_prefix=str(lat))
+            self.assertNotContains(response, 'id="location-details', msg_prefix=str(lat))
             self.assertContains(response, 'query=Donner%20Summit">', msg_prefix=str(lat))
             self.assertNotContains(response, 'forecast.weather.gov', msg_prefix=str(lat))
 

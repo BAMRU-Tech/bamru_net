@@ -53,13 +53,13 @@ class ForecastDaysTestCase(TestCase):
         self.assertEqual(days, [
             {'date': '2026-11-20', 'label': 'Fri Nov 20', 'high': 41, 'high_band': None, 'high_note': None,
              'low': 35, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
-             'precip': 78, 'wind': '7 mph NW', 'summary': 'Light Rain then Partly Sunny'},
+             'precip': 78, 'wind_speed': '7 mph', 'wind_direction': 'NW', 'summary': 'Light Rain then Partly Sunny'},
             {'date': '2026-11-21', 'label': 'Sat Nov 21', 'high': 41, 'high_band': None, 'high_note': None,
              'low': 33, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
-             'precip': 64, 'wind': '5 to 10 mph ESE', 'summary': 'Light Rain Likely'},
+             'precip': 64, 'wind_speed': '5 to 10 mph', 'wind_direction': 'ESE', 'summary': 'Light Rain Likely'},
             {'date': '2026-11-22', 'label': 'Sun Nov 22', 'high': 50, 'high_band': None, 'high_note': None,
              'low': None, 'low_band': None, 'low_note': None,
-             'precip': 0, 'wind': '10 mph N', 'summary': 'Sunny'},
+             'precip': 0, 'wind_speed': '10 mph', 'wind_direction': 'N', 'summary': 'Sunny'},
         ])
 
     def test_only_the_events_days(self):
@@ -73,7 +73,7 @@ class ForecastDaysTestCase(TestCase):
             self.assertEqual(forecast_days(*MOUNT_DIABLO, date(2026, 11, 19), date(2026, 11, 19)), [
                 {'date': '2026-11-19', 'label': 'Thu Nov 19', 'high': None, 'high_band': None, 'high_note': None,
                  'low': 34, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
-                 'precip': 69, 'wind': '6 mph WSW', 'summary': 'Light Rain Likely'}])
+                 'precip': 69, 'wind_speed': '6 mph', 'wind_direction': 'WSW', 'summary': 'Light Rain Likely'}])
 
     def test_temperature_bands_from_the_heat_index_categories_and_cold_guidance(self):
         for degrees, band in ((125, 'danger'), (103, 'danger'), (102, 'extreme-caution'), (90, 'extreme-caution'),
@@ -110,11 +110,12 @@ class EventForecastPageTestCase(TestCase):
                                     finish_at=start + timedelta(days=days - 1, hours=8),
                                     lat=point and str(point[0]), lon=point and str(point[1]))
 
-    def test_the_forecast_for_each_day_of_the_event(self):
-        event = self.event(date(2026, 11, 20), days=2)
+    def test_the_forecast_for_the_day_before_and_each_day_of_the_event(self):
+        event = self.event(date(2026, 11, 21), days=2)
         with service_answers():
             days = self.client.get('/event/{}/forecast/'.format(event.id)).json()['days']
-        self.assertEqual([d['date'] for d in days], ['2026-11-20', '2026-11-21'])
+        self.assertEqual([(d['name'], d['label']) for d in days],
+                         [('Day before', 'Fri Nov 20'), ('OP1', 'Sat Nov 21'), ('OP2', 'Sun Nov 22')])
 
     def test_no_forecast_without_a_whole_point(self):
         event = self.event(date(2026, 11, 20), point=None)
@@ -131,8 +132,10 @@ class EventForecastPageTestCase(TestCase):
 
     def test_the_page_asks_only_for_an_event_within_the_forecast(self):
         today = timezone.localdate()
+        # An event a week away still asks: its day before is the forecast's last day.
         for first_day, days, asks in ((today + timedelta(days=2), 1, True), (today - timedelta(days=3), 5, True),
-                                      (today - timedelta(days=10), 1, False), (today + timedelta(days=10), 1, False)):
+                                      (today + timedelta(days=7), 1, True), (today + timedelta(days=8), 1, False),
+                                      (today - timedelta(days=1), 1, False), (today - timedelta(days=10), 1, False)):
             event = self.event(first_day, days)
             response = self.client.get('/event/{}/'.format(event.id))
             self.assertContains(response, 'NOAA Forecast</a>')
