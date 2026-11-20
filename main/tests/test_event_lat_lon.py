@@ -277,19 +277,30 @@ class EventLatLonPageTestCase(TestCase):
             self.assertNotContains(response, 'name="lon"', msg_prefix=url)
             self.assertNotContains(response, 'geopicker', msg_prefix=url)
 
-    def test_event_page_shows_the_point_to_copy(self):
+    def test_event_page_shows_the_point_and_locations_to_copy_on_tap(self):
         self.event.lat, self.event.lon = '39.3157', '-120.3277'
         self.event.save()
         response = self.client.get('/event/{}/'.format(self.event.id))
-        self.assertContains(response, '<strong>Lat/Lon:</strong> <span id="event-lat-lon">39.3157, -120.3277</span>')
-        self.assertContains(response, '<a href="#" id="copy-lat-lon" role="button" aria-label="Copy Lat/Lon">\n'
-                                      '        <i class="fa fa-copy"></i> Copy</a>')
+        self.assertContains(response, '<strong>Lat/Lon:</strong> <span class="copy-on-tap">39.3157, -120.3277</span>')
+        self.assertContains(response, '<strong>Location:</strong> <span class="copy-on-tap">Donner Summit</span>')
+        self.assertContains(response, "$('.copy-on-tap').on('click'")
         self.assertNotContains(response, '<strong>Lat:</strong>')
         # Under a private location, on its own line.
         self.event.location_private = 'Trailhead gate'
         self.event.save()
-        self.assertContains(self.client.get('/event/{}/'.format(self.event.id)),
-                            '<br>\n      <strong>Lat/Lon:</strong>')
+        response = self.client.get('/event/{}/'.format(self.event.id))
+        self.assertContains(response, '<strong>Private Location:</strong> <span class="copy-on-tap">Trailhead gate</span>')
+        self.assertContains(response, '<br>\n      <strong>Lat/Lon:</strong>')
+
+    def test_event_page_links_the_point_to_google_maps_and_the_noaa_forecast(self):
+        self.event.lat, self.event.lon = '39.3157', '-120.3277'
+        self.event.save()
+        response = self.client.get('/event/{}/'.format(self.event.id))
+        self.assertContains(response, '<a target="_blank" aria-label="Google Maps" title="Google Maps"\n'
+                                      '         href="https://google.com/maps/search/?api=1&query=39.3157%2C-120.3277">\n'
+                                      '        <i class="fa fa-map-marker"></i></a>')
+        self.assertContains(response, 'href="https://forecast.weather.gov/MapClick.php?lat=39.3157&lon=-120.3277">\n'
+                                      '        <i class="fa fa-cloud"></i> NOAA</a>')
 
     def test_event_page_without_a_whole_point_shows_none(self):
         for lat in (None, '39.3157'):
@@ -297,7 +308,8 @@ class EventLatLonPageTestCase(TestCase):
             self.event.save()
             response = self.client.get('/event/{}/'.format(self.event.id))
             self.assertNotContains(response, 'Lat/Lon:', msg_prefix=str(lat))
-            self.assertNotContains(response, 'id="copy-lat-lon"', msg_prefix=str(lat))
+            self.assertNotContains(response, 'aria-label="Google Maps"', msg_prefix=str(lat))
+            self.assertNotContains(response, 'forecast.weather.gov', msg_prefix=str(lat))
 
     def test_saving_a_new_point_outside_the_area_warns_on_the_event_page(self):
         canyon, edit = '36.0544, -112.1401', '/event/{}/edit/'.format(self.event.id)

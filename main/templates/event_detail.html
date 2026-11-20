@@ -41,14 +41,14 @@
     {% if event.description_private %}
     <p><strong>Private Description:</strong> {{ event.description_private|urlize }}</p>
     {% endif %}
-    <p><strong>Location:</strong> {{ event.location|urlize }}
+    <p><strong>Location:</strong> <span class="copy-on-tap">{{ event.location|urlize }}</span>
       <a target="_blank"
          href="https://google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
         <i class="fa fa-map-marker"></i>
       </a>
       <p>
       {% if event.location_private %}
-      <strong>Private Location:</strong> {{ event.location_private|urlize }}
+      <strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
       <a target="_blank"
          href="https://google.com/maps/search/?api=1&query={{ event.location_private|urlencode }}">
         <i class="fa fa-map-marker"></i>
@@ -56,9 +56,13 @@
       {% endif %}
       {% if event.lat and event.lon %}
       {% if event.location_private %}<br>{% endif %}
-      <strong>Lat/Lon:</strong> <span id="event-lat-lon">{{ event.lat }}, {{ event.lon }}</span>
-      <a href="#" id="copy-lat-lon" role="button" aria-label="Copy Lat/Lon">
-        <i class="fa fa-copy"></i> Copy</a>
+      <strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
+      <a target="_blank" aria-label="Google Maps" title="Google Maps"
+         href="https://google.com/maps/search/?api=1&query={{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}">
+        <i class="fa fa-map-marker"></i></a>
+      <a target="_blank" title="NOAA forecast"
+         href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
+        <i class="fa fa-cloud"></i> NOAA</a>
       {% endif %}
       </p></p>
     <p><strong>Leaders:</strong>
@@ -1228,22 +1232,24 @@ function MarkRow ( e, dt, type, indices ) {
 
 </script>
 <script type="text/javascript">
-// Copy the event's Lat/Lon as one item, ready to paste into Google Maps or CalTopo. Where the
-// browser won't copy, select it so the member can.
+// Tapping a location or the Lat/Lon copies it whole, ready to paste into a map app or CalTopo.
+// A link inside still opens, and text the member selected is left alone. Where the browser
+// won't copy, select it so the member can.
 $(document).ready(function() {
-    $('#copy-lat-lon').on('click', function(event) {
-        event.preventDefault();
-        var link = this, point = document.getElementById('event-lat-lon');
+    $('.copy-on-tap').on('click', function(event) {
+        if ($(event.target).closest('a').length || getSelection().toString()) return;
+        var text = this;
         function select() {
             var range = document.createRange();
-            range.selectNodeContents(point);
+            range.selectNodeContents(text);
             getSelection().removeAllRanges();
             getSelection().addRange(range);
         }
         if (!navigator.clipboard) return select();
-        navigator.clipboard.writeText(point.textContent).then(function() {
-            link.innerHTML = '<i class="fa fa-check"></i> Copied';
-            setTimeout(function() { link.innerHTML = '<i class="fa fa-copy"></i> Copy'; }, 2000);
+        navigator.clipboard.writeText(text.textContent.trim()).then(function() {
+            $(text).next('.copied').remove();
+            var note = $('<small class="copied text-muted"> Copied</small>').insertAfter(text);
+            setTimeout(function() { note.remove(); }, 2000);
         }, select);
     });
 });
