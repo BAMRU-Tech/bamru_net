@@ -58,8 +58,11 @@ class EventSunPageTestCase(TestCase):
         self.assertShows(response, '05:46', '20:33', '21:05')
         self.assertContains(response, '<strong title="On Jun 21, for a flat horizon: the sun goes behind ridges and '
                                       'canyon walls earlier.">Daylight:</strong>')
-        for tooltip in ('Sunrise', 'Sunset', 'Dark by: the end of civil twilight'):
-            self.assertContains(response, '<span title="{}">'.format(tooltip))
+        for tooltip, symbol, label in (('Sunrise', '&#x2600;&#xFE0F;&#x2191;', 'Sunrise'),
+                                       ('Sunset', '&#x2600;&#xFE0F;&#x2193;', 'Sunset'),
+                                       ('Dark by: the end of civil twilight', '&#x1F319;', 'Dark by')):
+            self.assertContains(response, '<span title="{}"><span aria-hidden="true">{}</span><span class="sr-only">{}</span>'
+                                .format(tooltip, symbol, label))
         page = response.content.decode()
         self.assertLess(page.index('<details id="location-details"'), page.index('Daylight:</strong>'))
         self.assertLess(page.index('Daylight:</strong>'), page.index('<strong>Weather:</strong>'))
