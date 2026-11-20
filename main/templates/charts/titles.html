@@ -1,0 +1,2 @@
+{# A chart's titles, one for each measure and view, and, never shown, any others (`sizes`) the title's place must be tall enough for, which the menu's script leaves where they are; part of charts/share_panels.html. #}
+{% for title in chart.titles %}<div class="chart-m{{ title.measure }} chart-v{{ title.view }}">{{ title.text }}</div>{% endfor %}{% for text in sizes %}<div aria-hidden="true" data-chart-keep>{{ text }}</div>{% endfor %}

@@ -1,0 +1,1 @@
+{% load l10n %}<div class="chart-part-{{ part.colour }}" style="{% if part.colour == 'ramp' %}--chart-ramp: {{ part.ramp|unlocalize }}%; {% endif %}{% for size in part.sizes %}--m{{ forloop.counter }}: {{ size|unlocalize }}%; {% endfor %}"></div>

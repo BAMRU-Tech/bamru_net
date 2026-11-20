@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.db import connection, transaction
 from django.db.models import Prefetch
 from django import forms
 from django.forms import widgets
@@ -9,17 +10,24 @@ from django.forms.formsets import BaseFormSet
 from django.forms.models import inlineformset_factory, modelform_factory, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
 from rules.contrib.views import PermissionRequiredMixin
 
+from main.lib import report_cache
+from main.lib.counting import member_latest
+from main.lib.report_settings import report_settings
 from main.models import Address, Cert, Email, EmergencyContact,Member, Phone, Unavailable
 from main.views.file_views import download_file_helper
 
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 import datetime
+import math
+import time
+from contextlib import contextmanager
 from datetime import timedelta
 
 import logging
@@ -43,13 +51,63 @@ class MemberListView(LoginRequiredMixin, generic.ListView):
         )
 
 
+@contextmanager
+def _within(seconds):
+    """On Postgres, the statements run inside have `seconds` between them, if
+    not 0: each is given what is left of them as its statement_timeout (SET
+    LOCAL, as a function, which takes a parameter), and one begun with none
+    left is not run. So inside a transaction, and ended before it is. Time
+    spent between the statements counts; nothing ends a wait that is not in
+    the database. On SQLite and other backends, nothing."""
+    if not seconds or connection.vendor != 'postgresql':
+        yield
+        return
+    deadline = time.monotonic() + seconds
+
+    def within_what_is_left(execute, sql, params, many, context):
+        left = deadline - time.monotonic()
+        if left <= 0:
+            raise TimeoutError('No time left of {} seconds'.format(seconds))
+        # On the database's own cursor, as one of Django's would come back through here.
+        milliseconds = str(math.ceil(left * 1000))
+        context['cursor'].cursor.execute("SELECT set_config('statement_timeout', %s, true)", [milliseconds])
+        return execute(sql, params, many, context)
+
+    with connection.execute_wrapper(within_what_is_left):
+        yield
+
+
 class MemberDetailView(LoginRequiredMixin, generic.DetailView):
     model = Member
     template_name = 'member_detail.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        # The page holds the member's contact details, so the Activity section never breaks it: if building the
+        # section fails, the page shows without it, as it did before the reports, and the error is logged.
+        try:
+            context['activity'] = self.activity()
+        except Exception:
+            logger.exception('Member page of member %s: the Activity section is left out', self.object.pk)
         return context
+
+    def activity(self):
+        """The Activity section, the Last table, as HTML: the template rendered
+        here, so that nothing of it is left to run later in the page. Built
+        in a transaction of its own (a savepoint, in one already open), so
+        that a database error in it leaves the connection as it was for the
+        rest of the page; its queries together within the team's time limit
+        on Postgres (LAST_TABLE_SECONDS, _within); and rolled back, as it
+        only reads (the reports' cache is in memory, not the database), so
+        that the limit ends with it, as it would not with a savepoint
+        released into the transaction around it."""
+        now = timezone.now()
+        with transaction.atomic():
+            with _within(report_settings().LAST_TABLE_SECONDS):
+                latest = member_latest(self.object, now, report_cache.records_from(now))
+                html = render_to_string('member_latest.html', {'latest': latest})
+            transaction.set_rollback(True)
+        return html
 
 
 class MemberHistoryView(LoginRequiredMixin, generic.DetailView):
