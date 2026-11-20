@@ -67,8 +67,8 @@ def names_text(names):
 
 
 def county_text(lat, lon):
-    """'Contra Costa'; within the site setting's miles of a county line, 'border of Placer and Nevada';
-    across a state line, 'border of Placer and El Dorado, CA, and Douglas, NV'; None in no county."""
+    """'Contra Costa'; within the site setting's miles of a county line, 'Border of Placer and Nevada';
+    across a state line, 'Border of Placer and El Dorado, CA, and Douglas, NV'; None in no county."""
     found = counties_near(lat, lon, global_preferences_registry.manager()['general__event_county_border_miles'])
     if not found:
         return None
@@ -78,6 +78,6 @@ def county_text(lat, lon):
     if len(found) == 1:
         return by_state[found[0][1]][0]
     if len(by_state) == 1:
-        return 'border of ' + names_text(next(iter(by_state.values())))
+        return 'Border of ' + names_text(next(iter(by_state.values())))
     groups = ['{}, {}'.format(names_text(names), state) for state, names in by_state.items()]
-    return 'border of ' + ', '.join(groups[:-1]) + ', and ' + groups[-1]
+    return 'Border of ' + ', '.join(groups[:-1]) + ', and ' + groups[-1]

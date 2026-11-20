@@ -7,7 +7,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from main.lib import forecast
-from main.lib.forecast import USER_AGENT, forecast_days
+from main.lib.forecast import USER_AGENT, forecast_days, temperature_band
 from main.models import Event, Member
 
 # Public places only. The tests never call the National Weather Service: each answer is mocked.
@@ -51,12 +51,15 @@ class ForecastDaysTestCase(TestCase):
         with service_answers():
             days = forecast_days(*MOUNT_DIABLO, date(2026, 11, 20), date(2026, 11, 22))
         self.assertEqual(days, [
-            {'date': '2026-11-20', 'label': 'Fri Nov 20', 'high': 41, 'low': 35, 'precip': 78,
-             'wind': '7 mph NW', 'summary': 'Light Rain then Partly Sunny'},
-            {'date': '2026-11-21', 'label': 'Sat Nov 21', 'high': 41, 'low': 33, 'precip': 64,
-             'wind': '5 to 10 mph ESE', 'summary': 'Light Rain Likely'},
-            {'date': '2026-11-22', 'label': 'Sun Nov 22', 'high': 50, 'low': None, 'precip': 0,
-             'wind': '10 mph N', 'summary': 'Sunny'},
+            {'date': '2026-11-20', 'label': 'Fri Nov 20', 'high': 41, 'high_band': None, 'high_note': None,
+             'low': 35, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
+             'precip': 78, 'wind': '7 mph NW', 'summary': 'Light Rain then Partly Sunny'},
+            {'date': '2026-11-21', 'label': 'Sat Nov 21', 'high': 41, 'high_band': None, 'high_note': None,
+             'low': 33, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
+             'precip': 64, 'wind': '5 to 10 mph ESE', 'summary': 'Light Rain Likely'},
+            {'date': '2026-11-22', 'label': 'Sun Nov 22', 'high': 50, 'high_band': None, 'high_note': None,
+             'low': None, 'low_band': None, 'low_note': None,
+             'precip': 0, 'wind': '10 mph N', 'summary': 'Sunny'},
         ])
 
     def test_only_the_events_days(self):
@@ -68,8 +71,15 @@ class ForecastDaysTestCase(TestCase):
     def test_an_overnight_period_is_the_night_before(self):
         with service_answers():
             self.assertEqual(forecast_days(*MOUNT_DIABLO, date(2026, 11, 19), date(2026, 11, 19)), [
-                {'date': '2026-11-19', 'label': 'Thu Nov 19', 'high': None, 'low': 34, 'precip': 69,
-                 'wind': '6 mph WSW', 'summary': 'Light Rain Likely'}])
+                {'date': '2026-11-19', 'label': 'Thu Nov 19', 'high': None, 'high_band': None, 'high_note': None,
+                 'low': 34, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
+                 'precip': 69, 'wind': '6 mph WSW', 'summary': 'Light Rain Likely'}])
+
+    def test_temperature_bands_from_the_heat_index_categories_and_cold_guidance(self):
+        for degrees, band in ((125, 'danger'), (103, 'danger'), (102, 'extreme-caution'), (90, 'extreme-caution'),
+                              (89, 'caution'), (80, 'caution'), (79, None), (41, None), (40, 'cold'),
+                              (33, 'cold'), (32, 'freezing'), (-10, 'freezing'), (None, None)):
+            self.assertEqual(temperature_band(degrees)[0], band, degrees)
 
     def test_asks_with_the_sites_name_and_keeps_the_answer(self):
         with service_answers() as get:
@@ -127,5 +137,5 @@ class EventForecastPageTestCase(TestCase):
             response = self.client.get('/event/{}/'.format(event.id))
             self.assertContains(response, 'NOAA Forecast</a>')
             check = self.assertContains if asks else self.assertNotContains
-            check(response, '<span id="event-forecast"></span>', msg_prefix=str(first_day))
+            check(response, '<table id="event-forecast" class="event-forecast" hidden></table>', msg_prefix=str(first_day))
             check(response, "$.getJSON('/event/{}/forecast/'".format(event.id), msg_prefix=str(first_day))

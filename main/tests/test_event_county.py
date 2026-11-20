@@ -36,13 +36,13 @@ class CountyTextTestCase(TestCase):
         self.assertEqual(county_text(*MOUNT_DIABLO), 'Contra Costa')
 
     def test_a_point_near_a_county_line_names_both_counties(self):
-        self.assertEqual(county_text(*DONNER_SUMMIT), 'border of Placer and Nevada')
+        self.assertEqual(county_text(*DONNER_SUMMIT), 'Border of Placer and Nevada')
 
     def test_three_counties(self):
-        self.assertEqual(county_text(*KIRKWOOD), 'border of Alpine, Amador and El Dorado')
+        self.assertEqual(county_text(*KIRKWOOD), 'Border of Alpine, Amador and El Dorado')
 
     def test_counties_across_a_state_line_are_grouped_by_state(self):
-        self.assertEqual(county_text(*MID_LAKE_TAHOE), 'border of Placer and El Dorado, CA, and Douglas and Carson City, NV')
+        self.assertEqual(county_text(*MID_LAKE_TAHOE), 'Border of Placer and El Dorado, CA, and Douglas and Carson City, NV')
 
     def test_a_point_in_no_county_has_none(self):
         for point in (OFF_POINT_REYES, GRAND_CANYON):
@@ -73,7 +73,7 @@ class EventPageCountyTestCase(TestCase):
     def test_the_event_page_names_the_county_under_the_point(self):
         self.event.lat, self.event.lon = (str(degrees) for degrees in DONNER_SUMMIT)
         self.event.save()
-        self.assertContains(self.page(), '<br><strong>County:</strong> border of Placer and Nevada\n')
+        self.assertContains(self.page(), '<br><strong>County:</strong> Border of Placer and Nevada\n')
 
     def test_no_county_line_without_a_point_in_a_county(self):
         for lat, lon in ((None, None), ('39.3157', None), ('39.3157', 'west'), (str(GRAND_CANYON[0]), str(GRAND_CANYON[1]))):

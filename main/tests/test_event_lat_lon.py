@@ -311,10 +311,10 @@ class EventLatLonPageTestCase(TestCase):
         self.event.lat, self.event.lon = '39.3157', '-120.3277'
         self.event.save()
         self.assertContains(self.client.get('/event/{}/'.format(self.event.id)),
-                            '<strong>Weather:</strong>\n'
+                            '<div><strong>Weather:</strong>\n'
                             '      <a target="_blank" title="The weather.gov forecast for the Lat/Lon"\n'
                             '         href="https://forecast.weather.gov/MapClick.php?lat=39.3157&lon=-120.3277">\n'
-                            '        <i class="fa fa-cloud"></i> NOAA Forecast</a>')
+                            '        <i class="fa fa-cloud"></i> NOAA Forecast</a></div>')
 
     def test_event_page_groups_the_place_then_the_weather_then_the_leaders(self):
         self.event.lat, self.event.lon, self.event.location_private = '39.3157', '-120.3277', 'Trailhead gate'

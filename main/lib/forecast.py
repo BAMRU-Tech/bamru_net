@@ -1,7 +1,7 @@
 """Each day's forecast at a point from the National Weather Service (api.weather.gov), for the days its
-seven-day forecast covers: high, low, chance of precipitation and wind. Kept in the server process's
-cache: the point's forecast grid for 30 days, as the service asks clients to check it again from time
-to time, and the forecast for an hour, as the service's own replies allow."""
+seven-day forecast covers: high and low, each with its danger band, chance of precipitation and wind.
+Kept in the server process's cache: the point's forecast grid for 30 days, as the service asks clients
+to check it again from time to time, and the forecast for an hour, as the service's own replies allow."""
 import logging
 from datetime import datetime, timedelta
 
@@ -16,7 +16,33 @@ GRID_KEPT = 30 * 24 * 3600
 FORECAST_KEPT = 3600
 RETRY_AFTER = 10 * 60               # seconds before asking again when the service gave no answer
 
+# Light colour bands for a forecast temperature, in °F. Hot: the National Weather Service's heat index
+# categories (weather.gov/ama/heatindex), read against the air temperature, which humidity and full sun
+# push higher. Cold: freezing, below which frostbite is possible, and 40°F, at and below which the CDC
+# warns of hypothermia, as it does above 40°F for someone wet (cdc.gov/winter-weather/prevention).
+HOT_BANDS = (
+    (103, 'danger', 'Danger: heat exhaustion likely, heat stroke possible with exertion'),
+    (90, 'extreme-caution', 'Extreme caution: heat stroke, cramps or exhaustion possible with exertion'),
+    (80, 'caution', 'Caution: fatigue possible with exertion'),
+)
+COLD_BANDS = (
+    (32, 'freezing', 'Freezing: frostbite possible'),
+    (40, 'cold', 'Cold: hypothermia possible, more so when wet'),
+)
+
 logger = logging.getLogger(__name__)
+
+
+def temperature_band(degrees):
+    """The band a temperature falls in and what it means, or (None, None)."""
+    if degrees is not None:
+        for at_least, band, note in HOT_BANDS:
+            if degrees >= at_least:
+                return band, note
+        for at_most, band, note in COLD_BANDS:
+            if degrees <= at_most:
+                return band, note
+    return None, None
 
 
 def ask(url):
@@ -60,11 +86,14 @@ def forecast_days(lat, lon, first_day, last_day):
     for day in sorted(d for d in by_day if first_day <= d <= last_day):
         daytime, night = by_day[day].get('daytime'), by_day[day].get('night')
         lead = daytime or night
+        high = daytime['temperature'] if daytime else None
+        low = night['temperature'] if night else None
+        (high_band, high_note), (low_band, low_note) = temperature_band(high), temperature_band(low)
         days.append({
             'date': day.isoformat(),
             'label': '{:%a %b} {}'.format(day, day.day),
-            'high': daytime['temperature'] if daytime else None,
-            'low': night['temperature'] if night else None,
+            'high': high, 'high_band': high_band, 'high_note': high_note,
+            'low': low, 'low_band': low_band, 'low_note': low_note,
             'precip': max((p.get('probabilityOfPrecipitation') or {}).get('value') or 0 for p in (daytime, night) if p),
             'wind': '{} {}'.format(lead['windSpeed'], lead['windDirection']).strip(),
             'summary': lead['shortForecast'],
