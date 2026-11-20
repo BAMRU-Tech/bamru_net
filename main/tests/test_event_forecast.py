@@ -158,6 +158,24 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
                 self.assertEqual(forecast_days(*MOUNT_DIABLO, date(2026, 11, 20), date(2026, 11, 20)), (True, []), problem)
             self.assertEqual(get.call_count, 1, problem)
 
+    def test_a_grid_whose_forecast_fails_is_looked_up_again(self):
+        moved = 'https://api.weather.gov/gridpoints/MTR/1,1/forecast'
+        caches['lookups'].set('forecast-grid:37.8817,-121.9142', moved, 60)
+
+        def get(url, **kwargs):
+            if url == moved:
+                raise requests.HTTPError('404 Not Found')
+            response = mock.Mock()
+            response.json.return_value = {
+                'properties': {'forecast': FORECAST_URL} if '/points/' in url else {'periods': PERIODS_IN_THE_NEW_FORMAT}}
+            return response
+        with mock.patch.object(forecast.requests, 'get', mock.Mock(side_effect=get)) as asked:
+            self.assertEqual(forecast_for(date(2026, 11, 20), date(2026, 11, 20)), [])
+            caches['lookups'].delete('forecast:37.8817,-121.9142')       # as once RETRY_AFTER has passed
+            self.assertEqual(len(forecast_for(date(2026, 11, 20), date(2026, 11, 20))), 1)
+        self.assertEqual([call.args[0] for call in asked.call_args_list],
+                         [moved, 'https://api.weather.gov/points/37.8817,-121.9142', FORECAST_URL])
+
     def test_an_answer_it_cannot_read_gives_no_days_kept_briefly(self):
         unreadable = (dict(PERIODS_IN_THE_NEW_FORMAT[0], temperature={'unitCode': 'wmoUnit:K', 'value': 280}),
                       dict(PERIODS_IN_THE_NEW_FORMAT[0], windSpeed={'unitCode': 'wmoUnit:furlong_fortnight-1', 'value': 3}),

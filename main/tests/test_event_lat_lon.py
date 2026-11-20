@@ -153,10 +153,12 @@ class ReadPointTestCase(TestCase):
 
 
 class EventPointTestCase(TestCase):
-    def test_the_point_in_degrees_only_with_both_as_numbers(self):
+    def test_the_point_in_degrees_only_with_both_as_numbers_on_the_globe(self):
         for lat, lon, point in (('39.3157', '-120.3277', (39.3157, -120.3277)), ('0', '0', (0.0, 0.0)),
+                                ('90', '-180', (90.0, -180.0)),
                                 (None, None, None), ('39.3157', None, None), ('', '-120.3277', None),
-                                ('north', '-120.3277', None), ('nan', '-120.3277', None), ('inf', '0', None)):
+                                ('north', '-120.3277', None), ('nan', '-120.3277', None), ('39.3157', 'nan', None),
+                                ('inf', '0', None), ('-120.3277', '39.3157', None), ('39.3157', '200', None)):
             self.assertEqual(Event(lat=lat, lon=lon).point, point, (lat, lon))
 
 

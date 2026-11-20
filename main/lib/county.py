@@ -3,7 +3,7 @@ county layer in The National Map, a copy of the Census Bureau's county lines and
 when it gives no answer, from the Census Bureau's own TIGERweb service. Asked for in the background and
 kept (main.lib.lookups)."""
 import logging
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_EXCEPTION, ThreadPoolExecutor, wait
 
 import requests
 from dynamic_preferences.registries import global_preferences_registry
@@ -40,14 +40,17 @@ def county_text(lat, lon):
 
 def ask_counties(lat, lon, miles):
     """The text for the point, from the first service that answers. Its two questions, the county the
-    point is in and those near it, are asked at once; when one fails, the next service is asked without
-    waiting for the other."""
+    point is in and those near it, are asked at once; when either fails, the next service is asked without
+    waiting for the other. With the setting at 0 miles the one question answers both."""
     for url, name_field, state_field in SERVICES:
         both = ThreadPoolExecutor(2)
         try:
-            inside, near = both.map(lambda within: counties(url, name_field, state_field, lat, lon, within),
-                                    (0, miles) if miles else (0, 0))
-            return text_for(inside, near)
+            asked = [both.submit(counties, url, name_field, state_field, lat, lon, within)
+                     for within in ((0, miles) if miles else (0,))]
+            answered, _ = wait(asked, return_when=FIRST_EXCEPTION)
+            for question in answered:
+                question.result()           # raises what a failed question raised
+            return text_for(asked[0].result(), asked[-1].result())
         except (requests.RequestException, ValueError, KeyError, TypeError) as problem:
             logger.info('No counties from %s for %s, %s: %s', url, lat, lon, problem)
             last_problem = problem

@@ -108,7 +108,7 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
         set_border_miles(self, 0)
         with services_answer() as get:
             self.assertEqual(county_for(*DONNER_SUMMIT), 'Placer')
-        self.assertFalse(any('distance' in call.kwargs['params'] for call in get.call_args_list))
+        self.assertEqual(['distance' in call.kwargs['params'] for call in get.call_args_list], [False])
 
     def test_the_census_bureau_when_usgs_gives_no_answer(self):
         for problem in ({'failing': (USGS,)}, {'refusing': (USGS,)}):
@@ -122,24 +122,27 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
 
     def test_the_census_bureau_without_waiting_for_usgs_s_other_question(self):
         # USGS hangs on one question and, once that one is under way, refuses the other: the Census Bureau
-        # is asked at once.
-        hanging, near_asked = threading.Event(), threading.Event()
-        self.addCleanup(hanging.set)
+        # is asked at once, whichever of the two hangs.
         answers = services_answer().new.side_effect
+        for near_hangs in (True, False):
+            caches['lookups'].clear()
+            hanging, hanging_asked = threading.Event(), threading.Event()
+            self.addCleanup(hanging.set)
 
-        def get(url, params, timeout):
-            if url == USGS:
-                if 'distance' in params:
-                    near_asked.set()
-                    hanging.wait(10)
-                else:
-                    near_asked.wait(5)
-                raise requests.ConnectionError('refused')
-            return answers(url, params, timeout)
-        started = time.monotonic()
-        with mock.patch.object(county.requests, 'get', mock.Mock(side_effect=get)), self.assertLogs('main.lib.county', 'INFO'):
-            self.assertEqual(county_for(*DONNER_SUMMIT), 'Placer, bordering Nevada')
-        self.assertLess(time.monotonic() - started, 2)
+            def get(url, params, timeout):
+                if url == USGS:
+                    if ('distance' in params) == near_hangs:
+                        hanging_asked.set()
+                        hanging.wait(10)
+                    else:
+                        hanging_asked.wait(5)
+                    raise requests.ConnectionError('refused')
+                return answers(url, params, timeout)
+            started = time.monotonic()
+            with mock.patch.object(county.requests, 'get', mock.Mock(side_effect=get)), \
+                    self.assertLogs('main.lib.county', 'INFO'):
+                self.assertEqual(county_for(*DONNER_SUMMIT), 'Placer, bordering Nevada', near_hangs)
+            self.assertLess(time.monotonic() - started, 2, near_hangs)
 
     def test_neither_answering_gives_none_kept_briefly(self):
         with services_answer(failing=(USGS, CENSUS)), self.assertLogs('main.lib.lookups', 'INFO'), \

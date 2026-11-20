@@ -127,7 +127,13 @@ def fetch_periods(point):
     if forecast_url is None:
         forecast_url = ask(POINTS + point)['forecast']
         kept.set('forecast-grid:' + point, forecast_url, GRID_KEPT)
-    return [read_period(period) for period in ask(forecast_url)['periods']]
+    try:
+        periods = ask(forecast_url)['periods']
+    except requests.RequestException:
+        # The service may have moved the point to another grid: look its grid up again next time.
+        kept.delete('forecast-grid:' + point)
+        raise
+    return [read_period(period) for period in periods]
 
 
 def periods(lat, lon):

@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 def sun_times(lat, lon, day):
-    """The day's sunrise, sunset and dark at the point, in degrees, in local time to the nearest minute,
+    """The day's sunrise, sunset and dark at the point, in degrees, in the site's time zone to the nearest minute,
     or None on a day the sun doesn't rise and set there."""
     try:
         times = sun(Observer(lat, lon), day, tzinfo=timezone.get_current_timezone())
