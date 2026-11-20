@@ -60,7 +60,7 @@ class EventCountyBorderMiles(types.FloatPreference):
     name = 'event_county_border_miles'
     verbose_name = 'Event county: miles from a county line to name both counties'
     help_text = ('The event page names the county an event\'s Lat/Lon is in. Within this many miles of a '
-                 'county line, it names the counties on each side instead, such as "border of Placer and '
+                 'county line, it names the counties on each side instead, such as "Border of Placer and '
                  'Nevada". The county outlines are simplified to within about a mile, so keep this to a '
                  'mile or more. 0 names only the county the point is in.')
     default = 3.0
