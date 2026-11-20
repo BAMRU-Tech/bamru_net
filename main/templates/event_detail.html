@@ -10,13 +10,17 @@
   .location-details > summary:focus-visible { outline: revert; }   /* style.css hides it on every summary */
   .location-details-body { margin-left: 1.05em; }                  /* level with the summary's text, after its triangle */
   .event-forecast th, .event-forecast td { padding: 0 .6em 0 0; white-space: nowrap; }
+  .event-forecast th, .event-forecast tr.forecast-day td:first-child, .event-forecast td.wind { white-space: normal; }  /* wrap only to fit */
   .event-forecast td.wind span { white-space: nowrap; }
-  .event-forecast td.forecast-summary { white-space: normal; }
-  @media (max-width: 767.98px) {
-    .event-forecast tr.forecast-day { cursor: pointer; }
-    .event-forecast th, .event-forecast tr.forecast-day td:first-child, .event-forecast td.wind { white-space: normal; }  /* wrap only to fit */
-    .event-forecast tr.forecast-note td { padding-bottom: .4em; color: #6c757d; }
-  }
+  /* The summary column shows while the table fits on one line a day (the page's script measures); otherwise
+     tapping a day shows its summary underneath. */
+  .event-forecast .forecast-summary-column { display: none; }
+  .event-forecast.forecast-wide .forecast-summary-column { display: table-cell; }
+  .event-forecast.forecast-wide tr.forecast-note { display: none; }
+  .event-forecast:not(.forecast-wide) tr.forecast-day { cursor: pointer; }
+  .event-forecast tr.forecast-note td { white-space: normal; padding-bottom: .4em; color: #6c757d; }
+  .event-forecast.forecast-measure { width: max-content; }
+  .event-forecast.forecast-measure th, .event-forecast.forecast-measure td { white-space: nowrap; }
   @media (max-width: 575.98px) {
     .event-forecast { font-size: .875rem; }
   }
@@ -1308,14 +1312,15 @@ $(document).ready(function() {
     });
     {% if forecast_wanted %}
     // The forecast, from the National Weather Service, for the day before and each event day it covers: one
-    // row a day, with the weather's symbol, high, low, precipitation and wind. From tablet width up the
-    // service's summary is the last column; narrower, tapping a day shows it on a line underneath.
+    // row a day, with the weather's symbol, high, low, precipitation and wind. The service's summary is the
+    // symbol's alt text and tooltip, and the last column while the table fits on one line a day, measured
+    // whenever the section opens or the window changes size; otherwise tapping a day shows it underneath.
     $.getJSON('{% url "event_forecast" event.id %}', function(answer) {
         if (!answer.days.length) return;
         var table = $('#event-forecast').append($('<tr>').append(
             $('<th>'), $('<th>'),
             ['High', 'Low', 'Precip'].map(function(heading) { return $('<th class="number">').text(heading); }),
-            $('<th>').text('Wind mph'), $('<th class="d-none d-md-table-cell">')));
+            $('<th>').text('Wind mph'), $('<th class="forecast-summary-column">')));
         function temperature(degrees, band, note) {
             var cell = $('<td class="number">');
             if (degrees !== null) {
@@ -1324,8 +1329,7 @@ $(document).ready(function() {
             return cell;
         }
         answer.days.forEach(function(day) {
-            var note = $('<tr class="forecast-note d-md-none" hidden>').append(
-                $('<td class="forecast-summary" colspan="6">').text(day.summary));
+            var note = $('<tr class="forecast-note" hidden>').append($('<td colspan="6">').text(day.summary));
             var row = $('<tr class="forecast-day">').append(
                 $('<td>').text(day.name),
                 $('<td>').append(day.symbol && $('<span role="img">').attr({'aria-label': day.summary, title: day.summary}).text(day.symbol)),
@@ -1333,11 +1337,20 @@ $(document).ready(function() {
                 temperature(day.low, day.low_band, day.low_note),
                 $('<td class="number">').text(day.precip + '%'),
                 $('<td class="wind">').append($('<span>').text(day.wind_mph), ' ', $('<span>').text(day.wind_direction)),
-                $('<td class="forecast-summary d-none d-md-table-cell">').text(day.summary));
+                $('<td class="forecast-summary-column">').text(day.summary));
             row.on('click', function() { note.prop('hidden', !note.prop('hidden')); });
             table.append(row, note);
         });
+        function fitSummaries() {
+            if (!table.is(':visible')) return;             // inside the closed section: measured when it opens
+            table.addClass('forecast-wide forecast-measure');
+            var fits = table.outerWidth() <= table.parent().width();
+            table.removeClass('forecast-measure').toggleClass('forecast-wide', fits);
+        }
         table.prop('hidden', false);
+        fitSummaries();
+        $('#location-details').on('toggle', fitSummaries);
+        $(window).on('resize', fitSummaries);
     });
     {% endif %}
 });
