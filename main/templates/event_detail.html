@@ -47,21 +47,24 @@
          href="https://google.com/maps/search/?api=1&query={% if event.lat and event.lon %}{{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}{% else %}{{ event.location_private|default:event.location|urlencode }}{% endif %}">
         <i class="fa fa-map-marker"></i>
       </a>
-      <p>
       {% if event.location_private %}
-      <strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
+      <br><strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
       {% endif %}
-      {% if event.lat and event.lon %}
-      {% if event.location_private %}<br>{% endif %}
-      <strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
-      <a target="_blank" title="NOAA forecast"
-         href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
-        <i class="fa fa-cloud"></i> NOAA</a>
       {% if county %}
       <br><strong>County:</strong> {{ county }}
       {% endif %}
+      {% if event.lat and event.lon %}
+      <br><strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
       {% endif %}
-      </p></p>
+    </p>
+    {% if event.lat and event.lon %}
+    <p>
+      <strong>Weather:</strong>
+      <a target="_blank" title="The weather.gov forecast for the Lat/Lon"
+         href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
+        <i class="fa fa-cloud"></i> NOAA Forecast</a>
+    </p>
+    {% endif %}
     <p><strong>Leaders:</strong>
       {% for leader in leaders %}{% if leader.id != 0 %}<a href="{% url 'member_detail' leader.id %}">{{ leader.name }}</a>{% else %}{{ leader.name }}{% endif %}{% endfor %}
     </p>

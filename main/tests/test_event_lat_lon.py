@@ -290,7 +290,7 @@ class EventLatLonPageTestCase(TestCase):
         self.event.save()
         response = self.client.get('/event/{}/'.format(self.event.id))
         self.assertContains(response, '<strong>Private Location:</strong> <span class="copy-on-tap">Trailhead gate</span>')
-        self.assertContains(response, '<br>\n      <strong>Lat/Lon:</strong>')
+        self.assertContains(response, '<br><strong>Lat/Lon:</strong>')
 
     def test_one_map_pin_goes_to_the_most_precise_place(self):
         def pins():
@@ -310,11 +310,23 @@ class EventLatLonPageTestCase(TestCase):
     def test_event_page_links_the_point_to_the_noaa_forecast(self):
         self.event.lat, self.event.lon = '39.3157', '-120.3277'
         self.event.save()
-        response = self.client.get('/event/{}/'.format(self.event.id))
-        self.assertContains(response, '<span class="copy-on-tap">39.3157, -120.3277</span>\n'
-                                      '      <a target="_blank" title="NOAA forecast"\n'
-                                      '         href="https://forecast.weather.gov/MapClick.php?lat=39.3157&lon=-120.3277">\n'
-                                      '        <i class="fa fa-cloud"></i> NOAA</a>')
+        self.assertContains(self.client.get('/event/{}/'.format(self.event.id)),
+                            '<strong>Weather:</strong>\n'
+                            '      <a target="_blank" title="The weather.gov forecast for the Lat/Lon"\n'
+                            '         href="https://forecast.weather.gov/MapClick.php?lat=39.3157&lon=-120.3277">\n'
+                            '        <i class="fa fa-cloud"></i> NOAA Forecast</a>')
+
+    def test_event_page_groups_the_place_then_the_weather_then_the_leaders(self):
+        self.event.lat, self.event.lon, self.event.location_private = '39.3157', '-120.3277', 'Trailhead gate'
+        self.event.save()
+        page = self.client.get('/event/{}/'.format(self.event.id)).content.decode()
+        place = page[page.index('<strong>Location:</strong>'):page.index('</p>', page.index('<strong>Location:</strong>'))]
+        for label in ('<strong>Private Location:</strong>', '<strong>County:</strong>', '<strong>Lat/Lon:</strong>'):
+            self.assertIn(label, place)
+        self.assertLess(place.index('Private Location:'), place.index('County:'))
+        self.assertLess(place.index('County:'), place.index('Lat/Lon:'))
+        self.assertLess(page.index('<strong>Lat/Lon:</strong>'), page.index('<strong>Weather:</strong>'))
+        self.assertLess(page.index('<strong>Weather:</strong>'), page.index('<strong>Leaders:</strong>'))
 
     def test_event_page_without_a_whole_point_shows_none(self):
         for lat in (None, '39.3157'):
