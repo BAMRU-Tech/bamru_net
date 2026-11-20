@@ -1,0 +1,28 @@
+{# What the activity reports with charts add to activity_style.html: the chart's frame and the glossary. #}
+<style type="text/css">
+/* The chart is framed as a section like the tables: a grey head, a black rule.
+   The frame takes 9px at each side: the rule and the padding below. */
+.chart { border: 1px solid black; }
+.chart, .chart-tiles, .chart-grid, .chart-page { --chart-inset: 9px; }
+.chart-head { background-color: #ccc; border-bottom: 1px solid black; padding: 1px 4px; }
+.chart-title { text-align: center; }
+/* The plots' padding is on the element whose width decides how many panels go across. */
+.chart-controls, .chart-note, .chart-plots { padding: 0 8px; }
+/* The main part closes the chart, after the controls or, without any, the plots. */
+.chart-main { padding-bottom: 6px; }
+
+/* A table's title is its caption, drawn as the grey first row of its head,
+   as the reports' tables have always shown it. A row's own heading (a
+   year, a term) reads as the cells beside it do. */
+table > caption { background-color: #ccc; border: 1px solid black; border-bottom: 0; padding: 1px; font-weight: bold; }
+tbody th[scope="row"] { font-weight: inherit; text-align: left; }
+
+/* The glossary at the foot of a report: a narrow column of terms. */
+table.glossary { table-layout: fixed; }
+/* A fixed table takes a column's width only as a plain length or percentage:
+   a sixth of the page, or room for two short words (7rem) where that is less,
+   on a screen narrower than 7rem / 16% = 43.75rem. */
+table.glossary col.glossary-term { width: 16%; }
+@media (max-width: 43.75rem) { table.glossary col.glossary-term { width: 7rem; } }
+table.glossary td, table.glossary th[scope="row"] { vertical-align: top; padding: 1px 4px; }
+</style>

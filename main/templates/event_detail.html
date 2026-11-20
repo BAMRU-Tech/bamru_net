@@ -62,14 +62,7 @@
       {% endif %}
       </p></p>
     <p><strong>Leaders:</strong>
-      {%for leader in leaders %}
-      {% if leader.id != 0 %}
-      <a href="{% url 'member_detail' leader.id %}">
-        {{ leader.name }}</a>{% if not forloop.last %}, {% endif %}
-      {% else %}
-        {{ leader.name }}{% if not forloop.last %}, {% endif %}
-      {% endif %}
-      {% endfor %}
+      {% for leader in leaders %}{% if leader.id != 0 %}<a href="{% url 'member_detail' leader.id %}">{{ leader.name }}</a>{% else %}{{ leader.name }}{% endif %}{% endfor %}
     </p>
     <p>
       <strong>Start:</strong>

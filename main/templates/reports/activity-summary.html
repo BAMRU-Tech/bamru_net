@@ -2,33 +2,7 @@
 {% load humanize %}
 <html>
 <head>
-<style type="text/css">
-
-@page {
-    margin: 1.5cm;
-}
-body { font-family: sans-serif }
-table { page-break-inside:auto }
-tr    { page-break-inside:avoid; page-break-after:auto }
-thead { display:table-header-group }
-tfoot { display:table-footer-group }
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-table, td, th {
-  border: 1px solid black;
-}
-thead tr {
-    background-color: #ccc;
-}
-tr.member:nth-child(even) {
-    background-color: #eee;
-}
-tr.total {
-    font-weight: bold;
-}
-</style>
+{% include 'reports/activity_style.html' %}
 </head>
 
 <body>
