@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from django.test import TestCase
 from django.utils import timezone
@@ -60,7 +60,13 @@ class EventSunPageTestCase(TestCase):
         self.assertLess(page.index('Daylight:</strong>'), page.index('<strong>Weather:</strong>'))
 
     def test_a_late_start_reads_the_local_day(self):
-        self.assertContains(self.page(local(date(2026, 12, 21), 23, 30)), 'On Dec 21, for a flat horizon')
+        # At 23:30 here it's already the next day in UTC. Near the equinox sunrise moves a minute or more a day.
+        day = date(2027, 3, 20)
+        this_day, next_day = (sun_times(*MOUNT_DIABLO, d) for d in (day, day + timedelta(days=1)))
+        self.assertNotEqual(this_day['sunrise'].time(), next_day['sunrise'].time())
+        response = self.page(local(day, 23, 30))
+        self.assertContains(response, 'On Mar 20, for a flat horizon')
+        self.assertContains(response, '<span class="sr-only">Sunrise</span> {:%H:%M}</span>'.format(this_day['sunrise']))
 
     def test_no_sun_line_without_a_whole_point(self):
         for lat_lon in ((None, None), ('37.8817', None), ('80', '-120')):
