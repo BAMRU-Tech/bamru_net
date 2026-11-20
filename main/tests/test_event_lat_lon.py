@@ -135,6 +135,10 @@ class ReadPointTestCase(TestCase):
                 ('61S 727330 4355390', 'UTM zones run from 1 to 60.'),
                 ('0S 727330 4355390', 'UTM zones run from 1 to 60.'),
                 ('10S 999999 9999999', 'This UTM point is off the map. Check its easting and northing.'),
+                ('10S 999999 4180757', 'Easting 999999 is outside zone 10. Check the zone and the easting.'),
+                ('10S 100000 4180757', 'Easting 100000 is outside zone 10. Check the zone and the easting.'),
+                ('10T 727330 4355390', 'This point is not in latitude band T. Check the band letter and the northing.'),
+                ('34J 261878 6243186', 'This point is not in latitude band J. Check the band letter and the northing.'),
                 ('60X ZV 99999 99999', 'This USNG point is off the map. Check its easting and northing.'),
                 ('10S KJ 27330 53919', 'Zone 10 has no 100 km square starting K.'),
                 ('10T GJ 27330 53919', 'Square GJ is not in latitude band T.'),
@@ -145,6 +149,14 @@ class ReadPointTestCase(TestCase):
             with self.assertRaises(NotAPoint, msg=text) as raised:
                 read_point(text)
             self.assertEqual(str(raised.exception), message, msg=text)
+
+
+class EventPointTestCase(TestCase):
+    def test_the_point_in_degrees_only_with_both_as_numbers(self):
+        for lat, lon, point in (('39.3157', '-120.3277', (39.3157, -120.3277)), ('0', '0', (0.0, 0.0)),
+                                (None, None, None), ('39.3157', None, None), ('', '-120.3277', None),
+                                ('north', '-120.3277', None), ('nan', '-120.3277', None), ('inf', '0', None)):
+            self.assertEqual(Event(lat=lat, lon=lon).point, point, (lat, lon))
 
 
 class UsualAreaTestCase(TestCase):

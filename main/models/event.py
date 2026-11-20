@@ -1,6 +1,7 @@
 #
 #           Event Model
 #
+import math
 import re
 from django.db import models
 from django.urls import reverse
@@ -121,6 +122,15 @@ class Event(BaseModel):
 
     def __str__(self):
         return self.title
+
+    @property
+    def point(self):
+        """The event's (lat, lon) in degrees, or None without both as numbers."""
+        try:
+            point = float(self.lat), float(self.lon)
+        except (TypeError, ValueError):
+            return None
+        return point if all(math.isfinite(degrees) for degrees in point) else None
 
     def add_period(self, only_if_empty=False):
         q = self.period_set.all().aggregate(models.Max('position'))

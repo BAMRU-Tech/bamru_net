@@ -68,7 +68,19 @@ ROWS = 'ABCDEFGHJKLMNPQRSTUV'
 def utm_point(zone, band, easting, northing):
     zone = utm_zone(zone)
     lat, lon = utm_to_lat_lon(zone, bool(band) and band < 'N', float(easting), float(northing))
-    return checked(lat, lon, 'UTM')
+    point = checked(lat, lon, 'UTM')
+    # A zone is 6° wide; half a degree more allows a point read just across its edge.
+    if abs((lon - (6 * zone - 183) + 180) % 360 - 180) > 3.5:
+        raise NotAPoint('Easting {} is outside zone {}. Check the zone and the easting.'.format(easting, zone))
+    if band and not in_band(band, lat):
+        raise NotAPoint('This point is not in latitude band {}. Check the band letter and the northing.'.format(band))
+    return point
+
+
+def in_band(band, lat):
+    """Whether the latitude is in the band, give or take half a degree."""
+    edge = -80 + 8 * BANDS.index(band)
+    return edge - 0.5 <= lat <= edge + (12 if band == 'X' else 8) + 0.5
 
 
 def usng_point(zone, band, column, row, digits):
@@ -86,12 +98,10 @@ def usng_point(zone, band, column, row, digits):
     easting += (columns.index(column) + 1) * 100000
     northing += (ROWS.index(row) - (5 if zone % 2 == 0 else 0)) % 20 * 100000
     south = band < 'N'
-    band_edge = -80 + 8 * BANDS.index(band)
-    band_top = band_edge + (12 if band == 'X' else 8)
     # The row letters repeat every 2,000 km; the latitude band says which repeat it is.
     for repeat in (range(4, -1, -1) if south else range(5)):
         lat, lon = utm_to_lat_lon(zone, south, easting, northing + repeat * 2000000)
-        if band_edge - 0.5 <= lat <= band_top + 0.5:
+        if in_band(band, lat):
             return checked(lat, lon, 'USNG')
     raise NotAPoint('Square {}{} is not in latitude band {}.'.format(column, row, band))
 

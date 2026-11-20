@@ -82,21 +82,21 @@
       <span class="copy-on-tap">{{ event.location|urlize }}</span>
       <a target="_blank" aria-label="Google Maps"
          title="Google Maps: the Lat/Lon if there is one, else the Private Location, else the Location"
-         href="https://google.com/maps/search/?api=1&query={% if event.lat and event.lon %}{{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}{% else %}{{ event.location_private|default:event.location|urlencode }}{% endif %}">
+         href="https://google.com/maps/search/?api=1&query={% if event.point %}{{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}{% else %}{{ event.location_private|default:event.location|urlencode }}{% endif %}">
         <i class="fa fa-map-marker"></i>
       </a>
       {% if event.location_private %}
       <br><strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
       {% endif %}
-      {% if event.lat and event.lon %}
+      {% if event.point %}
       <br><strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
       {% endif %}
     </p>
-    {% if event.lat and event.lon %}
+    {% if event.point %}
     <details id="location-details" class="location-details">
       <summary title="The County, Elevation, Daylight and Weather at the Lat/Lon"><strong>Weather and location information</strong></summary>
       <div class="location-details-body">
-      {% if county %}<div><strong>County:</strong> {{ county }}</div>{% endif %}
+      <div id="event-county-line" hidden><strong>County:</strong> <span id="event-county"></span></div>
       <div id="event-elevation-line" hidden><strong>Elevation:</strong>
       <span id="event-elevation" title="Elevation at the point, from USGS"></span></div>
       {% if sun %}
@@ -1302,12 +1302,29 @@ $(document).ready(function() {
     });
 });
 </script>
-{% if event.lat and event.lon %}
+{% if event.point %}
 <script type="text/javascript">
-// The elevation and forecast are asked for once the page has loaded, so they are ready when a member
-// opens Weather and location information.
+// The county, elevation and forecast are asked for once the page has loaded, so they are ready when a
+// member opens Weather and location information. The server fetches them from the Census Bureau, USGS
+// and the weather service in the background and answers at once, 'ready' or not; the page asks again
+// each second, and after lookup_seconds shows nothing.
+function whenReady(url, show) {
+    var until = Date.now() + {{ lookup_seconds }} * 1000;
+    (function ask() {
+        $.getJSON(url, function(answer) {
+            if (answer.ready) show(answer);
+            else if (Date.now() < until) setTimeout(ask, 1000);
+        });
+    })();
+}
 $(document).ready(function() {
-    $.getJSON('{% url "event_elevation" event.id %}', function(answer) {
+    whenReady('{% url "event_county" event.id %}', function(answer) {
+        if (answer.county) {
+            $('#event-county').text(answer.county);
+            $('#event-county-line').prop('hidden', false);
+        }
+    });
+    whenReady('{% url "event_elevation" event.id %}', function(answer) {
         if (answer.feet !== null) {
             $('#event-elevation').text(answer.feet.toLocaleString('en-US') + ' ft');
             if (answer.band) {
@@ -1322,7 +1339,7 @@ $(document).ready(function() {
     // row a day, with the weather's symbol, high, low, precipitation and wind. The service's summary is the
     // symbol's alt text and tooltip, and the last column while the table fits on one line a day, measured
     // whenever the section opens or the window changes size; otherwise tapping a day shows it underneath.
-    $.getJSON('{% url "event_forecast" event.id %}', function(answer) {
+    whenReady('{% url "event_forecast" event.id %}', function(answer) {
         if (!answer.days.length) return;
         var table = $('#event-forecast').append($('<tr>').append(
             $('<th>'), $('<th>'),

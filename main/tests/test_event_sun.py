@@ -27,15 +27,15 @@ def local(day, hour, minute=0):
 class SunTimesTestCase(TestCase):
     def test_within_a_minute_of_jpl(self):
         for day, expected in JPL.items():
-            found = sun_times(*MOUNT_DIABLO, day)
+            found = sun_times(*map(float, MOUNT_DIABLO), day)
             for name, text in zip(('sunrise', 'sunset', 'dark_by'), expected):
                 jpl = timezone.make_aware(datetime.combine(day, time.fromisoformat(text)))
                 self.assertLessEqual(abs((found[name] - jpl).total_seconds()), 60, (day, name))
                 self.assertEqual(found[name].second, 0)
 
-    def test_none_where_the_sun_does_not_rise_or_the_point_cannot_be_read(self):
-        self.assertIsNone(sun_times('80', '-120', date(2026, 12, 21)))
-        self.assertIsNone(sun_times('north', '-120', date(2026, 12, 21)))
+    def test_none_where_the_sun_does_not_rise_or_set(self):
+        self.assertIsNone(sun_times(80.0, -120.0, date(2026, 12, 21)))       # polar night
+        self.assertIsNone(sun_times(80.0, -120.0, date(2026, 6, 21)))        # midnight sun
 
 
 class EventSunPageTestCase(TestCase):
@@ -76,7 +76,7 @@ class EventSunPageTestCase(TestCase):
     def test_a_late_start_reads_the_local_day(self):
         # At 23:30 here it's already the next day in UTC. Near the equinox sunrise moves a minute or more a day.
         day = date(2027, 3, 20)
-        this_day, next_day = (sun_times(*MOUNT_DIABLO, d) for d in (day, day + timedelta(days=1)))
+        this_day, next_day = (sun_times(*map(float, MOUNT_DIABLO), d) for d in (day, day + timedelta(days=1)))
         self.assertNotEqual(this_day['sunrise'].time(), next_day['sunrise'].time())
         response = self.page(local(day, 23, 30))
         self.assertContains(response, 'On Mar 20, for a flat horizon')

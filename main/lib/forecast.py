@@ -1,17 +1,23 @@
 """Each day's forecast at a point from the National Weather Service (api.weather.gov), for the days its
 seven-day forecast covers: high and low, each with its danger band, chance of precipitation and wind.
-Kept in the server process's cache: the point's forecast grid for 30 days, as the service asks clients
-to check it again from time to time, and the forecast for an hour, as the service's own replies allow."""
-import logging
+Asked for in the background and kept (main.lib.lookups): the point's forecast grid for 30 days, as the
+service asks clients to check it again from time to time, and the forecast for an hour, as the service's
+own replies allow."""
+import math
 import re
 from datetime import datetime, timedelta
 
 import requests
-from django.core.cache import cache
+from django.core.cache import caches
 
-POINTS = 'https://api.weather.gov/points/{:.4f},{:.4f}'
+from main.lib import lookups
+
+POINTS = 'https://api.weather.gov/points/'
 USER_AGENT = '(bamru.net event page, https://bamru.net)'     # the service asks each client to name itself
-TIMEOUT = 10
+# Ask for temperature and wind as values with their units, the format the API says it will move to; a
+# reply in the deprecated format (a number in °F, text such as "5 to 10 mph") is still read.
+FEATURE_FLAGS = 'forecast_temperature_qv, forecast_wind_speed_qv'
+MPH = {'km_h-1': 1 / 1.609344, 'm_s-1': 3600 / 1609.344, 'kt': 1852 / 1609.344, 'mi_h-1': 1}
 DAYS_COVERED = 7
 GRID_KEPT = 30 * 24 * 3600
 FORECAST_KEPT = 3600
@@ -35,9 +41,9 @@ COLD_BANDS = (
 # deprecated in the API), the most serious first: "Chance Light Rain then Mostly Sunny" shows rain.
 SYMBOLS = (
     (r'thunder|t-storm', '\u26c8\ufe0f'),                                      # thunder cloud and rain
-    (r'snow|blizzard|sleet|freezing|flurries|wintry|\bice\b', '\U0001f328\ufe0f'),  # cloud with snow
-    (r'rain|shower|drizzle', '\U0001f327\ufe0f'),                              # cloud with rain
-    (r'fog|haze|smoke|dust|mist', '\U0001f32b\ufe0f'),                          # fog
+    (r'snow|blizzard|sleet|flurries|wintry|\bice\b(?! fog)', '\U0001f328\ufe0f'),     # cloud with snow
+    (r'rain|shower|drizzle', '\U0001f327\ufe0f'),                              # cloud with rain, freezing too
+    (r'fog|haze|smoke|dust|mist', '\U0001f32b\ufe0f'),                          # fog, freezing fog too
     (r'wind|breezy|blustery|gust', '\U0001f4a8'),                               # dashing away
     (r'mostly cloudy', '\U0001f325\ufe0f'),                                    # sun behind large cloud
     (r'partly cloudy|partly sunny', '\u26c5'),                                 # sun behind cloud
@@ -46,8 +52,6 @@ SYMBOLS = (
     (r'sunny', '\u2600\ufe0f'),                                                 # sun
     (r'clear', '\U0001f319'),                                                  # crescent moon: clear is the night's word
 )
-
-logger = logging.getLogger(__name__)
 
 
 def weather_symbol(summary):
@@ -70,49 +74,81 @@ def temperature_band(degrees):
     return None, None
 
 
+def whole(number):
+    return math.floor(number + 0.5)
+
+
+def fahrenheit(temperature, unit):
+    """Whole °F: from a value with its unit code ('wmoUnit:degC' or 'wmoUnit:degF'), or from a number in
+    `unit`, the deprecated temperatureUnit ('F' or 'C')."""
+    if isinstance(temperature, dict):
+        temperature, unit = temperature['value'], {'degC': 'C', 'degF': 'F'}[temperature['unitCode'].split(':')[-1]]
+    if temperature is None:
+        return None
+    return whole(temperature * 9 / 5 + 32 if unit == 'C' else temperature)
+
+
+def wind_mph(speed):
+    """The wind in whole mph without its unit, "7" or "5–10": from a value or range with its unit code
+    ('wmoUnit:km_h-1'), or from the deprecated text, "7 mph" or "5 to 10 mph"."""
+    if isinstance(speed, dict):
+        per = MPH[speed['unitCode'].split(':')[-1]]
+        if speed.get('value') is not None:
+            return str(whole(speed['value'] * per))
+        low, high = whole(speed['minValue'] * per), whole(speed['maxValue'] * per)
+        return str(low) if low == high else '{}\u2013{}'.format(low, high)
+    return speed[:-len(' mph')].replace(' to ', '\u2013') if speed.endswith(' mph') else speed
+
+
+def read_period(period):
+    """One twelve-hour period of the forecast, in plain values; KeyError, TypeError or ValueError for a
+    period this can't read."""
+    return {
+        'start': datetime.fromisoformat(period['startTime']),
+        'daytime': bool(period['isDaytime']),
+        'temperature': fahrenheit(period['temperature'], period.get('temperatureUnit', 'F')),
+        'precip': whole((period.get('probabilityOfPrecipitation') or {}).get('value') or 0),
+        'wind_mph': wind_mph(period['windSpeed']),
+        'wind_direction': period['windDirection'] or '',
+        'summary': period['shortForecast'] or '',
+    }
+
+
 def ask(url):
-    response = requests.get(url, timeout=TIMEOUT, headers={'User-Agent': USER_AGENT, 'Accept': 'application/geo+json'})
+    response = requests.get(url, timeout=lookups.TIMEOUT, headers={
+        'User-Agent': USER_AGENT, 'Accept': 'application/geo+json', 'Feature-Flags': FEATURE_FLAGS})
     response.raise_for_status()
     return response.json()['properties']
 
 
+def fetch_periods(point):
+    kept = caches['lookups']
+    forecast_url = kept.get('forecast-grid:' + point)
+    if forecast_url is None:
+        forecast_url = ask(POINTS + point)['forecast']
+        kept.set('forecast-grid:' + point, forecast_url, GRID_KEPT)
+    return [read_period(period) for period in ask(forecast_url)['periods']]
+
+
 def periods(lat, lon):
-    """The forecast's twelve-hour periods at the point, or None when the service gave no answer."""
-    point = '{:.4f}:{:.4f}'.format(lat, lon)
-    if cache.get('forecast-none:' + point):
-        return None
-    try:
-        forecast_url = cache.get('forecast-grid:' + point)
-        if forecast_url is None:
-            forecast_url = ask(POINTS.format(lat, lon))['forecast']
-            cache.set('forecast-grid:' + point, forecast_url, GRID_KEPT)
-        found = cache.get('forecast:' + forecast_url)
-        if found is None:
-            found = ask(forecast_url)['periods']
-            cache.set('forecast:' + forecast_url, found, FORECAST_KEPT)
-        return found
-    except (requests.RequestException, ValueError, KeyError, TypeError) as problem:
-        logger.info('No forecast from the National Weather Service for %s, %s: %s', lat, lon, problem)
-        cache.set('forecast-none:' + point, True, RETRY_AFTER)
-        return None
-
-
-def wind_mph(speed):
-    """The service's wind speed in mph without its unit: "5 to 10 mph" is "5–10"."""
-    return speed[:-len(' mph')].replace(' to ', '\u2013') if speed.endswith(' mph') else speed
+    """(ready, periods): the forecast's twelve-hour periods at the point, read, or None when the service
+    gave no answer or one this can't read. Not ready while it is being asked in the background."""
+    point = '{:.4f},{:.4f}'.format(lat, lon)
+    return lookups.answer('forecast:' + point, lambda: fetch_periods(point), FORECAST_KEPT, RETRY_AFTER)
 
 
 def forecast_days(lat, lon, first_day, last_day):
-    """Each day from first_day to last_day that the forecast covers: the high of its daytime period
-    (None once that has passed), the low of the night that follows, the higher of their chances of
-    precipitation, and the wind in mph, its direction, the summary and its symbol from the daytime period,
-    else from the night."""
+    """(ready, days): each day from first_day to last_day that the forecast covers, with the high of its
+    daytime period (None once that has passed), the low of the night that follows, the higher of their
+    chances of precipitation, and the wind in mph, its direction, the summary and its symbol from the
+    daytime period, else from the night. Not ready while the forecast is being asked in the background."""
+    ready, found = periods(lat, lon)
     by_day = {}
-    for period in periods(lat, lon) or []:
-        start = datetime.fromisoformat(period['startTime'])
+    for period in found or []:
+        start = period['start']
         # A night period starting before noon, such as "Overnight", is the night of the day before.
-        day = start.date() if period['isDaytime'] or start.hour >= 12 else start.date() - timedelta(days=1)
-        by_day.setdefault(day, {})['daytime' if period['isDaytime'] else 'night'] = period
+        day = start.date() if period['daytime'] or start.hour >= 12 else start.date() - timedelta(days=1)
+        by_day.setdefault(day, {})['daytime' if period['daytime'] else 'night'] = period
     days = []
     for day in sorted(d for d in by_day if first_day <= d <= last_day):
         daytime, night = by_day[day].get('daytime'), by_day[day].get('night')
@@ -125,8 +161,8 @@ def forecast_days(lat, lon, first_day, last_day):
             'label': '{:%a}\u00a0{}'.format(day, day.day),     # "Sat 21", kept on one line
             'high': high, 'high_band': high_band, 'high_note': high_note,
             'low': low, 'low_band': low_band, 'low_note': low_note,
-            'precip': max((p.get('probabilityOfPrecipitation') or {}).get('value') or 0 for p in (daytime, night) if p),
-            'wind_mph': wind_mph(lead['windSpeed']), 'wind_direction': lead['windDirection'],
-            'summary': lead['shortForecast'], 'symbol': weather_symbol(lead['shortForecast']),
+            'precip': max(p['precip'] for p in (daytime, night) if p),
+            'wind_mph': lead['wind_mph'], 'wind_direction': lead['wind_direction'],
+            'summary': lead['summary'], 'symbol': weather_symbol(lead['summary']),
         })
-    return days
+    return ready, days
