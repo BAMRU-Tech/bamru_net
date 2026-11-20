@@ -57,6 +57,9 @@
       <a target="_blank" title="NOAA forecast"
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
         <i class="fa fa-cloud"></i> NOAA</a>
+      {% if county %}
+      <br><strong>County:</strong> {{ county }}
+      {% endif %}
       {% endif %}
       </p></p>
     <p><strong>Leaders:</strong>

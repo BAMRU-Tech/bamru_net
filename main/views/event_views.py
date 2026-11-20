@@ -15,6 +15,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from dynamic_preferences.registries import global_preferences_registry
 
+from main.lib.county import county_text
 from main.lib.gcal import get_gcal_manager
 from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
 from main.models import DoAvailable, Member, Event, Participant, Period
@@ -93,6 +94,10 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
         context['current_do'] = DoAvailable.current_scheduled_do()
         context['esb_spreadsheet_url'] = (
             global_preferences_registry.manager()['general__esb_spreadsheet_url'])
+        try:
+            context['county'] = county_text(float(event.lat), float(event.lon))
+        except (TypeError, ValueError):             # no point, or a stored point that isn't numbers
+            context['county'] = None
         return context
 
     def post(self, request, *args, **kwargs):
