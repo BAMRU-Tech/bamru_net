@@ -7,7 +7,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from main.lib import elevation
-from main.lib.elevation import RETRY_AFTER, elevation_feet
+from main.lib.elevation import RETRY_AFTER, altitude_band, elevation_feet
 from main.models import Event, Member
 
 # Public places only. The tests never call USGS: each answer is mocked.
@@ -26,6 +26,11 @@ def usgs_answers(value=None, problem=None):
 class ElevationTestCase(TestCase):
     def setUp(self):
         cache.clear()
+
+    def test_altitude_bands_from_the_cdc_risk_categories(self):
+        for feet, band in ((14505, 'danger'), (11150, 'danger'), (11149, 'extreme-caution'), (9000, 'extreme-caution'),
+                           (8999, 'caution'), (8000, 'caution'), (7999, None), (-280, None), (None, None)):
+            self.assertEqual(altitude_band(feet)[0], band, feet)
 
     def test_whole_feet_asked_once_per_point(self):
         with usgs_answers(3847.4941) as get:
@@ -75,7 +80,15 @@ class EventElevationPageTestCase(TestCase):
     def test_the_elevation_of_the_events_point(self):
         self.sign_in()
         with usgs_answers(3847.49):
-            self.assertEqual(self.client.get(self.url).json(), {'feet': 3847})
+            self.assertEqual(self.client.get(self.url).json(), {'feet': 3847, 'band': None, 'note': None})
+
+    def test_a_high_point_is_shaded_by_its_risk_of_altitude_sickness(self):
+        self.sign_in()
+        with usgs_answers(14505.2):                 # Mount Whitney's summit
+            self.assertEqual(self.client.get(self.url).json(), {
+                'feet': 14505, 'band': 'danger',
+                'note': 'High risk of altitude sickness sleeping here the first night, '
+                        'higher still working hard soon after arriving'})
 
     def test_no_elevation_without_a_whole_point(self):
         self.sign_in()
@@ -83,7 +96,7 @@ class EventElevationPageTestCase(TestCase):
             self.event.lat, self.event.lon = lat, lon
             self.event.save()
             with usgs_answers(3847.49) as get:
-                self.assertEqual(self.client.get(self.url).json(), {'feet': None}, (lat, lon))
+                self.assertEqual(self.client.get(self.url).json(), {'feet': None, 'band': None, 'note': None}, (lat, lon))
             get.assert_not_called()
 
     def test_event_page_asks_for_the_elevation_only_with_a_point(self):

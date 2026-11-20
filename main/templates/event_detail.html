@@ -31,11 +31,13 @@
   .event-forecast th { font-weight: normal; font-size: .85em; color: #6c757d; }
   .event-forecast .number { text-align: right; }
   .event-forecast .number span { padding: 0 .3em; border-radius: 3px; }
-  .forecast-danger { background: #f8d7da; }
-  .forecast-extreme-caution { background: #ffe5cc; }
-  .forecast-caution { background: #fff3cd; }
-  .forecast-cold { background: #e7f1ff; }
-  .forecast-freezing { background: #cfe2ff; }
+  /* Light shades for a temperature or an elevation, by how dangerous it is; the tooltip says why. */
+  .shaded { padding: 0 .3em; border-radius: 3px; }
+  .shade-danger { background: #f8d7da; }
+  .shade-extreme-caution { background: #ffe5cc; }
+  .shade-caution { background: #fff3cd; }
+  .shade-cold { background: #e7f1ff; }
+  .shade-freezing { background: #cfe2ff; }
 </style>
 {% endblock css %}
 
@@ -1308,6 +1310,10 @@ $(document).ready(function() {
     $.getJSON('{% url "event_elevation" event.id %}', function(answer) {
         if (answer.feet !== null) {
             $('#event-elevation').text(answer.feet.toLocaleString('en-US') + ' ft');
+            if (answer.band) {
+                $('#event-elevation').addClass('shaded shade-' + answer.band)
+                    .attr('title', 'Elevation at the point, from USGS. ' + answer.note);
+            }
             $('#event-elevation-line').prop('hidden', false);
         }
     });
@@ -1325,7 +1331,7 @@ $(document).ready(function() {
         function temperature(degrees, band, note) {
             var cell = $('<td class="number">');
             if (degrees !== null) {
-                cell.append($('<span>').addClass(band ? 'forecast-' + band : '').attr('title', note).text(degrees + '°'));
+                cell.append($('<span>').addClass(band ? 'shade-' + band : '').attr('title', note).text(degrees + '°'));
             }
             return cell;
         }

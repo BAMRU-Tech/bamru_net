@@ -16,7 +16,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 from dynamic_preferences.registries import global_preferences_registry
 
 from main.lib.county import county_text
-from main.lib.elevation import elevation_feet
+from main.lib.elevation import altitude_band, elevation_feet
 from main.lib.forecast import DAYS_COVERED, forecast_days
 from main.lib.gcal import get_gcal_manager
 from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
@@ -244,8 +244,10 @@ def event_elevation(request, pk):
     try:
         lat, lon = float(event.lat), float(event.lon)
     except (TypeError, ValueError):
-        return JsonResponse({'feet': None})
-    return JsonResponse({'feet': elevation_feet(lat, lon)})
+        return JsonResponse({'feet': None, 'band': None, 'note': None})
+    feet = elevation_feet(lat, lon)
+    band, note = altitude_band(feet)
+    return JsonResponse({'feet': feet, 'band': band, 'note': note})
 
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
