@@ -7,12 +7,13 @@ from django.test import TestCase
 from django.utils import timezone
 
 from main.lib import forecast
-from main.lib.forecast import USER_AGENT, forecast_days, temperature_band
+from main.lib.forecast import USER_AGENT, forecast_days, temperature_band, weather_symbol, wind_mph
 from main.models import Event, Member
 
 # Public places only. The tests never call the National Weather Service: each answer is mocked.
 MOUNT_DIABLO = (37.8817, -121.9142)
 FORECAST_URL = 'https://api.weather.gov/gridpoints/MTR/103,106/forecast'
+RAIN, SNOW = '\U0001f327\ufe0f', '\U0001f328\ufe0f'
 
 
 def period(start, daytime, temperature, precip, wind='6 mph', direction='ESE', summary='Light Rain Likely'):
@@ -51,15 +52,17 @@ class ForecastDaysTestCase(TestCase):
         with service_answers():
             days = forecast_days(*MOUNT_DIABLO, date(2026, 11, 20), date(2026, 11, 22))
         self.assertEqual(days, [
-            {'date': '2026-11-20', 'label': 'Fri Nov 20', 'high': 41, 'high_band': None, 'high_note': None,
+            {'date': '2026-11-20', 'label': 'Fri\xa020', 'high': 41, 'high_band': None, 'high_note': None,
              'low': 35, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
-             'precip': 78, 'wind_speed': '7 mph', 'wind_direction': 'NW', 'summary': 'Light Rain then Partly Sunny'},
-            {'date': '2026-11-21', 'label': 'Sat Nov 21', 'high': 41, 'high_band': None, 'high_note': None,
+             'precip': 78, 'wind_mph': '7', 'wind_direction': 'NW', 'summary': 'Light Rain then Partly Sunny',
+             'symbol': RAIN},
+            {'date': '2026-11-21', 'label': 'Sat\xa021', 'high': 41, 'high_band': None, 'high_note': None,
              'low': 33, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
-             'precip': 64, 'wind_speed': '5 to 10 mph', 'wind_direction': 'ESE', 'summary': 'Light Rain Likely'},
-            {'date': '2026-11-22', 'label': 'Sun Nov 22', 'high': 50, 'high_band': None, 'high_note': None,
+             'precip': 64, 'wind_mph': '5\u201310', 'wind_direction': 'ESE', 'summary': 'Light Rain Likely',
+             'symbol': RAIN},
+            {'date': '2026-11-22', 'label': 'Sun\xa022', 'high': 50, 'high_band': None, 'high_note': None,
              'low': None, 'low_band': None, 'low_note': None,
-             'precip': 0, 'wind_speed': '10 mph', 'wind_direction': 'N', 'summary': 'Sunny'},
+             'precip': 0, 'wind_mph': '10', 'wind_direction': 'N', 'summary': 'Sunny', 'symbol': '\u2600\ufe0f'},
         ])
 
     def test_only_the_events_days(self):
@@ -71,15 +74,35 @@ class ForecastDaysTestCase(TestCase):
     def test_an_overnight_period_is_the_night_before(self):
         with service_answers():
             self.assertEqual(forecast_days(*MOUNT_DIABLO, date(2026, 11, 19), date(2026, 11, 19)), [
-                {'date': '2026-11-19', 'label': 'Thu Nov 19', 'high': None, 'high_band': None, 'high_note': None,
+                {'date': '2026-11-19', 'label': 'Thu\xa019', 'high': None, 'high_band': None, 'high_note': None,
                  'low': 34, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
-                 'precip': 69, 'wind_speed': '6 mph', 'wind_direction': 'WSW', 'summary': 'Light Rain Likely'}])
+                 'precip': 69, 'wind_mph': '6', 'wind_direction': 'WSW', 'summary': 'Light Rain Likely',
+                 'symbol': RAIN}])
 
     def test_temperature_bands_from_the_heat_index_categories_and_cold_guidance(self):
         for degrees, band in ((125, 'danger'), (103, 'danger'), (102, 'extreme-caution'), (90, 'extreme-caution'),
                               (89, 'caution'), (80, 'caution'), (79, None), (41, None), (40, 'cold'),
                               (33, 'cold'), (32, 'freezing'), (-10, 'freezing'), (None, None)):
             self.assertEqual(temperature_band(degrees)[0], band, degrees)
+
+    def test_the_symbol_is_the_most_serious_weather_the_summary_names(self):
+        # Short forecasts as the service writes them.
+        for summary, symbol in (
+                ('Chance Showers And Thunderstorms', '\u26c8\ufe0f'), ('Slight Chance T-storms then Sunny', '\u26c8\ufe0f'),
+                ('Rain And Snow Likely', SNOW), ('Freezing Rain', SNOW), ('Patchy Ice Fog', SNOW),
+                ('Chance Light Rain then Mostly Sunny', RAIN), ('Areas Of Frost then Light Rain Likely', RAIN),
+                ('Rain Showers', RAIN), ('Patchy Drizzle', RAIN),
+                ('Patchy Fog then Sunny', '\U0001f32b\ufe0f'), ('Widespread Haze', '\U0001f32b\ufe0f'),
+                ('Areas Of Smoke', '\U0001f32b\ufe0f'), ('Breezy', '\U0001f4a8'), ('Sunny and Windy', '\U0001f4a8'),
+                ('Mostly Cloudy', '\U0001f325\ufe0f'), ('Areas Of Frost then Partly Sunny', '\u26c5'),
+                ('Partly Cloudy', '\u26c5'), ('Cloudy', '\u2601\ufe0f'), ('Mostly Sunny', '\U0001f324\ufe0f'),
+                ('Sunny', '\u2600\ufe0f'), ('Mostly Clear', '\U0001f319'), ('Clear', '\U0001f319'),
+                ('Patchy Frost', None), ('', None), (None, None)):
+            self.assertEqual(weather_symbol(summary), symbol, summary)
+
+    def test_wind_in_mph_without_its_unit(self):
+        for speed, mph in (('5 mph', '5'), ('5 to 10 mph', '5\u201310'), ('0 mph', '0'), ('10 km/h', '10 km/h')):
+            self.assertEqual(wind_mph(speed), mph)
 
     def test_asks_with_the_sites_name_and_keeps_the_answer(self):
         with service_answers() as get:
@@ -115,7 +138,7 @@ class EventForecastPageTestCase(TestCase):
         with service_answers():
             days = self.client.get('/event/{}/forecast/'.format(event.id)).json()['days']
         self.assertEqual([(d['name'], d['label']) for d in days],
-                         [('Day before', 'Fri Nov 20'), ('OP1', 'Sat Nov 21'), ('OP2', 'Sun Nov 22')])
+                         [('Day before', 'Fri\xa020'), ('OP1 Sat\xa021', 'Sat\xa021'), ('OP2 Sun\xa022', 'Sun\xa022')])
 
     def test_no_forecast_without_a_whole_point(self):
         event = self.event(date(2026, 11, 20), point=None)

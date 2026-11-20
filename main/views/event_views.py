@@ -223,7 +223,7 @@ def forecast_span(event):
 @login_required
 def event_forecast(request, pk):
     """The forecast at the event's point for the day before the event and each of its days, named
-    Day before, OP1, OP2 and so on, for the event page to show once it has loaded."""
+    "Day before", "OP1 Sat 21", "OP2 Sun 22" and so on, for the event page to show once it has loaded."""
     event = get_object_or_404(Event, pk=pk)
     try:
         lat, lon = float(event.lat), float(event.lon)
@@ -233,7 +233,7 @@ def event_forecast(request, pk):
     days = forecast_days(lat, lon, day_before, last_day)
     for day in days:
         op = (datetime.date.fromisoformat(day['date']) - day_before).days
-        day['name'] = 'OP{}'.format(op) if op else 'Day before'
+        day['name'] = 'OP{} {}'.format(op, day['label']) if op else 'Day before'
     return JsonResponse({'days': days})
 
 

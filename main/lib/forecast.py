@@ -3,6 +3,7 @@ seven-day forecast covers: high and low, each with its danger band, chance of pr
 Kept in the server process's cache: the point's forecast grid for 30 days, as the service asks clients
 to check it again from time to time, and the forecast for an hour, as the service's own replies allow."""
 import logging
+import re
 from datetime import datetime, timedelta
 
 import requests
@@ -30,7 +31,31 @@ COLD_BANDS = (
     (40, 'cold', 'Cold: hypothermia possible, more so when wet'),
 )
 
+# The symbol for a day's weather, from the words of the service's short forecast (its icon links are
+# deprecated in the API), the most serious first: "Chance Light Rain then Mostly Sunny" shows rain.
+SYMBOLS = (
+    (r'thunder|t-storm', '\u26c8\ufe0f'),                                      # thunder cloud and rain
+    (r'snow|blizzard|sleet|freezing|flurries|wintry|\bice\b', '\U0001f328\ufe0f'),  # cloud with snow
+    (r'rain|shower|drizzle', '\U0001f327\ufe0f'),                              # cloud with rain
+    (r'fog|haze|smoke|dust|mist', '\U0001f32b\ufe0f'),                          # fog
+    (r'wind|breezy|blustery|gust', '\U0001f4a8'),                               # dashing away
+    (r'mostly cloudy', '\U0001f325\ufe0f'),                                    # sun behind large cloud
+    (r'partly cloudy|partly sunny', '\u26c5'),                                 # sun behind cloud
+    (r'cloudy|overcast', '\u2601\ufe0f'),                                       # cloud
+    (r'mostly sunny', '\U0001f324\ufe0f'),                                     # sun behind small cloud
+    (r'sunny', '\u2600\ufe0f'),                                                 # sun
+    (r'clear', '\U0001f319'),                                                  # crescent moon: clear is the night's word
+)
+
 logger = logging.getLogger(__name__)
+
+
+def weather_symbol(summary):
+    """The symbol for the most serious weather the summary names, or None for words it doesn't know."""
+    for words, symbol in SYMBOLS:
+        if re.search(words, summary or '', re.IGNORECASE):
+            return symbol
+    return None
 
 
 def temperature_band(degrees):
@@ -72,10 +97,16 @@ def periods(lat, lon):
         return None
 
 
+def wind_mph(speed):
+    """The service's wind speed in mph without its unit: "5 to 10 mph" is "5–10"."""
+    return speed[:-len(' mph')].replace(' to ', '\u2013') if speed.endswith(' mph') else speed
+
+
 def forecast_days(lat, lon, first_day, last_day):
     """Each day from first_day to last_day that the forecast covers: the high of its daytime period
     (None once that has passed), the low of the night that follows, the higher of their chances of
-    precipitation, and the wind speed, wind direction and summary of the daytime period, else of the night."""
+    precipitation, and the wind in mph, its direction, the summary and its symbol from the daytime period,
+    else from the night."""
     by_day = {}
     for period in periods(lat, lon) or []:
         start = datetime.fromisoformat(period['startTime'])
@@ -91,11 +122,11 @@ def forecast_days(lat, lon, first_day, last_day):
         (high_band, high_note), (low_band, low_note) = temperature_band(high), temperature_band(low)
         days.append({
             'date': day.isoformat(),
-            'label': '{:%a %b} {}'.format(day, day.day),
+            'label': '{:%a}\u00a0{}'.format(day, day.day),     # "Sat 21", kept on one line
             'high': high, 'high_band': high_band, 'high_note': high_note,
             'low': low, 'low_band': low_band, 'low_note': low_note,
             'precip': max((p.get('probabilityOfPrecipitation') or {}).get('value') or 0 for p in (daytime, night) if p),
-            'wind_speed': lead['windSpeed'], 'wind_direction': lead['windDirection'],
-            'summary': lead['shortForecast'],
+            'wind_mph': wind_mph(lead['windSpeed']), 'wind_direction': lead['windDirection'],
+            'summary': lead['shortForecast'], 'symbol': weather_symbol(lead['shortForecast']),
         })
     return days

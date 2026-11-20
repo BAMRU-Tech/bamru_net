@@ -9,14 +9,19 @@
   .location-details { margin-bottom: 1rem; }
   .location-details > summary:focus-visible { outline: revert; }   /* style.css hides it on every summary */
   .location-details-body { margin-left: 1.05em; }                  /* level with the summary's text, after its triangle */
-  .event-forecast th, .event-forecast td { padding: 0 .7em 0 0; white-space: nowrap; }
-  .event-forecast .forecast-name { display: inline-block; min-width: 5.5em; }
+  .event-forecast th, .event-forecast td { padding: 0 .6em 0 0; white-space: nowrap; }
   .event-forecast td.wind span { white-space: nowrap; }
   .event-forecast td.forecast-summary { white-space: normal; }
-  .event-forecast tr.forecast-day td { padding-top: .6em; }
   @media (max-width: 767.98px) {
-    .event-forecast .number { width: 1%; }      /* as narrow as their numbers; the wind takes the rest */
-    .event-forecast td.wind { white-space: normal; }
+    .event-forecast tr.forecast-day { cursor: pointer; }
+    .event-forecast th, .event-forecast tr.forecast-day td:first-child, .event-forecast td.wind { white-space: normal; }  /* wrap only to fit */
+    .event-forecast tr.forecast-note td { padding-bottom: .4em; color: #6c757d; }
+  }
+  @media (max-width: 575.98px) {
+    .event-forecast { font-size: .875rem; }
+  }
+  @media (max-width: 359.98px) {
+    .event-forecast th, .event-forecast td { padding-right: .45em; }
   }
   .event-forecast th { font-weight: normal; font-size: .85em; color: #6c757d; }
   .event-forecast .number { text-align: right; }
@@ -97,7 +102,7 @@
       <a target="_blank" title="The weather.gov forecast for the Lat/Lon"
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
         NOAA Forecast</a></div>
-      {% if forecast_wanted %}<table id="event-forecast" class="event-forecast" hidden></table>{% endif %}
+      {% if forecast_wanted %}<div class="table-responsive"><table id="event-forecast" class="event-forecast" hidden></table></div>{% endif %}
       </div>
     </details>
     {% endif %}
@@ -1302,16 +1307,15 @@ $(document).ready(function() {
         }
     });
     {% if forecast_wanted %}
-    // The forecast, from the National Weather Service, for the day before and each event day it covers.
-    // From tablet width up, one row a day: the day, high, low, precipitation, wind and the service's summary.
-    // Narrower, each day is three lines: the day, then the numbers under their headings, then the summary.
+    // The forecast, from the National Weather Service, for the day before and each event day it covers: one
+    // row a day, with the weather's symbol, high, low, precipitation and wind. From tablet width up the
+    // service's summary is the last column; narrower, tapping a day shows it on a line underneath.
     $.getJSON('{% url "event_forecast" event.id %}', function(answer) {
         if (!answer.days.length) return;
-        var WIDE = 'd-none d-md-table-cell', NARROW = 'd-md-none';
         var table = $('#event-forecast').append($('<tr>').append(
-            $('<th>').addClass(WIDE),
+            $('<th>'), $('<th>'),
             ['High', 'Low', 'Precip'].map(function(heading) { return $('<th class="number">').text(heading); }),
-            $('<th>').text('Wind'), $('<th>').addClass(WIDE)));
+            $('<th>').text('Wind mph'), $('<th class="d-none d-md-table-cell">')));
         function temperature(degrees, band, note) {
             var cell = $('<td class="number">');
             if (degrees !== null) {
@@ -1320,17 +1324,18 @@ $(document).ready(function() {
             return cell;
         }
         answer.days.forEach(function(day) {
-            table.append(
-                $('<tr class="forecast-day">').addClass(NARROW).append(
-                    $('<td colspan="4">').append($('<strong>').text(day.name), ' ' + day.label)),
-                $('<tr>').append(
-                    $('<td>').addClass(WIDE).append($('<span class="forecast-name">').text(day.name), ' ' + day.label),
-                    temperature(day.high, day.high_band, day.high_note),
-                    temperature(day.low, day.low_band, day.low_note),
-                    $('<td class="number">').text(day.precip + '%'),
-                    $('<td class="wind">').append($('<span>').text(day.wind_speed), ' ', $('<span>').text(day.wind_direction)),
-                    $('<td class="forecast-summary">').addClass(WIDE).text(day.summary)),
-                $('<tr>').addClass(NARROW).append($('<td class="forecast-summary" colspan="4">').text(day.summary)));
+            var note = $('<tr class="forecast-note d-md-none" hidden>').append(
+                $('<td class="forecast-summary" colspan="6">').text(day.summary));
+            var row = $('<tr class="forecast-day">').append(
+                $('<td>').text(day.name),
+                $('<td>').append(day.symbol && $('<span role="img">').attr({'aria-label': day.summary, title: day.summary}).text(day.symbol)),
+                temperature(day.high, day.high_band, day.high_note),
+                temperature(day.low, day.low_band, day.low_note),
+                $('<td class="number">').text(day.precip + '%'),
+                $('<td class="wind">').append($('<span>').text(day.wind_mph), ' ', $('<span>').text(day.wind_direction)),
+                $('<td class="forecast-summary d-none d-md-table-cell">').text(day.summary));
+            row.on('click', function() { note.prop('hidden', !note.prop('hidden')); });
+            table.append(row, note);
         });
         table.prop('hidden', false);
     });
