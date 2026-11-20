@@ -48,6 +48,7 @@ urlpatterns = [
     path('event/<int:pk>/', views.EventDetailView.as_view(), name='event_detail'),
     path('event/add', views.EventCreateView.as_view(), name='event_add'),
     path('event/lat_lon/', views.event_lat_lon, name='event_lat_lon'),
+    path('event/<int:pk>/elevation/', views.event_elevation, name='event_elevation'),
     path('event/<int:pk>/edit/', views.EventUpdateView.as_view(), name='event_update'),
     path('event/<int:pk>/period/add/',
          views.EventPeriodAddView.as_view(), name='event_period_add'),

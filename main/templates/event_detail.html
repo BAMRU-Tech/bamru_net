@@ -70,6 +70,8 @@
       <a target="_blank" title="The weather.gov forecast for the Lat/Lon"
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
         <i class="fa fa-cloud"></i> NOAA Forecast</a>
+      <span id="event-elevation-line" hidden><br><strong>Elevation:</strong>
+      <span id="event-elevation" title="Elevation at the point, from USGS"></span></span>
     </p>
     {% endif %}
     <p><strong>Leaders:</strong>
@@ -1261,4 +1263,17 @@ $(document).ready(function() {
     });
 });
 </script>
+{% if event.lat and event.lon %}
+<script type="text/javascript">
+// The point's elevation, asked of USGS through the site once the page has loaded.
+$(document).ready(function() {
+    $.getJSON('{% url "event_elevation" event.id %}', function(answer) {
+        if (answer.feet !== null) {
+            $('#event-elevation').text(answer.feet.toLocaleString('en-US') + ' ft');
+            $('#event-elevation-line').prop('hidden', false);
+        }
+    });
+});
+</script>
+{% endif %}
 {% endblock js %}

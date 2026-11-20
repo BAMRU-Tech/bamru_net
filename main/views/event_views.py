@@ -16,6 +16,7 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 from dynamic_preferences.registries import global_preferences_registry
 
 from main.lib.county import county_text
+from main.lib.elevation import elevation_feet
 from main.lib.gcal import get_gcal_manager
 from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
 from main.lib.sun import sun_times
@@ -205,6 +206,17 @@ def event_lat_lon(request):
         return JsonResponse({'value': ''})
     return JsonResponse({'value': point_text(point.lat, point.lon), 'note': reading_note(point),
                          'warning': area_warning(point.lat, point.lon)})
+
+
+@login_required
+def event_elevation(request, pk):
+    """The ground elevation at the event's point, for the event page to show once it has loaded."""
+    event = get_object_or_404(Event, pk=pk)
+    try:
+        lat, lon = float(event.lat), float(event.lon)
+    except (TypeError, ValueError):
+        return JsonResponse({'feet': None})
+    return JsonResponse({'feet': elevation_feet(lat, lon)})
 
 
 class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
