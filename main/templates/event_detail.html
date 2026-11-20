@@ -85,7 +85,7 @@
       <div><strong>Weather:</strong>
       <a target="_blank" title="The weather.gov forecast for the Lat/Lon"
          href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
-        <i class="fa fa-cloud"></i> NOAA Forecast</a></div>
+        NOAA Forecast</a></div>
       {% if forecast_wanted %}<table id="event-forecast" class="event-forecast" hidden></table>{% endif %}
     </div>
     {% endif %}
