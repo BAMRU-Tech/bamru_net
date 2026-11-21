@@ -1,20 +1,28 @@
 from django import forms
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from django.forms import widgets
+from django.views.decorators.http import require_POST
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from dynamic_preferences.registries import global_preferences_registry
 
+from main.lib.county import county_text
+from main.lib.elevation import altitude_band, elevation_feet
+from main.lib.forecast import DAYS_COVERED, forecast_days
 from main.lib.gcal import get_gcal_manager
+from main.lib import lookups
+from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
+from main.lib.sun import sun_times
 from main.models import DoAvailable, Member, Event, Participant, Period
 from main.models.event import every_username, leader_parts
 from main.views.api_views import EventFilter
@@ -88,6 +96,12 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
                       for text, member_id in leader_parts(event.leaders, every_username())]
 
         context['leaders'] = result
+        if event.point:
+            context['sun'] = sun_times(*event.point, timezone.localtime(event.start_at).date())
+            first_day, last_day = forecast_span(event)
+            today = timezone.localdate()
+            context['forecast_wanted'] = last_day >= today and first_day < today + timedelta(days=DAYS_COVERED)
+            context['lookup_seconds'] = lookups.SECONDS
         context['current_do'] = DoAvailable.current_scheduled_do()
         context['esb_spreadsheet_url'] = (
             global_preferences_registry.manager()['general__esb_spreadsheet_url'])
@@ -113,10 +127,15 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
 
 class EventForm(ModelForm):
+    # One box for the event's point, read in any common form and saved as lat and lon.
+    lat_lon = forms.CharField(
+        required=False, label='Lat/Lon',
+        help_text='Any form, such as decimal degrees, degrees and minutes, UTM or USNG.')
+
     class Meta:
         model = Event
         fields = ['title', 'description', 'description_private', 'type',
-                  'location', 'location_private', 'lat', 'lon', 'leaders',
+                  'location', 'location_private', 'lat_lon', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
@@ -139,10 +158,27 @@ class EventForm(ModelForm):
                 time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
                             'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
-            'lat': widgets.HiddenInput(),
-            'lon': widgets.HiddenInput(),
-                
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.lat and self.instance.lon:
+            self.initial['lat_lon'] = '{}, {}'.format(self.instance.lat, self.instance.lon)
+        # An edit page opened before the box existed posts no box; it leaves the point as stored.
+        if self.is_bound and 'lat_lon' not in self.data:
+            self.fields['lat_lon'].disabled = True
+
+    def clean_lat_lon(self):
+        """The point as lat and lon text to store, or None for no point. A saved point the member
+        left untouched is kept exactly as stored."""
+        if 'lat_lon' not in self.changed_data:
+            return None
+        try:
+            point = read_point(self.cleaned_data['lat_lon'])
+        except NotAPoint as problem:
+            raise forms.ValidationError(str(problem))
+        self.point_warning = point and area_warning(point.lat, point.lon)
+        return point and (degrees_text(point.lat), degrees_text(point.lon))
 
     def clean(self):
         cleaned_data = super().clean()
@@ -152,8 +188,86 @@ class EventForm(ModelForm):
             self.add_error('finish_at', 'Finish time must not be earlier than start time')
         return cleaned_data
 
+    point_warning = None
 
-class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
+    def save(self, commit=True):
+        if 'lat_lon' in self.changed_data:
+            self.instance.lat, self.instance.lon = self.cleaned_data['lat_lon'] or (None, None)
+        return super().save(commit)
+
+
+@login_required
+@require_POST
+def event_lat_lon(request):
+    """The Lat/Lon box's text read as the event form reads it, so the form can show the point
+    converted in place, and warn of one outside the team's usual area, before the member saves."""
+    try:
+        point = read_point(request.POST.get('text'))
+    except NotAPoint as problem:
+        return JsonResponse({'error': str(problem)})
+    if not point:
+        return JsonResponse({'value': ''})
+    return JsonResponse({'value': point_text(point.lat, point.lon), 'note': reading_note(point),
+                         'warning': area_warning(point.lat, point.lon)})
+
+
+def forecast_span(event):
+    """The days the event's forecast covers, in local time: from the day before the event, for anyone
+    driving up or camping the night before, to its last day."""
+    first_day = timezone.localtime(event.start_at).date()
+    last_day = timezone.localtime(event.finish_at).date() if event.finish_at else first_day
+    return first_day - timedelta(days=1), max(first_day, last_day)
+
+
+@login_required
+def event_forecast(request, pk):
+    """The rows of the forecast table (event_forecast.html) at the event's point, for the day before the
+    event and each of its days, named "Day before", "OP1 Sat 21", "OP2 Sun 22" and so on, for the event
+    page to show once it has loaded; empty with no day to show. 'ready' is false while the forecast is being
+    asked for in the background, and the page asks again."""
+    event = get_object_or_404(Event, pk=pk)
+    if not event.point:
+        return JsonResponse({'ready': True, 'html': ''})
+    day_before, last_day = forecast_span(event)
+    ready, days = forecast_days(*event.point, day_before, last_day)
+    for day in days:
+        op = (datetime.date.fromisoformat(day['date']) - day_before).days
+        day['name'] = 'OP{} {}'.format(op, day['label']) if op else 'Day before'
+    return JsonResponse({'ready': ready, 'html': render_to_string('event_forecast.html', {'days': days}) if days else ''})
+
+
+@login_required
+def event_county(request, pk):
+    """The county line for the event's point, for the event page to show once it has loaded; 'ready' is
+    false while it is being asked for in the background, and the page asks again."""
+    event = get_object_or_404(Event, pk=pk)
+    if not event.point:
+        return JsonResponse({'ready': True, 'county': None})
+    ready, county = county_text(*event.point)
+    return JsonResponse({'ready': ready, 'county': county})
+
+
+@login_required
+def event_elevation(request, pk):
+    """The ground elevation at the event's point and its altitude band, for the event page to show once it
+    has loaded; 'ready' is false while it is being asked for in the background, and the page asks again."""
+    event = get_object_or_404(Event, pk=pk)
+    if not event.point:
+        return JsonResponse({'ready': True, 'feet': None, 'band': None, 'note': None})
+    ready, feet = elevation_feet(*event.point)
+    band, note = altitude_band(feet)
+    return JsonResponse({'ready': ready, 'feet': feet, 'band': band, 'note': note})
+
+
+class PointWarningMixin:
+    """After saving the event form, the page it goes to shows the point's warning, if it has one."""
+    def form_valid(self, form):
+        if form.point_warning:
+            messages.warning(self.request, 'Lat/Lon: ' + form.point_warning)
+        return super().form_valid(form)
+
+
+class EventUpdateView(LoginRequiredMixin, PointWarningMixin, generic.edit.UpdateView):
     model = Event
     form_class = EventForm
     template_name = 'event_create.html'
@@ -169,6 +283,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
 
         return form
 
+
     # Abuse get_success_url to do a calendar update after updating the object.
     def get_success_url(self, *args, **kwargs):
         get_gcal_manager().sync_event(self.object)
@@ -181,7 +296,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
         return context
 
 
-class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
+class EventCreateView(LoginRequiredMixin, PointWarningMixin, generic.edit.CreateView):
     model = Event
     form_class = EventForm
     template_name = 'event_create.html'
@@ -200,6 +315,7 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
         form.fields['description'].widget.attrs = { 'rows':4 }
 
         return form
+
 
     # Abuse get_success_url to do a calendar update after creating the object.
     def get_success_url(self, *args, **kwargs):

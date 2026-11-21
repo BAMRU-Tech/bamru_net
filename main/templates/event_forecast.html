@@ -1,0 +1,17 @@
+{# The rows of the event page's forecast table: one a day, and under each its summary, shown by tapping the day while the table is too narrow for the summary column. #}
+<tr>
+  <th></th><th></th><th class="number">High</th><th class="number">Low</th><th class="number">Precip</th>
+  <th>Wind mph</th><th class="forecast-summary-column"></th>
+</tr>
+{% for day in days %}
+<tr class="forecast-day">
+  <td>{{ day.name }}</td>
+  <td>{% if day.symbol %}<span role="img" aria-label="{{ day.summary }}" title="{{ day.summary }}">{{ day.symbol }}</span>{% endif %}</td>
+  <td class="number">{% if day.high is not None %}<span{% if day.high_band %} class="shade-{{ day.high_band }}" title="{{ day.high_note }}"{% endif %}>{{ day.high }}°</span>{% endif %}</td>
+  <td class="number">{% if day.low is not None %}<span{% if day.low_band %} class="shade-{{ day.low_band }}" title="{{ day.low_note }}"{% endif %}>{{ day.low }}°</span>{% endif %}</td>
+  <td class="number">{{ day.precip }}%</td>
+  <td class="wind"><span>{{ day.wind_mph }}</span> <span>{{ day.wind_direction }}</span></td>
+  <td class="forecast-summary-column">{{ day.summary }}</td>
+</tr>
+<tr class="forecast-note" hidden><td colspan="6">{{ day.summary }}</td></tr>
+{% endfor %}

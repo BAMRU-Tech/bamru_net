@@ -4,6 +4,43 @@
 
 {% block title %}Event Detail - {{ event.title }}{% endblock title %}
 
+{% block css %}{{ block.super }}
+<style>
+  .location-details { margin-bottom: 1rem; }
+  .location-details > summary:focus-visible { outline: revert; }   /* style.css hides it on every summary */
+  .location-details-body { margin-left: 1.05em; }                  /* level with the summary's text, after its triangle */
+  .daylight > span { white-space: nowrap; margin-right: .4em; }    /* each symbol stays with its time */
+  .event-forecast th, .event-forecast td { padding: 0 .6em 0 0; white-space: nowrap; }
+  .event-forecast th, .event-forecast tr.forecast-day td:first-child, .event-forecast td.wind { white-space: normal; }  /* wrap only to fit */
+  .event-forecast td.wind span { white-space: nowrap; }
+  /* The summary column shows while the table fits on one line a day (the page's script measures); otherwise
+     tapping a day shows its summary underneath. */
+  .event-forecast .forecast-summary-column { display: none; }
+  .event-forecast.forecast-wide .forecast-summary-column { display: table-cell; }
+  .event-forecast.forecast-wide tr.forecast-note { display: none; }
+  .event-forecast:not(.forecast-wide) tr.forecast-day { cursor: pointer; }
+  .event-forecast tr.forecast-note td { white-space: normal; padding-bottom: .4em; color: #6c757d; }
+  .event-forecast.forecast-measure { width: max-content; }
+  .event-forecast.forecast-measure th, .event-forecast.forecast-measure td { white-space: nowrap; }
+  @media (max-width: 575.98px) {
+    .event-forecast { font-size: .875rem; }
+  }
+  @media (max-width: 359.98px) {
+    .event-forecast th, .event-forecast td { padding-right: .45em; }
+  }
+  .event-forecast th { font-weight: normal; font-size: .85em; color: #6c757d; }
+  .event-forecast .number { text-align: right; }
+  .event-forecast .number span { padding: 0 .3em; border-radius: 3px; }
+  /* Light shades for a temperature or an elevation, by how dangerous it is; the tooltip says why. */
+  .shaded { padding: 0 .3em; border-radius: 3px; }
+  .shade-danger { background: #f8d7da; }
+  .shade-extreme-caution { background: #ffe5cc; }
+  .shade-caution { background: #fff3cd; }
+  .shade-cold { background: #e7f1ff; }
+  .shade-freezing { background: #cfe2ff; }
+</style>
+{% endblock css %}
+
 {% block subheader %}
 <strong class="d-md-none">
   <a href='{% url "event_list" %}'> Events </a>&gt; {{ event.title }}
@@ -41,26 +78,41 @@
     {% if event.description_private %}
     <p><strong>Private Description:</strong> {{ event.description_private|urlize }}</p>
     {% endif %}
-    <p><strong>Location:</strong> {{ event.location|urlize }}
-      <a target="_blank"
-         href="https://google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
+    <p><strong>Location:</strong>
+      <span class="copy-on-tap">{{ event.location|urlize }}</span>
+      <a target="_blank" aria-label="Google Maps"
+         title="Google Maps: the Lat/Lon if there is one, else the Private Location, else the Location"
+         href="https://google.com/maps/search/?api=1&query={% if event.point %}{{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}{% else %}{{ event.location_private|default:event.location|urlencode }}{% endif %}">
         <i class="fa fa-map-marker"></i>
       </a>
-      <p>
       {% if event.location_private %}
-      <strong>Private Location:</strong> {{ event.location_private|urlize }}
-      <a target="_blank"
-         href="https://google.com/maps/search/?api=1&query={{ event.location_private|urlencode }}">
-        <i class="fa fa-map-marker"></i>
-      </a>
+      <br><strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
       {% endif %}
-      {% if event.lat != None %}
-      <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
+      {% if event.point %}
+      <br><strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
       {% endif %}
-      {% if event.lon != None %}
-      <strong>Lon:</strong> {{ event.lon|floatformat:8 }}
+    </p>
+    {% if event.point %}
+    <details id="location-details" class="location-details">
+      <summary title="The County, Elevation, Daylight and Weather at the Lat/Lon"><strong>Weather and location information</strong></summary>
+      <div class="location-details-body">
+      <div id="event-county-line" hidden><strong>County:</strong> <span id="event-county"></span></div>
+      <div id="event-elevation-line" hidden><strong>Elevation:</strong>
+      <span id="event-elevation" title="Elevation at the point, from USGS"></span></div>
+      {% if sun %}
+      <div class="daylight"><strong title="On {{ event.start_at|date:'M j' }}, for a flat horizon: the sun goes behind ridges and canyon walls earlier.">Daylight:</strong>
+      <span title="Sunrise"><span aria-hidden="true">&#x2600;&#xFE0F;&#x2191;</span><span class="sr-only">Sunrise</span> {{ sun.sunrise|time:'H:i' }}</span>
+      <span title="Sunset"><span aria-hidden="true">&#x2600;&#xFE0F;&#x2193;</span><span class="sr-only">Sunset</span> {{ sun.sunset|time:'H:i' }}</span>
+      <span title="Dark by: the end of civil twilight"><span aria-hidden="true">&#x1F319;</span><span class="sr-only">Dark by</span> {{ sun.dark_by|time:'H:i' }}</span></div>
       {% endif %}
-      </p></p>
+      <div><strong>Weather:</strong>
+      <a target="_blank" title="The weather.gov forecast for the Lat/Lon"
+         href="https://forecast.weather.gov/MapClick.php?lat={{ event.lat|urlencode }}&lon={{ event.lon|urlencode }}">
+        NOAA Forecast</a></div>
+      {% if forecast_wanted %}<div class="table-responsive"><table id="event-forecast" class="event-forecast" hidden></table></div>{% endif %}
+      </div>
+    </details>
+    {% endif %}
     <p><strong>Leaders:</strong>
       {% for leader in leaders %}{% if leader.id != 0 %}<a href="{% url 'member_detail' leader.id %}">{{ leader.name }}</a>{% else %}{{ leader.name }}{% endif %}{% endfor %}
     </p>
@@ -1231,4 +1283,85 @@ function MarkRow ( e, dt, type, indices ) {
 }
 
 </script>
+<script type="text/javascript">
+// Tapping a location or the Lat/Lon copies it whole, ready to paste into a map app or CalTopo.
+// A link inside still opens, and text the member selected is left alone. Where the browser
+// won't copy, select it so the member can.
+$(document).ready(function() {
+    $('.copy-on-tap').on('click', function(event) {
+        if ($(event.target).closest('a').length || getSelection().toString()) return;
+        var text = this;
+        function select() {
+            var range = document.createRange();
+            range.selectNodeContents(text);
+            getSelection().removeAllRanges();
+            getSelection().addRange(range);
+        }
+        if (!navigator.clipboard) return select();
+        navigator.clipboard.writeText(text.textContent.trim()).then(function() {
+            $(text).next('.copied').remove();
+            var note = $('<small class="copied text-muted"> Copied</small>').insertAfter(text);
+            setTimeout(function() { note.remove(); }, 2000);
+        }, select);
+    });
+});
+</script>
+{% if event.point %}
+<script type="text/javascript">
+// The county, elevation and forecast are asked for once the page has loaded, so they are ready when a
+// member opens Weather and location information. The server fetches them from the Census Bureau, USGS
+// and the weather service in the background and answers at once, 'ready' or not; the page asks again
+// each second, and after lookup_seconds shows nothing.
+function whenReady(url, show) {
+    var until = Date.now() + {{ lookup_seconds }} * 1000;
+    (function ask() {
+        $.getJSON(url, function(answer) {
+            if (answer.ready) show(answer);
+            else if (Date.now() < until) setTimeout(ask, 1000);
+        });
+    })();
+}
+$(document).ready(function() {
+    whenReady('{% url "event_county" event.id %}', function(answer) {
+        if (answer.county) {
+            $('#event-county').text(answer.county);
+            $('#event-county-line').prop('hidden', false);
+        }
+    });
+    whenReady('{% url "event_elevation" event.id %}', function(answer) {
+        if (answer.feet !== null) {
+            $('#event-elevation').text(answer.feet.toLocaleString('en-US') + ' ft');
+            if (answer.band) {
+                $('#event-elevation').addClass('shaded shade-' + answer.band)
+                    .attr('title', 'Elevation at the point, from USGS. ' + answer.note);
+            }
+            $('#event-elevation-line').prop('hidden', false);
+        }
+    });
+    {% if forecast_wanted %}
+    // The forecast's rows come ready-made from the server (event_forecast.html). The service's summary is the
+    // last column while the table fits on one line a day, measured whenever the section opens or the window
+    // changes size; otherwise tapping a day shows it underneath.
+    whenReady('{% url "event_forecast" event.id %}', function(answer) {
+        if (!answer.html) return;
+        var table = $('#event-forecast').html(answer.html);
+        table.on('click', 'tr.forecast-day', function() {
+            var note = $(this).next();
+            note.prop('hidden', !note.prop('hidden'));
+        });
+        function fitSummaries() {
+            if (!table.is(':visible')) return;             // inside the closed section: measured when it opens
+            table.addClass('forecast-wide forecast-measure');
+            var fits = table.outerWidth() <= table.parent().width();
+            table.removeClass('forecast-measure').toggleClass('forecast-wide', fits);
+        }
+        table.prop('hidden', false);
+        fitSummaries();
+        $('#location-details').on('toggle', fitSummaries);
+        $(window).on('resize', fitSummaries);
+    });
+    {% endif %}
+});
+</script>
+{% endif %}
 {% endblock js %}
