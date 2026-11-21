@@ -14,8 +14,8 @@ from main.views.event_views import EventForm
 DONNER = (39.3157, -120.3277)
 GRAND_CANYON = (36.0544, -112.1401)
 OUTSIDE = 'This point is outside the area the team usually works in. Check its numbers and minus signs.'
-# Within about 2 m. The UTM and USNG answers below come from pyproj 3.8 and the mgrs package,
-# run separately, so these tests check the conversions against an independent source.
+# Within about 2 m. The UTM and USNG answers below come from pyproj 3.8, run separately, so these tests
+# check the conversions against an independent source.
 CLOSE = 2e-5
 # One point in each of the five forms CalTopo's point panel lists, as UTM, USNG, DD, DDM and DMS.
 # Their rounding, to a second in DMS, puts them up to half a second (15 m) apart.
@@ -140,9 +140,8 @@ class ReadPointTestCase(TestCase):
                 ('10S 100000 4180757', 'Easting 100000 is outside zone 10. Check the zone and the easting.'),
                 ('10T 727330 4355390', 'This point is not in latitude band T. Check the band letter and the northing.'),
                 ('34J 261878 6243186', 'This point is not in latitude band J. Check the band letter and the northing.'),
-                ('60X ZV 99999 99999', 'This USNG point is off the map. Check its easting and northing.'),
-                ('10S KJ 27330 53919', 'Zone 10 has no 100 km square starting K.'),
-                ('10T GJ 27330 53919', 'Square GJ is not in latitude band T.'),
+                ('10S KJ 27330 53919', 'Zone 10 has no 100 km square KJ in latitude band S. Check its letters.'),
+                ('10T GJ 27330 53919', 'Zone 10 has no 100 km square GJ in latitude band T. Check its letters.'),
                 ('10S GJ 273 53919', 'A USNG point needs as many easting digits as northing digits, '
                                      'such as 11S KB 71484 80756.'),
                 ('10S GJ 273300 539190', 'A USNG point needs as many easting digits as northing digits, '

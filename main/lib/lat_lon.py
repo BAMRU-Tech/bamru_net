@@ -8,10 +8,12 @@ The forms read:
 - UTM: 11S 271485 4180757 · 11 271485mE 4180757mN
 - USNG, which is MGRS for the US: 11S KB 71484 80756 · 11SKB7148480756
 """
-import math
 import re
+import warnings
 from collections import namedtuple
 
+import mgrs
+import utm
 from dynamic_preferences.registries import global_preferences_registry
 
 Point = namedtuple('Point', 'lat lon form')
@@ -59,15 +61,12 @@ UTM = re.compile(r'(?:UTM:?\s*)?(?:ZONE\s*)?(\d{1,2})\s*([C-HJ-NP-X])?\s+0?(\d{6
                  r'(\d{7}(?:\.\d+)?)\s*(?:M?\s*N)?')
 USNG = re.compile(r'(?:(?:USNG|MGRS):?\s*)?(\d{1,2})\s*([C-HJ-NP-X])\s*([A-HJ-NP-Z])\s*([A-HJ-NP-V])\s*'
                   r'(\d+(?:\s+\d+)?)')
-# The 100 km square letters: columns by zone (zone 1 uses the first set), and rows, which repeat
-# every 2,000 km and start five letters on in even zones.
-COLUMNS = ('ABCDEFGH', 'JKLMNPQR', 'STUVWXYZ')
-ROWS = 'ABCDEFGHJKLMNPQRSTUV'
 
 
 def utm_point(zone, band, easting, northing):
     zone = utm_zone(zone)
-    lat, lon = utm_to_lat_lon(zone, bool(band) and band < 'N', float(easting), float(northing))
+    # strict=False: an easting or northing off the grid is refused below, in this module's words.
+    lat, lon = utm.to_latlon(float(easting), float(northing), zone, northern=not band or band >= 'N', strict=False)
     point = checked(lat, lon, 'UTM')
     # A zone is 6° wide; half a degree more allows a point read just across its edge.
     if abs((lon - (6 * zone - 183) + 180) % 360 - 180) > 3.5:
@@ -92,48 +91,26 @@ def usng_point(zone, band, column, row, digits):
     if len(parts) != 2 or len(parts[0]) != len(parts[1]) or len(parts[0]) > 5:
         raise NotAPoint('A USNG point needs as many easting digits as northing digits, '
                         'such as 11S KB 71484 80756.')
-    easting, northing = (int(part) * 10 ** (5 - len(part)) for part in parts)
-    columns = COLUMNS[(zone - 1) % 3]
-    if column not in columns:
-        raise NotAPoint('Zone {} has no 100 km square starting {}.'.format(zone, column))
-    easting += (columns.index(column) + 1) * 100000
-    northing += (ROWS.index(row) - (5 if zone % 2 == 0 else 0)) % 20 * 100000
-    south = band < 'N'
-    # The row letters repeat every 2,000 km; the latitude band says which repeat it is.
-    for repeat in (range(4, -1, -1) if south else range(5)):
-        lat, lon = utm_to_lat_lon(zone, south, easting, northing + repeat * 2000000)
-        if in_band(band, lat):
-            return checked(lat, lon, 'USNG')
-    raise NotAPoint('Square {}{} is not in latitude band {}.'.format(column, row, band))
+    no_such_square = NotAPoint('Zone {} has no 100 km square {}{} in latitude band {}. Check its letters.'.format(
+        zone, column, row, band))
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)     # of a square at the edge of its band, checked below
+            _, hemisphere, easting, northing = mgrs.MGRS().MGRSToUTM(
+                '{}{}{}{}{:0<5}{:0<5}'.format(zone, band, column, row, *parts))
+    except mgrs.core.MGRSError:
+        raise no_such_square
+    # mgrs gives the middle of the 1 m square; USNG names its south-west corner, as UTM's digits do.
+    lat, lon = utm.to_latlon(easting - 0.5, northing - 0.5, zone, northern=hemisphere == 'N', strict=False)
+    if not in_band(band, lat):
+        raise no_such_square
+    return checked(lat, lon, 'USNG')
 
 
 def utm_zone(zone):
     if not 1 <= int(zone) <= 60:
         raise NotAPoint('UTM zones run from 1 to 60.')
     return int(zone)
-
-
-def utm_to_lat_lon(zone, south, easting, northing):
-    """WGS84 UTM to latitude and longitude, by the standard series (well under a metre)."""
-    a, f, k0 = 6378137.0, 1 / 298.257223563, 0.9996
-    e2 = f * (2 - f)
-    ep2 = e2 / (1 - e2)
-    x, y = easting - 500000.0, northing - (10000000.0 if south else 0.0)
-    mu = y / k0 / (a * (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256))
-    e1 = (1 - math.sqrt(1 - e2)) / (1 + math.sqrt(1 - e2))
-    phi1 = (mu + (3 * e1 / 2 - 27 * e1 ** 3 / 32) * math.sin(2 * mu)
-            + (21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32) * math.sin(4 * mu)
-            + (151 * e1 ** 3 / 96) * math.sin(6 * mu) + (1097 * e1 ** 4 / 512) * math.sin(8 * mu))
-    n1 = a / math.sqrt(1 - e2 * math.sin(phi1) ** 2)
-    t1, c1 = math.tan(phi1) ** 2, ep2 * math.cos(phi1) ** 2
-    r1 = a * (1 - e2) / (1 - e2 * math.sin(phi1) ** 2) ** 1.5
-    d = x / (n1 * k0)
-    lat = phi1 - (n1 * math.tan(phi1) / r1) * (
-        d ** 2 / 2 - (5 + 3 * t1 + 10 * c1 - 4 * c1 ** 2 - 9 * ep2) * d ** 4 / 24
-        + (61 + 90 * t1 + 298 * c1 + 45 * t1 ** 2 - 252 * ep2 - 3 * c1 ** 2) * d ** 6 / 720)
-    lon = (d - (1 + 2 * t1 + c1) * d ** 3 / 6
-           + (5 - 2 * c1 + 28 * t1 - 3 * c1 ** 2 + 8 * ep2 + 24 * t1 ** 2) * d ** 5 / 120) / math.cos(phi1)
-    return math.degrees(lat), (zone - 1) * 6 - 177 + math.degrees(lon)
 
 
 # ---- degrees -----------------------------------------------------------------------------------
