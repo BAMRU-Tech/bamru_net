@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, timedelta
 from unittest import mock
 
@@ -213,17 +214,30 @@ class EventForecastPageTestCase(FetchedAtOnce, TestCase):
     def test_the_forecast_for_the_day_before_and_each_day_of_the_event(self):
         event = self.event(date(2026, 11, 21), days=2)
         with service_answers():
-            self.assertEqual(self.client.get('/event/{}/forecast/'.format(event.id)).json(), {'ready': False, 'days': []})
+            self.assertEqual(self.client.get('/event/{}/forecast/'.format(event.id)).json(), {'ready': False, 'html': ''})
             answer = self.client.get('/event/{}/forecast/'.format(event.id)).json()
         self.assertTrue(answer['ready'])
-        days = answer['days']
-        self.assertEqual([(d['name'], d['label']) for d in days],
-                         [('Day before', 'Fri\xa020'), ('OP1 Sat\xa021', 'Sat\xa021'), ('OP2 Sun\xa022', 'Sun\xa022')])
+        self.assertEqual(re.findall(r'<tr class="forecast-day">\s*<td>(.*?)</td>', answer['html']),
+                         ['Day before', 'OP1 Sat\xa021', 'OP2 Sun\xa022'])
+        # Saturday's row: its symbol with the summary, the high unshaded, the low shaded as cold, and the rest.
+        self.assertInHTML(
+            '<tr class="forecast-day"><td>OP1 Sat\xa021</td>'
+            '<td><span role="img" aria-label="Light Rain Likely" title="Light Rain Likely">{}</span></td>'
+            '<td class="number"><span>41°</span></td>'
+            '<td class="number"><span class="shade-cold" title="Cold: hypothermia possible, more so when wet">33°</span></td>'
+            '<td class="number">64%</td><td class="wind"><span>5\u201310</span> <span>ESE</span></td>'
+            '<td class="forecast-summary-column">Light Rain Likely</td></tr>'.format(RAIN),
+            '<table>{}</table>'.format(answer['html']))
+        self.assertInHTML('<tr class="forecast-note" hidden><td colspan="6">Light Rain Likely</td></tr>',
+                          '<table>{}</table>'.format(answer['html']))
+        # Sunday has a high and, with its night beyond the forecast, an empty low.
+        self.assertInHTML('<td class="number"><span>50°</span></td><td class="number"></td>',
+                          '<table>{}</table>'.format(answer['html']))
 
     def test_no_forecast_without_a_whole_point(self):
         event = self.event(date(2026, 11, 20), point=None)
         with service_answers() as get:
-            self.assertEqual(self.client.get('/event/{}/forecast/'.format(event.id)).json(), {'ready': True, 'days': []})
+            self.assertEqual(self.client.get('/event/{}/forecast/'.format(event.id)).json(), {'ready': True, 'html': ''})
         get.assert_not_called()
 
     def test_the_forecast_needs_a_signed_in_member(self):

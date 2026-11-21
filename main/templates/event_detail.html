@@ -1339,35 +1339,15 @@ $(document).ready(function() {
         }
     });
     {% if forecast_wanted %}
-    // The forecast, from the National Weather Service, for the day before and each event day it covers: one
-    // row a day, with the weather's symbol, high, low, precipitation and wind. The service's summary is the
-    // symbol's alt text and tooltip, and the last column while the table fits on one line a day, measured
-    // whenever the section opens or the window changes size; otherwise tapping a day shows it underneath.
+    // The forecast's rows come ready-made from the server (event_forecast.html). The service's summary is the
+    // last column while the table fits on one line a day, measured whenever the section opens or the window
+    // changes size; otherwise tapping a day shows it underneath.
     whenReady('{% url "event_forecast" event.id %}', function(answer) {
-        if (!answer.days.length) return;
-        var table = $('#event-forecast').append($('<tr>').append(
-            $('<th>'), $('<th>'),
-            ['High', 'Low', 'Precip'].map(function(heading) { return $('<th class="number">').text(heading); }),
-            $('<th>').text('Wind mph'), $('<th class="forecast-summary-column">')));
-        function temperature(degrees, band, note) {
-            var cell = $('<td class="number">');
-            if (degrees !== null) {
-                cell.append($('<span>').addClass(band ? 'shade-' + band : '').attr('title', note).text(degrees + '°'));
-            }
-            return cell;
-        }
-        answer.days.forEach(function(day) {
-            var note = $('<tr class="forecast-note" hidden>').append($('<td colspan="6">').text(day.summary));
-            var row = $('<tr class="forecast-day">').append(
-                $('<td>').text(day.name),
-                $('<td>').append(day.symbol && $('<span role="img">').attr({'aria-label': day.summary, title: day.summary}).text(day.symbol)),
-                temperature(day.high, day.high_band, day.high_note),
-                temperature(day.low, day.low_band, day.low_note),
-                $('<td class="number">').text(day.precip + '%'),
-                $('<td class="wind">').append($('<span>').text(day.wind_mph), ' ', $('<span>').text(day.wind_direction)),
-                $('<td class="forecast-summary-column">').text(day.summary));
-            row.on('click', function() { note.prop('hidden', !note.prop('hidden')); });
-            table.append(row, note);
+        if (!answer.html) return;
+        var table = $('#event-forecast').html(answer.html);
+        table.on('click', 'tr.forecast-day', function() {
+            var note = $(this).next();
+            note.prop('hidden', !note.prop('hidden'));
         });
         function fitSummaries() {
             if (!table.is(':visible')) return;             // inside the closed section: measured when it opens

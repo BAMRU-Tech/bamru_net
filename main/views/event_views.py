@@ -7,6 +7,7 @@ from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
@@ -220,18 +221,19 @@ def forecast_span(event):
 
 @login_required
 def event_forecast(request, pk):
-    """The forecast at the event's point for the day before the event and each of its days, named
-    "Day before", "OP1 Sat 21", "OP2 Sun 22" and so on, for the event page to show once it has loaded;
-    'ready' is false while it is being asked for in the background, and the page asks again."""
+    """The rows of the forecast table (event_forecast.html) at the event's point, for the day before the
+    event and each of its days, named "Day before", "OP1 Sat 21", "OP2 Sun 22" and so on, for the event
+    page to show once it has loaded; empty with no day to show. 'ready' is false while the forecast is being
+    asked for in the background, and the page asks again."""
     event = get_object_or_404(Event, pk=pk)
     if not event.point:
-        return JsonResponse({'ready': True, 'days': []})
+        return JsonResponse({'ready': True, 'html': ''})
     day_before, last_day = forecast_span(event)
     ready, days = forecast_days(*event.point, day_before, last_day)
     for day in days:
         op = (datetime.date.fromisoformat(day['date']) - day_before).days
         day['name'] = 'OP{} {}'.format(op, day['label']) if op else 'Day before'
-    return JsonResponse({'ready': ready, 'days': days})
+    return JsonResponse({'ready': ready, 'html': render_to_string('event_forecast.html', {'days': days}) if days else ''})
 
 
 @login_required
