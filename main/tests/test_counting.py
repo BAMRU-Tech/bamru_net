@@ -8,10 +8,10 @@ from django.utils import timezone
 
 from main.lib.activity import glossary, member_activity
 from main.lib.charts import hours_text
-from main.lib.counting import (TYPES, activity_rows, counted_hours, day_hours, entry_hours, entry_led, first_claims,
-                               hours_by_local_day, listed_entries, member_entries, member_latest, pages, pages_from,
-                               records_from,
-                               reply_templates_from, reported_events, unit_since)
+from main.lib.counting import (TYPES, Joining, activity_rows, counted_hours, day_hours, entry_hours, entry_led,
+                               first_claims, hours_by_local_day, listed_entries, local_midnight, member_entries,
+                               member_latest, op_days, pages, pages_from, records_from, reply_templates_from,
+                               reported_events, unit_since, unit_time)
 from main.lib.unit_counting import unit_rows
 from main.models import DoAvailable, Event, Member, Message, Participant, Period, RsvpTemplate
 from main.tests.helpers import NOW, ActivityTestCase, when
@@ -278,8 +278,10 @@ class ActivityRowsTestCase(ActivityTestCase):
     def test_the_unit_is_read_from_the_members_first_day(self):
         self.make_event('training', when(2020, 1, 10), attended=[self.other])
         self.make_event('training', when(2024, 1, 10), attended=[self.member])
-        days, events = unit_since(date(2024, 1, 10), NOW, records_from(NOW))
+        days, events, ops = unit_since(date(2024, 1, 10), NOW, records_from(NOW))
         self.assertEqual((days['training'], list(events['training'].values())), ({date(2024, 1, 10)}, [date(2024, 1, 10)]))
+        # And its OPs, from the records' start, here 2024, as the 2020 training is a stray early record.
+        self.assertEqual(ops['training'], {date(2024, 1, 10)})
         self.assertEqual(self.days(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))['total'], 'training'), (1, 1))
 
     def test_a_unit_entry_begun_seven_days_before_the_first_day_reaches_it(self):
@@ -318,8 +320,11 @@ class ActivityRowsTestCase(ActivityTestCase):
         for member in (self.member, self.other):
             Participant.objects.create(period=training.period_set.first(), member=member,
                                        en_route_at=tomorrow, return_home_at=tomorrow + timedelta(hours=4))
-        # Time typed for tomorrow counts nothing yet, for the member or for the unit.
-        self.assertIsNone(activity_rows(self.member, evening, member_entries(self.member), records_from(NOW)))
+        # Time typed for tomorrow counts no day, event or hours yet, for the member or for the unit; the OP it is
+        # logged on is today's, and is attended, as any time logged on it attends it.
+        rows = activity_rows(self.member, evening, member_entries(self.member), records_from(NOW))
+        self.assertEqual((rows['total'].all_days, rows['total'].events['training'], rows['total'].all_hours,
+                          rows['total'].ops['training'], rows['total'].unit_ops['training']), (0, 0, 0, 1, 1))
         self.assertEqual(unit_since(date(2024, 6, 1), evening, records_from(NOW))[1]['training'], {})
         listed = listed_entries(member_entries(self.member), evening, records_from(NOW))
         self.assertEqual([(e.days, e.left_out_hours) for e in listed], [(0, 4)])
@@ -441,7 +446,9 @@ class ActivityRowsTestCase(ActivityTestCase):
         event = self.make_event('training', when(2024, 6, 1), attended=[self.member])
         Participant.objects.filter(period__event=event).update(
             en_route_at=when(2025, 6, 1), return_home_at=when(2025, 6, 1) + timedelta(hours=4))
-        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW)))
+        # No day yet; but the OP, whose day has come, has time logged on it.
+        total = activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))['total']
+        self.assertEqual((total.all_days, total.all_ops), (0, 1))
         self.make_event('meeting', when(2024, 1, 10), attended=[self.member])
         rows = activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))
         self.assertEqual(([r.period for r in rows['years']], rows['total'].all_days), ([2024], 1))
@@ -557,6 +564,31 @@ class ActivityRowsTestCase(ActivityTestCase):
         year = self.years(guest)['2024']
         self.assertEqual((self.days(year, 'training'), self.days(year, 'operation')), ((1, 1), (1, 1)))
 
+    def test_a_member_s_time_before_they_joined_counts_only_on_their_own_report(self):
+        # The other joined on 1 March, after a training in February: that one was a guest's, so it is no unit
+        # active day on the member's report, though it is on the other's own.
+        self.endorse(self.other, 'T', date(2024, 3, 1))
+        self.make_event('training', when(2024, 1, 10), attended=[self.member])
+        self.make_event('training', when(2024, 2, 10), attended=[self.other])
+        self.make_event('training', when(2024, 3, 10), attended=[self.other])
+        self.assertEqual(self.days(self.years()['2024'], 'training'), (1, 2))
+        self.assertEqual(self.days(self.years(self.other)['2024'], 'training'), (2, 2))
+
+    def test_the_unit_reads_logged_time_from_the_day_its_member_joined(self):
+        # unit_time, through which every count of the unit's days and hours reads logged time. One entry counts
+        # two days, 29 February and 1 March; for a member who joined on 1 March, the second alone, its time from
+        # that midnight; for one who joined later, neither.
+        self.make_event('operation', when(2024, 2, 29), attended=[self.other], hours=30)
+        rows = Participant.objects.filter(member=self.other).values_list(
+            'member_id', 'period__event__start_at', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at')
+        [whole] = unit_time(rows, NOW, None)
+        self.assertEqual((sorted(whole.hours), whole.hours), ([date(2024, 2, 29), date(2024, 3, 1)], whole.counted))
+        [joined] = unit_time(rows, NOW, None, Joining({self.other.id: date(2024, 3, 1)}, set()))
+        self.assertEqual((list(joined.hours), joined.counted), ([date(2024, 3, 1)], whole.counted))
+        self.assertEqual(joined.span, (local_midnight(date(2024, 3, 1)), whole.span[1]))
+        [guest] = unit_time(rows, NOW, None, Joining({self.other.id: date(2024, 3, 2)}, set()))
+        self.assertEqual((guest.hours, guest.span), ({}, None))
+
     def test_a_slip_affects_only_the_member_who_made_it(self):
         event = self.make_event('operation', when(2024, 3, 1), attended=[self.member], hours=30)
         Participant.objects.create(period=event.period_set.first(), member=self.other,
@@ -601,7 +633,7 @@ class ActivityRowsTestCase(ActivityTestCase):
         # Ten months are too many to name each on the chart: the year and the quarters are.
         measures, (years, months), _ = self.chart_asked_for()
         self.assertEqual([p['short'] for p in months['periods']], ['', 'Oct', '', '', "'24", '', '', 'Apr', '', ''])
-        self.assertEqual(measures[0]['title'], 'Days attended / unit active days, by type and role, 2023 to 2024')
+        self.assertEqual(measures[0]['title'], 'OPs attended / unit OPs, by type and role, 2023 to 2024')
 
     def test_counts_stop_at_last_day_for_alumni(self):
         alum = self.make_member('Cat', 'MA')
@@ -780,7 +812,7 @@ class PagingHistoryTestCase(ActivityTestCase):
         # A page sent with the event page's Test button is none.
         self.assertIn("A page sent with the event page's Test button is no page.", dict(glossary())['Events left out'])
         # And who is a guest: by their status today, the guest statuses named as examples, never a no-contact one.
-        self.assertIn('status today is a guest status, such as Guest or Guest Alum.', dict(glossary())['Guests'])
+        self.assertIn('status today is a guest status, such as Guest or Guest Alum,', dict(glossary())['Guests'])
 
     def test_pages_were_first_recorded_on_the_first_page_for_an_operation_a_report_counts(self):
         # A test operation paged in January 2015, before paging began on 1 March 2016: an operation begun in
@@ -865,7 +897,7 @@ class RecordsFromTestCase(ActivityTestCase):
                 # Not a day in that year, a row for it, or a line on the member page: only the meeting counts.
                 self.assertEqual(self.counted(since), ([2024], 1, {training.id: 0, self.member.participant_set.get(
                     period__event__type='meeting').period.event_id: 1}))
-                self.assertNotIn('event', self.latest()['Training'])
+                self.assertNotIn('event', self.latest()['Training (as participant)'])
         self.assertIn('Nothing dated before 2022', dict(glossary(member_report=True, records_from=since))['Time left out'])
 
     def test_an_event_dated_long_before_the_unit_s_counts_nowhere(self):
@@ -895,7 +927,9 @@ class RecordsFromTestCase(ActivityTestCase):
         self.assertEqual(since, date(1, 1, 1))
         rows = activity_rows(self.other, NOW, member_entries(self.other), since)
         self.assertEqual([r.period for r in rows['years']][0], 1)
-        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member), since))
+        # The member's one time is before any local date: no day, but an OP, which takes its day from the event.
+        total = activity_rows(self.member, NOW, member_entries(self.member), since)['total']
+        self.assertEqual((total.all_days, total.all_ops), (0, 1))
         listed_entries(member_entries(self.member), NOW, since)
         member_latest(self.member, NOW)
 
@@ -1376,6 +1410,14 @@ class CountedAgainstTheRulesTestCase(ActivityTestCase):
         own_events, hours = {t: {} for t in TYPES}, {t: defaultdict(float) for t in TYPES}
         unit_days, unit_events = {t: set() for t in TYPES}, {t: {} for t in TYPES}
         own = self.own_days(now, tz)
+        # Another member counts for the unit from the day they joined: with no endorsement, their first day at a
+        # training or an operation by now.
+        joined = {}
+        for p in Participant.objects.select_related('period__event'):
+            if p.period.event.type in ('training', 'operation') and p.period.event.start_at <= now:
+                for day in days_of[p.id]:
+                    if day <= today:
+                        joined[p.member_id] = min(day, joined.get(p.member_id, day))
         for p in Participant.objects.select_related('period__event', 'member'):
             event = p.period.event
             if event.start_at > now:
@@ -1391,6 +1433,7 @@ class CountedAgainstTheRulesTestCase(ActivityTestCase):
                 if mine:
                     own_events[event.type][event.id] = timezone.localtime(event.start_at).date()
             if p.member.status not in Member.GUESTS and not ahc:
+                days = {day for day in days if day >= joined.get(p.member_id, date.max)}
                 unit_days[event.type].update(days)
                 if any(day <= today for day in days):
                     unit_events[event.type][event.id] = event.start_at
@@ -1458,3 +1501,104 @@ class CountedAgainstTheRulesTestCase(ActivityTestCase):
                                             {t: round(r.hours[t], 6) for t in TYPES}, r.all_days)
                                 for r in rows['years']}
                 self.assertEqual(got, self.expected(now, days_of), 'seed {}, now {}'.format(seed, now))
+
+
+class OpsTestCase(ActivityTestCase):
+    """OPs: an event's operating periods, each standing for one calendar day (counting.op_days)."""
+
+    def total(self, member=None):
+        member = member or self.member
+        return activity_rows(member, NOW, member_entries(member), records_from(NOW))['total']
+
+    def more_periods(self, event, positions):
+        """The event's first period, and one more for each position given, made in that order."""
+        return [event.period_set.first()] + [Period.objects.create(event=event, position=p) for p in positions]
+
+    def test_an_op_is_the_events_day_for_its_place_on_the_page(self):
+        # On an operation begun on Saturday 9 March, OP1 is Saturday, OP2 Sunday and OP3 Monday: by their order on
+        # the page, not the order they were made in (OP3 first here), nor the times logged on them (OP2's on Monday).
+        event = self.make_event('operation', when(2024, 3, 9), attended=[self.member])
+        first, third, second = self.more_periods(event, (3, 2))
+        Participant.objects.create(period=second, member=self.member, en_route_at=when(2024, 3, 11),
+                                   return_home_at=when(2024, 3, 11) + timedelta(hours=3))
+        self.assertEqual(op_days([event.id], NOW),
+                         {first.id: date(2024, 3, 9), second.id: date(2024, 3, 10), third.id: date(2024, 3, 11)})
+        # Two periods in one place keep the order they were made in.
+        tied = self.make_event('training', when(2024, 4, 6))
+        one, two = self.more_periods(tied, (1,))
+        self.assertEqual([op_days([tied.id], NOW)[period.id] for period in (one, two)], [date(2024, 4, 6), date(2024, 4, 7)])
+        # Two OPs of one event, on two days attended.
+        total = self.total()
+        self.assertEqual((total.ops['operation'], total.events['operation'], total.days['operation']), (2, 1, 2))
+
+    def test_any_time_logged_attends_an_op_and_none_does_not(self):
+        # Left with no Returned, Signed in alone and Returned alone each attend an OP, though none counts a day.
+        for day, times in ((2, {'en_route_at': when(2024, 3, 2)}), (3, {'signed_in_at': when(2024, 3, 3)}),
+                           (4, {'return_home_at': when(2024, 3, 4)})):
+            event = self.make_event('training', when(2024, 3, day))
+            Participant.objects.create(period=event.period_set.first(), member=self.member, **times)
+        self.make_event('training', when(2024, 3, 5), no_time=[self.member])          # listed with no time
+        total = self.total()
+        self.assertEqual((total.ops['training'], total.all_days, total.events['training']), (3, 0, 0))
+
+    def test_an_op_counts_once_its_day_has_come(self):
+        # Begun today, 15 June: OP1 stands for today and counts; OP2, tomorrow, does not yet, though time is
+        # logged on it, for the member or for the unit.
+        event = self.make_event('training', when(2024, 6, 15), attended=[self.member])
+        _, tomorrow = self.more_periods(event, (2,))
+        Participant.objects.create(period=tomorrow, member=self.member, en_route_at=when(2024, 6, 15))
+        self.assertEqual(self.total().ops['training'], 1)
+        self.assertEqual(unit_since(date(2024, 6, 1), NOW, records_from(NOW)).ops['training'], {date(2024, 6, 15)})
+
+    def test_an_op_counts_once_its_event_has_begun(self):
+        # A meeting starting three hours from now, today, with a sign-in typed in ahead an hour ago: no OP yet.
+        later = self.make_event('meeting', NOW + timedelta(hours=3))
+        Participant.objects.create(period=later.period_set.first(), member=self.member,
+                                   signed_in_at=NOW - timedelta(hours=1))
+        self.assertIsNone(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW)))
+        self.assertEqual(unit_since(date(2024, 6, 1), NOW, records_from(NOW)).ops['meeting'], set())
+        self.assertEqual(op_days([later.id], NOW), {})
+
+    def test_ops_of_different_events_on_one_day_count_once(self):
+        # A training and two meetings on Saturday: one training OP and one meeting OP, and one OP across all
+        # types, as days are; the member listed twice on one meeting's OP, once.
+        self.make_event('training', when(2024, 3, 9), attended=[self.member])
+        meeting = self.make_event('meeting', when(2024, 3, 9) + timedelta(hours=1), attended=[self.member])
+        Participant.objects.create(period=meeting.period_set.first(), member=self.member,
+                                   signed_in_at=when(2024, 3, 9) + timedelta(hours=1))
+        self.make_event('meeting', when(2024, 3, 9) + timedelta(hours=2), attended=[self.member])
+        total = self.total()
+        self.assertEqual((total.ops['training'], total.ops['meeting'], total.all_ops, total.all_unit_ops), (1, 1, 1, 1))
+        # Two operations out on one day are one unit OP; an operation's two OPs, on two days, are two.
+        self.make_event('operation', when(2024, 4, 6), attended=[self.other])
+        self.make_event('operation', when(2024, 4, 6) + timedelta(hours=1), attended=[self.make_member('Cy', 'FM')])
+        two_days = self.make_event('operation', when(2024, 5, 4), attended=[self.other])
+        _, sunday = self.more_periods(two_days, (2,))
+        Participant.objects.create(period=sunday, member=self.other, en_route_at=when(2024, 5, 5))
+        self.assertEqual(unit_since(date(2024, 1, 1), NOW, records_from(NOW)).ops['operation'],
+                         {date(2024, 4, 6), date(2024, 5, 4), date(2024, 5, 5)})
+
+    def test_what_an_op_was_attended_as(self):
+        self.make_event('operation', when(2024, 3, 2), ol=[self.member])
+        self.make_event('operation', when(2024, 3, 3), attended=[self.other], ahc=[self.member])
+        # Flagged AHC and OL on one entry: AHC, as for days.
+        both = self.make_event('operation', when(2024, 3, 4), attended=[self.other])
+        Participant.objects.create(period=both.period_set.first(), member=self.member, ahc=True, ol=True,
+                                   en_route_at=when(2024, 3, 4), return_home_at=when(2024, 3, 4) + timedelta(hours=1))
+        self.make_event('training', when(2024, 3, 5), attended=[self.member], leaders='Ann (TL)')
+        self.make_event('meeting', when(2024, 3, 6), attended=[self.member])
+        total = self.total()
+        self.assertEqual((total.ops['operation'], total.ol_ops, total.ahc_ops), (3, 1, 2))
+        self.assertEqual((total.led_ops['training'], total.led_ops['meeting']), (1, 0))
+
+    def test_a_unit_op_is_one_a_member_other_than_the_ahc_attended(self):
+        # The AHC's time alone, or a guest's, makes no unit OP; a member in the field does.
+        alone = self.make_event('operation', when(2024, 3, 2), ahc=[self.other])
+        self.make_event('training', when(2024, 3, 3), attended=[self.make_member('Gus', 'G')])
+        self.make_event('operation', when(2024, 3, 4), attended=[self.member])
+        unit = unit_since(date(2024, 1, 1), NOW, records_from(NOW)).ops
+        self.assertEqual((unit['operation'], unit['training']), ({date(2024, 3, 4)}, set()))
+        # On the AHC's own report, their OP is a unit OP too, so the unit's figure is never below theirs.
+        total = self.total(self.other)
+        self.assertEqual((total.ops['operation'], total.unit_ops['operation'], total.ahc_ops), (1, 2, 1))
+        self.assertNotIn(timezone.localtime(alone.start_at).date(), unit['operation'])

@@ -1,4 +1,4 @@
-"""How the activity reports count logged time: days, events and hours,
+"""How the activity reports count logged time: days, events, OPs and hours,
 for one member and for the unit.
 
 The rules are stated once, for readers, in main.lib.activity.glossary():
@@ -13,6 +13,8 @@ glossary leaves to the code:
   the times entered, or time still to come.
 - An event counts once one of its counted days has come, and is placed on
   the local day it started, whichever days of it were attended.
+- OPs are an event's operating periods (Period), dated by op_days; ANY_TIME
+  is the time that attends one.
 - An entry's hours are shown on the days attended it counts as, each on the
   date it fell on; hours on another of its dates go to the nearest of those
   days (the earlier of two as near), so none are lost.
@@ -21,7 +23,9 @@ glossary leaves to the code:
   elapsed hours. The 7-day limit is a calendar rule, so it reads the local
   clock: noon to noon seven days later is 7 days in any week of the year.
 - Members are counted whatever their status today, alumni included, so that
-  past years are not undercounted as people leave.
+  past years are not undercounted as people leave, and from the day they
+  joined (joined_on), so that a member's joining adds nothing to the unit's
+  past.
 - Events count whether published or not: publishing puts an event on the
   calendars, and members see and log time on unpublished ones as well.
 - AHC days are those a member did not also spend in the field, and OL days
@@ -46,9 +50,10 @@ glossary leaves to the code:
 - DO weeks are assigned duty officer shifts that have started.
 """
 import calendar
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, NamedTuple
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 
 from django.db.models import (BooleanField, Case, Exists, ExpressionWrapper, F, Min, OuterRef, Q, Subquery, Value,
@@ -58,7 +63,7 @@ from django.template.defaultfilters import pluralize
 from django.utils import timezone
 
 from main.lib.report_settings import report_settings
-from main.models import DoAvailable, Event, Member, Message, Participant
+from main.models import Cert, DoAvailable, Event, Member, Message, Participant, Period
 from main.models.event import every_username, members_named
 
 # In the order they are shown.
@@ -118,10 +123,10 @@ def reported_events(since=None):
     events = (Event.objects.filter(type__in=TYPES, start_at__gte=EARLIEST, start_at__lte=LATEST)
               .alias(start_day=TruncDate('start_at'))
               .exclude(title__iregex=rules.TEST_TITLE).exclude(unused))
-    return events if since is None else events.filter(start_at__gte=_midnight(since))
+    return events if since is None else events.filter(start_at__gte=local_midnight(since))
 
 
-def _midnight(day, tz=None):
+def local_midnight(day, tz=None):
     """The local midnight that begins `day`."""
     return timezone.make_aware(datetime.combine(day, time.min), tz or timezone.get_current_timezone())
 
@@ -137,6 +142,9 @@ HAS_TIME = (
 
 # Time in the field: the AHC flag takes an entry out of it on operations only.
 IN_FIELD = Q(ahc=False) | ~Q(period__event__type='operation')
+# Any time logged on an entry, even one time alone: what attends an OP.
+ANY_TIME = (Q(en_route_at__isnull=False) | Q(return_home_at__isnull=False) | Q(signed_in_at__isnull=False)
+            | Q(signed_out_at__isnull=False))
 
 
 def entry_led(event_type, ol, in_field, named):
@@ -312,7 +320,7 @@ def _claims(entries, now, tz, since):
     begun on or after `since`), and {index: claim} for those that claim
     time (first_claims), each claim (start, end) or None when other time
     covers it all."""
-    begins = since and _midnight(since, tz)
+    begins = since and local_midnight(since, tz)
     counts = [not begins or start_at >= begins for start_at, *_ in entries]
     spans = {}
     for i, (start_at, *times) in enumerate(entries):
@@ -326,6 +334,48 @@ def _counted_from(hours, since):
     """An entry's {day: hours} from the day `since` (records_from) on: the
     days before it count nothing. All of them when `since` is None."""
     return hours if since is None else {day: h for day, h in hours.items() if day >= since}
+
+
+# The order of a member's entries that every report reads them in (entries_hours), so that all break a tie alike.
+ENTRY_ORDER = ('period__event__start_at', 'period__event_id', 'period__position', 'id')
+
+
+class UnitTime(NamedTuple):
+    """An entry's time, for the unit's figures (unit_time)."""
+    counted: dict               # {local day: hours} it counts for by now (entries_hours), joined then or not
+    hours: dict                 # those on days its member had joined: the unit's
+    span: tuple                 # the (start, end) logged, up to the end of today, from the first of those days when
+                                #   days before it are left out; None without them, or when too long to be right
+
+
+def unit_time(entries, now, since, joining=None, tz=None):
+    """The time of these entries for the unit, a UnitTime each, in the order
+    given: entries of events the reports count from `since` (records_from),
+    each (member, start_at, en_route_at, return_home_at, signed_in_at,
+    signed_out_at, …), anything after those the caller's, and each member's
+    in ENTRY_ORDER. Time on a day before its member joined (Joining) is a
+    guest's, and left out; with no `joining`, none is."""
+    tz = tz or timezone.get_current_timezone()
+    entries = list(entries)
+    by_member = defaultdict(list)        # member -> the indexes of their entries, in the order given
+    for i, (member, *_) in enumerate(entries):
+        by_member[member].append(i)
+    counted = {}
+    for indexes in by_member.values():
+        counted.update(zip(indexes, entries_hours([entries[i][1:6] for i in indexes], now, tz, since)))
+    stops = end_of_today(now, tz)
+    times = []
+    for i, (member, _, *logged) in enumerate(entries):
+        hours = counted[i] or {}
+        kept = hours if joining is None else {day: h for day, h in hours.items() if joining.member_on(member, day)}
+        span = logged_span(*logged[:4]) if kept else None
+        if span:
+            start, end = span
+            span = None if too_long(start, end, tz) else (start, min(end, stops))
+        if span and len(kept) < len(hours):
+            span = (max(span[0], local_midnight(min(kept), tz)), span[1])
+        times.append(UnitTime(hours, kept, span))
+    return times
 
 
 def reply_templates_from():
@@ -459,8 +509,8 @@ def _years_counted(years, now):
     tz = timezone.get_current_timezone()
     # Only events begun in those years: from the first's start (EARLIEST in year 1, as its local midnight may
     # fall before any date east of Greenwich) to the last's end, or to now.
-    first = _midnight(date(min(years), 1, 1), tz) if min(years) > EARLIEST.year else EARLIEST
-    last = _midnight(date(max(years) + 1, 1, 1), tz) if max(years) < date.max.year else now
+    first = local_midnight(date(min(years), 1, 1), tz) if min(years) > EARLIEST.year else EARLIEST
+    last = local_midnight(date(max(years) + 1, 1, 1), tz) if max(years) < date.max.year else now
     begun = reported_events().filter(start_at__gte=first, start_at__lt=last, start_at__lte=now)
     entries = (Participant.objects.filter(HAS_TIME, period__event__in=begun).exclude(member__status__in=Member.GUESTS)
                .values_list('period__event__start_at', 'en_route_at', 'return_home_at', 'signed_in_at',
@@ -474,9 +524,72 @@ def _years_counted(years, now):
     return counted
 
 
+# The year of an endorsement with no date: its comment starts with the year, or with "by" and the year, as in
+# "2008 (from the residency sheet)" or "by 2006 (background check 2006)", which is only the latest it can be.
+COMMENT_YEAR = re.compile(r'(by\s+)?(\d{4})(?!\d)', re.IGNORECASE)
+
+
+def endorsements(today):
+    """The day each member, not a guest, first earned each endorsement the
+    reports read, up to today, and which of those days are only the latest it
+    can be: ({(member, endorsement): day}, {(member, endorsement)}). One with
+    no date counts from the first of January of its comment's year
+    (COMMENT_YEAR), a bound after "by", and without that is left out."""
+    rules = report_settings()
+    earliest = {}                        # (member, endorsement) -> (day, whether only a bound)
+    for member, name, earned, comment in (
+            Cert.objects.filter(Q(earned_on__lte=today) | Q(earned_on__isnull=True),
+                                subtype__type__name=rules.ENDORSEMENTS,
+                                subtype__name__in={rules.JOINED_ENDORSEMENT, *rules.PROMOTIONS, *rules.BANDED_STATUSES})
+            .exclude(member__status__in=Member.GUESTS)
+            .values_list('member_id', 'subtype__name', 'earned_on', 'comment')):
+        bound = False
+        if earned is None:
+            year = COMMENT_YEAR.match((comment or '').strip())
+            if not (year and 1 <= int(year[2]) <= today.year):
+                continue
+            earned, bound = date(int(year[2]), 1, 1), bool(year[1])
+        earliest[(member, name)] = min((earned, bound), earliest.get((member, name), (earned, bound)))
+    return ({key: day for key, (day, _) in earliest.items()}, {key for key, (_, bound) in earliest.items() if bound})
+
+
+class Joining(NamedTuple):
+    """The day each member joined (joined_on)."""
+    on: dict                    # member -> the day they joined
+    by: set                     # those whose day is only the latest it can be: a "by" year, or their first
+                                #   training or operation
+
+    def member_on(self, member, day):
+        """Whether the member had joined by this day: their time on it is a
+        member's, for the unit, and not a guest's."""
+        return day >= self.on.get(member, date.max)
+
+
+def joined_on(now, since, endorsed=None):
+    """Joining: each member's day of joining, that of their joining
+    endorsement (report_settings' JOINED_ENDORSEMENT), or without one, their
+    first day at a training or an operation the reports count from `since`
+    (records_from) by `now`, only the latest it can be. A member with neither
+    has not joined."""
+    tz = timezone.get_current_timezone()
+    joining = report_settings().JOINED_ENDORSEMENT
+    days, bounds = endorsed or endorsements(now.astimezone(tz).date())
+    on = {member: day for (member, name), day in days.items() if name == joining}
+    first = {}                           # member without the endorsement -> their first day at a training or operation
+    rows = list(Participant.objects.filter(HAS_TIME, period__event__in=reported_events(since).filter(
+                    type__in=('training', 'operation')))
+                .exclude(member__status__in=Member.GUESTS).exclude(member_id__in=list(on)).order_by(*ENTRY_ORDER)
+                .values_list('member_id', 'period__event__start_at', 'en_route_at', 'return_home_at', 'signed_in_at',
+                             'signed_out_at'))
+    for (member_id, *_), time in zip(rows, unit_time(rows, now, since, tz=tz)):
+        if time.counted:
+            first[member_id] = min(min(time.counted), first.get(member_id, date.max))
+    return Joining({**on, **first}, {member for member, name in bounds if name == joining} | set(first))
+
+
 def unit_days_and_events(entries):
     """The unit's active days and its events, for both reports, from the
-    entries that make the unit active (in the field, not a guest's), each
+    entries that make the unit active (in the field, a member's), each
     as (event id, type, the local day the event started, the hours it counts
     for: entry_hours): ({type: {days}}, {type: {event id: the day it
     started}}). An event counts once one of its entries has a day counted."""
@@ -488,76 +601,148 @@ def unit_days_and_events(entries):
     return days, events
 
 
+def op_days(events, now):
+    """{period id: the day its OP stands for}, for the periods of these events
+    (ids, or a queryset of Event) whose OPs count by `now`: their event has
+    begun and their day has come. In their order on the event page, then as
+    created, the first OP is the local day the event started and each next
+    one the day after."""
+    tz = timezone.get_current_timezone()
+    today = now.astimezone(tz).date()
+    by_event = defaultdict(list)
+    for period_id, event_id, position, start_at in (Period.objects.filter(event__in=events, event__start_at__lte=now)
+                                                    .values_list('id', 'event_id', 'position', 'event__start_at')):
+        by_event[event_id].append((position is None, position or 0, period_id, start_at))
+    days = {}
+    for periods in by_event.values():
+        periods.sort()
+        first = periods[0][3].astimezone(tz).date()
+        for k, (_, _, period_id, _) in enumerate(periods[:(today - first).days + 1]):
+            days[period_id] = first + timedelta(days=k)
+    return days
+
+
+class UnitOp(NamedTuple):
+    """One member's attendance of one OP."""
+    period: int
+    type: str
+    day: date                   # the day the OP stands for
+    member: int
+    in_field: bool              # IN_FIELD, on any of their entries on it
+
+    @property
+    def responder(self):
+        return self.type == 'operation' and self.in_field
+
+
+def unit_ops(now, since, joining):
+    """The OPs members attended, as UnitOp records, one for each member and
+    OP: those counting by `now` (op_days), of events begun from `since`
+    (records_from), from the day they joined (Joining). Guests' are left
+    out."""
+    events = reported_events(since)
+    on_day = op_days(events, now)
+    attended = {}                        # (member, period) -> UnitOp
+    for period_id, event_type, member_id, in_field in (
+            Participant.objects.filter(ANY_TIME, period__event__in=events).exclude(member__status__in=Member.GUESTS)
+            .annotate(in_field=ExpressionWrapper(IN_FIELD, output_field=BooleanField()))
+            .values_list('period_id', 'period__event__type', 'member_id', 'in_field')):
+        if period_id in on_day and joining.member_on(member_id, on_day[period_id]):
+            was = attended.get((member_id, period_id))
+            attended[(member_id, period_id)] = UnitOp(period_id, event_type, on_day[period_id], member_id,
+                                                      in_field or bool(was and was.in_field))
+    return list(attended.values())
+
+
+class UnitSince(NamedTuple):
+    """What the unit did, for a member's report (unit_since)."""
+    days: dict                  # {type: {unit active days}}
+    events: dict                # {type: {unit event id: the day it started}}
+    ops: dict                   # {type: {the days of its unit OPs}}
+
+
 def unit_since(first, until, since):
     """What the unit did from the day `first` on, up to `until`, for a
     member's report, read in one pass: unit_days_and_events, counted from
-    `since` (records_from) on. Some days before `first`, and events that
-    started before it, may be among them, for the caller to count from
-    `first` on."""
+    `since` (records_from) on, each member's from the day they joined
+    (joined_on), and the days of its unit OPs. Some days before `first`, and
+    events and OPs before it, may be among them, for the caller to count
+    from `first` on. A UnitSince."""
     tz = timezone.get_current_timezone()
-    start = _midnight(first, tz)
+    start = local_midnight(first, tz)
     # An entry counts for at most MAX_ENTRY_DAYS, so nothing that began earlier
     # than this can reach the day asked for.
     reach = timedelta(days=report_settings().MAX_ENTRY_DAYS + 1)
     earliest = start - reach if start - EARLIEST > reach else EARLIEST
-    rows = (Participant.objects
-            .filter(HAS_TIME, IN_FIELD, period__event__in=reported_events(since))
-            .filter(Q(en_route_at__gte=earliest) | Q(signed_in_at__gte=earliest) | Q(period__event__start_at__gte=start))
-            .exclude(member__status__in=Member.GUESTS)
-            .values_list('period__event_id', 'period__event__type', 'period__event__start_at',
-                         'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at'))
+    rows = list(Participant.objects
+                .filter(HAS_TIME, IN_FIELD, period__event__in=reported_events(since))
+                .filter(Q(en_route_at__gte=earliest) | Q(signed_in_at__gte=earliest)
+                        | Q(period__event__start_at__gte=start))
+                .exclude(member__status__in=Member.GUESTS).order_by(*ENTRY_ORDER)
+                .values_list('member_id', 'period__event__start_at', 'en_route_at', 'return_home_at', 'signed_in_at',
+                             'signed_out_at', 'period__event_id', 'period__event__type'))
+    joining = joined_on(until, since)
     days, events = unit_days_and_events(
-        (event_id, event_type, start_at.astimezone(tz).date(),
-         _counted_from(entry_hours(*times, start_at, until, tz), since))
-        for event_id, event_type, start_at, *times in rows)
-    return days, events
+        (event_id, event_type, start_at.astimezone(tz).date(), time.hours)
+        for (_, start_at, *_, event_id, event_type), time in zip(rows, unit_time(rows, until, since, joining, tz)))
+    ops = defaultdict(set)
+    for op in unit_ops(until, since, joining):
+        if op.in_field:
+            ops[op.type].add(op.day)
+    return UnitSince(days, events, ops)
 
 
-def departure_entries(until, since):
-    """The entries that log a departure for an operation by `until`, for
-    both reports, as a queryset of Participant: on operations begun by then
-    that the reports count from `since` (records_from) on, by members in the
-    field (not the AHC), not guests, with a departure (Left) logged by the
-    end of until's day, whatever else of their times is logged yet, as the
-    reply to a "Left?" page logs only that. A departure means the operation
-    ran, though it counts no day or hours until the time is complete."""
-    return (Participant.objects
+class Departure(NamedTuple):
+    """An entry that logs a departure for an operation (departure_entries)."""
+    operation: int
+    member: int
+    ol: bool
+    operation_start: datetime
+    left_at: datetime
+
+
+def departure_entries(until, since, joining, operations=None):
+    """The entries that log a departure for an operation by `until`, as
+    Departure records: on operations begun by then that the reports count
+    from `since` (records_from) on, or of the ids given, by members in the
+    field (not the AHC), not guests, who had joined by the day they left
+    (Joining), with a departure (Left) logged by the end of until's day,
+    whatever else of their times is logged yet, as the reply to a "Left?"
+    page logs only that. A departure means the operation ran, though it
+    counts no day or hours until the time is complete."""
+    tz = timezone.get_current_timezone()
+    rows = (Participant.objects
             .filter(IN_FIELD, period__event__type='operation', en_route_at__lt=end_of_today(until),
                     period__event__in=reported_events(since).filter(start_at__lte=until))
             .exclude(member__status__in=Member.GUESTS))
-
-
-def departures(until, since, operations=None):
-    """Who had left for each operation by `until` (departure_entries), of
-    those the reports count from `since` on, or of the ids given:
-    {operation id: {member ids}}."""
-    rows = departure_entries(until, since)
     if operations is not None:
         rows = rows.filter(period__event_id__in=operations)
-    left = defaultdict(set)
-    for event_id, member_id in rows.values_list('period__event_id', 'member_id'):
-        left[event_id].add(member_id)
-    return dict(left)
+    departed = (Departure(*row) for row in rows.values_list('period__event_id', 'member_id', 'ol',
+                                                            'period__event__start_at', 'en_route_at'))
+    return [left for left in departed if joining.member_on(left.member, left.left_at.astimezone(tz).date())]
 
 
 def operations_that_ran(until, operations, since):
     """Those of these operations, by id, that ran by `until`: at which a
     member other than the AHC, and not a guest, has a day attended up to
-    until's local day, counted from `since` (records_from) on, as the unit
-    report counts its responders, or has left for it (departures). One that
-    has finished and is not among them was called off. {ids}"""
+    until's local day, counted from `since` (records_from) on and from the
+    day they joined (joined_on), as the unit report counts its responders,
+    or has left for it (departure_entries). One that has finished and is not
+    among them was called off. {ids}"""
+    if not operations:
+        return set()
     tz = timezone.get_current_timezone()
-    rows = (Participant.objects
-            .filter(HAS_TIME, IN_FIELD, period__event__type='operation', period__event__in=reported_events(since),
-                    period__event_id__in=operations)
-            .exclude(member__status__in=Member.GUESTS))
-    ran = {event_id for event_id, *times, start_at in rows.values_list(
-               'period__event_id', 'en_route_at', 'return_home_at', 'signed_in_at', 'signed_out_at',
-               'period__event__start_at')
-           if _counted_from(entry_hours(*times, start_at, until, tz), since)}
+    joining = joined_on(until, since)
+    rows = list(Participant.objects
+                .filter(HAS_TIME, IN_FIELD, period__event__type='operation', period__event__in=reported_events(since),
+                        period__event_id__in=operations)
+                .exclude(member__status__in=Member.GUESTS).order_by(*ENTRY_ORDER)
+                .values_list('member_id', 'period__event__start_at', 'en_route_at', 'return_home_at', 'signed_in_at',
+                             'signed_out_at', 'period__event_id'))
+    ran = {row[-1] for row, time in zip(rows, unit_time(rows, until, since, joining, tz)) if time.hours}
     # Those with a day attended ran: the rest are asked whether anyone left for them, usually none.
     rest = set(operations) - ran
-    return ran | set(departures(until, since, rest)) if rest else ran
+    return ran | {left.operation for left in departure_entries(until, since, joining, rest)} if rest else ran
 
 
 def member_entries(member):
@@ -566,10 +751,11 @@ def member_entries(member):
     report: by event, then period. The events' long
     descriptions, which no page of them shows, are left unread."""
     return list(Participant.objects.filter(member=member, period__event__in=reported_events())
-                .annotate(in_field=ExpressionWrapper(IN_FIELD, output_field=BooleanField()))
+                .annotate(in_field=ExpressionWrapper(IN_FIELD, output_field=BooleanField()),
+                          any_time=ExpressionWrapper(ANY_TIME, output_field=BooleanField()))
                 .select_related('period__event')
                 .defer('period__event__description', 'period__event__description_private')
-                .order_by('period__event__start_at', 'period__event_id', 'period__position', 'id'))
+                .order_by(*ENTRY_ORDER))
 
 
 @dataclass(frozen=True)
@@ -605,11 +791,23 @@ class Attended:
 
 
 @dataclass(frozen=True)
+class AttendedOp:
+    """An OP a member attended."""
+    type: str
+    day: date           # the day it stands for
+    led: bool           # off operations: entry_led, on any of the member's entries for it
+    ol: bool            # on an operation: entry_led, on any of them
+    in_field: bool      # on any of them
+
+
+@dataclass(frozen=True)
 class MemberRecord:
     """A member's entries with logged time, as counted, in the order of
-    member_entries; and the operations they were listed on without any."""
+    member_entries; the operations they were listed on without any; and the
+    OPs they attended, when asked for."""
     counted: list       # [CountedEntry]
     no_time: dict       # operations listed on with no time that counts: event id -> event
+    ops: dict           # period id -> AttendedOp
 
     def days(self, event_type, led=False):
         """{day: event} for the days attended at events of a type: in the
@@ -653,34 +851,43 @@ def counted_hours(entries, now, since):
     return entries_hours(_times(entries), now, since=since)
 
 
-def _record(member, now, since, entries=None, leading=True, hours=None):
+def _record(member, now, since, entries=None, leading=TYPES, hours=None, ops=False):
     """A member's MemberRecord, from their entries (member_entries, loaded here
     unless given), each with the hours it counts for by `now` (counted_hours,
-    worked out here unless given) from `since` (records_from) on.
-    Without `leading`, what they led by being named in an event's leaders
-    text is not worked out, for a caller that does not read it."""
+    worked out here unless given) from `since` (records_from) on. What they
+    led by being named in an event's leaders text is worked out for the
+    types in `leading`; the OPs they attended are worked out with `ops`."""
     entries = member_entries(member) if entries is None else entries
     # The members each leaders text names, read once for all the member's
     # events, by the rule the event page links leaders by.
-    texts = {p.period.event.leaders for p in entries if p.period.event.type != 'operation'}
-    named = members_named(texts, every_username()) if leading and any(texts) else {}
-    counted, no_time, timed_operations = [], {}, set()
+    texts = {p.period.event.leaders for p in entries
+             if p.period.event.type in leading and p.period.event.type != 'operation'}
+    named = members_named(texts, every_username()) if any(texts) else {}
+    on_day = op_days({p.period.event_id for p in entries}, now) if ops else {}
+    counted, no_time, timed_operations, attended_ops = [], {}, set(), {}
     for p, hours_by_day in zip(entries, counted_hours(entries, now, since) if hours is None else hours):
         event = p.period.event
         if hours_by_day is None:
             continue            # begun before the unit's records: counted nowhere, not even as stood down from
         operation = event.type == 'operation'
+        led = entry_led(event.type, p.ol, p.in_field, member.id in named.get(event.leaders, ()))
+        if p.any_time and p.period_id in on_day:
+            was = attended_ops.get(p.period_id)
+            attended_ops[p.period_id] = AttendedOp(
+                type=event.type, day=on_day[p.period_id], led=(led and not operation) or bool(was and was.led),
+                ol=(led and operation) or bool(was and was.ol), in_field=p.in_field or bool(was and was.in_field))
         if not hours_by_day:
             if operation:
                 no_time[event.id] = event
             continue
         if operation:
             timed_operations.add(event.id)
-        led = entry_led(event.type, p.ol, p.in_field, member.id in named.get(event.leaders, ()))
         counted.append(CountedEntry(event=event, hours=hours_by_day, led=led and not operation,
                                     ol=led and operation, in_field=p.in_field))
     return MemberRecord(counted=counted,
-                  no_time={event_id: event for event_id, event in no_time.items() if event_id not in timed_operations})
+                        no_time={event_id: event for event_id, event in no_time.items()
+                                 if event_id not in timed_operations},
+                        ops=attended_ops)
 
 
 @dataclass(frozen=True)
@@ -747,17 +954,24 @@ def months_after(day, months):
     return date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
 
 
+def whole_months(since, until):
+    """The whole calendar months from one day to another (months_after), as
+    an age counts them."""
+    months = (until.year - since.year) * 12 + until.month - since.month
+    return months - 1 if months_after(since, months) > until else months
+
+
 def _ago(then, today):
-    """How long ago, in whole calendar months (months_after), or whole years
-    from two years on."""
-    months = (today.year - then.year) * 12 + today.month - then.month
-    if months_after(then, months) > today:
-        months -= 1
-    if months < 1:
+    """How long ago, to the nearest calendar month (whole_months), or the
+    nearest year from two years on, a half rounding up."""
+    months = whole_months(then, today)
+    start, end = months_after(then, months), months_after(then, months + 1)
+    months += (today - start).days / (end - start).days
+    if months < 0.5:
         return 'Under a month'
-    if months < 24:
-        return '{} month{}'.format(months, pluralize(months))
-    return '{} years'.format(months // 12)
+    if months < 23.5:
+        return '{} month{}'.format(int(months + 0.5), pluralize(int(months + 0.5)))
+    return '{} years'.format(int(months / 12 + 0.5))
 
 
 _READ = object()     # member_latest's `since` when not given: it reads records_from itself
@@ -768,7 +982,9 @@ def member_latest(member, now=None, since=_READ):
     page, with the event. For operations that is a day in the field; the last
     day in the field as OL, whenever they have been OL, even the same day; and
     a later day as AHC, and a later operation they stood down from (by the day
-    it started), are added as lines of their own. Returns [] when there is
+    it started), are added as lines of their own. Trainings likewise: the last
+    as a participant, in any role, and the last they led (as TL or LL),
+    whenever they have led one. Returns [] when there is
     nothing to show, which includes a member only listed on an operation
     still under way: it is not called off until it has finished. `since`
     is records_from(now), read here unless given, or as the page keeps it,
@@ -776,7 +992,7 @@ def member_latest(member, now=None, since=_READ):
     now = now or timezone.now()
     today = timezone.localtime(now).date()
     since = records_from(now) if since is _READ else since
-    record = _record(member, now, since, leading=False)      # who led is not shown here
+    record = _record(member, now, since, leading=('training',))
     # Operations the member was listed on without time that have finished, so
     # perhaps called off: usually none, and then the unit is not asked. A
     # member stands down from an operation called off, not one that was
@@ -808,12 +1024,16 @@ def member_latest(member, now=None, since=_READ):
     as_ol = last(record.ol_days())
     as_ahc = last(record.ahc_days(), after=[in_field.get('day')])
     stood_down = last(called_off, after=[in_field.get('day'), as_ahc.get('day')])
+    led_training = last(record.days('training', led=True))
     one = dict(Event.TYPES)         # the name of one event of each type
     latest = ([{'label': one['operation'] + ' (in the field)', **in_field}]
               + [{'label': label, **line} for label, line in ((one['operation'] + ' (as OL)', as_ol),
                                                               (one['operation'] + ' (as AHC)', as_ahc),
                                                               (one['operation'] + ' (stood down)', stood_down)) if line]
-              + [{'label': one[t], **last(record.days(t))} for t in TYPES[1:]])
+              + [{'label': one['training'] + ' (as participant)', **last(record.days('training'))}]
+              + ([{'label': '{} (as {})'.format(one['training'], LEADING['training']), **led_training}]
+                 if led_training else [])
+              + [{'label': one[t], **last(record.days(t))} for t in TYPES[2:]])
     return latest if any('event' in item for item in latest) else []
 
 
@@ -862,6 +1082,10 @@ class ActivityRow:
     events: dict            # {type: events attended}
     unit_events: dict       # {type: unit events}
     led_events: dict        # {type: events led}
+    ops: dict               # {type: OPs attended}; for operations, in the field or as AHC
+    unit_ops: dict          # {type: unit OPs}
+    led_ops: dict           # {type: OPs attended leading it}
+    first_ops: dict         # {type: the OPs that count under it, the first type in TYPES on each day}
     hours: dict             # {type: hours}
     led_hours: dict         # {type: hours leading it}
     other_hours: dict       # {type: hours neither leading nor, on operations, as OL or AHC}
@@ -872,6 +1096,10 @@ class ActivityRow:
     do_days: int            # DO weeks
     ol_events: int
     ahc_events: int
+    all_ops: int            # OPs attended, of every type, each day once
+    all_unit_ops: int
+    ol_ops: int
+    ahc_ops: int
     ol_hours: float
     ahc_hours: float
     all_hours: float
@@ -916,6 +1144,15 @@ def _row(months, period, by_type, alone, hours_by_month):
                        all_hours=sum(of_type['hours'][t] for t in TYPES))
 
 
+def _under_first_type(by_type):
+    """{type: days} with each day only under the first type in TYPES that has it."""
+    under, earlier = {}, set()
+    for t in TYPES:
+        under[t] = by_type[t] - earlier
+        earlier |= by_type[t]
+    return under
+
+
 def activity_rows(member, now, entries, since, hours=None, unit=None):
     """Count a member's days, duties and hours by year and by month, from the
     first day they were involved to today (or to the last day, for someone no
@@ -933,7 +1170,7 @@ def activity_rows(member, now, entries, since, hours=None, unit=None):
     None when there is nothing to count."""
     today = timezone.localtime(now).date()
     do_days = {day for day in _do_days(member, now) if since is None or day >= since}
-    record = _record(member, now, since, entries, hours=hours)
+    record = _record(member, now, since, entries, hours=hours, ops=True)
 
     # Days as AHC are days attended on operations, apart from days in the field.
     days = {t: set(record.days(t)) for t in TYPES}
@@ -941,24 +1178,26 @@ def activity_rows(member, now, entries, since, hours=None, unit=None):
     days['operation'] |= ahc_days
     any_days = set().union(*days.values())
     events = record.events()
-    involved = any_days | do_days | {e.day for e in events.values()}
+    # Sets of days, so that OPs of different events on one day are one, as days are.
+    attended_ops = record.ops.values()
+    ops = {t: {op.day for op in attended_ops if op.type == t} for t in TYPES}
+    ahc_ops = ({op.day for op in attended_ops if op.type == 'operation' and not op.in_field}
+               - {op.day for op in attended_ops if op.type == 'operation' and op.in_field})
+    all_ops = set().union(*ops.values())
+    involved = any_days | do_days | {e.day for e in events.values()} | all_ops
     if not involved:
         return None
     first = min(involved)
     last = today if member.status in Member.CURRENT_MEMBERS else max(involved)
     # The unit's days matter only from the member's first day on; any before it are not counted.
-    active, unit = (unit() if callable(unit) else unit) or unit_since(first, now, since)
+    active, unit, unit_op_days = (unit() if callable(unit) else unit) or unit_since(first, now, since)
     # A day the member attended is a unit active day for them, as AHC when
-    # nobody went out or as a guest among guests; and an event they attended
-    # is a unit event.
+    # nobody went out or as a guest among guests; an event they attended is
+    # a unit event, and an OP a unit OP.
     active = {t: active[t] | days[t] for t in TYPES}
     unit = {t: {**unit[t], **_started(events, lambda e, t=t: e.type == t)} for t in TYPES}
-    # Across all types a day counts once, under the first type in the order
-    # above that the member attended on it.
-    first_days, earlier = {}, set()
-    for t in TYPES:
-        first_days[t] = days[t] - earlier
-        earlier |= days[t]
+    unit_op_days = {t: unit_op_days[t] | ops[t] for t in TYPES}
+    first_days, first_ops = _under_first_type(days), _under_first_type(ops)
 
     # Each figure counted by month: days as a set of them, so each counts
     # once, and events as {event id: the day it started}, so each counts
@@ -967,7 +1206,10 @@ def activity_rows(member, now, entries, since, hours=None, unit=None):
         **{name: {t: _by_month(of_type[t], first, last) for t in TYPES}
            for name, of_type in (('days', days), ('active_days', active),
                                  ('led_days', {t: set(record.days(t, led=True)) for t in TYPES}),
-                                 ('first_days', first_days))},
+                                 ('first_days', first_days), ('ops', ops), ('unit_ops', unit_op_days),
+                                 ('led_ops', {t: {op.day for op in attended_ops if op.type == t and op.led}
+                                              for t in TYPES}),
+                                 ('first_ops', first_ops))},
         **{name: {t: _by_month(of_type[t].values(), first, last) for t in TYPES}
            for name, of_type in (('events', {t: _started(events, lambda e, t=t: e.type == t) for t in TYPES}),
                                  ('unit_events', unit),
@@ -977,7 +1219,9 @@ def activity_rows(member, now, entries, since, hours=None, unit=None):
     alone = {
         **{name: _by_month(days_of, first, last) for name, days_of in (
             ('all_days', any_days), ('all_active_days', set().union(*active.values())),
-            ('ol_days', record.ol_days()), ('ahc_days', ahc_days), ('do_days', do_days))},
+            ('ol_days', record.ol_days()), ('ahc_days', ahc_days), ('do_days', do_days),
+            ('all_ops', all_ops), ('all_unit_ops', set().union(*unit_op_days.values())),
+            ('ol_ops', {op.day for op in attended_ops if op.ol}), ('ahc_ops', ahc_ops))},
         **{name: _by_month(events_of.values(), first, last) for name, events_of in (
             ('ol_events', _started(events, lambda e: e.ol)),
             ('ahc_events', _started(events, lambda e: e.type == 'operation' and not e.in_field)))},

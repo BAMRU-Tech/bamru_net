@@ -20,8 +20,8 @@ from django.template.defaultfilters import floatformat
 
 
 # The most measures and views a chart has, one switch each.
-MAX_MEASURES = 3
-MAX_VIEWS = 3
+MAX_MEASURES = 4
+MAX_VIEWS = 4
 
 
 def axis_top(largest):
@@ -112,19 +112,27 @@ def _check_colour(colour, where, key=False):
         _fail(where, '{!r} is not a colour the charts have'.format(colour))
 
 
-def _check(name, measures, views):
+def _check(name, measures, views, total_switch):
     """Raise ValueError, saying where, for input share_panels would draw wrongly
     or fail on later with an error that does not say what is wrong."""
     for measure in measures:
         if 'label' not in measure or 'title' not in measure:
             _fail((name,), 'a measure has a label and a title')
+    if total_switch:
+        totalled = [measure for measure in measures if measure.get('total_label')]
+        if not totalled:
+            _fail((name,), 'a switch for the totals is for a chart with a measure that has one')
+        if any('title_without_total' not in measure for measure in totalled):
+            _fail((name,), 'with a switch for the totals, a measure with a total has a title_without_total')
+        if any('titles' in view for view in views):
+            _fail((name,), "with a switch for the totals, the measures' titles are the titles: a view has none")
     for view in views:
         if any(key not in view for key in ('label', 'periods', 'series')):
             _fail((name,), 'a view has a label, periods and series')
-        _check_view(view, measures, (name, 'view {!r}'.format(view['label'])))
+        _check_view(view, measures, (name, 'view {!r}'.format(view['label'])), total_switch)
 
 
-def _check_view(view, measures, where):
+def _check_view(view, measures, where, total_switch):
     """A view's periods, titles and panels."""
     if any(not isinstance(period.get('short'), str) for period in view['periods']):
         _fail(where, "every period has a short label, '' for none")
@@ -134,45 +142,60 @@ def _check_view(view, measures, where):
     if not (isinstance(titles, (list, tuple)) and len(titles) == len(measures)):
         _fail(where, 'a view with titles has a list of them, one for each measure')
     for series in view['series']:
-        _check_panel(series, len(view['periods']), measures, where + ('panel {!r}'.format(series.get('label', '')),))
+        _check_panel(series, len(view['periods']), measures, where + ('panel {!r}'.format(series.get('label', '')),),
+                     total_switch)
 
 
-def _check_panel(series, periods, measures, where):
+def _check_panel(series, periods, measures, where, total_switch):
     """A panel's key, and a column for each of the view's periods."""
     if not series.get('key'):
         _fail(where, 'every panel has a key: name what its columns count')
     if 'cells' not in series:
         _fail(where, 'every panel has cells')
+    labels = [measure['label'] for measure in measures]
     for item in series['key']:
-        if not (isinstance(item, (list, tuple)) and len(item) == 2):
-            _fail(where + ('key',), 'a key names its items as (colour, label)')
+        if not (isinstance(item, (list, tuple)) and (len(item) == 2 or len(item) == 3 and item[2] in labels)):
+            _fail(where + ('key',), "a key names its items as (colour, label), or for one measure alone as "
+                                    "(colour, label, the measure's label)")
         _check_colour(item[0], where + ('key',), key=True)
     if (any('marker' in entry for cell in series['cells'] for entry in cell)
-            and 'marker' not in [colour for colour, _ in series['key']]):
+            and 'marker' not in [item[0] for item in series['key']]):
         _fail(where, "a panel with markers names them in its key, as 'marker'")
     if len(series['cells']) != periods:
         _fail(where, '{} columns for {} periods'.format(len(series['cells']), periods))
     for i, cell in enumerate(series['cells']):
-        _check_column(cell, measures, where + ('column {}'.format(i + 1),))
+        _check_column(cell, measures, where + ('column {}'.format(i + 1),), total_switch)
 
 
-def _check_column(cell, measures, where):
+def _is_tip(tip):
+    """Whether `tip` is a column's figures as _tip reads them."""
+    return isinstance(tip, str) or isinstance(tip, (list, tuple)) and all(
+        isinstance(line, str) or isinstance(line, (list, tuple)) and len(line) == 2 for line in tip)
+
+
+def _check_column(cell, measures, where, total_switch):
     """A column's entries, one for each measure: their figures, tips and parts,
     the same colours in the same order in each."""
     if len(cell) != len(measures):
         _fail(where, 'a column has one entry for each measure')
-    for entry in cell:
+    for entry, measure in zip(cell, measures):
         if any(key not in entry for key in ('parts', 'total', 'tip')):
             _fail(where, 'a column has parts, a total and a tip for each measure')
         if len(measures) > 1 and ('marker' in entry or any(value < 0 for _, value in entry['parts'])):
             _fail(where, 'markers and parts below zero are for a chart of one measure')
+        if total_switch and ('marker' in entry or any(value < 0 for _, value in entry['parts'])):
+            _fail(where, 'markers and parts below zero are for a chart without a switch for the totals')
         figures = [entry['total'], entry.get('marker') or 0] + [value for _, value in entry['parts']]
         if any(not isinstance(figure, (int, float)) or math.isnan(figure) for figure in figures):
             _fail(where, 'every figure is a number')
-        tip = entry['tip']
-        if not (isinstance(tip, str) or isinstance(tip, (list, tuple)) and all(
-                isinstance(line, str) or isinstance(line, (list, tuple)) and len(line) == 2 for line in tip)):
+        if not _is_tip(entry['tip']):
             _fail(where, 'a tip is a line, or a list of a heading and lines, each text or (number, label)')
+        if 'tip_without_total' in entry:
+            if not (total_switch and measure.get('total_label')):
+                _fail(where, 'tip_without_total is for a measure with a total, on a chart with a switch for them')
+            tip, without = (_tip(t) if _is_tip(t) else None for t in (entry['tip'], entry['tip_without_total']))
+            if not without or without['head'] != tip['head'] or len(without['lines']) != len(tip['lines']):
+                _fail(where, 'a tip without the total has the heading of the tip, and as many lines')
     colours = [colour for colour, _ in cell[0]['parts']]
     if len(set(colours)) != len(colours):
         _fail(where, 'a colour is used twice in one column')
@@ -196,6 +219,22 @@ def _tip(tip):
     return {'head': lines[0] if lines else '',
             'lines': [{'text': line} if isinstance(line, str) else {'number': line[0], 'label': line[1]}
                       for line in lines[1:]]}
+
+
+def _with_lines_without_total(tip, without):
+    """A column's figures (_tip), each line that differs with the totals off
+    carrying that version as `without`."""
+    return {'head': tip['head'], 'lines': [line if other == line else dict(line, without=other)
+                                           for line, other in zip(tip['lines'], without['lines'])]}
+
+
+def _against_parts(cell, totalled):
+    """A column's entries as drawn without the totals: each measure of
+    `totalled` (indexes) measured against what its parts reach, with its tip
+    for that (tip_without_total, or the tip)."""
+    return [dict(entry, total=sum(value for _, value in entry['parts'] if value > 0),
+                 tip=entry.get('tip_without_total', entry['tip'])) if m in totalled else entry
+            for m, entry in enumerate(cell)]
 
 
 def _tip_at(i, n):
@@ -232,45 +271,32 @@ def year_label(year):
     return "'{:02d}".format(year % 100)
 
 
-def _in_drawn_order(measures, views, start_measure):
-    """(switch, measures, views): the measures, and each view's titles and
-    cells, in the order they are drawn, with the one started on
-    (`start_measure`, a label; the first if None) first, which charts.css
-    shows without the switch; and the switch, the measures in the order
-    given, each with its number as drawn."""
-    labels = [measure['label'] for measure in measures]
-    if start_measure is not None and start_measure not in labels:
-        raise ValueError('a chart starts on one of its measures, {}: {!r}'.format(', '.join(labels), start_measure))
-    first = labels.index(start_measure) if start_measure else 0
-    order = [first] + [m for m in range(len(measures)) if m != first]
-    return ([dict(measure, number=order.index(m) + 1) for m, measure in enumerate(measures)],
-            [measures[m] for m in order],
-            [dict(view, titles=view.get('titles') and [view['titles'][m] for m in order],
-                  series=[dict(s, cells=[[cell[m] for m in order] for cell in s['cells']]) for s in view['series']])
-             for view in views])
-
-
-def share_panels(measures, views, note='', *, name, start_measure=None, measure_switch_label='Show',
-                 view_switch_label='By'):
+def share_panels(measures, views, note='', *, name, measure_switch_label='Show', view_switch_label='By',
+                 total_switch_label='', note_without_total=''):
     """Columns by period or category, one small panel per series. Each column is a total
     (pale) with the parts reached stacked inside it, bottom up.
 
-    measures: one to three things to plot on the same columns, in the order
-      of the switch:
+    measures: one to MAX_MEASURES things to plot on the same columns, in the
+      order of the switch:
       {'label': 'Days', 'title': ..., 'total_label': 'Unit active'}
       total_label names the pale part in the legend; leave it out when the
       parts always add up to the total. The note keeps room for the longest,
       so that it does not reflow when the measure changes.
-    views: up to three ways of drawing it, the first shown by default: usually
-      ways of cutting time, named for the reader by view_switch_label.
+      title_without_total is the title of a measure with a total while the
+      totals are off (total_switch_label, below).
+    views: up to MAX_VIEWS ways of drawing it, in the order of the switch:
+      usually ways of cutting time, named for the reader by view_switch_label.
       {'label': 'Years', 'name': ..., 'max_labels': 9, 'titles': [...],
        'periods': [{'short': ...}],                              # oldest first
        'series': [{'label': ..., 'key': [(colour, label), ...],
                    'cells': [[{'parts': [(colour, value), ...],
                                'total': ..., 'tip': ..., 'marker': ...}, ...]]}]}
       key names a panel's colours under it, and every panel has one, even
-      of a single colour: [('1', 'Pages')]. A series may have an empty
-      label, for a chart of one panel whose title already says what it is.
+      of a single colour: [('1', 'Pages')]. An item for one measure alone
+      adds that measure's label, ('muted-light', 'Alumni', 'All'): it shows
+      with that measure and keeps its room under the others. A series may
+      have an empty label, for a chart of one panel whose title already says
+      what it is.
       name, which may be left out, is what a screen reader is told each of
       the view's plots is, after its series label, in place of the view's
       label: for a label that does not say it alone, such as 'Month'.
@@ -286,7 +312,9 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
       zero, and those stack downward in the order given; the total is the
       whole above zero only. marker, which may be left out, is a value marked
       on the column of a chart of one measure with a small dark dot (a net,
-      say); name it in the key with the colour 'marker'.
+      say); name it in the key with the colour 'marker'. tip_without_total,
+      which may be left out, is the tip of a measure with a total while the
+      totals are off, with the tip's heading and as many lines.
     A colour is the name of a chart-part-... class in charts.css: '1' and '2'
       for the series colours, '1-strong' and '1-light' for a darker and a
       lighter step of the first, '2-light' for a lighter step of the second,
@@ -296,14 +324,18 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
       so not for a column that shows one. For more layers than four,
       'ramp-3-17' is step 3 of 17 from '1-pale' through '1' at the middle
       to '1-strong'.
-    start_measure: the label of the measure shown to start with, and in a
-      browser without the switches; the first if left out. The switch keeps
-      the order of measures.
     note: a sentence under the title saying what the chart is for; terms
-      are defined in the report's glossary, not here.
+      are defined in the report's glossary, not here. note_without_total, on
+      a chart with a switch for the totals, is the note while they are off.
     measure_switch_label, view_switch_label: the words drawn before each
       switch, saying what it sets ('Show', 'By', or 'Inactive after no
       activity for'); '' leaves one without. The scale's switch says 'Y-axis scale'.
+    total_switch_label: given, the words before a switch, On to start with,
+      that turns the totals off: then each measure with a total draws every
+      column against what its parts reach, on axes of its own, with the
+      measures' title_without_total and the entries' tip_without_total; the
+      keys to the totals go. For a chart whose views have no titles of their
+      own, no markers and no parts below zero.
     name: this chart's own on the page, a letter and then letters, digits,
       hyphens or underscores; it ties the switches and the title to it.
 
@@ -316,9 +348,18 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
         raise ValueError('a chart\'s name is a letter, then letters, digits, - or _: {!r}'.format(name))
     if not 1 <= len(measures) <= MAX_MEASURES or not 1 <= len(views) <= MAX_VIEWS:
         raise ValueError('share_panels draws one to {} measures and one to {} views'.format(MAX_MEASURES, MAX_VIEWS))
-    _check(name, measures, views)
-    switch, measures, views = _in_drawn_order(measures, views, start_measure)
+    _check(name, measures, views, total_switch_label)
+    if note_without_total and not (total_switch_label and note):
+        raise ValueError('chart {!r}: note_without_total is for a chart with a note and a switch for the totals'
+                         .format(name))
+    # The first measure and view are shown to start with, and in a browser without the switches.
+    switch = [dict(measure, number=m + 1) for m, measure in enumerate(measures)]
+    view_switch = [{'label': view['label'], 'number': v + 1} for v, view in enumerate(views)]
     numbers = range(len(measures))
+    drawn_as = {measure['label']: m + 1 for m, measure in enumerate(measures)}
+    # With the switch for the totals, the measures that have one are also drawn without it (_against_parts):
+    # their sizes, ticks, figures and titles come twice, and charts.css shows those the switch is set to.
+    totalled = [m for m in numbers if total_switch_label and measures[m].get('total_label')]
     drawn = []
     for v, view in enumerate(views):
         periods = view['periods']
@@ -327,12 +368,18 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
         shown = set(labelled[::-1][::step])
         every = [c for s in view['series'] for c in s['cells']]
         shared_scales = [_scale(every, m) for m in numbers]
+        by_parts = [[_against_parts(c, totalled) for c in s['cells']] if totalled else s['cells']
+                    for s in view['series']]
+        shared_by_parts = [_scale([c for cells in by_parts for c in cells], m) for m in numbers] if totalled else None
         panels = []
-        for s in view['series']:
+        for s, panel_by_parts in zip(view['series'], by_parts):
             scales = {'own': [_scale(s['cells'], m) for m in numbers], 'shared': shared_scales}
+            scales_by_parts = ({'own': [_scale(panel_by_parts, m) for m in numbers], 'shared': shared_by_parts}
+                               if totalled else None)
             signed = any(floor for which in scales.values() for _, floor, _ in which)
             cells = []
             for i, c in enumerate(s['cells']):
+                a = panel_by_parts[i]
                 colours = [colour for colour, _ in c[0]['parts']]      # the same in every measure (_check)
                 values = {colour: [dict(c[m]['parts'])[colour] for m in numbers] for colour in colours}
                 below = [_below(c[m]) for m in numbers]
@@ -341,16 +388,25 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
                     up = [_percent(max(value, 0), c[m]['total']) for m, value in enumerate(values[colour])]
                     down = [_percent(max(-value, 0), below[m]) for m, value in enumerate(values[colour])]
                     if any(up):
-                        parts.append(dict(_colour(colour), sizes=up))
+                        part = dict(_colour(colour), sizes=up)
+                        if totalled:
+                            part['sizes_by_parts'] = [(m + 1, _percent(max(values[colour][m], 0), a[m]['total']))
+                                                      for m in totalled]
+                        parts.append(part)
                     if any(down):
                         under.append(dict(_colour(colour), sizes=down))
                 cell = {
                     'drawn': any(c[m]['total'] for m in numbers),
-                    'tips': [_tip(c[m]['tip']) for m in numbers],
+                    'tips': [_with_lines_without_total(_tip(c[m]['tip']), _tip(a[m]['tip'])) if m in totalled
+                             else _tip(c[m]['tip']) for m in numbers],
                     'tip_at': _tip_at(i, len(s['cells'])),
                     'parts': parts,
                 }
                 cell.update(_sizes([c[m]['total'] for m in numbers], scales, above=True))
+                if totalled:
+                    sizes = _sizes([a[m]['total'] for m in numbers], scales_by_parts, above=True)
+                    cell['own_by_parts'] = [(m + 1, sizes['own'][m]) for m in totalled]
+                    cell['shared_by_parts'] = [(m + 1, sizes['shared'][m]) for m in totalled]
                 if under:
                     cell['under'] = dict(_sizes(below, scales, above=False), parts=under)
                 if c[0].get('marker') is not None:
@@ -364,9 +420,13 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
                 # For readers who cannot see the plot: which panel and view this
                 # is. The chart itself is named by its title as shown.
                 'name': ', '.join(part for part in (s.get('label'), view.get('name') or view['label']) if part),
-                'key': [dict(_colour(colour), label=label) for colour, label in s['key']],
-                'ticks': [{'measure': m + 1, 'scale': which, 'ticks': _ticks(*scales[which][m])}
-                          for m in numbers for which in ('own', 'shared')],
+                'key': [dict(_colour(colour), label=label, **({'measure': drawn_as[only[0]]} if only else {}))
+                        for colour, label, *only in s['key']],
+                'ticks': [dict({'measure': m + 1, 'scale': which, 'ticks': _ticks(*scales[which][m])},
+                               **({'only': 'total'} if m in totalled else {}))
+                          for m in numbers for which in ('own', 'shared')]
+                         + [{'measure': m + 1, 'scale': which, 'ticks': _ticks(*scales_by_parts[which][m]),
+                             'only': 'no-total'} for m in totalled for which in ('own', 'shared')],
                 # With parts below zero, which a chart of one measure may have (_check), the
                 # share of the plot above zero on each scale.
                 'signed': signed and {which: round(top / (top + floor), 4)
@@ -380,17 +440,23 @@ def share_panels(measures, views, note='', *, name, start_measure=None, measure_
             'panels': panels,
         })
     return {
-        'titles': [{'measure': m + 1, 'view': v + 1,
-                    'text': view['titles'][m] if view.get('titles') else measure['title']}
+        'titles': [dict({'measure': m + 1, 'view': v + 1,
+                         'text': view['titles'][m] if view.get('titles') else measure['title']},
+                        **({'without': measure['title_without_total']} if m in totalled else {}))
                    for v, view in enumerate(views) for m, measure in enumerate(measures)],
         'scale_switch': any(len(view['series']) > 1 for view in views),
         'view_switch_label': view_switch_label,
+        'view_switch': view_switch,
         'measure_switch_label': measure_switch_label,
+        'total_switch_label': total_switch_label,
+        # With the switch for the totals, a column's sizes against them are --m1-own-whole and so on (charts.css).
+        'size_suffix': '-whole' if totalled else '',
         'measures': switch,
         # The keys to the measures' totals, in the note: one place for them all.
         'total_keys': [{'number': m + 1, 'label': measure['total_label']}
                        for m, measure in enumerate(measures) if measure.get('total_label')],
         'note': note,
+        'note_without_total': note_without_total,
         'name': name,
         'views': drawn,
         # The longest value on any value axis, in characters: the gutter is made wide enough for it.
@@ -415,12 +481,13 @@ def with_menu(options, label):
         raise ValueError('the charts of one menu share one name')
     if len({(tuple((measure['label'], measure['number']) for measure in chart['measures']),
              tuple(view['label'] for view in chart['views']),
-             chart['scale_switch']) for _, chart in options}) > 1:
+             chart['scale_switch'], chart['total_switch_label']) for _, chart in options}) > 1:
         raise ValueError('the charts of one menu have the same measures and views, which the switches serve')
     chart = dict(options[0][1])
     # Every option's titles are laid out unseen in the title's place, so that
     # the head is as tall for one option as for another and nothing moves.
-    sizes = list(dict.fromkeys(title['text'] for _, option_chart in options for title in option_chart['titles']))
+    sizes = list(dict.fromkeys(text for _, option_chart in options for title in option_chart['titles']
+                               for text in (title['text'], title.get('without')) if text))
     chart['digits'] = max(option_chart['digits'] for _, option_chart in options)
     chart['menu'] = {'label': label, 'title_sizes': sizes,
                      'options': [{'label': option_label, 'chart': option_chart, 'selected': i == 0}

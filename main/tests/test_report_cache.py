@@ -16,8 +16,8 @@ from main.lib import counting, report_cache
 from main.lib import unit_activity as unit_report
 from main.lib.activity import member_activity
 from main.lib.counting import member_entries
-from main.models import (DoAvailable, Distribution, Event, Member, Message, Participant, Period, RsvpTemplate,
-                         Unavailable)
+from main.models import (Cert, CertSubType, CertType, DoAvailable, Distribution, Event, Member, Message, Participant,
+                         Period, RsvpTemplate, Unavailable)
 from main.tests.helpers import ActivityTestCase, when
 
 
@@ -37,6 +37,7 @@ class ReportCacheTestCase(ActivityTestCase):
         self.page = Message.objects.create(author=self.member, text='Callout', format='page',
                                            rsvp_template=self.callout, period=self.operation.period_set.first())
         Message.objects.filter(id=self.page.id).update(created_at=when(2024, 2, 7) - timedelta(hours=1))
+        self.endorse(self.other, 'T', date(2010, 1, 1))                 # joined before anything here
         self.reply = Distribution.objects.create(message=self.page, member=self.other, rsvp=True, rsvp_answer=True,
                                                  response_seconds=60)
         self.busy = Unavailable.objects.create(member=self.member, start_on=date(2024, 5, 1), end_on=date(2024, 5, 3))
@@ -185,6 +186,22 @@ class ReportCacheTestCase(ActivityTestCase):
         with self.subTest('delete'):
             self.assert_rebuilt(lambda: Unavailable.objects.filter(start_on=busy_then).delete(), changes_figures=False)
 
+    def test_writes_to_endorsements(self):
+        # A promotion's endorsement draws the chart of promotions; moving or deleting it redraws it.
+        kind = CertSubType.objects.create(type=CertType.objects.get(name='Endorsements'), name='FM')
+        with self.subTest('add'):
+            self.assert_rebuilt(lambda: Cert.objects.create(member=self.member, subtype=kind, earned_on=date(2024, 2, 1)))
+        with self.subTest('edit'):
+            self.assert_rebuilt(lambda: self.edit(Cert.objects.get(subtype=kind), earned_on=None, comment='2025'))
+        with self.subTest('delete'):
+            self.assert_rebuilt(lambda: Cert.objects.filter(subtype=kind).delete())
+        # Endorsements are read by the names of their kind and its type.
+        Cert.objects.create(member=self.member, subtype=kind, earned_on=date(2024, 2, 1))
+        with self.subTest('rename its kind'):
+            self.assert_rebuilt(lambda: self.edit(kind, name='TM'))
+        with self.subTest('rename its type'):
+            self.assert_rebuilt(lambda: self.edit(kind.type, name='Certificates'))
+
     def test_writes_to_do_weeks(self):
         # A DO week years before the rest moves the records' first year, and with it every chart's.
         with self.subTest('add'):
@@ -282,6 +299,7 @@ class ReportCacheTestCase(ActivityTestCase):
             self.assertNotEqual(after, before)
 
     def test_writes_the_units_days_read(self):
+        self.endorse(self.third, 'T', date(2024, 1, 1))
         second = Period.objects.create(event=self.training, position=2)
         with self.subTest('event'):
             self.assert_unit_days_rebuilt(lambda: self.edit(self.training, title='Test'))
@@ -303,6 +321,16 @@ class ReportCacheTestCase(ActivityTestCase):
                 period=self.training.period_set.first(), member=self.third, en_route_at=when(2024, 3, 11),
                 return_home_at=when(2024, 3, 11) + timedelta(hours=4)))
             self.assert_unit_days_rebuilt(lambda: entry.delete())
+        with self.subTest('endorsement'):
+            # The joining endorsement dates a member's joining, and their day at a training before it is a guest's;
+            # without it, they joined on that day, their first at a training.
+            joined = Cert.objects.get(member=self.third)
+            self.assert_unit_days_rebuilt(lambda: self.edit(joined, earned_on=date(2024, 3, 12)))
+            self.assert_unit_days_rebuilt(lambda: self.edit(joined.subtype, name='FM'))
+            self.edit(joined.subtype, name='T')
+            self.assert_unit_days_rebuilt(lambda: self.edit(joined.subtype.type, name='Certificates'))
+            self.edit(joined.subtype.type, name='Endorsements')
+            self.assert_unit_days_rebuilt(lambda: joined.delete())
         with self.subTest('member'):
             self.assert_unit_days_rebuilt(lambda: self.edit(self.third, status='G'))
             self.assert_unit_days_rebuilt(lambda: self.make_member('Dee', 'FM'), changes=False)
@@ -540,11 +568,10 @@ class ReportCacheTestCase(ActivityTestCase):
         ('main/lib/gcal.py', 'event = self.client.events().update('),
         ('main/lib/charts.py', "cell.update(_sizes([c[m]['total'] for m in numbers], scales, above=True))"),
         ('main/lib/counting.py', 'days[event_type].update(hours)'),
+        ('main/lib/counting.py',
+         'counted.update(zip(indexes, entries_hours([entries[i][1:6] for i in indexes], now, tz, since)))'),
         ('main/lib/report_cache.py', 'cursor.execute(sql)'),
-        ('main/lib/unit_counting.py', 'claimed_hours.update(zip([entry_id for entry_id, _, _ in logged],'),
-        ('main/lib/unit_counting.py', 'member_only[entry.member].update(entry.hours)'),
         ('main/lib/unit_counting.py', 'reportable_days[entry.member].update(entry.hours)'),
-        ('main/lib/unit_counting.py', 'joined_on.update({member: sorted(days)[joined_at - 1]'),
         ('main/lib/unit_counting.py', 'attended_days[t].update((entry.member, day) for day in entry.hours)'),
         ('main/lib/unit_counting.py', "counted['unit']['days'][t].update(map(_year_and_part, active_days[t]))"),
         ('main/lib/unit_counting.py',

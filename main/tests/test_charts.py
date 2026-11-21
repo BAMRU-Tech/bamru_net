@@ -72,16 +72,17 @@ class ChartsTestCase(TestCase):
         # A single panel has no scale switch.
         self.assertFalse(share_panels(measures, [one])['scale_switch'])
 
-    def test_three_measures_at_most(self):
-        labels = ['Days', 'Events', 'Hours', 'Miles']
+    def test_four_measures_at_most(self):
+        labels = ['Days', 'Events', 'OPs', 'Hours', 'Miles']
         measures = [{'label': label, 'title': label} for label in labels]
         cell = [{'parts': [('1', n)], 'total': 10, 'tip': label} for n, label in enumerate(labels, 1)]
         view = {'label': 'Years', 'periods': [{'short': "'24"}],
-                'series': [{'key': [('1', 'Counted')], 'label': 'Operations', 'cells': [cell[:3]]}]}
-        chart = share_panels(measures[:3], [view], measure_switch_label='Count')
-        self.assertEqual([(m['label'], m['number']) for m in chart['measures']], [('Days', 1), ('Events', 2), ('Hours', 3)])
+                'series': [{'key': [('1', 'Counted')], 'label': 'Operations', 'cells': [cell[:4]]}]}
+        chart = share_panels(measures[:4], [view], measure_switch_label='Count')
+        self.assertEqual([(m['label'], m['number']) for m in chart['measures']],
+                         [('Days', 1), ('Events', 2), ('OPs', 3), ('Hours', 4)])
         self.assertEqual(chart['measure_switch_label'], 'Count')
-        self.assertEqual(chart['views'][0]['panels'][0]['cells'][0]['parts'][0]['sizes'], [10, 20, 30])
+        self.assertEqual(chart['views'][0]['panels'][0]['cells'][0]['parts'][0]['sizes'], [10, 20, 30, 40])
         with self.assertRaises(ValueError):
             share_panels(measures, [dict(view, series=[dict(view['series'][0], cells=[cell])])])
 
@@ -122,8 +123,9 @@ class ChartsTestCase(TestCase):
         self.assertNotIn('aria-label="By"', two)
         self.assertIn('role="radiogroup" aria-label="View"', render_to_string('charts/share_panels.html', {
             'chart': share_panels(self.MEASURES, [self.view([[(1, 2)]]), self.view([[(1, 2)]])], view_switch_label='')}))
+        self.assertEqual(len(share_panels(self.MEASURES, [view(str(n), ['a']) for n in range(4)])['views']), 4)
         with self.assertRaises(ValueError):
-            share_panels(self.MEASURES, [view(str(n), ['a']) for n in range(4)])
+            share_panels(self.MEASURES, [view(str(n), ['a']) for n in range(5)])
 
     def test_figures_as_a_list(self):
         cells = [[{'parts': [('1', 1)], 'total': 1, 'tip': tip}]
@@ -143,28 +145,23 @@ class ChartsTestCase(TestCase):
                          [{'side': 'left', 'at': 0}, {'side': 'left', 'at': 16.67}, {'side': 'centre', 'at': 41.67},
                           {'side': 'centre', 'at': 58.33}, {'side': 'right', 'at': 16.67}, {'side': 'right', 'at': 0}])
 
-    def test_a_chart_can_start_on_a_later_measure(self):
-        # It draws what a chart listing that measure first draws, so a browser without the switches
-        # shows it, with its title, ticks and figures; the switch keeps its order.
-        def chart(labels, **start):
-            cells = [[{'parts': [('1', n)], 'total': n, 'tip': label} for label, n in labels]]
-            view = {'label': 'Years', 'periods': [{'short': '1'}], 'titles': [label + ' by year' for label, _ in labels],
-                    'series': [{'key': [('1', 'Counted')], 'label': label, 'cells': cells} for label in 'ST']}
-            return share_panels([{'label': label, 'title': label} for label, _ in labels], [view], **start)
-        started = chart([('Days', 1), ('Events', 3), ('Hours', 7)], start_measure='Hours')
-        listed_first = chart([('Hours', 7), ('Days', 1), ('Events', 3)])
-        self.assertEqual(dict(started, measures=None), dict(listed_first, measures=None))
-        self.assertEqual(started['titles'][0], {'measure': 1, 'view': 1, 'text': 'Hours by year'})
-        self.assertEqual([(m['label'], m['number']) for m in started['measures']],
-                         [('Days', 2), ('Events', 3), ('Hours', 1)])
-        html = render_to_string('charts/share_panels.html', {'chart': started})
-        radios = ['<input type="radio" name="chart-measure" class="chart-pick-m2"><span>Days</span>',
-                  '<input type="radio" name="chart-measure" class="chart-pick-m3"><span>Events</span>',
-                  '<input type="radio" name="chart-measure" checked><span>Hours</span>']
-        self.assertEqual(sorted(radios, key=html.find), radios)
-        self.assertNotIn(-1, [html.find(radio) for radio in radios])
-        with self.assertRaisesRegex(ValueError, "Days, Events, Hours: 'Weeks'"):
-            chart([('Days', 1), ('Events', 3), ('Hours', 7)], start_measure='Weeks')
+    def test_a_key_item_can_be_for_one_measure_alone(self):
+        # Named by the measure's label, it takes that measure's number, which charts.css shows it with.
+        cells = [[{'parts': [('1', 1)], 'total': 1, 'tip': ''}, {'parts': [('1', 2)], 'total': 2, 'tip': ''}]]
+        view = {'label': 'Years', 'periods': [{'short': '1'}],
+                'series': [{'label': '', 'key': [('1', 'Counted'), ('muted-light', 'Others', 'Both')], 'cells': cells}]}
+        measures = [{'label': 'Some', 'title': 'Some'}, {'label': 'Both', 'title': 'Both'}]
+
+        def keys(chart):
+            return [(k['label'], k.get('measure')) for k in chart['views'][0]['panels'][0]['key']]
+        chart = share_panels(measures, [view], name='c')
+        self.assertEqual(keys(chart), [('Counted', None), ('Others', 2)])
+        html = render_to_string('charts/share_panels.html', {'chart': chart})
+        self.assertIn('<span class="chart-key"><i class="chart-part-1"></i>Counted</span>', html)
+        self.assertIn('<span class="chart-key chart-key-m2"><i class="chart-part-muted-light"></i>Others</span>', html)
+        with self.assertRaisesRegex(ValueError, "the measure's label"):
+            share_panels(measures, [dict(view, series=[dict(view['series'][0], key=[('1', 'Counted', 'Neither')])])],
+                         name='c')
 
     def test_menu(self):
         def chart(period, name='ops'):
@@ -277,13 +274,6 @@ class ChartsTestCase(TestCase):
         switched = dict(chart(['Months']), scale_switch=True)
         with self.assertRaisesRegex(ValueError, 'same measures and views'):
             with_menu([('All years', chart(['Months'])), ('2026', switched)], 'Year')
-        # And they start on the same measure.
-        cells = [[{'parts': [('1', 1)], 'total': 2, 'tip': ''}] * 2]
-        view = {'label': 'Months', 'periods': [{'short': 'a'}], 'series': [{'label': '', 'key': [('1', 'Counted')], 'cells': cells}]}
-        hours = self.MEASURES + [{'label': 'Hours', 'title': 'Hours'}]
-        with self.assertRaisesRegex(ValueError, 'same measures and views'):
-            with_menu([('All years', share_panels(hours, [view], name='ops', start_measure='Hours')),
-                       ('2026', share_panels(hours, [view], name='ops'))], 'Year')
 
     def test_the_keys_to_the_totals_share_one_place(self):
         # So that the note keeps its lines when the measure changes, even to one without a total.
@@ -300,6 +290,97 @@ class ChartsTestCase(TestCase):
         without = share_panels([{'label': 'Hours', 'title': 'Hours'}], [{**view, 'series': [
             {'label': 'S', 'key': [('1', 'A')], 'cells': [cell[:1]]}]}])
         self.assertNotIn('chart-note-keys', render_to_string('charts/share_panels.html', {'chart': without}))
+
+    def test_a_switch_turns_the_totals_off(self):
+        # Days against the unit's, and hours, which have no total. Off, each day column is drawn against what its
+        # parts reach, on axes of its own, with its own title and figures; hours are drawn as they were.
+        measures = [{'label': 'Days', 'title': 'Days / unit days', 'title_without_total': 'Days',
+                     'total_label': 'Unit days'},
+                    {'label': 'Hours', 'title': 'Hours'}]
+
+        def cell(days, unit, hours):
+            return [{'parts': [('1', days[0]), ('2', days[1])], 'total': unit,
+                     'tip': ['2024', ('{} of {}'.format(sum(days), unit), 'days'), 'a line'],
+                     'tip_without_total': ['2024', (sum(days), 'days'), 'a line']},
+                    {'parts': [('1', hours[0]), ('2', hours[1])], 'total': sum(hours), 'tip': ['2024', (sum(hours), 'hours')]}]
+        view = {'label': 'Years', 'periods': [{'short': 'a'}, {'short': 'b'}],
+                'series': [{'label': 'S', 'key': [('1', 'A'), ('2', 'B')], 'cells': [cell((5, 5), 20, (3, 1)),
+                                                                                     cell((2, 0), 10, (1, 1))]}]}
+        chart = share_panels(measures, [view], note='How many, against the unit?', note_without_total='How many?',
+                             total_switch_label='Unit figures')
+        self.assertEqual((chart['total_switch_label'], chart['size_suffix']), ('Unit figures', '-whole'))
+        panel = chart['views'][0]['panels'][0]
+        first, second = panel['cells']
+        # Against the unit's 20, and against the 10 the parts reach, on an axis to 10.
+        self.assertEqual((first['own'], first['own_by_parts'], second['own_by_parts']), ([100, 100], [(1, 100)], [(1, 20)]))
+        self.assertEqual(first['parts'], [{'colour': '1', 'sizes': [25, 75], 'sizes_by_parts': [(1, 50)]},
+                                          {'colour': '2', 'sizes': [25, 25], 'sizes_by_parts': [(1, 50)]}])
+        self.assertEqual([(t['measure'], t['scale'], t.get('only'), [tick['value'] for tick in t['ticks']])
+                          for t in panel['ticks']],
+                         [(1, 'own', 'total', [20, 10, 0]), (1, 'shared', 'total', [20, 10, 0]),
+                          (2, 'own', None, [4, 2, 0]), (2, 'shared', None, [4, 2, 0]),
+                          (1, 'own', 'no-total', [10, 5, 0]), (1, 'shared', 'no-total', [10, 5, 0])])
+        # The line that reads otherwise carries how it reads then; the rest are as they were.
+        self.assertEqual(first['tips'][0]['lines'], [{'number': '10 of 20', 'label': 'days',
+                                                      'without': {'number': 10, 'label': 'days'}}, {'text': 'a line'}])
+        self.assertEqual(first['tips'][1]['lines'], [{'number': 4, 'label': 'hours'}])
+        self.assertEqual(chart['titles'], [{'measure': 1, 'view': 1, 'text': 'Days / unit days', 'without': 'Days'},
+                                           {'measure': 2, 'view': 1, 'text': 'Hours'}])
+        html = render_to_string('charts/share_panels.html', {'chart': chart})
+        # The switch, On to start with, as a browser without the switches shows the chart.
+        self.assertIn('<span class="chart-control-label" id="chart-total-label">Unit figures</span>', html)
+        self.assertIn('<div class="chart-switch" role="radiogroup" aria-labelledby="chart-total-label">', html)
+        self.assertIn('<input type="radio" name="chart-total" checked><span>On</span>', html)
+        self.assertIn('<input type="radio" name="chart-total" class="chart-pick-no-total"><span>Off</span>', html)
+        # Both sizes of each column and part, measured against the total and against the parts.
+        self.assertIn('style="--m1-own-whole: 100.0%; --m2-own-whole: 100.0%; --m1-shared-whole: 100.0%; '
+                      '--m2-shared-whole: 100.0%; --m1-own-parts: 100.0%; --m1-shared-parts: 100.0%; "', html)
+        self.assertIn('style="--m1-whole: 25.0%; --m2-whole: 75.0%; --m1-parts: 50.0%; "', html)
+        self.assertIn('class="chart-tick chart-m1 chart-own chart-only-no-total"', html)
+        self.assertIn('<div class="chart-m1 chart-v1 chart-pair"><span class="chart-only-total">Days / unit days'
+                      '</span><span class="chart-only-no-total">Days</span></div>', html)
+        self.assertIn('<div class="chart-tip-pair chart-only-total"><div class="chart-tip-number">10 of 20</div>'
+                      '<div>days</div></div><div class="chart-tip-pair chart-only-no-total"><div class="chart-tip-number">'
+                      '10</div><div>days</div></div><div class="chart-tip-text">a line</div>', html)
+        self.assertIn('<span class="chart-note-keys"><span class="chart-key chart-key-m1">', html)
+        self.assertIn('<span class="chart-pair"><span class="chart-only-total">How many, against the unit?</span>'
+                      '<span class="chart-only-no-total">How many?</span></span>', html)
+        # A chart without the switch is drawn as before.
+        unswitched = dict(view, series=[dict(view['series'][0], cells=[
+            [{key: value for key, value in entry.items() if key != 'tip_without_total'} for entry in cell]
+            for cell in view['series'][0]['cells']])])
+        plain = render_to_string('charts/share_panels.html', {'chart': share_panels(measures, [unswitched])})
+        for name in ('-whole', '-parts', 'chart-only-total', 'chart-only-no-total', 'chart-pick-no-total', '-pair'):
+            self.assertNotIn(name, plain, name)
+        self.assertIn('style="--m1-own: 100.0%; --m2-own: 100.0%; --m1-shared: 100.0%; --m2-shared: 100.0%; "', plain)
+
+    def test_a_switch_for_the_totals_is_refused_where_it_would_draw_wrongly(self):
+        def chart(measures=None, entry=None, **view):
+            days = dict({'parts': [('1', 1)], 'total': 2, 'tip': ['2024', ('1 of 2', 'days')]}, **(entry or {}))
+            view = dict({'label': 'Years', 'periods': [{'short': 'a'}],
+                         'series': [{'label': 'S', 'key': [('1', 'A')], 'cells': [[days]]}]}, **view)
+            measures = measures or [{'label': 'Days', 'title': 'Days', 'total_label': 'Unit', 'title_without_total': 'D'}]
+            return lambda **options: share_panels(measures, [view], **dict({'total_switch_label': 'Unit figures'}, **options))
+        wrong = {
+            'for a chart with a measure that has one': chart([{'label': 'Days', 'title': 'Days'}]),
+            'a measure with a total has a title_without_total': chart([{'label': 'Days', 'title': 'Days', 'total_label': 'Unit'}]),
+            'a view has none': chart(titles=['Days by year']),
+            'the heading of the tip, and as many lines': chart(entry={'tip_without_total': ['2025', (1, 'day')]}),
+            'and as many lines': chart(entry={'tip_without_total': ['2024']}),
+            'for a chart without a switch for the totals': chart(entry={'parts': [('1', 1), ('2', -1)]}),
+        }
+        for message, draw in wrong.items():
+            with self.assertRaisesRegex(ValueError, "chart 'chart'.*" + message, msg=message):
+                draw()
+        with self.assertRaisesRegex(ValueError, 'tip_without_total is for a measure with a total, on a chart with a switch'):
+            chart(entry={'tip_without_total': ['2024', (1, 'day')]})(total_switch_label='')
+        for options in ({'note': 'Why?', 'note_without_total': 'Why?', 'total_switch_label': ''}, {'note_without_total': 'Why?'}):
+            with self.assertRaisesRegex(ValueError, 'note_without_total is for a chart with a note and a switch', msg=options):
+                chart()(**options)
+        # A menu's charts all have the switch, or none does: one set of switches serves them all.
+        draw = chart()
+        with self.assertRaisesRegex(ValueError, 'same measures and views'):
+            with_menu([('All years', draw()), ('2026', draw(total_switch_label=''))], 'Year')
 
     def test_a_panel_of_a_column_or_two_has_room_for_its_key_and_figures(self):
         # A first-year member's panels have one column each. They are drawn as wide as a panel is readable, so
@@ -339,8 +420,10 @@ class ChartsTestCase(TestCase):
         def view(label, measures):
             # Markers and parts below zero are for a chart of one measure.
             one = len(measures) == 1
+            switched = all('title_without_total' in measure for measure in measures)
             cells = [[dict({'parts': [(colour, 1) for colour in colours], 'total': 20,
-                            'tip': ['Head', (1, 'counted'), 'a line']}, **({'marker': 3} if one else {}))
+                            'tip': ['Head', (1, 'counted'), 'a line']}, **({'marker': 3} if one else {}),
+                           **({'tip_without_total': ['Head', (1, 'counted alone'), 'a line']} if switched else {}))
                       for _ in measures] for _ in range(3)]
             series = [{'label': 'Every colour', 'cells': cells,
                        'key': [(colour, colour) for colour in colours] + ([('marker', 'Net')] if one else [])}]
@@ -350,12 +433,16 @@ class ChartsTestCase(TestCase):
                                          for _ in range(3)]})
             return {'label': label, 'periods': [{'short': 'a'}, {'short': ''}, {'short': 'c'}],
                     'titles': ['{} {}'.format(label, m) for m in range(1, len(measures) + 1)], 'series': series}
-        three = [{'label': 'M{}'.format(m), 'title': 'Measure {}'.format(m), 'total_label': 'Whole'} for m in range(1, 4)]
-        chart = with_menu([(option, share_panels(three, [view(v, three) for v in 'ABC'], note='A note', name='everything'))
+        four = [{'label': 'M{}'.format(m), 'title': 'Measure {}'.format(m), 'total_label': 'Whole'} for m in range(1, 5)]
+        chart = with_menu([(option, share_panels(four, [view(v, four) for v in 'ABC'], note='A note', name='everything'))
                            for option in ('All years', '2026')], label='Year')
         net = [{'label': 'Net', 'title': 'Net', 'total_label': 'Whole'}]
         signed = share_panels(net, [view(v, net) for v in 'AB'], note='A note', name='signed')
-        html = ''.join(render_to_string('charts/share_panels.html', {'chart': c}) for c in (chart, signed))
+        # And a chart with a switch for its totals, whose measures' titles are its titles.
+        totals = [dict(measure, title_without_total=measure['title'] + ' alone') for measure in four]
+        switched = share_panels(totals, [{key: value for key, value in view(v, totals).items() if key != 'titles'}
+                                         for v in 'AB'], name='switched', total_switch_label='Totals')
+        html = ''.join(render_to_string('charts/share_panels.html', {'chart': c}) for c in (chart, signed, switched))
         css = open(finders.find('css/charts.css')).read()
         css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
         classes = {name for names in re.findall(r'class="([^"]*)"', html) for name in names.split() if name.startswith('chart')}
@@ -377,7 +464,8 @@ class ChartsTestCase(TestCase):
         put_by_page = {'chart-tiles', 'chart-grid', 'chart-page', 'chart-scripted'}
         self.assertEqual(sorted(name for name in styled - classes - put_by_page
                                 if not re.fullmatch(r'chart-(part-[\w-]+|tip-(left|right|centre)|pick-[\w-]+|v\d|m\d)', name)), [])
-        for name in ('chart-signed', 'chart-x-axis', 'chart-baseline', 'chart-down', 'chart-under', 'chart-marker'):
+        for name in ('chart-signed', 'chart-x-axis', 'chart-baseline', 'chart-down', 'chart-under', 'chart-marker',
+                     'chart-only-total', 'chart-only-no-total', 'chart-pair', 'chart-tip-pair'):
             self.assertIn(name, classes, name)
         # Read by a screen reader: each column's figures, named by their panel; not the axes.
         self.assertIn('<div class="chart-bands chart-x-axis" aria-hidden="true">', html)
@@ -437,6 +525,9 @@ class ChartsTestCase(TestCase):
         column = ' '.join(re.search(r'\n\.chart-column \{([^}]*)\}', css)[1].split())
         self.assertIn('width: calc(100% - clamp(0px, calc((100% - 6px) / 2), 2px));', column)
         self.assertIn('min-width: 1px;', column)
+        # A column of nothing, drawn for another measure or with the totals off, shows nothing, its edge neither.
+        self.assertIn('min-height: min(1px, calc(var(--chart-size) * 100));', column)
+        self.assertIn('overflow: hidden;', column)
         self.assertNotIn('box-shadow', column)
         self.assertIn('background: var(--chart-total);', column)
         self.assertIn('container-type: inline-size;', column)
@@ -496,13 +587,13 @@ class ChartsTestCase(TestCase):
         self.assertNotIn('under', panel['cells'][0])
 
     def test_the_scale_switch_starts_on_the_shared_scale(self):
-        # Shared is the scale as drawn, so a browser without the switches shows it too; Separate is picked.
+        # Shared is the scale as drawn, so a browser without the switches shows it too, and it comes first.
         cells = [[{'parts': [('1', 1)], 'total': 1, 'tip': ''}]]
         view = {'label': 'V', 'periods': [{'short': '1'}],
                 'series': [{'key': [('1', 'Counted')], 'label': label, 'cells': cells} for label in ('S', 'T')]}
         html = render_to_string('charts/share_panels.html', {'chart': share_panels(self.MEASURES, [view])})
-        self.assertIn('<input type="radio" name="chart-scale" class="chart-pick-own"><span>Separate</span>', html)
-        self.assertIn('<input type="radio" name="chart-scale" checked><span>Shared</span>', html)
+        self.assertLess(html.index('<input type="radio" name="chart-scale" checked><span>Shared</span>'),
+                        html.index('<input type="radio" name="chart-scale" class="chart-pick-own"><span>Separate</span>'))
         # Its words say which scale it sets, and name it for a screen reader.
         self.assertIn('<span class="chart-control-label" id="chart-scale-label">Y-axis scale</span>', html)
         self.assertIn('<div class="chart-switch" role="radiogroup" aria-labelledby="chart-scale-label">', html)
@@ -576,9 +667,10 @@ class BreakpointsTestCase(SimpleTestCase):
 
         def page(name):
             return open(get_template(name).origin.name).read()
-        # The member report's tables change at a width of their own, measured from the
-        # summary's columns (activity-member.html says so), a little above a phone.
-        self.assertEqual(self.queries(page('reports/activity-member.html')), {('media', 'max', 34.0)})
+        # The member report's tables change at widths of their own: the events lists a little above a phone, and the
+        # summary where a member with every duty no longer fits (activity-member.html says so).
+        self.assertEqual(self.queries(page('reports/activity-member.html')),
+                         {('media', 'max', 34.0), ('media', 'max', 47.0)})
         self.assertGreater(34.0, phone)
         self.assertEqual(self.queries(page('reports/activity-unit.html')), set())
         # The glossary's column of terms is 16% wide, or 7rem where 16% is less.
@@ -639,26 +731,72 @@ class SwitchesTestCase(SimpleTestCase):
 
     def test_every_setting_shows_one_title_one_set_of_ticks_one_view_and_its_measure(self):
         chart = ('div', {'chart'})
-        for m in (1, 2, 3):
-            for v in (1, 2, 3):
+        for m in (1, 2, 3, 4):
+            for v in (1, 2, 3, 4):
                 for scale in ('own', 'shared'):
-                    picked = {name for name, on in (('m2', m == 2), ('m3', m == 3), ('v2', v == 2), ('v3', v == 3),
-                                                    ('own', scale == 'own')) if on}
+                    picked = {name for name, on in (('m2', m == 2), ('m3', m == 3), ('m4', m == 4), ('v2', v == 2),
+                                                    ('v3', v == 3), ('v4', v == 4), ('own', scale == 'own')) if on}
                     state = 'measure {}, view {}, {} scale'.format(m, v, scale)
-                    titles = {(tm, tv) for tm in (1, 2, 3) for tv in (1, 2, 3) if self.shown(
+                    titles = {(tm, tv) for tm in (1, 2, 3, 4) for tv in (1, 2, 3, 4) if self.shown(
                         [chart, ('div', {'chart-title'}), ('div', {'chart-m%d' % tm, 'chart-v%d' % tv})],
                         'visibility', picked) == 'visible'}
                     self.assertEqual(titles, {(m, v)}, state)
-                    ticks = {(tm, ts) for tm in (1, 2, 3) for ts in ('own', 'shared') if self.shown(
+                    ticks = {(tm, ts) for tm in (1, 2, 3, 4) for ts in ('own', 'shared') if self.shown(
                         [chart, ('div', {'chart-plot'}), ('div', {'chart-tick', 'chart-m%d' % tm, 'chart-' + ts})],
                         'display', picked) not in (None, 'none')}
                     self.assertEqual(ticks, {(m, scale)}, state)
-                    views = {tv for tv in (1, 2, 3) if self.shown(
+                    views = {tv for tv in (1, 2, 3, 4) if self.shown(
                         [chart, ('div', {'chart-panels', 'chart-v%d' % tv})], 'display', picked) not in (None, 'none')}
                     self.assertEqual(views, {v}, state)
-                    figures = {tm for tm in (1, 2, 3) if self.shown(
+                    figures = {tm for tm in (1, 2, 3, 4) if self.shown(
                         [chart, ('div', {'chart-tip'}), ('div', {'chart-only-m%d' % tm})], 'display', picked) != 'none'}
                     self.assertEqual(figures, {m}, state)
+                    keys = {tm for tm in (1, 2, 3, 4) if self.shown(
+                        [chart, ('div', {'chart-panel-key'}), ('span', {'chart-key', 'chart-key-m%d' % tm})],
+                        'visibility', picked) != 'hidden'}
+                    self.assertEqual(keys, {m}, state)
+                    self.assertIsNone(self.shown([chart, ('div', {'chart-panel-key'}), ('span', {'chart-key'})],
+                                                 'visibility', picked), state)
+
+    def test_the_switch_for_the_totals_shows_one_setting_s_sizes_ticks_titles_and_figures(self):
+        chart = ('div', {'chart'})
+        for m in (1, 2, 3, 4):
+            for scale in ('own', 'shared'):
+                for total in (True, False):
+                    picked = {name for name, on in (('m2', m == 2), ('m3', m == 3), ('m4', m == 4), ('own', scale == 'own'),
+                                                    ('no-total', not total)) if on}
+                    state = 'measure {}, {} scale, totals {}'.format(m, scale, 'on' if total else 'off')
+                    # The column's size and its parts' heights are those measured against the total, or the parts.
+                    size = '--m{}-{}'.format(m, scale)
+                    self.assertEqual(self.shown([chart, ('div', {'chart-column'})], size, picked),
+                                     'var({}-whole)'.format(size) if total else
+                                     'var({0}-parts, var({0}-whole))'.format(size), state)
+                    self.assertEqual(self.shown([chart, ('div', {'chart-column'}), ('div', set())], '--m%d' % m, picked),
+                                     'var(--m{}-whole)'.format(m) if total else 'var(--m{0}-parts, var(--m{0}-whole))'.format(m),
+                                     state)
+                    # One set of ticks: the measure's and the scale's, for the setting of the totals.
+                    ticks = {(tm, ts, only) for tm in (1, 2, 3, 4) for ts in ('own', 'shared') for only in ('total', 'no-total')
+                             if self.shown([chart, ('div', {'chart-plot'}),
+                                            ('div', {'chart-tick', 'chart-m%d' % tm, 'chart-' + ts, 'chart-only-' + only})],
+                                           'display', picked) not in (None, 'none')
+                             and self.shown([chart, ('div', {'chart-plot'}),
+                                             ('div', {'chart-tick', 'chart-m%d' % tm, 'chart-' + ts, 'chart-only-' + only})],
+                                            'visibility', picked) != 'hidden'}
+                    self.assertEqual(ticks, {(m, scale, 'total' if total else 'no-total')}, state)
+                    # The title's words for the setting, and the figures' lines; the keys to the totals only with them.
+                    words = {only for only in ('total', 'no-total') if self.shown(
+                        [chart, ('div', {'chart-title'}), ('div', {'chart-m1', 'chart-v1', 'chart-pair'}),
+                         ('span', {'chart-only-' + only})], 'visibility', picked) != 'hidden'}
+                    self.assertEqual(words, {'total' if total else 'no-total'}, state)
+                    lines = {only for only in ('total', 'no-total') if self.shown(
+                        [chart, ('div', {'chart-tip'}), ('div', {'chart-tip-pair', 'chart-only-' + only})],
+                        'display', picked) != 'none'}
+                    self.assertEqual(lines, {'total' if total else 'no-total'}, state)
+                    keys = self.shown([chart, ('div', {'chart-note'}), ('span', {'chart-note-keys'})], 'display', picked)
+                    self.assertEqual(keys != 'none', total, state)
+                    self.assertEqual(self.shown([chart, ('div', {'chart-note'}), ('span', {'chart-note-keys'}),
+                                                 ('span', {'chart-key', 'chart-key-m%d' % m})], 'visibility', picked),
+                                     'inherit', state)
 
     def test_the_script_and_the_figures_box_keep_their_contract(self):
         # Alt, Ctrl and Cmd with an arrow are the browser's; the box starts, centres or ends at its column.
