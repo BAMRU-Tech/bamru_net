@@ -4,7 +4,7 @@ from datetime import timedelta
 from unittest import mock
 
 import requests
-from django.core.cache import caches
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
@@ -14,7 +14,7 @@ from main.dynamic_preferences_registry import EventCountyBorderMiles
 from main.lib import county
 from main.lib.county import RETRY_AFTER, county_text, text_for
 from main.models import Event, Member
-from main.tests.lookup_support import FetchedAtOnce, in_memory
+from main.tests.lookup_support import FetchedAtOnce
 
 # Public places only. The tests never call USGS or the Census Bureau: each answer is mocked, as the
 # services answered for these points on 20 Nov 2026, with the field names each sends.
@@ -71,7 +71,6 @@ def county_for(lat, lon):
     return text
 
 
-@in_memory
 class CountyTextTestCase(FetchedAtOnce, TestCase):
 
     def test_a_point_well_inside_a_county(self):
@@ -112,7 +111,7 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
 
     def test_the_census_bureau_when_usgs_gives_no_answer(self):
         for problem in ({'failing': (USGS,)}, {'refusing': (USGS,)}):
-            caches['lookups'].clear()
+            cache.clear()
             with services_answer(**problem) as get, self.assertLogs('main.lib.county', 'INFO'):
                 self.assertEqual(county_for(*DONNER_SUMMIT), 'Placer, bordering Nevada', problem)
             # Once one of USGS's two questions fails, the other may be dropped before it is asked.
@@ -125,7 +124,7 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
         # is asked at once, whichever of the two hangs.
         answers = services_answer().new.side_effect
         for near_hangs in (True, False):
-            caches['lookups'].clear()
+            cache.clear()
             hanging, hanging_asked = threading.Event(), threading.Event()
             self.addCleanup(hanging.set)
 
@@ -146,7 +145,7 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
 
     def test_neither_answering_gives_none_kept_briefly(self):
         with services_answer(failing=(USGS, CENSUS)), self.assertLogs('main.lib.lookups', 'INFO'), \
-                mock.patch.object(caches['lookups'], 'add', wraps=caches['lookups'].add) as kept:
+                mock.patch.object(cache, 'add', wraps=cache.add) as kept:
             self.assertIsNone(county_for(*DONNER_SUMMIT))
         self.assertEqual(kept.call_args.args[1:], ({'value': None}, RETRY_AFTER))
 
@@ -162,7 +161,6 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
             EventCountyBorderMiles().validate(-1)
 
 
-@in_memory
 class EventPageCountyTestCase(FetchedAtOnce, TestCase):
 
     def setUp(self):

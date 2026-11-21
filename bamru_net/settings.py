@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 
 import logging
 import os
-import tempfile
 import sentry_sdk
 from dotenv import load_dotenv, find_dotenv
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -309,18 +308,6 @@ DEFAULT_FROM_EMAIL = os.environ['MAILGUN_EMAIL_FROM']
 
 # Used for tests
 GOOGLE_CREDENTIALS_FILE = os.environ.get('GOOGLE_CREDENTIALS_FILE', '')
-
-# The default cache is Django's own: in memory, in each server process. The event page's answers from outside
-# services (USGS's elevation, the weather service's forecast) are kept apart from it, in files that all of the
-# server's processes and their background fetches share.
-CACHES = {
-    'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'},
-    'lookups': {
-        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': os.environ.get('LOOKUP_CACHE_DIR', os.path.join(tempfile.gettempdir(), 'bamru_net_lookups')),
-        'OPTIONS': {'MAX_ENTRIES': 5000},
-    },
-}
 
 Q_CLUSTER = {
     'workers': 1,

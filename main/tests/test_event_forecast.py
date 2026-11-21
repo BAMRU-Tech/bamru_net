@@ -2,15 +2,15 @@ from datetime import date, datetime, timedelta
 from unittest import mock
 
 import requests
-from django.core.cache import caches
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 
 from main.lib import forecast
-from main.lib.forecast import (FEATURE_FLAGS, RETRY_AFTER, USER_AGENT, fahrenheit, forecast_days, temperature_band,
-                               weather_symbol, wind_mph)
+from main.lib.forecast import (FEATURE_FLAGS, RETRY_AFTER, USER_AGENT, fahrenheit, fahrenheit_with_unit, forecast_days,
+                               temperature_band, weather_symbol, wind_mph_from_text, wind_mph_with_unit)
 from main.models import Event, Member
-from main.tests.lookup_support import FetchedAtOnce, in_memory
+from main.tests.lookup_support import FetchedAtOnce
 
 # Public places only. The tests never call the National Weather Service: each answer is mocked.
 MOUNT_DIABLO = (37.8817, -121.9142)
@@ -47,13 +47,17 @@ def in_the_new_format(period):
 PERIODS_IN_THE_NEW_FORMAT = [in_the_new_format(p) for p in PERIODS]
 
 
-def service_answers(periods=PERIODS_IN_THE_NEW_FORMAT, problem=None):
-    """requests.get as the service would answer: the point's grid, then its forecast, or `problem` raised."""
-    def get(url, **kwargs):
-        if problem:
-            raise problem
+def service_answers(periods=None, problem=None, with_units_problem=None):
+    """requests.get as the service would answer: the point's grid, then its forecast, with units when the
+    feature flags ask for them and in the deprecated format otherwise; or `periods` whatever is asked, or
+    `problem` raised, or `with_units_problem` raised only when the flags are sent."""
+    def get(url, headers, **kwargs):
+        with_units = 'Feature-Flags' in headers
+        if problem or (with_units and with_units_problem):
+            raise problem or with_units_problem
         response = mock.Mock()
-        response.json.return_value = {'properties': {'forecast': FORECAST_URL} if '/points/' in url else {'periods': periods}}
+        response.json.return_value = {'properties': {'forecast': FORECAST_URL} if '/points/' in url else {
+            'periods': periods or (PERIODS_IN_THE_NEW_FORMAT if with_units else PERIODS)}}
         return response
     return mock.patch.object(forecast.requests, 'get', mock.Mock(side_effect=get))
 
@@ -66,13 +70,17 @@ def forecast_for(first_day, last_day):
     return days
 
 
-@in_memory
 class ForecastDaysTestCase(FetchedAtOnce, TestCase):
-    def test_each_day_high_low_precip_and_wind_in_the_new_format_or_the_old(self):
-        for periods in (PERIODS_IN_THE_NEW_FORMAT, PERIODS):
-            caches['lookups'].clear()
-            with service_answers(periods):
+    def test_each_day_high_low_precip_and_wind_in_the_format_asked_for_else_the_deprecated_one(self):
+        # The service answers with units; or ignores the flags; or fails only when the flags are sent.
+        for service, asks in (({}, 1), ({'periods': PERIODS}, 2),
+                              ({'with_units_problem': requests.HTTPError('400 Bad Request')}, 2)):
+            cache.clear()
+            with service_answers(**service) as get:
                 days = forecast_for(date(2026, 11, 20), date(2026, 11, 22))
+            forecast_asks = [call for call in get.call_args_list if call.args[0] == FORECAST_URL]
+            self.assertEqual(['Feature-Flags' in call.kwargs['headers'] for call in forecast_asks],
+                             [True, False][:asks], service)
             self.assertEqual(days, [
                 {'date': '2026-11-20', 'label': 'Fri\xa020', 'high': 41, 'high_band': None, 'high_note': None,
                  'low': 35, 'low_band': 'cold', 'low_note': 'Cold: hypothermia possible, more so when wet',
@@ -128,18 +136,19 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
                            ({'unitCode': 'wmoUnit:km_h-1', 'minValue': 1.852, 'maxValue': 7.408}, '1\u20135'),
                            ({'unitCode': 'wmoUnit:km_h-1', 'minValue': 8.0, 'maxValue': 8.1}, '5'),
                            ({'unitCode': 'wmoUnit:m_s-1', 'value': 4.47}, '10'),
-                           ({'unitCode': 'wmoUnit:kt', 'value': 10}, '12'),
-                           ('5 mph', '5'), ('5 to 10 mph', '5\u201310'), ('0 mph', '0'), ('10 km/h', '10 km/h')):
-            self.assertEqual(wind_mph(speed), mph, speed)
+                           ({'unitCode': 'wmoUnit:kt', 'value': 10}, '12')):
+            self.assertEqual(wind_mph_with_unit(speed), mph, speed)
+        for speed, mph in (('5 mph', '5'), ('5 to 10 mph', '5\u201310'), ('0 mph', '0'), ('10 km/h', '10 km/h')):
+            self.assertEqual(wind_mph_from_text(speed), mph, speed)
 
     def test_temperature_in_whole_fahrenheit(self):
-        for temperature, unit, degrees in (({'unitCode': 'wmoUnit:degC', 'value': 5}, None, 41),
-                                           ({'unitCode': 'wmoUnit:degC', 'value': 1.6666666666666667}, None, 35),
-                                           ({'unitCode': 'wmoUnit:degC', 'value': -40}, None, -40),
-                                           ({'unitCode': 'wmoUnit:degF', 'value': 41}, None, 41),
-                                           ({'unitCode': 'wmoUnit:degC', 'value': None}, None, None),
-                                           (41, 'F', 41), (5, 'C', 41)):
-            self.assertEqual(fahrenheit(temperature, unit), degrees, temperature)
+        for temperature, degrees in (({'unitCode': 'wmoUnit:degC', 'value': 5}, 41),
+                                     ({'unitCode': 'wmoUnit:degC', 'value': 1.6666666666666667}, 35),
+                                     ({'unitCode': 'wmoUnit:degC', 'value': -40}, -40),
+                                     ({'unitCode': 'wmoUnit:degF', 'value': 41}, 41),
+                                     ({'unitCode': 'wmoUnit:degC', 'value': None}, None)):
+            self.assertEqual(fahrenheit_with_unit(temperature), degrees, temperature)
+        self.assertEqual((fahrenheit(41, 'F'), fahrenheit(5, 'C')), (41, 41))
 
     def test_asks_in_the_new_format_with_the_sites_name_and_keeps_the_answer(self):
         with service_answers() as get:
@@ -152,7 +161,7 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
 
     def test_no_answer_gives_no_days_and_is_not_asked_again_at_once(self):
         for problem in (requests.Timeout(), requests.HTTPError('404 outside the US'), requests.ConnectionError()):
-            caches['lookups'].clear()
+            cache.clear()
             with service_answers(problem=problem) as get:
                 self.assertEqual(forecast_for(date(2026, 11, 20), date(2026, 11, 20)), [], problem)
                 self.assertEqual(forecast_days(*MOUNT_DIABLO, date(2026, 11, 20), date(2026, 11, 20)), (True, []), problem)
@@ -160,21 +169,20 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
 
     def test_a_grid_whose_forecast_fails_is_looked_up_again(self):
         moved = 'https://api.weather.gov/gridpoints/MTR/1,1/forecast'
-        caches['lookups'].set('forecast-grid:37.8817,-121.9142', moved, 60)
+        cache.set('forecast-grid:37.8817,-121.9142', moved, 60)
+
+        answers = service_answers().new.side_effect
 
         def get(url, **kwargs):
             if url == moved:
                 raise requests.HTTPError('404 Not Found')
-            response = mock.Mock()
-            response.json.return_value = {
-                'properties': {'forecast': FORECAST_URL} if '/points/' in url else {'periods': PERIODS_IN_THE_NEW_FORMAT}}
-            return response
+            return answers(url, **kwargs)
         with mock.patch.object(forecast.requests, 'get', mock.Mock(side_effect=get)) as asked:
             self.assertEqual(forecast_for(date(2026, 11, 20), date(2026, 11, 20)), [])
-            caches['lookups'].delete('forecast:37.8817,-121.9142')       # as once RETRY_AFTER has passed
+            cache.delete('forecast:37.8817,-121.9142')       # as once RETRY_AFTER has passed
             self.assertEqual(len(forecast_for(date(2026, 11, 20), date(2026, 11, 20))), 1)
         self.assertEqual([call.args[0] for call in asked.call_args_list],
-                         [moved, 'https://api.weather.gov/points/37.8817,-121.9142', FORECAST_URL])
+                         [moved, moved, 'https://api.weather.gov/points/37.8817,-121.9142', FORECAST_URL])
 
     def test_an_answer_it_cannot_read_gives_no_days_kept_briefly(self):
         unreadable = (dict(PERIODS_IN_THE_NEW_FORMAT[0], temperature={'unitCode': 'wmoUnit:K', 'value': 280}),
@@ -183,14 +191,13 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
                       {key: value for key, value in PERIODS_IN_THE_NEW_FORMAT[0].items() if key != 'windSpeed'},
                       dict(PERIODS_IN_THE_NEW_FORMAT[0], windSpeed=None))
         for period in unreadable:
-            caches['lookups'].clear()
+            cache.clear()
             with service_answers([period]), self.assertLogs('main.lib.lookups', 'INFO'), \
-                    mock.patch.object(caches['lookups'], 'add', wraps=caches['lookups'].add) as kept:
+                    mock.patch.object(cache, 'add', wraps=cache.add) as kept:
                 self.assertEqual(forecast_for(date(2026, 11, 20), date(2026, 11, 20)), [], period)
             self.assertEqual(kept.call_args.args[1:], ({'value': None}, RETRY_AFTER), period)
 
 
-@in_memory
 class EventForecastPageTestCase(FetchedAtOnce, TestCase):
     def setUp(self):
         super().setUp()

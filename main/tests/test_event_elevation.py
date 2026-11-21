@@ -2,13 +2,13 @@ from datetime import timedelta
 from unittest import mock
 
 import requests
-from django.core.cache import caches
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 
 from main.lib import elevation, lookups
 from main.lib.elevation import RETRY_AFTER, altitude_band, elevation_feet
-from main.tests.lookup_support import FetchedAtOnce, in_memory
+from main.tests.lookup_support import FetchedAtOnce
 from main.models import Event, Member
 
 # Public places only. The tests never call USGS: each answer is mocked.
@@ -24,7 +24,6 @@ def usgs_answers(value=None, problem=None):
     return mock.patch.object(elevation.requests, 'get', mock.Mock(return_value=response, side_effect=problem))
 
 
-@in_memory
 class ElevationTestCase(FetchedAtOnce, TestCase):
     def test_altitude_bands_from_the_cdc_risk_categories(self):
         for feet, band in ((14505, 'danger'), (11150, 'danger'), (11149, 'extreme-caution'), (9000, 'extreme-caution'),
@@ -41,7 +40,7 @@ class ElevationTestCase(FetchedAtOnce, TestCase):
 
     def test_nothing_outside_the_us_or_off_land(self):
         for value in (-1000000, 0):
-            caches['lookups'].clear()
+            cache.clear()
             with usgs_answers(value):
                 elevation_feet(*MOUNT_DIABLO)
                 self.assertEqual(elevation_feet(*MOUNT_DIABLO), (True, None), value)
@@ -53,16 +52,15 @@ class ElevationTestCase(FetchedAtOnce, TestCase):
 
     def test_no_answer_is_kept_only_briefly(self):
         for problem in (requests.Timeout('slow'), requests.HTTPError('503'), requests.ConnectionError('down')):
-            caches['lookups'].clear()
+            cache.clear()
             with usgs_answers(problem=problem) as get, \
-                    mock.patch.object(caches['lookups'], 'add', wraps=caches['lookups'].add) as kept:
+                    mock.patch.object(cache, 'add', wraps=cache.add) as kept:
                 elevation_feet(*MOUNT_DIABLO)
                 self.assertEqual(elevation_feet(*MOUNT_DIABLO), (True, None), problem)
             get.assert_called_once()
             self.assertEqual(kept.call_args.args[2], RETRY_AFTER)
 
 
-@in_memory
 class EventElevationPageTestCase(FetchedAtOnce, TestCase):
     def setUp(self):
         super().setUp()

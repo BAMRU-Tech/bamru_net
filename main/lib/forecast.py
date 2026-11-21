@@ -3,25 +3,29 @@ seven-day forecast covers: high and low, each with its danger band, chance of pr
 Asked for in the background and kept (main.lib.lookups): the point's forecast grid for 30 days, as the
 service asks clients to check it again from time to time, and the forecast for an hour, as the service's
 own replies allow."""
+import logging
 import math
 import re
 from datetime import datetime, timedelta
 
 import requests
-from django.core.cache import caches
+from django.core.cache import cache
 
 from main.lib import lookups
 
 POINTS = 'https://api.weather.gov/points/'
 USER_AGENT = '(bamru.net event page, https://bamru.net)'     # the service asks each client to name itself
-# Ask for temperature and wind as values with their units, the format the API says it will move to; a
-# reply in the deprecated format (a number in °F, text such as "5 to 10 mph") is still read.
+# Ask for temperature and wind as values with their units, the format the API says it will move to. When
+# that gives no answer this can read, the forecast is asked for again without the flags and read in the
+# deprecated format: a number in °F, and text such as "5 to 10 mph".
 FEATURE_FLAGS = 'forecast_temperature_qv, forecast_wind_speed_qv'
 MPH = {'km_h-1': 1 / 1.609344, 'm_s-1': 3600 / 1609.344, 'kt': 1852 / 1609.344, 'mi_h-1': 1}
 DAYS_COVERED = 7
 GRID_KEPT = 30 * 24 * 3600
 FORECAST_KEPT = 3600
 RETRY_AFTER = 10 * 60               # seconds before asking again when the service gave no answer
+
+logger = logging.getLogger(__name__)
 
 # Light colour bands for a forecast temperature, in °F. Hot: the National Weather Service's heat index
 # categories (weather.gov/ama/heatindex), read against the air temperature, which humidity and full sun
@@ -78,62 +82,76 @@ def whole(number):
     return math.floor(number + 0.5)
 
 
-def fahrenheit(temperature, unit):
-    """Whole °F: from a value with its unit code ('wmoUnit:degC' or 'wmoUnit:degF'), or from a number in
-    `unit`, the deprecated temperatureUnit ('F' or 'C')."""
-    if isinstance(temperature, dict):
-        temperature, unit = temperature['value'], {'degC': 'C', 'degF': 'F'}[temperature['unitCode'].split(':')[-1]]
-    if temperature is None:
+def fahrenheit(degrees, unit):
+    """Whole °F from a number in 'F' or 'C'."""
+    if degrees is None:
         return None
-    return whole(temperature * 9 / 5 + 32 if unit == 'C' else temperature)
+    return whole(degrees * 9 / 5 + 32 if unit == 'C' else degrees)
 
 
-def wind_mph(speed):
-    """The wind in whole mph without its unit, "7" or "5–10": from a value or range with its unit code
-    ('wmoUnit:km_h-1'), or from the deprecated text, "7 mph" or "5 to 10 mph"."""
-    if isinstance(speed, dict):
-        per = MPH[speed['unitCode'].split(':')[-1]]
-        if speed.get('value') is not None:
-            return str(whole(speed['value'] * per))
-        low, high = whole(speed['minValue'] * per), whole(speed['maxValue'] * per)
-        return str(low) if low == high else '{}\u2013{}'.format(low, high)
+def fahrenheit_with_unit(temperature):
+    """Whole °F from a value with its unit code, 'wmoUnit:degC' or 'wmoUnit:degF'."""
+    return fahrenheit(temperature['value'], {'degC': 'C', 'degF': 'F'}[temperature['unitCode'].split(':')[-1]])
+
+
+def wind_mph_with_unit(speed):
+    """The wind in whole mph without its unit, "7" or "5–10", from a value or range with its unit code
+    ('wmoUnit:km_h-1')."""
+    per = MPH[speed['unitCode'].split(':')[-1]]
+    if speed.get('value') is not None:
+        return str(whole(speed['value'] * per))
+    low, high = whole(speed['minValue'] * per), whole(speed['maxValue'] * per)
+    return str(low) if low == high else '{}\u2013{}'.format(low, high)
+
+
+def wind_mph_from_text(speed):
+    """The same from the deprecated format's text, "7 mph" or "5 to 10 mph"."""
     return speed[:-len(' mph')].replace(' to ', '\u2013') if speed.endswith(' mph') else speed
 
 
-def read_period(period):
-    """One twelve-hour period of the forecast, in plain values; KeyError, TypeError or ValueError for a
-    period this can't read."""
+def read_period(period, with_units):
+    """One twelve-hour period of the forecast, in plain values, from the format asked for (with_units) or
+    the deprecated one; one of lookups.NO_ANSWER for a period it can't read."""
+    if with_units:
+        temperature, wind = fahrenheit_with_unit(period['temperature']), wind_mph_with_unit(period['windSpeed'])
+    else:
+        temperature = fahrenheit(period['temperature'], period.get('temperatureUnit', 'F'))
+        wind = wind_mph_from_text(period['windSpeed'])
     return {
         'start': datetime.fromisoformat(period['startTime']),
         'daytime': bool(period['isDaytime']),
-        'temperature': fahrenheit(period['temperature'], period.get('temperatureUnit', 'F')),
+        'temperature': temperature,
         'precip': whole((period.get('probabilityOfPrecipitation') or {}).get('value') or 0),
-        'wind_mph': wind_mph(period['windSpeed']),
+        'wind_mph': wind,
         'wind_direction': period['windDirection'] or '',
         'summary': period['shortForecast'] or '',
     }
 
 
-def ask(url):
-    response = requests.get(url, timeout=lookups.TIMEOUT, headers={
-        'User-Agent': USER_AGENT, 'Accept': 'application/geo+json', 'Feature-Flags': FEATURE_FLAGS})
+def ask(url, feature_flags=None):
+    headers = {'User-Agent': USER_AGENT, 'Accept': 'application/geo+json'}
+    if feature_flags:
+        headers['Feature-Flags'] = feature_flags
+    response = requests.get(url, timeout=lookups.TIMEOUT, headers=headers)
     response.raise_for_status()
     return response.json()['properties']
 
 
 def fetch_periods(point):
-    kept = caches['lookups']
-    forecast_url = kept.get('forecast-grid:' + point)
+    forecast_url = cache.get('forecast-grid:' + point)
     if forecast_url is None:
         forecast_url = ask(POINTS + point)['forecast']
-        kept.set('forecast-grid:' + point, forecast_url, GRID_KEPT)
+        cache.set('forecast-grid:' + point, forecast_url, GRID_KEPT)
     try:
-        periods = ask(forecast_url)['periods']
+        try:
+            return [read_period(period, True) for period in ask(forecast_url, FEATURE_FLAGS)['periods']]
+        except lookups.NO_ANSWER as problem:
+            logger.info('No forecast with units from %s, asking in the deprecated format: %s', forecast_url, problem)
+            return [read_period(period, False) for period in ask(forecast_url)['periods']]
     except requests.RequestException:
         # The service may have moved the point to another grid: look its grid up again next time.
-        kept.delete('forecast-grid:' + point)
+        cache.delete('forecast-grid:' + point)
         raise
-    return [read_period(period) for period in periods]
 
 
 def periods(lat, lon):
