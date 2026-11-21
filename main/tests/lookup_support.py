@@ -12,6 +12,6 @@ class FetchedAtOnce:
     def setUp(self):
         super().setUp()
         cache.clear()
-        patched = mock.patch.object(lookups, 'start', lambda target, *args: target(*args))
+        patched = mock.patch.object(lookups.pool, 'submit', lambda target, *args: target(*args))
         patched.start()
         self.addCleanup(patched.stop)

@@ -3,7 +3,7 @@ forecast. No request waits on one: a request gets the answer kept for it, or, wi
 being fetched in the background and says it isn't ready, so the page asks again. Kept in the
 site's cache, which each server process has its own, so each fetches an answer once."""
 import logging
-import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from django.core.cache import cache
@@ -13,13 +13,13 @@ SECONDS = 10            # how long the page keeps asking for an answer before it
 # leaves time, within the page's SECONDS, to ask a second service when the first doesn't answer.
 TIMEOUT = (4, 10)
 MARKED = 30             # seconds the 'fetching' mark holds off a second fetch of the same key
-AT_ONCE = 4             # fetches running at once in one server process
+AT_ONCE = 4             # fetches running at once in one server process; more wait their turn
 
 # What a fetch raises when its service gives no answer, or one in a shape the fetch can't read.
 NO_ANSWER = (requests.RequestException, ValueError, KeyError, TypeError, AttributeError)
 
 logger = logging.getLogger(__name__)
-running = threading.BoundedSemaphore(AT_ONCE)
+pool = ThreadPoolExecutor(AT_ONCE, thread_name_prefix='lookup')
 
 
 def answer(key, fetch, kept_for, retry_after):
@@ -29,44 +29,22 @@ def answer(key, fetch, kept_for, retry_after):
     found = cache.get(key)
     if found is not None:
         return True, found['value']
-    if not running.acquire(blocking=False):
-        return False, None
-    started = False
-    try:
-        if cache.add('fetching:' + key, True, MARKED):
-            try:
-                start(fetched, key, fetch, kept_for, retry_after)
-                started = True
-            finally:
-                if not started:
-                    cache.delete('fetching:' + key)
-    finally:
-        if not started:         # the fetch, once started, gives its place back itself
-            running.release()
+    if cache.add('fetching:' + key, True, MARKED):
+        pool.submit(fetched, key, fetch, kept_for, retry_after)
     return False, None
-
-
-def start(target, *args):
-    threading.Thread(target=target, args=args, daemon=True).start()
 
 
 def fetched(key, fetch, kept_for, retry_after):
     """Fetch and keep the answer; on a failure, keep None, but never in place of an answer kept already
-    (another fetch of the same key may have succeeded). Always gives its place back, even when the cache
-    itself fails."""
+    (another fetch of the same key may have succeeded)."""
     try:
-        try:
-            cache.set(key, {'value': fetch()}, kept_for)
-        except NO_ANSWER as problem:
-            # The page shows nothing, and an outage isn't an error.
-            logger.info('No answer for %s: %s', key, problem)
-            cache.add(key, {'value': None}, retry_after)
-        except Exception:
-            logger.exception('Fetching %s failed', key)
-            cache.add(key, {'value': None}, retry_after)
-        finally:
-            cache.delete('fetching:' + key)
+        cache.set(key, {'value': fetch()}, kept_for)
+    except NO_ANSWER as problem:
+        # The page shows nothing, and an outage isn't an error.
+        logger.info('No answer for %s: %s', key, problem)
+        cache.add(key, {'value': None}, retry_after)
     except Exception:
-        logger.exception('Keeping the answer for %s failed', key)
+        logger.exception('Fetching %s failed', key)
+        cache.add(key, {'value': None}, retry_after)
     finally:
-        running.release()
+        cache.delete('fetching:' + key)
