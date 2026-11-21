@@ -1,12 +1,13 @@
 """Answers from outside services for the event page, such as USGS's elevation and the weather service's
 forecast. No request waits on one: a request gets the answer kept for it, or, with none kept, starts it
-being fetched in the background and says it isn't ready, so the page asks again. Kept in the
-site's cache, which each server process has its own, so each fetches an answer once."""
+being fetched in the background and says it isn't ready, so the page asks again. Kept in the 'lookups'
+cache, which the server's processes share, apart from the rest of the site's."""
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
-from django.core.cache import cache
+from django.core.cache import caches
+from django.utils.connection import ConnectionProxy
 
 SECONDS = 10            # how long the page keeps asking for an answer before it shows nothing
 # Seconds an outside service has to connect, and then to send each part of its answer. A short connect
@@ -19,6 +20,7 @@ AT_ONCE = 4             # fetches running at once in one server process; more wa
 NO_ANSWER = (requests.RequestException, ValueError, KeyError, TypeError, AttributeError)
 
 logger = logging.getLogger(__name__)
+cache = ConnectionProxy(caches, 'lookups')      # as Django's own `cache` is the 'default' one
 pool = ThreadPoolExecutor(AT_ONCE, thread_name_prefix='lookup')
 
 

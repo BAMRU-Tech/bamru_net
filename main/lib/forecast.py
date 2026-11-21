@@ -9,7 +9,6 @@ import re
 from datetime import datetime, timedelta
 
 import requests
-from django.core.cache import cache
 
 from main.lib import lookups
 
@@ -138,10 +137,10 @@ def ask(url, feature_flags=None):
 
 
 def fetch_periods(point):
-    forecast_url = cache.get('forecast-grid:' + point)
+    forecast_url = lookups.cache.get('forecast-grid:' + point)
     if forecast_url is None:
         forecast_url = ask(POINTS + point)['forecast']
-        cache.set('forecast-grid:' + point, forecast_url, GRID_KEPT)
+        lookups.cache.set('forecast-grid:' + point, forecast_url, GRID_KEPT)
     try:
         try:
             return [read_period(period, True) for period in ask(forecast_url, FEATURE_FLAGS)['periods']]
@@ -150,7 +149,7 @@ def fetch_periods(point):
             return [read_period(period, False) for period in ask(forecast_url)['periods']]
     except requests.RequestException:
         # The service may have moved the point to another grid: look its grid up again next time.
-        cache.delete('forecast-grid:' + point)
+        lookups.cache.delete('forecast-grid:' + point)
         raise
 
 

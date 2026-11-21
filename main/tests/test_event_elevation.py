@@ -2,13 +2,13 @@ from datetime import timedelta
 from unittest import mock
 
 import requests
-from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 
 from main.lib import elevation, lookups
 from main.lib.elevation import RETRY_AFTER, altitude_band, elevation_feet
-from main.tests.lookup_support import FetchedAtOnce
+from main.lib.lookups import cache
+from main.tests.lookup_support import FetchedAtOnce, in_memory
 from main.models import Event, Member
 
 # Public places only. The tests never call USGS: each answer is mocked.
@@ -24,6 +24,7 @@ def usgs_answers(value=None, problem=None):
     return mock.patch.object(elevation.requests, 'get', mock.Mock(return_value=response, side_effect=problem))
 
 
+@in_memory
 class ElevationTestCase(FetchedAtOnce, TestCase):
     def test_altitude_bands_from_the_cdc_risk_categories(self):
         for feet, band in ((14505, 'danger'), (11150, 'danger'), (11149, 'extreme-caution'), (9000, 'extreme-caution'),
@@ -61,6 +62,7 @@ class ElevationTestCase(FetchedAtOnce, TestCase):
             self.assertEqual(kept.call_args.args[2], RETRY_AFTER)
 
 
+@in_memory
 class EventElevationPageTestCase(FetchedAtOnce, TestCase):
     def setUp(self):
         super().setUp()

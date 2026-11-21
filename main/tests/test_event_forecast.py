@@ -3,7 +3,6 @@ from datetime import date, datetime, timedelta
 from unittest import mock
 
 import requests
-from django.core.cache import cache
 from django.template.loader import render_to_string
 from django.test import TestCase
 from django.utils import timezone
@@ -12,7 +11,8 @@ from main.lib import forecast
 from main.lib.forecast import (FEATURE_FLAGS, RETRY_AFTER, USER_AGENT, fahrenheit, fahrenheit_with_unit, forecast_days,
                                temperature_band, weather_symbol, wind_mph_from_text, wind_mph_with_unit)
 from main.models import Event, Member
-from main.tests.lookup_support import FetchedAtOnce
+from main.lib.lookups import cache
+from main.tests.lookup_support import FetchedAtOnce, in_memory
 
 # Public places only. The tests never call the National Weather Service: each answer is mocked.
 MOUNT_DIABLO = (37.8817, -121.9142)
@@ -72,6 +72,7 @@ def forecast_for(first_day, last_day):
     return days
 
 
+@in_memory
 class ForecastDaysTestCase(FetchedAtOnce, TestCase):
     def test_each_day_high_low_precip_and_wind_in_the_format_asked_for_else_the_deprecated_one(self):
         # The service answers with units; or ignores the flags; or fails only when the flags are sent.
@@ -201,6 +202,7 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
             self.assertEqual(kept.call_args.args[1:], ({'value': None}, RETRY_AFTER), period)
 
 
+@in_memory
 class EventForecastPageTestCase(FetchedAtOnce, TestCase):
     def setUp(self):
         super().setUp()

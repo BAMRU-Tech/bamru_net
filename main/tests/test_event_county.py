@@ -4,7 +4,6 @@ from datetime import timedelta
 from unittest import mock
 
 import requests
-from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
@@ -14,7 +13,8 @@ from main.dynamic_preferences_registry import EventCountyBorderMiles
 from main.lib import county
 from main.lib.county import RETRY_AFTER, county_text, text_for
 from main.models import Event, Member
-from main.tests.lookup_support import FetchedAtOnce
+from main.lib.lookups import cache
+from main.tests.lookup_support import FetchedAtOnce, in_memory
 
 # Public places only. The tests never call USGS or the Census Bureau: each answer is mocked, as the
 # services answered for these points on 20 Nov 2026, with the field names each sends.
@@ -71,6 +71,7 @@ def county_for(lat, lon):
     return text
 
 
+@in_memory
 class CountyTextTestCase(FetchedAtOnce, TestCase):
 
     def test_a_point_well_inside_a_county(self):
@@ -161,6 +162,7 @@ class CountyTextTestCase(FetchedAtOnce, TestCase):
             EventCountyBorderMiles().validate(-1)
 
 
+@in_memory
 class EventPageCountyTestCase(FetchedAtOnce, TestCase):
 
     def setUp(self):

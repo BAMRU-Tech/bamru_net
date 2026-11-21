@@ -3,13 +3,16 @@ import time
 from unittest import mock
 
 import requests
-from django.core.cache import cache
+from django.core.cache import caches
+from django.core.cache.backends.filebased import FileBasedCache
 from django.test import SimpleTestCase
 
 from main.lib import lookups
-from main.tests.lookup_support import FetchedAtOnce
+from main.lib.lookups import cache
+from main.tests.lookup_support import FetchedAtOnce, in_memory
 
 
+@in_memory
 class LookupsTestCase(FetchedAtOnce, SimpleTestCase):
     def test_not_ready_until_fetched_then_kept(self):
         fetch = mock.Mock(return_value=3847)
@@ -18,6 +21,11 @@ class LookupsTestCase(FetchedAtOnce, SimpleTestCase):
         self.assertEqual(lookups.answer('elevation:a', fetch, 60, 10), (True, 3847))
         fetch.assert_called_once_with()
         self.assertIsNone(cache.get('fetching:elevation:a'))      # the mark goes with the fetch
+
+    def test_kept_in_the_lookups_cache_apart_from_the_sites(self):
+        lookups.answer('elevation:m', mock.Mock(return_value=3847), 60, 10)
+        self.assertEqual(caches['lookups'].get('elevation:m'), {'value': 3847})
+        self.assertIsNone(caches['default'].get('elevation:m'))
 
     def test_an_answer_of_none_is_kept_too(self):
         fetch = mock.Mock(return_value=None)
@@ -56,6 +64,7 @@ class LookupsTestCase(FetchedAtOnce, SimpleTestCase):
             self.assertEqual(cache.get('county:l'), {'value': 'Placer'}, problem)
 
 
+@in_memory
 class LookupsInTheBackgroundTestCase(SimpleTestCase):
     def setUp(self):
         cache.clear()
@@ -100,3 +109,9 @@ class LookupsInTheBackgroundTestCase(SimpleTestCase):
                 break
             time.sleep(0.05)
         self.assertEqual(lookups.answer('elevation:at-once-4', fetch, 60, 10), (True, 3847))
+
+
+class LookupsCacheTestCase(SimpleTestCase):
+    def test_kept_in_files_that_every_server_process_shares(self):
+        # Each of the server's processes has its own memory; kept there, each would fetch every answer itself.
+        self.assertIsInstance(caches['lookups'], FileBasedCache)
