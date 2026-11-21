@@ -54,7 +54,7 @@ SYMBOLS = (
     (r'cloudy|overcast', '\u2601\ufe0f'),                                       # cloud
     (r'mostly sunny', '\U0001f324\ufe0f'),                                     # sun behind small cloud
     (r'sunny', '\u2600\ufe0f'),                                                 # sun
-    (r'clear', '\U0001f319'),                                                  # crescent moon: clear is the night's word
+    (r'clear|frost', '\U0001f319'),             # crescent moon: clear is the night's word, and frost forms on clear nights
 )
 
 

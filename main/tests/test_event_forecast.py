@@ -4,6 +4,7 @@ from unittest import mock
 
 import requests
 from django.core.cache import cache
+from django.template.loader import render_to_string
 from django.test import TestCase
 from django.utils import timezone
 
@@ -129,7 +130,8 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
                 ('Mostly Cloudy', '\U0001f325\ufe0f'), ('Areas Of Frost then Partly Sunny', '\u26c5'),
                 ('Partly Cloudy', '\u26c5'), ('Cloudy', '\u2601\ufe0f'), ('Mostly Sunny', '\U0001f324\ufe0f'),
                 ('Sunny', '\u2600\ufe0f'), ('Mostly Clear', '\U0001f319'), ('Clear', '\U0001f319'),
-                ('Patchy Frost', None), ('', None), (None, None)):
+                ('Areas Of Frost', '\U0001f319'), ('Patchy Frost then Sunny', '\u2600\ufe0f'),
+                ('', None), (None, None)):
             self.assertEqual(weather_symbol(summary), symbol, summary)
 
     def test_wind_in_whole_mph_without_its_unit(self):
@@ -233,6 +235,17 @@ class EventForecastPageTestCase(FetchedAtOnce, TestCase):
         # Sunday has a high and, with its night beyond the forecast, an empty low.
         self.assertInHTML('<td class="number"><span>50°</span></td><td class="number"></td>',
                           '<table>{}</table>'.format(answer['html']))
+
+    def test_a_shaded_temperature_shows_its_band_and_why(self):
+        day = {'name': 'OP1 Sat\xa021', 'symbol': '\u2600\ufe0f', 'summary': 'Sunny and Hot', 'precip': 0,
+               'wind_mph': '5', 'wind_direction': 'W', 'high': 104, 'low': 31}
+        for end in ('high', 'low'):
+            day[end + '_band'], day[end + '_note'] = temperature_band(day[end])
+        rows = '<table>{}</table>'.format(render_to_string('event_forecast.html', {'days': [day]}))
+        self.assertInHTML('<td class="number"><span class="shade-danger" title="{}">104°</span></td>'.format(
+            day['high_note']), rows)
+        self.assertInHTML('<td class="number"><span class="shade-freezing" title="{}">31°</span></td>'.format(
+            day['low_note']), rows)
 
     def test_no_forecast_without_a_whole_point(self):
         event = self.event(date(2026, 11, 20), point=None)

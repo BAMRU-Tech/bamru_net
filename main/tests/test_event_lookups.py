@@ -49,9 +49,11 @@ class LookupsTestCase(FetchedAtOnce, SimpleTestCase):
         self.assertEqual(lookups.answer('forecast:f', mock.Mock(), 3600, 600), (True, None))
 
     def test_a_failed_fetch_never_replaces_an_answer_kept_already(self):
-        cache.set('county:l', {'value': 'Placer'}, 60)
-        lookups.fetched('county:l', mock.Mock(side_effect=requests.Timeout), 60, 10)
-        self.assertEqual(cache.get('county:l'), {'value': 'Placer'})
+        for problem in (requests.Timeout, ZeroDivisionError):     # no answer, and an unexpected error
+            cache.set('county:l', {'value': 'Placer'}, 60)
+            with self.assertLogs('main.lib.lookups'):
+                lookups.fetched('county:l', mock.Mock(side_effect=problem), 60, 10)
+            self.assertEqual(cache.get('county:l'), {'value': 'Placer'}, problem)
 
 
 class LookupsInTheBackgroundTestCase(SimpleTestCase):
@@ -72,3 +74,29 @@ class LookupsInTheBackgroundTestCase(SimpleTestCase):
             time.sleep(0.05)
         self.assertEqual((ready, feet), (True, 3847))
         fetch.assert_called_once_with()
+
+    def test_four_fetches_run_at_once_and_more_wait_their_turn(self):
+        answering, lock, running = threading.Event(), threading.Lock(), []
+        self.addCleanup(answering.set)
+        all_running = threading.Event()
+
+        def fetch():
+            with lock:
+                running.append(1)
+                if len(running) == lookups.AT_ONCE:
+                    all_running.set()
+            answering.wait(5)
+            return 3847
+
+        for n in range(lookups.AT_ONCE + 1):
+            lookups.answer('elevation:at-once-{}'.format(n), fetch, 60, 10)
+        self.assertEqual(lookups.AT_ONCE, 4)
+        self.assertTrue(all_running.wait(2))
+        time.sleep(0.1)
+        self.assertEqual(len(running), lookups.AT_ONCE)     # the fifth waits its turn
+        answering.set()
+        for _ in range(50):
+            if lookups.answer('elevation:at-once-4', fetch, 60, 10)[0]:
+                break
+            time.sleep(0.05)
+        self.assertEqual(lookups.answer('elevation:at-once-4', fetch, 60, 10), (True, 3847))

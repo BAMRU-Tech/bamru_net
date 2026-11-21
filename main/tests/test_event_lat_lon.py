@@ -142,6 +142,8 @@ class ReadPointTestCase(TestCase):
                 ('34J 261878 6243186', 'This point is not in latitude band J. Check the band letter and the northing.'),
                 ('10S KJ 27330 53919', 'Zone 10 has no 100 km square KJ in latitude band S. Check its letters.'),
                 ('10T GJ 27330 53919', 'Zone 10 has no 100 km square GJ in latitude band T. Check its letters.'),
+                # mgrs reads this square, Donner Summit's, but its northing is in band S, not R.
+                ('10R GJ 27330 53919', 'Zone 10 has no 100 km square GJ in latitude band R. Check its letters.'),
                 ('10S GJ 273 53919', 'A USNG point needs as many easting digits as northing digits, '
                                      'such as 11S KB 71484 80756.'),
                 ('10S GJ 273300 539190', 'A USNG point needs as many easting digits as northing digits, '
