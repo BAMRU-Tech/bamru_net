@@ -14,8 +14,9 @@ from main.views.event_views import EventForm
 DONNER = (39.3157, -120.3277)
 GRAND_CANYON = (36.0544, -112.1401)
 OUTSIDE = 'This point is outside the area the team usually works in. Check its numbers and minus signs.'
-# Within about 2 m. The UTM and USNG answers below come from pyproj 3.8, run separately, so these tests
-# check the conversions against an independent source.
+# Within about 2 m. The UTM and USNG answers below come from pyproj 3.8 and the mgrs package, run
+# separately before the box read USNG with mgrs itself, so these tests check the conversions against
+# answers worked out apart from them.
 CLOSE = 2e-5
 # One point in each of the five forms CalTopo's point panel lists, as UTM, USNG, DD, DDM and DMS.
 # Their rounding, to a second in DMS, puts them up to half a second (15 m) apart.
