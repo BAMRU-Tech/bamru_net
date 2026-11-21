@@ -171,6 +171,15 @@ class ForecastDaysTestCase(FetchedAtOnce, TestCase):
                 self.assertEqual(forecast_days(*MOUNT_DIABLO, date(2026, 11, 20), date(2026, 11, 20)), (True, []), problem)
             self.assertEqual(get.call_count, 1, problem)
 
+    def test_the_deprecated_format_is_asked_for_only_when_the_service_answered(self):
+        # With no answer at all, asking again would only wait as long again.
+        for problem in (requests.Timeout(), requests.ConnectionError()):
+            cache.clear()
+            with service_answers(with_units_problem=problem) as get, self.assertLogs('main.lib.lookups', 'INFO'):
+                self.assertEqual(forecast_for(date(2026, 11, 20), date(2026, 11, 20)), [], problem)
+            self.assertEqual([call.args[0] for call in get.call_args_list],
+                             ['https://api.weather.gov/points/37.8817,-121.9142', FORECAST_URL], problem)
+
     def test_a_grid_whose_forecast_fails_is_looked_up_again(self):
         moved = 'https://api.weather.gov/gridpoints/MTR/1,1/forecast'
         cache.set('forecast-grid:37.8817,-121.9142', moved, 60)

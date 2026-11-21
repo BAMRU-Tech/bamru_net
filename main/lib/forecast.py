@@ -15,8 +15,8 @@ from main.lib import lookups
 POINTS = 'https://api.weather.gov/points/'
 USER_AGENT = '(bamru.net event page, https://bamru.net)'     # the service asks each client to name itself
 # Ask for temperature and wind as values with their units, the format the API says it will move to. When
-# that gives no answer this can read, the forecast is asked for again without the flags and read in the
-# deprecated format: a number in °F, and text such as "5 to 10 mph".
+# the service answers that with an error, or with a reply this can't read, the forecast is asked for again
+# without the flags and read in the deprecated format: a number in °F, and text such as "5 to 10 mph".
 FEATURE_FLAGS = 'forecast_temperature_qv, forecast_wind_speed_qv'
 MPH = {'km_h-1': 1 / 1.609344, 'm_s-1': 3600 / 1609.344, 'kt': 1852 / 1609.344, 'mi_h-1': 1}
 DAYS_COVERED = 7
@@ -144,7 +144,9 @@ def fetch_periods(point):
     try:
         try:
             return [read_period(period, True) for period in ask(forecast_url, FEATURE_FLAGS)['periods']]
-        except lookups.NO_ANSWER as problem:
+        except (requests.HTTPError, ValueError, KeyError, TypeError, AttributeError) as problem:
+            # The service answered, with an error or a reply this can't read. With no answer at all, such as a
+            # timeout, asking again would only wait as long again.
             logger.info('No forecast with units from %s, asking in the deprecated format: %s', forecast_url, problem)
             return [read_period(period, False) for period in ask(forecast_url)['periods']]
     except requests.RequestException:
