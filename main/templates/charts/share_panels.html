@@ -9,7 +9,7 @@
   {# Always three parts in this order: the head, the note (an empty element without one), and a main part of the plots with their keys and then the controls (an empty element when there are none). In .chart-tiles each part lines up across charts side by side. #}
   <div class="chart-note">{% spaceless %}
     {% if chart.total_keys %}<span class="chart-note-keys">{% for key in chart.total_keys %}<span class="chart-key chart-key-m{{ key.number }}"><i class="chart-part-total"></i>{{ key.label }}</span>{% endfor %}</span>{% endif %}
-    {% if chart.note %}<span>{{ chart.note }}</span>{% endif %}
+    {% if chart.note_without_total %}<span class="chart-pair"><span class="chart-only-total">{{ chart.note }}</span><span class="chart-only-no-total">{{ chart.note_without_total }}</span></span>{% elif chart.note %}<span>{{ chart.note }}</span>{% endif %}
   {% endspaceless %}</div>
   <div class="chart-main">
   <div class="chart-plots" data-chart-part="views">
@@ -36,8 +36,8 @@
       {% if chart.views|length > 1 %}
       <div class="chart-control">{% if chart.view_switch_label %}<span class="chart-control-label" id="{{ chart.name }}-view-label">{{ chart.view_switch_label }}</span>{% endif %}
       <div class="chart-switch" role="radiogroup" {% if chart.view_switch_label %}aria-labelledby="{{ chart.name }}-view-label"{% else %}aria-label="View"{% endif %}>
-        {% for view in chart.views %}
-        <label><input type="radio" name="{{ chart.name }}-view"{% if forloop.first %} checked{% else %} class="chart-pick-v{{ forloop.counter }}"{% endif %}><span>{{ view.label }}</span></label>
+        {% for view in chart.view_switch %}
+        <label><input type="radio" name="{{ chart.name }}-view"{% if view.number == 1 %} checked{% else %} class="chart-pick-v{{ view.number }}"{% endif %}><span>{{ view.label }}</span></label>
         {% endfor %}
       </div>
       </div>
@@ -45,8 +45,16 @@
       {% if chart.scale_switch %}
       <div class="chart-control"><span class="chart-control-label" id="{{ chart.name }}-scale-label">Y-axis scale</span>
       <div class="chart-switch" role="radiogroup" aria-labelledby="{{ chart.name }}-scale-label">
-        <label><input type="radio" name="{{ chart.name }}-scale" class="chart-pick-own"><span>Separate</span></label>
         <label><input type="radio" name="{{ chart.name }}-scale" checked><span>Shared</span></label>
+        <label><input type="radio" name="{{ chart.name }}-scale" class="chart-pick-own"><span>Separate</span></label>
+      </div>
+      </div>
+      {% endif %}
+      {% if chart.total_switch_label %}
+      <div class="chart-control"><span class="chart-control-label" id="{{ chart.name }}-total-label">{{ chart.total_switch_label }}</span>
+      <div class="chart-switch" role="radiogroup" aria-labelledby="{{ chart.name }}-total-label">
+        <label><input type="radio" name="{{ chart.name }}-total" checked><span>On</span></label>
+        <label><input type="radio" name="{{ chart.name }}-total" class="chart-pick-no-total"><span>Off</span></label>
       </div>
       </div>
       {% endif %}

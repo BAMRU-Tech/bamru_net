@@ -254,6 +254,7 @@
                 max-width: var(--chart-column); --chart-size: var(--m1-shared);
                 height: calc(var(--chart-size) * var(--chart-up));
                 min-height: min(1px, calc(var(--chart-size) * 100));   /* a hairline, but nothing for zero */
+                overflow: hidden;   /* nor its edge, which would otherwise show for zero */
                 position: relative; isolation: isolate; container-type: inline-size;
                 background: var(--chart-total); }
 .chart-column::before { content: ''; position: absolute; inset: 0; z-index: -1; box-sizing: border-box;
@@ -283,33 +284,63 @@
 .chart-x-axis span { font-size: 0.7rem; color: var(--chart-ink-secondary); white-space: nowrap; padding-top: 0.15rem; }
 
 /* The other views, when the reader asks for one */
-.chart-panels.chart-v2, .chart-panels.chart-v3 { display: none; }
+.chart-panels.chart-v2, .chart-panels.chart-v3, .chart-panels.chart-v4 { display: none; }
 .chart:has(.chart-pick-v2:checked) .chart-panels.chart-v1 { display: none; }
 .chart:has(.chart-pick-v3:checked) .chart-panels.chart-v1 { display: none; }
+.chart:has(.chart-pick-v4:checked) .chart-panels.chart-v1 { display: none; }
 .chart:has(.chart-pick-v2:checked) .chart-panels.chart-v2 { display: grid; }
 .chart:has(.chart-pick-v3:checked) .chart-panels.chart-v3 { display: grid; }
+.chart:has(.chart-pick-v4:checked) .chart-panels.chart-v4 { display: grid; }
 
-/* Which ticks and sizes show depends on two switches: the measure (first,
-   second or third) and the scale (each panel's own, or one shared by all). Each rule
-   stands alone, so a browser without :has() keeps the first view whole. */
+/* Which ticks and sizes show depends on two switches: the measure and the
+   scale (each panel's own, or one shared by all). Each rule stands alone, so
+   a browser without :has() keeps the first view whole. */
 .chart-tick.chart-m1.chart-shared { display: block; }
 .chart:has(.chart-pick-m2:checked) .chart-tick.chart-m1.chart-shared { display: none; }
 .chart:has(.chart-pick-m3:checked) .chart-tick.chart-m1.chart-shared { display: none; }
+.chart:has(.chart-pick-m4:checked) .chart-tick.chart-m1.chart-shared { display: none; }
 .chart:has(.chart-pick-own:checked) .chart-tick.chart-m1.chart-shared { display: none; }
-.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):has(.chart-pick-own:checked) .chart-tick.chart-m1.chart-own { display: block; }
+.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):not(:has(.chart-pick-m4:checked)):has(.chart-pick-own:checked) .chart-tick.chart-m1.chart-own { display: block; }
 .chart:has(.chart-pick-m2:checked):not(:has(.chart-pick-own:checked)) .chart-tick.chart-m2.chart-shared { display: block; }
 .chart:has(.chart-pick-m3:checked):not(:has(.chart-pick-own:checked)) .chart-tick.chart-m3.chart-shared { display: block; }
+.chart:has(.chart-pick-m4:checked):not(:has(.chart-pick-own:checked)) .chart-tick.chart-m4.chart-shared { display: block; }
 .chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-tick.chart-m2.chart-own { display: block; }
 .chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-tick.chart-m3.chart-own { display: block; }
+.chart:has(.chart-pick-m4:checked):has(.chart-pick-own:checked) .chart-tick.chart-m4.chart-own { display: block; }
 .chart:has(.chart-pick-own:checked) .chart-column { --chart-size: var(--m1-own); }
 .chart:has(.chart-pick-m2:checked) .chart-column { --chart-size: var(--m2-shared); }
 .chart:has(.chart-pick-m3:checked) .chart-column { --chart-size: var(--m3-shared); }
+.chart:has(.chart-pick-m4:checked) .chart-column { --chart-size: var(--m4-shared); }
 .chart:has(.chart-pick-m2:checked):has(.chart-pick-own:checked) .chart-column { --chart-size: var(--m2-own); }
 .chart:has(.chart-pick-m3:checked):has(.chart-pick-own:checked) .chart-column { --chart-size: var(--m3-own); }
+.chart:has(.chart-pick-m4:checked):has(.chart-pick-own:checked) .chart-column { --chart-size: var(--m4-own); }
 .chart:has(.chart-pick-m2:checked) .chart-column div { height: var(--m2); }
 .chart:has(.chart-pick-m3:checked) .chart-column div { height: var(--m3); }
+.chart:has(.chart-pick-m4:checked) .chart-column div { height: var(--m4); }
 .chart:has(.chart-pick-own:checked) .chart-plot { --chart-up: var(--m1-own-up, 1); }
 .chart:has(.chart-pick-own:checked) .chart-marker { --chart-mark: var(--m1-own-mark); }
+/* A chart with a switch for its totals (share_panels' total_switch_label) has two sizes for each measure with a
+   total: against the total (-whole), and against what the parts reach (-parts); a measure without a total has
+   the first only. These give the rules above the sizes the switch is set to. A chart without the switch sets
+   those sizes in each column's own style, which these leave alone. */
+.chart-column { --m1-own: var(--m1-own-whole); --m1-shared: var(--m1-shared-whole);
+                --m2-own: var(--m2-own-whole); --m2-shared: var(--m2-shared-whole);
+                --m3-own: var(--m3-own-whole); --m3-shared: var(--m3-shared-whole);
+                --m4-own: var(--m4-own-whole); --m4-shared: var(--m4-shared-whole); }
+.chart-column div { --m1: var(--m1-whole); --m2: var(--m2-whole); --m3: var(--m3-whole); --m4: var(--m4-whole); }
+.chart:has(.chart-pick-no-total:checked) .chart-column {
+  --m1-own: var(--m1-own-parts, var(--m1-own-whole)); --m1-shared: var(--m1-shared-parts, var(--m1-shared-whole));
+  --m2-own: var(--m2-own-parts, var(--m2-own-whole)); --m2-shared: var(--m2-shared-parts, var(--m2-shared-whole));
+  --m3-own: var(--m3-own-parts, var(--m3-own-whole)); --m3-shared: var(--m3-shared-parts, var(--m3-shared-whole));
+  --m4-own: var(--m4-own-parts, var(--m4-own-whole)); --m4-shared: var(--m4-shared-parts, var(--m4-shared-whole)); }
+.chart:has(.chart-pick-no-total:checked) .chart-column div {
+  --m1: var(--m1-parts, var(--m1-whole)); --m2: var(--m2-parts, var(--m2-whole)); --m3: var(--m3-parts, var(--m3-whole));
+  --m4: var(--m4-parts, var(--m4-whole)); }
+/* What is drawn for one setting of that switch only. Hidden, it keeps its room, so nothing moves when the switch
+   changes; inherited, it shows where what holds it does. */
+.chart-only-no-total { visibility: hidden; }
+.chart:has(.chart-pick-no-total:checked) .chart-only-total { visibility: hidden; }
+.chart:has(.chart-pick-no-total:checked) .chart-only-no-total { visibility: inherit; }
 /* The title follows both the measure and the view. Every variant sits in the same grid cell, so the head is as tall as the
    longest one and nothing below moves when a switch changes the title. */
 .chart-title { display: grid; }
@@ -317,33 +348,55 @@
 .chart-title .chart-m1.chart-v1 { visibility: visible; }
 .chart:has(.chart-pick-m2:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
 .chart:has(.chart-pick-m3:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
+.chart:has(.chart-pick-m4:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
 .chart:has(.chart-pick-v2:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
 .chart:has(.chart-pick-v3:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
-.chart:has(.chart-pick-m2:checked):not(:has(.chart-pick-v2:checked)):not(:has(.chart-pick-v3:checked)) .chart-title .chart-m2.chart-v1 { visibility: visible; }
-.chart:has(.chart-pick-m3:checked):not(:has(.chart-pick-v2:checked)):not(:has(.chart-pick-v3:checked)) .chart-title .chart-m3.chart-v1 { visibility: visible; }
-.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):has(.chart-pick-v2:checked) .chart-title .chart-m1.chart-v2 { visibility: visible; }
+.chart:has(.chart-pick-v4:checked) .chart-title .chart-m1.chart-v1 { visibility: hidden; }
+.chart:has(.chart-pick-m2:checked):not(:has(.chart-pick-v2:checked)):not(:has(.chart-pick-v3:checked)):not(:has(.chart-pick-v4:checked)) .chart-title .chart-m2.chart-v1 { visibility: visible; }
+.chart:has(.chart-pick-m3:checked):not(:has(.chart-pick-v2:checked)):not(:has(.chart-pick-v3:checked)):not(:has(.chart-pick-v4:checked)) .chart-title .chart-m3.chart-v1 { visibility: visible; }
+.chart:has(.chart-pick-m4:checked):not(:has(.chart-pick-v2:checked)):not(:has(.chart-pick-v3:checked)):not(:has(.chart-pick-v4:checked)) .chart-title .chart-m4.chart-v1 { visibility: visible; }
+.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):not(:has(.chart-pick-m4:checked)):has(.chart-pick-v2:checked) .chart-title .chart-m1.chart-v2 { visibility: visible; }
 .chart:has(.chart-pick-m2:checked):has(.chart-pick-v2:checked) .chart-title .chart-m2.chart-v2 { visibility: visible; }
 .chart:has(.chart-pick-m3:checked):has(.chart-pick-v2:checked) .chart-title .chart-m3.chart-v2 { visibility: visible; }
-.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):has(.chart-pick-v3:checked) .chart-title .chart-m1.chart-v3 { visibility: visible; }
+.chart:has(.chart-pick-m4:checked):has(.chart-pick-v2:checked) .chart-title .chart-m4.chart-v2 { visibility: visible; }
+.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):not(:has(.chart-pick-m4:checked)):has(.chart-pick-v3:checked) .chart-title .chart-m1.chart-v3 { visibility: visible; }
 .chart:has(.chart-pick-m2:checked):has(.chart-pick-v3:checked) .chart-title .chart-m2.chart-v3 { visibility: visible; }
 .chart:has(.chart-pick-m3:checked):has(.chart-pick-v3:checked) .chart-title .chart-m3.chart-v3 { visibility: visible; }
+.chart:has(.chart-pick-m4:checked):has(.chart-pick-v3:checked) .chart-title .chart-m4.chart-v3 { visibility: visible; }
+.chart:not(:has(.chart-pick-m2:checked)):not(:has(.chart-pick-m3:checked)):not(:has(.chart-pick-m4:checked)):has(.chart-pick-v4:checked) .chart-title .chart-m1.chart-v4 { visibility: visible; }
+.chart:has(.chart-pick-m2:checked):has(.chart-pick-v4:checked) .chart-title .chart-m2.chart-v4 { visibility: visible; }
+.chart:has(.chart-pick-m3:checked):has(.chart-pick-v4:checked) .chart-title .chart-m3.chart-v4 { visibility: visible; }
+.chart:has(.chart-pick-m4:checked):has(.chart-pick-v4:checked) .chart-title .chart-m4.chart-v4 { visibility: visible; }
+/* A title or a note with the totals and without them: the two in one place, as big as the bigger. */
+.chart-pair { display: inline-grid; }
+.chart-pair > span { grid-area: 1 / 1; }
 .chart-only-m2 { display: none; }
 .chart-only-m3 { display: none; }
+.chart-only-m4 { display: none; }
 .chart:has(.chart-pick-m2:checked) .chart-only-m1 { display: none; }
 .chart:has(.chart-pick-m3:checked) .chart-only-m1 { display: none; }
+.chart:has(.chart-pick-m4:checked) .chart-only-m1 { display: none; }
 .chart:has(.chart-pick-m2:checked) .chart-only-m2 { display: revert; }
 .chart:has(.chart-pick-m3:checked) .chart-only-m3 { display: revert; }
-/* The keys to the measures' totals share one place in the note, as wide as
-   the widest, and only the measure's own shows: so the note after them
-   keeps its lines, and the chart its height, when the measure changes,
-   even to one without a total. */
+.chart:has(.chart-pick-m4:checked) .chart-only-m4 { display: revert; }
+/* A key's entry for one measure shows only with it, and keeps its room under
+   the others. The keys to the measures' totals share one place in the note,
+   as wide as the widest: so the note after them keeps its lines, and the
+   chart its height, when the measure changes, even to one without a total.
+   With the totals switched off, they take no room. */
+.chart-key-m1 { visibility: inherit; }
+.chart-key-m2 { visibility: hidden; }
+.chart-key-m3 { visibility: hidden; }
+.chart-key-m4 { visibility: hidden; }
+.chart:has(.chart-pick-m2:checked) .chart-key-m1 { visibility: hidden; }
+.chart:has(.chart-pick-m3:checked) .chart-key-m1 { visibility: hidden; }
+.chart:has(.chart-pick-m4:checked) .chart-key-m1 { visibility: hidden; }
+.chart:has(.chart-pick-m2:checked) .chart-key-m2 { visibility: inherit; }
+.chart:has(.chart-pick-m3:checked) .chart-key-m3 { visibility: inherit; }
+.chart:has(.chart-pick-m4:checked) .chart-key-m4 { visibility: inherit; }
 .chart-note-keys { display: inline-grid; }
-.chart-note-keys .chart-key { grid-area: 1 / 1; visibility: hidden; }
-.chart-note-keys .chart-key-m1 { visibility: visible; }
-.chart:has(.chart-pick-m2:checked) .chart-note-keys .chart-key-m1 { visibility: hidden; }
-.chart:has(.chart-pick-m3:checked) .chart-note-keys .chart-key-m1 { visibility: hidden; }
-.chart:has(.chart-pick-m2:checked) .chart-note-keys .chart-key-m2 { visibility: visible; }
-.chart:has(.chart-pick-m3:checked) .chart-note-keys .chart-key-m3 { visibility: visible; }
+.chart:has(.chart-pick-no-total:checked) .chart-note-keys { display: none; }
+.chart-note-keys .chart-key { grid-area: 1 / 1; }
 
 /* The figures for the column under the pointer: a list in a box that floats
    just above the plot, by the column, over whatever is there, so nothing
@@ -378,6 +431,12 @@
 .chart-tip-lines { display: grid; grid-template-columns: auto minmax(min-content, 1fr); column-gap: 0.4rem; }
 .chart-tip-number { text-align: right; white-space: nowrap; }
 .chart-tip-text { grid-column: 1 / -1; }
+/* A line that reads otherwise with the totals switched off comes twice, each in the grid of lines, and only the
+   setting's own takes room: the box shows for one column at a time, over the rest, so it may change size. */
+.chart-tip-pair { display: contents; }
+.chart-tip-pair.chart-only-no-total { display: none; }
+.chart:has(.chart-pick-no-total:checked) .chart-tip-pair.chart-only-total { display: none; }
+.chart:has(.chart-pick-no-total:checked) .chart-tip-pair.chart-only-no-total { display: contents; }
 .chart-tip-left { left: var(--chart-tip-at); }
 .chart-tip-right { right: var(--chart-tip-at); }
 .chart-tip-centre { left: var(--chart-tip-at); transform: translateX(-50%); }

@@ -10,6 +10,7 @@ not an error, so that migrate and the task queue still start."""
 import math
 import re
 from dataclasses import dataclass, field, fields
+from datetime import date
 from functools import cache
 from types import SimpleNamespace
 from typing import get_args, get_origin
@@ -20,7 +21,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.signals import setting_changed
 from django.dispatch import receiver
 
-from main.lib.charts import MAX_VIEWS
+from main.lib.charts import MAX_MEASURES, MAX_VIEWS
 from main.models import Member
 
 
@@ -56,6 +57,11 @@ def _up_to(most, unit):
     return check
 
 
+def _a_year(value, report_settings):
+    return None if date.min.year <= value <= date.max.year else 'is a year, {} to {}'.format(date.min.year,
+                                                                                            date.max.year)
+
+
 def _no_limit_or_up_to_20_seconds(value, report_settings):
     return None if 0 <= value <= 20 else 'is 0, for no limit, or a number of seconds up to 20'
 
@@ -64,8 +70,8 @@ def _member_statuses(value, report_settings):
     # Not a guest's, as guests are not counted with members; nor a no-contact status, whose name the reports never
     # show (Member.NO_CONTACT), as the status chart names each status banded.
     statuses = [code for code, _ in Member.TYPES if code not in Member.GUESTS and code not in Member.NO_CONTACT]
-    return None if 1 <= len(value) <= 4 and len(set(value)) == len(value) and set(value) <= set(statuses) else (
-        'is one to four statuses of members, each once, of {}'.format(', '.join(statuses)))
+    fits = 1 <= len(value) <= MAX_MEASURES and len(set(value)) == len(value) and set(value) <= set(statuses)
+    return None if fits else 'is 1 to {} statuses of members, each once, of {}'.format(MAX_MEASURES, ', '.join(statuses))
 
 
 def _escape_unsafe(letter):
@@ -196,20 +202,9 @@ class ReportSettings:
     # The member page's Last table: the longest, in seconds, that its queries may run between them, on Postgres,
     # before the page shows without it: up to 20, as the server ends a page at 30 (gunicorn's timeout,
     # deploy/azure_startup.sh), or 0 for no limit but the server's.
-    LAST_TABLE_SECONDS: float = _rule(2, check=_no_limit_or_up_to_20_seconds)
+    LAST_TABLE_SECONDS: float = _rule(5, check=_no_limit_or_up_to_20_seconds)
 
     # The unit report.
-    # Trainings guests may come to, by their title, so that a day at one is no day towards joining: SAR Basic;
-    # those whose title says "guest", other than "no guests", "not for guests" or a guest lecturer, speaker,
-    # instructor or presenter; and those marked G: "* G", "*G", "G*", "(G)", or a capital G at the very end
-    # ("Rope rescue G"). Words may have any spaces or hyphens between them, so a match starts where those
-    # before "guests" (or "for guests") do: after anything but a space or a hyphen, and not after "no" or "not".
-    GUEST_FRIENDLY_TITLE: str = _rule(
-        r'sar[\s-]*basic'
-        r'|(?<![\s-])(?:(?<!\bno)(?<!\bfor)|(?<!\bnot)[\s-]*\bfor)'
-        r'[\s-]*\bguests?\b(?![\s-]+(?:lectur|speak|instruct|present))'
-        r'|\*\s*g\b|\bg\*|\(g\)'
-        r'|(?-i:\sG\s*$)', pattern=True)
     # An immediate callout's page, by how its text starts: the DO starts one with the word, after the name of
     # the operation's period where the page form puts it ("<title> OP1:"); a page that repeats, answers,
     # forwards or updates one puts its own word before that, perhaps numbered, perhaps more than once
@@ -223,13 +218,14 @@ class ReportSettings:
     IMMEDIATE_CALLOUT_SAID: str = ('that starts with "Immediate", or has "Immediate" straight after the operation\'s '
                                    'name and number, which is how the page form starts a page. A repage, reply, '
                                    'forward or update of such a page counts as well')
-    # Joining, read from activity as no date for it is kept: the days at operations or trainings not open to
-    # guests on which a member has joined; with fewer, they joined on their first event.
-    JOINED_AT: int = _rule(3, check=_above_zero)
-    # How well that rule agrees with the team's own record of when members joined, for the glossary to say after
-    # it; empty to say nothing.
-    JOINED_CHECKED: str = ('Checked against Member Residency Times, this gives the same joining year for 122 of 124 '
-                           'members who joined in 2011 or later.')
+    # The certificate type whose kinds are the endorsements named below and in BANDED_STATUSES.
+    ENDORSEMENTS: str = 'Endorsements'
+    # Joining: the endorsement whose date, or the year its comment starts with, is the day a member joined. Without
+    # either, a member joined on their first day at a training or an operation.
+    JOINED_ENDORSEMENT: str = 'T'
+    # The endorsements whose dates are promotions, each to the member status of the same code: an option each of the
+    # chart of promotions' switch, the first shown to start with.
+    PROMOTIONS: tuple[str, ...] = _rule(('FM', 'TM'), check=_member_statuses)
     # Becoming inactive: the months without an operation, training or community event after which a member is
     # inactive (left, in the code's names). The first is the rule for being active; the chart of members joining
     # and becoming inactive can be switched to the others.
@@ -255,7 +251,7 @@ class ReportSettings:
     BANDED_STATUSES: tuple[str, ...] = _rule(('T', 'FM', 'TM'), check=_member_statuses)
     # The year from which most operations have their times logged: what the unit report reads from those times
     # (whether an operation ran, who went) is grey before it.
-    OPERATION_TIMES_FROM: int = 2013
+    OPERATION_TIMES_FROM: int = _rule(2013, check=_a_year)
 
     def __post_init__(self):
         # The one gate every value passes: no ReportSettings holds a value its key refuses.

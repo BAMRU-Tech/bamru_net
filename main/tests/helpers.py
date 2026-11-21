@@ -10,7 +10,7 @@ from django.utils import timezone
 from main.lib.activity import member_activity
 from main.lib.counting import (activity_rows, member_entries, member_latest, operations_not_run, operations_that_ran,
                                records_from, reply_templates_from)
-from main.models import Event, Member, Message, Participant, Period, RsvpTemplate
+from main.models import Cert, CertSubType, CertType, Event, Member, Message, Participant, Period, RsvpTemplate
 
 
 NOW = datetime(2024, 6, 15, 20, 0, tzinfo=dt_timezone.utc)
@@ -37,6 +37,12 @@ class ActivityTestCase(TestCase):
     def make_member(self, name, status):
         return Member.objects.create(first_name=name, last_name='Test',
                                      username=name.lower(), status=status)
+
+    def endorse(self, member, name, earned_on, comment=''):
+        """Give the member the endorsement of that name, earned that day, or with no date for None."""
+        endorsements, _ = CertType.objects.get_or_create(name='Endorsements')
+        kind, _ = CertSubType.objects.get_or_create(type=endorsements, name=name)
+        Cert.objects.create(member=member, subtype=kind, earned_on=earned_on, comment=comment)
 
     def make_event(self, event_type, start, attended=(), no_time=(), ahc=(), ol=(), hours=4,
                    leaders=''):
