@@ -29,7 +29,7 @@ class ReportSettingsTestCase(SimpleTestCase):
         self.assertEqual(report_settings(), ReportSettings())
 
     def test_a_team_sets_the_member_page_s_time_limit_or_none(self):
-        self.assertEqual(report_settings().LAST_TABLE_SECONDS, 2)
+        self.assertEqual(report_settings().LAST_TABLE_SECONDS, 5)
         for seconds in (0, 0.001, 0.5, 20):
             with override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': seconds}):
                 self.assertEqual((check_report_settings(None), report_settings().LAST_TABLE_SECONDS), ([], seconds))
@@ -48,7 +48,7 @@ class ReportSettingsTestCase(SimpleTestCase):
             "'BANDED_STATUSES'] is a tuple of str, not (['T'],)": {'BANDED_STATUSES': [['T']]},
             "'REPLY_MINUTES'] is a tuple of float, not (5, None)": {'REPLY_MINUTES': (5, None)},
             # As many as the chart has views to switch between.
-            "'LEFT_AFTER'] is at most 3 numbers": {'LEFT_AFTER': (6, 12, 24, 36)},
+            "'LEFT_AFTER'] is at most 4 numbers": {'LEFT_AFTER': (6, 12, 24, 36, 48)},
             # The two title patterns run in the database: only what Postgres reads as Python does.
             "'TEST_TITLE'] has \\b, which the database reads otherwise": {'TEST_TITLE': r'\btest\b'},
             "'HEADS_UP_TITLE'] has (?P": {'HEADS_UP_TITLE': r'(?P<h>heads up)'},
@@ -82,13 +82,16 @@ class ReportSettingsTestCase(SimpleTestCase):
             # Months that a date can be counted forward by.
             "'LEFT_AFTER'] is at most 120 months": {'LEFT_AFTER': (12, 24, 120000)},
             "'MAX_ENTRY_DAYS'] is at most 366 days": {'MAX_ENTRY_DAYS': 10 ** 9},
+            # A year a date can be made of.
+            "'OPERATION_TIMES_FROM'] is a year, 1 to 9999": {'OPERATION_TIMES_FROM': 0},
             "'SINGLE_DAY_HOURS'] is above zero": {'SINGLE_DAY_HOURS': 0},
-            "'GUEST_FRIENDLY_TITLE'] is not a pattern": {'GUEST_FRIENDLY_TITLE': 'guests ('},
             "'LEFT_AFTER'] is one or more numbers above zero, each more than the last": {'LEFT_AFTER': (24, 12)},
             "'RESPONDERS_FULL'] is at least two more than RESPONDERS_THIN": {'RESPONDERS_THIN': 5,
                                                                               'RESPONDERS_FULL': 6},
             "'REPLY_MINUTES'] is two numbers above zero, the second more than the first": {'REPLY_MINUTES': [5]},
-            "'BANDED_STATUSES'] is one to four statuses of members, each once": {'BANDED_STATUSES': ('T', 'T')},
+            "'BANDED_STATUSES'] is 1 to 4 statuses of members, each once": {'BANDED_STATUSES': ('T', 'T')},
+            "'PROMOTIONS'] is 1 to 4 statuses of members, each once": {'PROMOTIONS': ('FM', 'G')},
+            "'JOINED_ENDORSEMENT'] is a str, not 5": {'JOINED_ENDORSEMENT': 5},
             # The member page's time limit: seconds up to 20, under the server's own 30, or 0 for none; not None,
             # nor a time below 0.
             "'LAST_TABLE_SECONDS'] is a float, not None": {'LAST_TABLE_SECONDS': None},
@@ -112,7 +115,7 @@ class ReportSettingsTestCase(SimpleTestCase):
         self.assertEqual(check_report_settings(None), [])
         # A pattern that only Python reads may use what Python has, and a title pattern what both read alike.
         with override_settings(ACTIVITY_REPORTS={
-                'GUEST_FRIENDLY_TITLE': r'(?-i:\sG$)',
+                'IMMEDIATE_CALLOUT': r'(?-i:\sG$)',
                 'TEST_TITLE': r'^[^-a-z]*[-0-9a-z_ ]*(?:drill|te(?:s){1}t)(?:x{2})*(?=\W|$)',
                 'HEADS_UP_TITLE': r"^\W{0,3}head(s|['’]s)?[\s-]{1,}up\{1\}(\W{2}|$)"}):
             self.assertEqual(check_report_settings(None), [])
@@ -128,7 +131,7 @@ class NoContactTestCase(SimpleTestCase):
                 [warning] = check_report_settings(None)
                 self.assertEqual(warning.id, 'main.W001')
                 # The statuses it may band end at MA: the warning repeats the team's own value after them.
-                self.assertIn("'BANDED_STATUSES'] is one to four statuses of members, each once, of TM, FM, T, R, S, "
+                self.assertIn("'BANDED_STATUSES'] is 1 to 4 statuses of members, each once, of TM, FM, T, R, S, "
                               "A, MA: ", warning.msg)
                 self.assertEqual(report_settings().BANDED_STATUSES, ReportSettings().BANDED_STATUSES)
 
@@ -136,14 +139,6 @@ class NoContactTestCase(SimpleTestCase):
 class RefusedValueTestCase(SimpleTestCase):
     """A team's refused value warns at start-up and keeps its default, so that migrate and the task queue still
     start and the reports run, on checked values only."""
-
-    def test_a_team_may_say_nothing_of_how_its_joining_rule_was_checked_but_not_give_a_number(self):
-        with override_settings(ACTIVITY_REPORTS={'JOINED_CHECKED': ''}):
-            self.assertEqual(check_report_settings(None), [])
-            self.assertEqual(report_settings().JOINED_CHECKED, '')
-        with override_settings(ACTIVITY_REPORTS={'JOINED_CHECKED': 5}):
-            self.assertEqual([(w.id, w.level) for w in check_report_settings(None)], [('main.W001', checks.WARNING)])
-            self.assertEqual(report_settings().JOINED_CHECKED, ReportSettings().JOINED_CHECKED)
 
     def test_a_refused_value_warns_and_the_reports_use_its_default_beside_the_team_s_other_keys(self):
         defaults = ReportSettings()

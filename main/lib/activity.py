@@ -1,5 +1,5 @@
-"""A member's activity report: the chart and table of their days, events and
-hours against the unit's, and the glossary of terms both activity reports
+"""A member's activity report: the chart and table of their days, events,
+OPs and hours against the unit's, and the glossary of terms both activity reports
 share. The counting is main.lib.counting's.
 """
 import calendar
@@ -61,6 +61,18 @@ def glossary(member_report=False, records_from=None):
         ('Unit event',
          'An event attended by at least one member other than the AHC.'
          + (own.format('event', 'unit event') if member_report else '')),
+        ('OP attended',
+         'An operating period of an event, OP1, OP2 and so on on its page, with any time of the member\'s logged on '
+         'it: one time alone counts, such as Left with no Returned. Each OP is one calendar day: in their order on '
+         'the page, the first is the day the event starts, the next the day after, and so on, whatever its times '
+         'say. An OP counts once its event has begun and its day has come. '
+         'OPs of different events on one date count once for each type of event: two meetings on one date are one '
+         'OP. They also count once across all types: a meeting and a training on one date are one OP across all '
+         'types.'),
+        ('Unit OP',
+         'An OP attended by at least one member other than the AHC, at an event of that type, counted once a date '
+         'as a member\'s are.'
+         + (own.format('OP', 'unit OP') if member_report else '')),
         ('Hours',
          "Hours of time logged on events; nothing else counts as hours. Each logged time's hours are shown on the "
          'day or days it counts as (see Day attended).{} When a logged time has hours on a date that does not '
@@ -68,13 +80,16 @@ def glossary(member_report=False, records_from=None):
              example(' 10pm to 4am counts as one day, on the second date, so all 6 hours are shown on that date.'),
              example(': for 8am Saturday to 1am Sunday, all 17 hours are shown on Saturday'))),
         ('Guests',
-         'Those whose status today is {}. Their time counts only on their own activity report. A former guest '
-         'who is now a member counts as a member for all their time, including time logged while they were a '
-         'guest.'.format(guests)),
+         'Those whose status today is {}, and members before the day they joined: the date of their {} '
+         'endorsement, or with no date, the year its comment starts with; without either, their first training or '
+         'operation. A member with none of these has not joined. Time as a guest counts only on their own activity '
+         'report.'.format(
+             guests, rules.JOINED_ENDORSEMENT)),
         ('OL', 'Operation Leader: marked OL on an entry on the event page.'),
         ('AHC',
          'At Home Coordinator: marked AHC on an entry for an operation on the event page. Time as AHC counts as '
-         'days attended and hours, but not as time in the field.'),
+         'days attended, OPs attended and hours, but not as time in the field. A day or an OP counts as AHC only on '
+         'a date with no time in the field on an operation.'),
         ('Led',
          'On an operation, in the field as OL. On a training (as TL or LL), a meeting or a community event, named '
          'in its leaders text, as the event page links leaders, or marked OL.'),
@@ -111,13 +126,13 @@ def glossary(member_report=False, records_from=None):
     ]
     if member_report:
         terms += [
-            ('AHC days', 'Days on operations as AHC, apart from days also in the field.'),
+            ('AHC OPs', 'OPs of operations attended as AHC.'),
             ('DO weeks',
              'Duty Officer weeks. An assigned DO week counts once its shift starts, in the month and year that hold '
              'most of its days; in its first three days, on today.'),
             ('All',
-             'Every type of event together. In days, a day with more than one type counts once, under the '
-             'first of Operations, Trainings, Meetings and Community.'),
+             'Every type of event together. In days and OPs, a date with more than one type counts once, under '
+             'the first of Operations, Trainings, Meetings and Community.'),
         ]
     return terms
 
@@ -141,10 +156,12 @@ def _lines(role, amount, hours=False):
 
 
 def _counted(label, attended, parts, whole, noun, more=()):
-    """One column of days or of events, against the unit's. Parts are
-    (colour, amount); `more` is further lines for its figures."""
+    """One column of days, events or OPs, against the unit's, and its figures
+    with the unit's figures switched off. Parts are (colour, amount); `more`
+    is further lines for its figures."""
     return {'parts': parts, 'total': whole,
-            'tip': [label, ('{} of {}'.format(attended, whole), noun + pluralize(whole)), *more]}
+            'tip': [label, ('{} of {}'.format(attended, whole), noun + pluralize(whole)), *more],
+            'tip_without_total': [label, (attended, noun + pluralize(attended)), *more]}
 
 
 def _logged(label, parts, more=()):
@@ -162,24 +179,27 @@ def _by_role(led, other, ahc=None):
 
 
 def _type_cells(label, r, event_type):
-    """A type's own panel, as days, events and hours: the same colours
+    """A type's own panel, as OPs, days, events and hours: the same colours
     whatever the type, with what was led (as OL, or as TL or LL) picked out
     at the foot of the column, where it can be compared from one period to
     the next."""
-    days, events = r.days[event_type], r.events[event_type]
-    active_days, unit_events = r.active_days[event_type], r.unit_events[event_type]
+    days, events, ops = r.days[event_type], r.events[event_type], r.ops[event_type]
+    active_days, unit_events, unit_ops = r.active_days[event_type], r.unit_events[event_type], r.unit_ops[event_type]
     other_hours = r.other_hours[event_type]
     if event_type == 'operation':
         ol, ahc = r.ol_days, r.ahc_days
-        return [_counted(label, days, _by_role(ol, days - ol - ahc, ahc), active_days, 'day',
+        return [_counted(label, ops, _by_role(r.ol_ops, ops - r.ol_ops - r.ahc_ops, r.ahc_ops), unit_ops, 'OP',
+                         _lines(LEADING['operation'], r.ol_ops) + _lines('AHC', r.ahc_ops)),
+                _counted(label, days, _by_role(ol, days - ol - ahc, ahc), active_days, 'day',
                          _lines(LEADING['operation'], ol) + _lines('AHC', ahc)),
                 _counted(label, events, _by_role(r.ol_events, events - r.ol_events - r.ahc_events, r.ahc_events),
                          unit_events, 'event', _lines(LEADING['operation'], r.ol_events) + _lines('AHC', r.ahc_events)),
                 _logged(label, _by_role(r.ol_hours, other_hours, r.ahc_hours),
                         _lines(LEADING['operation'], r.ol_hours, hours=True) + _lines('AHC', r.ahc_hours, hours=True))]
-    led, led_events, led_hours = r.led_days[event_type], r.led_events[event_type], r.led_hours[event_type]
-    role = LEADING[event_type]
-    return [_counted(label, days, _by_role(led, days - led), active_days, 'day', _lines(role, led)),
+    led, led_events, led_ops = r.led_days[event_type], r.led_events[event_type], r.led_ops[event_type]
+    led_hours, role = r.led_hours[event_type], LEADING[event_type]
+    return [_counted(label, ops, _by_role(led_ops, ops - led_ops), unit_ops, 'OP', _lines(role, led_ops)),
+            _counted(label, days, _by_role(led, days - led), active_days, 'day', _lines(role, led)),
             _counted(label, events, _by_role(led_events, events - led_events), unit_events, 'event',
                      _lines(role, led_events)),
             _logged(label, _by_role(led_hours, other_hours), _lines(role, led_hours, hours=True))]
@@ -187,8 +207,8 @@ def _type_cells(label, r, event_type):
 
 def _all_cells(label, r):
     """Every type in one column, shaded by type, with a line of its figures
-    for each type it draws, from the foot up: a day under the first type
-    attended on it, as the column counts it."""
+    for each type it draws, from the foot up: a day, or a day's OPs, under
+    the first type attended on it, as the column counts it."""
     def by_type(amounts):
         return [(TYPE_COLOURS[t], amounts[t]) for t in TYPES]
 
@@ -197,7 +217,8 @@ def _all_cells(label, r):
 
     def events(amounts):
         return [(amounts[t], ONE_EVENT[t] if amounts[t] == 1 else TYPE_WORDS[t]) for t in TYPES if amounts[t]]
-    return [_counted(label, r.all_days, by_type(r.first_days), r.all_active_days, 'day', lines(r.first_days)),
+    return [_counted(label, r.all_ops, by_type(r.first_ops), r.all_unit_ops, 'OP', lines(r.first_ops)),
+            _counted(label, r.all_days, by_type(r.first_days), r.all_active_days, 'day', lines(r.first_days)),
             _counted(label, sum(r.events.values()), by_type(r.events), sum(r.unit_events.values()), 'event',
                      events(r.events)),
             _logged(label, by_type(r.hours), lines(r.hours, hours=True))]
@@ -206,15 +227,15 @@ def _all_cells(label, r):
 def _keys(total):
     """The key under each type's panel: the colours its columns draw, in any
     period, which are those the whole of the member's record draws, in the
-    order they stack from the foot, each named. Attendance is "Other
-    attendance" beside a role picked out, and "Attended" alone, as it is too
+    order they stack from the foot, each named. Attendance is "as
+    participant" beside a role picked out, and "Attended" alone, as it is too
     for a panel that draws nothing."""
     order = (ROLE_COLOURS['led'], ROLE_COLOURS['other'], ROLE_COLOURS['ahc'])
     keys = {}
     for t in TYPES:
         drawn = {colour for column in _type_cells('', total, t) for colour, amount in column['parts'] if amount}
         names = {ROLE_COLOURS['led']: 'as ' + LEADING[t], ROLE_COLOURS['ahc']: 'as AHC',
-                 ROLE_COLOURS['other']: 'Other attendance' if drawn - {ROLE_COLOURS['other']} else 'Attended'}
+                 ROLE_COLOURS['other']: 'as participant' if drawn - {ROLE_COLOURS['other']} else 'Attended'}
         keys[t] = ([(colour, names[colour]) for colour in order if colour in drawn]
                    or [(ROLE_COLOURS['other'], 'Attended')])
     return keys
@@ -252,33 +273,35 @@ def _view(label, periods, keys):
     return {'label': label, 'series': series, 'periods': [{'short': short} for _, short, _ in periods]}
 
 
-def _pair(days, hours):
-    """A table cell, "days / hours": the hours to one decimal, as the event
-    lists show them, so that the rows add up to the total."""
-    return '{} / {} hours'.format(days, charts.hours_text(hours))
+def _cell(days, ops, hours):
+    """A table cell, "days / OPs / hours": the hours to one decimal, as the
+    event lists show them, so that the rows add up to the total; blank with
+    none of the three."""
+    return '{} / {} / {}'.format(days, ops, charts.hours_text(hours)) if days or ops or charts.hours_tenths(hours) else ''
 
 
 def _table(years, total):
-    """The table: one column per type as "days / hours", with plain counts
-    beside operations for whichever duties the member has done, and a row
-    for each year, of [(label, short, row)], and the total."""
+    """The table: one column per type as "days / OPs / hours", with a count
+    of OPs beside it for each of its duties the member has done, and DO
+    weeks, and a row for each year, of [(label, short, row)], and the total."""
+    duties = {'operation': (('OL OPs', lambda r: r.ol_ops), ('AHC OPs', lambda r: r.ahc_ops),
+                            ('DO weeks', lambda r: r.do_days)),
+              'training': (('{} OPs'.format(LEADING['training']), lambda r: r.led_ops['training']),)}
     columns = []
     for t, label in EVENT_TYPES:
-        columns.append((label, lambda r, t=t: _pair(r.days[t], r.hours[t])))
-        if t == 'operation':
-            columns += [(duty_label, lambda r, field=field: getattr(r, field) or '')
-                        for field, duty_label in (('ol_days', 'OL days'), ('ahc_days', 'AHC days'),
-                                                  ('do_days', 'DO weeks'))
-                        if getattr(total, field)]
-    columns.append(('Total', lambda r: _pair(r.all_days, r.all_hours)))
+        columns.append((label, lambda r, t=t: _cell(r.days[t], r.ops[t], r.hours[t])))
+        columns += [(duty_label, lambda r, count=count: count(r) or '')
+                    for duty_label, count in duties.get(t, ()) if count(total)]
+    columns.append(('Total', lambda r: _cell(r.all_days, r.all_ops, r.all_hours)))
 
     def table_row(label, r):
         # Each cell with its column's heading, for a screen too narrow for columns.
         return {'label': label, 'cells': [(heading, value(r)) for heading, value in columns]}
 
     return {
-        'title': 'Days attended / hours logged',
+        'title': 'Days attended / OPs attended / hours logged',
         'columns': [heading for heading, _ in columns],
+        'counts': {heading for kinds in duties.values() for heading, _ in kinds},
         'rows': [table_row(label, r) for label, _, r in years],
         'total': table_row('Total', total),
     }
@@ -296,12 +319,19 @@ def member_activity(member, now, entries, since, hours=None, unit=None):
     keys = _keys(rows['total'])
     years, months, span = _periods(rows)
     chart = charts.share_panels(
-        [{'label': 'Days', 'total_label': 'Unit active days',
-          'title': 'Days attended / unit active days, by type and role, ' + span},
+        [{'label': 'OPs', 'total_label': 'Unit OPs',
+          'title': 'OPs attended / unit OPs, by type and role, ' + span,
+          'title_without_total': 'OPs attended, by type and role, ' + span},
+         {'label': 'Days', 'total_label': 'Unit active days',
+          'title': 'Days attended / unit active days, by type and role, ' + span,
+          'title_without_total': 'Days attended, by type and role, ' + span},
          {'label': 'Events', 'total_label': 'Unit events',
-          'title': 'Events attended / unit events, by type and role, ' + span},
+          'title': 'Events attended / unit events, by type and role, ' + span,
+          'title_without_total': 'Events attended, by type and role, ' + span},
          {'label': 'Hours', 'title': 'Hours logged, by type and role, ' + span}],
         [_view('Years', years, keys), _view('Months', months, keys)],
-        note="How many days and events does this member attend, against the unit's, and how many hours do they log?",
-        name='activity', measure_switch_label='Count')
+        note="How many OPs, days and events does this member attend, against the unit's, and how many hours do they "
+             "log?",
+        note_without_total='How many OPs, days and events does this member attend, and how many hours do they log?',
+        name='activity', measure_switch_label='Count', total_switch_label='Unit figures')
     return {'chart': chart, 'table': _table(years, rows['total'])}
