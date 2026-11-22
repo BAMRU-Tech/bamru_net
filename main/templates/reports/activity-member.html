@@ -25,7 +25,7 @@ table.events col.hours, table.events col.days { width: 6%; }
 /* On a phone the two number columns need room for their headings, taken
    from the text columns, which wrap; Hours a little more, for a mark and
    its hours, "‡381.5", on one line at 320px. */
-@media (max-width: 34rem) {   /* the summary's breakpoint, below */
+@media (max-width: 34rem) {
   table.events { font-size: 0.8em; }
   table.events col.date { width: 14%; }
   table.events col.event { width: 27%; }
@@ -39,12 +39,16 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
                    white-space: nowrap; }
 .events-note { margin: 0.3em 0 0; }
-/* The summary has a column for each type and duty: with all three duties
-   they need about 543px, measured, so its breakpoint is its own, 34rem
-   (544px), a little above the charts' phone width. Below it each year is a
-   block of its own, one line for each column with something in it, the
-   column's heading beside the figure. */
-@media (max-width: 34rem) {
+/* The summary spans the page, its types' columns taking the room: a column of plain counts is as narrow as its
+   heading's longer line. */
+table.summary th, table.summary td { padding: 1px 0.4em; }
+table.summary thead th { white-space: nowrap; }
+table.summary th.count { width: 1px; }
+/* The summary has a column for each type and duty. Below the width a member
+   with every duty needs, its own breakpoint, each year is a block of its
+   own, one line for each column with something in it, the column's heading
+   beside the figure. */
+@media (max-width: 47rem) {
   table.summary, table.summary caption, table.summary tbody, table.summary tr, table.summary th, table.summary td {
     display: block; }
   table.summary caption { border: 0; }     /* inside the table's own border here */
@@ -69,7 +73,7 @@ table.events td:nth-last-child(-n+2) { text-align: right; }
   <table class="summary">
     <caption>{{ activity.table.title }}</caption>
     <thead>
-      <tr><th>Year</th>{% for column in activity.table.columns %}<th>{{ column }}</th>{% endfor %}</tr>
+      <tr><th>Year</th>{% for column in activity.table.columns %}<th{% if column in activity.table.counts %} class="count"{% endif %}>{{ column|last_word_below }}</th>{% endfor %}</tr>
     </thead>
     <tbody>
       {% for row in activity.table.rows %}

@@ -12,8 +12,9 @@ from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from main.lib.counting import (NotRun, activity_rows, departures, member_entries, member_latest, months_after,
-                               operations_not_run, operations_that_ran, records_from, reply_templates_from)
+from main.lib.counting import (NotRun, activity_rows, departure_entries, joined_on, member_entries, member_latest,
+                               months_after, operations_not_run, operations_that_ran, records_from,
+                               reply_templates_from)
 from main.lib.unit_counting import unit_rows
 from main.models import Address, EmergencyContact, Event, Participant, Period, Phone
 from main.tests.helpers import NOW, ActivityTestCase, PageTestCase, when
@@ -36,9 +37,9 @@ class MemberLatestTestCase(ActivityTestCase):
         latest = self.make_event('operation', when(2024, 3, 20), attended=[self.member])
         self.make_event('operation', when(2024, 5, 1), attended=[self.other], no_time=[self.member])
         items = self.latest()
-        self.assertEqual(list(items), ['Operation (in the field)', 'Training', 'Meeting', 'Community'])
+        self.assertEqual(list(items), ['Operation (in the field)', 'Training (as participant)', 'Meeting', 'Community'])
         self.assertEqual(items['Operation (in the field)']['event'], latest)
-        self.assertEqual(items['Operation (in the field)']['ago'], '2 months')
+        self.assertEqual(items['Operation (in the field)']['ago'], '3 months')         # 2 months and 26 days
         self.assertIsNone(items['Meeting'].get('event'))
 
     def test_a_day_after_today_is_not_the_last(self):
@@ -54,7 +55,7 @@ class MemberLatestTestCase(ActivityTestCase):
         training = self.make_event('training', when(2024, 6, 14))
         Participant.objects.create(period=training.period_set.first(), member=self.member,
                                    en_route_at=when(2024, 6, 14), return_home_at=when(2024, 6, 18))
-        self.assertEqual(self.latest()['Training']['day'], date(2024, 6, 15))
+        self.assertEqual(self.latest()['Training (as participant)']['day'], date(2024, 6, 15))
 
     def test_the_last_operation_as_ol_is_a_line_of_its_own(self):
         # Never OL: no line.
@@ -65,7 +66,7 @@ class MemberLatestTestCase(ActivityTestCase):
         led = self.make_event('operation', when(2024, 1, 10), ol=[self.member])
         with self.assertNumQueries(2):
             items = {i['label']: i for i in member_latest(self.member, NOW)}
-        self.assertEqual(list(items), ['Operation (in the field)', 'Operation (as OL)', 'Training', 'Meeting',
+        self.assertEqual(list(items), ['Operation (in the field)', 'Operation (as OL)', 'Training (as participant)', 'Meeting',
                                        'Community'])
         self.assertEqual((items['Operation (as OL)']['event'], items['Operation (as OL)']['day'],
                           items['Operation (as OL)']['ago']), (led, date(2024, 1, 10), '5 months'))
@@ -81,6 +82,21 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertEqual([label for label in self.latest() if label.startswith('Operation')],
                          ['Operation (in the field)', 'Operation (as OL)', 'Operation (as AHC)'])
         self.assertEqual(self.latest()['Operation (as AHC)']['event'], ahc)
+
+    def test_the_last_training_as_tl_or_ll_is_a_line_of_its_own(self):
+        # Never led one: no line.
+        self.make_event('training', when(2024, 2, 10), attended=[self.member])
+        self.assertNotIn('Training (as TL or LL)', self.latest())
+        # Named as TL in January, then at a training in February: the led line, under the training one, with its
+        # own event and day. Flagged OL on a training counts as leading it too, as on the report.
+        named = self.make_event('training', when(2024, 1, 10), attended=[self.member], leaders='Ann (TL)')
+        items = self.latest()
+        self.assertEqual(list(items), ['Operation (in the field)', 'Training (as participant)', 'Training (as TL or LL)', 'Meeting',
+                                       'Community'])
+        self.assertEqual((items['Training (as TL or LL)']['event'], items['Training (as TL or LL)']['day'],
+                          items['Training (as participant)']['day']), (named, date(2024, 1, 10), date(2024, 2, 10)))
+        flagged = self.make_event('training', when(2024, 3, 10), ol=[self.member])
+        self.assertEqual(self.latest()['Training (as TL or LL)']['event'], flagged)
 
     def test_ol_is_counted_as_the_other_lines_are(self):
         # Flagged OL but as AHC: not in the field, so not as OL, as the report counts who led.
@@ -282,12 +298,15 @@ class MemberLatestTestCase(ActivityTestCase):
     def test_a_departure_logged_with_no_return_yet_means_the_operation_ran(self):
         # Yesterday's, saved as finished, with the other's Left logged and no return yet, as the reply to a
         # "Left?" page writes it: it ran, though no day of it counts yet, and the member did not stand down.
-        self.make_event('training', when(2024, 1, 10), attended=[self.member])
+        self.make_event('training', when(2024, 1, 10), attended=[self.member, self.other])
         operation = self.make_event('operation', when(2024, 6, 14), no_time=[self.member])
         Participant.objects.create(period=operation.period_set.first(), member=self.other,
                                    en_route_at=when(2024, 6, 14) + timedelta(hours=1))
         since = records_from(NOW)
-        self.assertEqual(departures(NOW, since), {operation.id: {self.other.id}})
+
+        def departed():
+            return {(left.operation, left.member) for left in departure_entries(NOW, since, joined_on(NOW, since))}
+        self.assertEqual(departed(), {(operation.id, self.other.id)})
         self.assertEqual(operations_that_ran(NOW, [operation.id], since), {operation.id})
         self.assertNotIn('Operation (stood down)', self.latest())
         self.assertNotIn('Operation (in the field)', {k for k, v in self.latest(self.other).items() if 'event' in v})
@@ -300,23 +319,27 @@ class MemberLatestTestCase(ActivityTestCase):
         Participant.objects.create(period=period, member=self.other, en_route_at=when(2024, 6, 16))
         ahead = self.make_event('operation', NOW + timedelta(days=1))
         Participant.objects.create(period=ahead.period_set.first(), member=self.other, en_route_at=NOW)
-        self.assertEqual(departures(NOW, since), {})
+        self.assertEqual(departed(), set())
         self.assertEqual(self.latest()['Operation (stood down)']['event'], operation)
 
     def test_the_unit_is_asked_only_about_operations_that_may_have_been_called_off(self):
-        self.make_event('training', when(2024, 1, 10), attended=[self.member], leaders='Ann (TL)')
-        self.make_event('operation', when(2024, 2, 10), attended=[self.member, self.other])
-        # The member's entries, and the year the unit's records begin: no usernames for who led, no look at
-        # the unit.
+        # A meeting's leaders text alone asks for no usernames: the table names only trainings led.
+        self.make_event('meeting', when(2024, 1, 3), attended=[self.member], leaders='Ann')
         with self.assertNumQueries(2):
             member_latest(self.member, NOW)
-        # Listed without time on an operation that has finished: one more, about that operation.
-        self.make_event('operation', when(2024, 3, 10), attended=[self.other], no_time=[self.member])
+        self.make_event('training', when(2024, 1, 10), attended=[self.member], leaders='Ann (TL)')
+        self.make_event('operation', when(2024, 2, 10), attended=[self.member, self.other])
+        # The member's entries, the year the unit's records begin and the usernames, for the training they led:
+        # no look at the unit.
         with self.assertNumQueries(3):
+            member_latest(self.member, NOW)
+        # Listed without time on an operation that has finished: that operation, and when those on it joined.
+        self.make_event('operation', when(2024, 3, 10), attended=[self.other], no_time=[self.member])
+        with self.assertNumQueries(6):
             self.assertNotIn('Operation (stood down)', self.latest())
         # One still under way is not asked about.
         self.make_event('operation', NOW - timedelta(hours=2), no_time=[self.member], hours=24)
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(6):
             member_latest(self.member, NOW)
 
     def test_listed_without_time_on_one_period_of_an_operation_timed_on_another_is_not_standing_down(self):
@@ -354,16 +377,19 @@ class MemberLatestTestCase(ActivityTestCase):
         ahead = self.make_event('training', when(2024, 6, 14) + timedelta(hours=1))
         Participant.objects.create(period=ahead.period_set.first(), member=self.member,
                                    en_route_at=when(2024, 6, 15), return_home_at=when(2024, 6, 15) + timedelta(hours=4))
-        self.make_event('meeting', when(2024, 5, 15), attended=[self.member])
+        self.make_event('meeting', when(2024, 5, 31), attended=[self.member])
         latest = {i['label']: i for i in member_latest(self.member, evening)}
-        self.assertEqual(latest['Training']['day'], date(2024, 6, 14))
-        # And how long ago is counted to the 14th: the 15th of May is not yet a month ago.
+        self.assertEqual(latest['Training (as participant)']['day'], date(2024, 6, 14))
+        # And how long ago is counted to the 14th: 14 days of the 30 to 30 June, under half a month, where the 15th
+        # would be half and round up to a month.
         self.assertEqual(latest['Meeting']['ago'], 'Under a month')
 
     def test_how_long_ago_is_in_years_from_two(self):
+        # From 23 and a half months, which rounds to 24: 30 June 2022 is 23 months and 16 of 31 days ago, and
+        # 1 July 23 months and 14 of 30 days.
         two, under = self.make_member('Two', 'FM'), self.make_member('Under', 'FM')
-        self.make_event('meeting', when(2022, 6, 15), attended=[two])
-        self.make_event('meeting', when(2022, 6, 16), attended=[under])
+        self.make_event('meeting', when(2022, 6, 30), attended=[two])
+        self.make_event('meeting', when(2022, 7, 1), attended=[under])
         self.assertEqual((self.latest(two)['Meeting']['ago'], self.latest(under)['Meeting']['ago']),
                          ('2 years', '23 months'))
 
@@ -379,12 +405,13 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertEqual(months_after(date(2024, 2, 29), 12), date(2025, 2, 28))
 
     def test_how_long_ago(self):
-        self.make_event('operation', when(2021, 11, 10), attended=[self.member])    # 31 months
-        self.make_event('training', when(2023, 5, 20), attended=[self.member])      # 12 months and some days
+        # Each to the nearest: 31 months and 5 days is 3 years, 12 months and 26 days 13 months.
+        self.make_event('operation', when(2021, 11, 10), attended=[self.member])
+        self.make_event('training', when(2023, 5, 20), attended=[self.member])
         self.make_event('meeting', when(2024, 6, 10), attended=[self.member])
         self.make_event('community', when(2024, 5, 10), attended=[self.member])
         self.assertEqual([i['ago'] for i in member_latest(self.member, NOW)],
-                         ['2 years', '12 months', 'Under a month', '1 month'])
+                         ['3 years', '13 months', 'Under a month', '1 month'])
 
     def test_matches_the_report(self):
         # The member page looks only at the member's own operations; the dates
@@ -394,7 +421,7 @@ class MemberLatestTestCase(ActivityTestCase):
         self.assertEqual(activity_rows(self.member, NOW, member_entries(self.member), records_from(NOW))['total'].ahc_days, 1)
         items = self.latest()
         self.assertEqual(items['Operation (as AHC)']['day'], date(2024, 1, 10))
-        self.assertEqual(items['Training']['day'], date(2024, 2, 11))
+        self.assertEqual(items['Training (as participant)']['day'], date(2024, 2, 11))
 
 
 class MemberPageTestCase(PageTestCase):
@@ -409,7 +436,7 @@ class MemberPageTestCase(PageTestCase):
         self.assertContains(response, '<tr><td>Operation (in the field)</td><td><a href="{}">&lt;b&gt;Search&lt;/b&gt;</a>'
                             '</td><td>10 Jan 2024</td><td>5 months</td></tr>'.format(link),
                             html=True)
-        self.assertContains(response, '<tr><td>Training</td><td>None</td><td></td><td></td></tr>', html=True)
+        self.assertContains(response, '<tr><td>Training (as participant)</td><td>None</td><td></td><td></td></tr>', html=True)
         self.assertNotContains(response, 'Operation (as OL)')
         # As OL: its line, under the one in the field.
         self.make_event('operation', when(2024, 2, 10), ol=[self.member])
@@ -516,10 +543,10 @@ class LastTableGuard:
             with override_settings(ACTIVITY_REPORTS={'LAST_TABLE_SECONDS': 0.05}), \
                     self.assertLogs(LOGGER, 'ERROR') as logs:
                 self.assertLeftOut(self.page(), logs, 'canceling statement due to statement timeout')
-            # With the default, 2 seconds, the same wait shows the section.
+            # With the default, 5 seconds, the same wait shows the section.
             self.assertShown(self.page())
         short, default = self.limits
-        self.assertTrue(0 < short <= 0.05 and 1 < default <= 2, self.limits)
+        self.assertTrue(0 < short <= 0.05 and 4 < default <= 5, self.limits)
 
     @skipUnless(POSTGRES, "statement_timeout is Postgres's")
     def test_the_time_limit_is_for_the_table_s_queries_together(self):

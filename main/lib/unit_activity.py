@@ -18,7 +18,6 @@ import calendar
 from collections import Counter, defaultdict
 from typing import NamedTuple
 
-from django.contrib.humanize.templatetags.humanize import apnumber, ordinal
 from django.template.defaultfilters import pluralize
 from django.utils.text import get_text_list
 
@@ -73,21 +72,24 @@ WEEK = Bands((Band('1-light', 'weekday', 'Weekday', 'on weekdays'), Band('1', 'w
 
 
 class Who(NamedTuple):
-    """Whose days, events and hours a view of the days chart counts."""
+    """Whose OPs, days, events and hours a view of the days chart counts."""
     switch: str                 # the option's label on the switch
-    titles: tuple               # the title for days, events and hours
+    titles: tuple               # the title for OPs, days, events and hours
 
 
-WHO = {'unit': Who('Unit (any member out)', ('Unit active days (any member out)',
+WHO = {'unit': Who('Unit (any member out)', ('Unit OPs (any member out)',
+                                             'Unit active days (any member out)',
                                              'Unit events (any member out)',
                                              'Unit active hours (any member out)')),
-       'people': Who('Members (added up)', ('Member-days (each member\'s days, added up)',
+       'people': Who('Members (added up)', ('Member-OPs (each member\'s OPs, added up)',
+                                            'Member-days (each member\'s days, added up)',
                                             'Events attended (each member\'s events, added up)',
                                             'Member-hours (each member\'s hours, added up)'))}
 # How a number of each is written, and what it is counted in, for the unit and for its members, with {}
 # where the plural takes its s. Hours are written to one decimal, as on a member's report, and so are
 # always plural.
-COUNTED = {'days': ('{:,}'.format, {'unit': 'day{}', 'people': 'member-day{}'}),
+COUNTED = {'ops': ('{:,}'.format, {'unit': 'OP{}', 'people': 'member-OP{}'}),
+           'days': ('{:,}'.format, {'unit': 'day{}', 'people': 'member-day{}'}),
            'events': ('{:,}'.format, {'unit': 'event{}', 'people': 'event{} attended'}),
            'hours': (charts.hours_text, {'unit': 'hours', 'people': 'member-hours'})}
 
@@ -111,18 +113,16 @@ FLOWS = Bands((Band('1', 'joined', 'Joined', 'joined'), Band('1-light', 'came_ba
                Band('2-light', 'left_returned', 'Became inactive, reactivated later',
                     'became inactive, reactivated later')))
 DEPARTURES = ('left', 'left_returned')
-# Years since joining, newest first and lightest; the limit is the most years in the band. They are the
-# people chart's: counting counts active members by the year they joined (UnitYear.active), and only
-# that chart cuts them into bands.
+# Years since joining, newest first and lightest; the limit is the most whole years in the band.
 YEARS_SINCE_JOINING = Cuts((('first', 0), ('early', 2), ('settled', 5), ('long', 10), ('longest', None)))
 TENURE = Bands((Band('ramp-1-5', 'first', 'First year', 'in their first year'),
                  Band('ramp-2-5', 'early', '1 to 2 years', 'after 1 to 2 years'),
                  Band('ramp-3-5', 'settled', '3 to 5 years', 'after 3 to 5 years'),
                  Band('ramp-4-5', 'long', '6 to 10 years', 'after 6 to 10 years'),
                  Band('ramp-5-5', 'longest', 'Over 10 years', 'after over 10 years')))
-# Who attended each type of event, counted once each: the other members, and those who led it, darker, at
+# Who attended each type of event, counted once each: those who took part, and those who led it, darker, at
 # the foot.
-MEMBERS = {t: Bands((Band('1-light', 'others', 'Other members', 'other member{}'),
+MEMBERS = {t: Bands((Band('1-light', 'others', 'as participant', 'as participant'),
                      Band('1', 'led', 'as ' + LEADING[t], 'as ' + LEADING[t]))) for t in TYPES}
 
 
@@ -176,15 +176,22 @@ def status_bands():
                  + (Band('muted', OTHER_STATUS, 'Other status', 'with other status', on_scale=False),))
 
 
-def run_bands():
+def run_bands(noun=None):
     """A member's stretches in the field, shortest first and lightest, a
-    one-day stretch split at LONG_DAY."""
+    one-day stretch split at LONG_DAY, counted in `noun` ('day' or 'OP').
+    Without a noun, the labels for the key, which OPs and days share: the
+    chart's title says which."""
     hours = report_settings().LONG_DAY
     up_to, over = ('{} {} hour{}'.format(edge, hours, pluralize(hours)) for edge in ('up to', 'over'))
-    return Bands((Band('1-pale', 'day', '1 day, ' + up_to, 'of one day, ' + up_to),
-                  Band('1-light', 'long_day', '1 day, ' + over, 'of one day, ' + over),
-                  Band('1', 'two', '2 days', 'of 2 days'),
-                  Band('1-strong', 'more', '3 or more days', 'of 3 or more days')))
+    if noun is None:
+        labels = said = ('1, ' + up_to, '1, ' + over, '2 in a row', '3 or more in a row')
+    else:
+        labels = ('1 {}, {}'.format(noun, up_to), '1 {}, {}'.format(noun, over), '2 {}s'.format(noun),
+                  '3 or more {}s'.format(noun))
+        said = ('of one {}, {}'.format(noun, up_to), 'of one {}, {}'.format(noun, over), 'of 2 {}s'.format(noun),
+                'of 3 or more {}s'.format(noun))
+    return Bands(Band(colour, name, label, words) for colour, name, label, words in zip(
+        ('1-pale', '1-light', '1', '1-strong'), ('day', 'long_day', 'two', 'more'), labels, said))
 
 
 def _how_soon(names, minutes):
@@ -275,7 +282,7 @@ def _days_chart(years, today):
         return None
     period = _span(rows[0].year, today.year, today.year)
     before, times_from = early_band(), report_settings().OPERATION_TIMES_FROM
-    # Operations' days, events and hours are read from their times, few of them logged before
+    # Operations' days, events, OPs and hours are read from their times, few of them logged before
     # OPERATION_TIMES_FROM: grey before it.
     operations = Bands(WEEK + (before,))
 
@@ -298,18 +305,18 @@ def _days_chart(years, today):
              for who, view in WHO.items()]
     return charts.share_panels(
         [{'label': label, 'title': title}
-         for label, title in zip(('Days', 'Events', 'Hours'), views[0]['titles'])],
+         for label, title in zip(('OPs', 'Days', 'Events', 'Hours'), views[0]['titles'])],
         views,
         note='How busy is the unit, how much time do its members give, and how much of it falls on weekdays?',
-        name='days', start_measure='Hours', measure_switch_label='Count', view_switch_label='For')
+        name='days', measure_switch_label='Count', view_switch_label='For')
 
 
 def _operations_chart(years, today, templates_from):
     """How often the unit is called out, how often the callout is called off,
-    and how many respond: counted in operations, and in the days the unit
-    was out. Heads-ups are told apart by their pages from `templates_from`,
-    and by their titles before it, or with no such day."""
-    rows = _since(years, today.year, lambda r: (r.operations, r.operation_days))
+    and how many respond: counted in operations, in the days the unit was
+    out, and in OPs. Heads-ups are told apart by their pages from
+    `templates_from`, and by their titles before it, or with no such day."""
+    rows = _since(years, today.year, lambda r: (r.operations, r.operation_days, r.operation_ops))
     if not rows:
         return None
     sizes, before, times_from = size_bands(), early_band(), report_settings().OPERATION_TIMES_FROM
@@ -317,13 +324,16 @@ def _operations_chart(years, today, templates_from):
 
     def operations(r):
         named = _in_full(r.year, today)
-        count, on_days = Counter(r.operations), Counter(r.operation_days)
+        count, on_days, on_ops = Counter(r.operations), Counter(r.operation_days), Counter(r.operation_ops)
         ran, total, on_days_total = sum(count[size] for size in SIZES), sum(count.values()), sum(on_days.values())
+        on_ops_total = sum(on_ops.values())
         if r.year < times_from:
-            return [{'parts': outcomes.stack(Counter({before.name: total})), 'total': total,
-                     'tip': ['{}: {} operation{}'.format(named, total, pluralize(total)), 'Few with times logged']},
+            return [{'parts': outcomes.stack(Counter({before.name: on_ops_total})), 'total': on_ops_total,
+                     'tip': ['{}: {} OP{}'.format(named, on_ops_total, pluralize(on_ops_total)), FEW_TIMES]},
                     {'parts': outcomes.stack(Counter({before.name: on_days_total})), 'total': on_days_total,
-                     'tip': ['{}: {} day{}'.format(named, on_days_total, pluralize(on_days_total)), FEW_TIMES]}]
+                     'tip': ['{}: {} day{}'.format(named, on_days_total, pluralize(on_days_total)), FEW_TIMES]},
+                    {'parts': outcomes.stack(Counter({before.name: total})), 'total': total,
+                     'tip': ['{}: {} operation{}'.format(named, total, pluralize(total)), 'Few with times logged']}]
         # Those that did not run; where their pages did not yet tell a heads-up, before templates_from or with
         # no such day, its title did, and a line says so.
         not_run = DID_NOT_RUN.lines(count)
@@ -331,36 +341,40 @@ def _operations_chart(years, today, templates_from):
             not_run.append('Heads-ups told by their titles')
         elif r.year == templates_from.year:
             not_run.append('Before {}, heads-ups told by their titles'.format(templates_from.strftime('%d %b')))
-        return [{'parts': outcomes.stack(count), 'total': total,
-                 'tip': ['{}: {} operation{}'.format(named, total, pluralize(total)), (ran, 'ran')]
-                        + sizes.lines(count) + not_run},
+        return [{'parts': outcomes.stack(on_ops), 'total': on_ops_total,
+                 'tip': ['{}: {} OP{}'.format(named, on_ops_total, pluralize(on_ops_total))] + sizes.lines(on_ops)},
                 {'parts': outcomes.stack(on_days), 'total': on_days_total,
                  'tip': ['{}: {} day{}'.format(named, on_days_total, pluralize(on_days_total))]
-                        + sizes.lines(on_days)}]
+                        + sizes.lines(on_days)},
+                {'parts': outcomes.stack(count), 'total': total,
+                 'tip': ['{}: {} operation{}'.format(named, total, pluralize(total)), (ran, 'ran')]
+                        + sizes.lines(count) + not_run}]
 
     key = Bands(sizes + DID_NOT_RUN + ((before,) if rows[0].year < times_from else ())).key()
     return _yearly_chart(
-        rows, today, [('Operations', 'Operations, by unique responder count'),
-                      ('Days', 'Operation days, by unique responder count')],
-        'Operations and operation days, by unique responder count',
+        rows, today, [('OPs', 'OPs of operations, by unique responder count'),
+                      ('Days', 'Operation days, by unique responder count'),
+                      ('Events', 'Operations, by unique responder count')],
+        'OPs, operation days and operations, by unique responder count',
         [{'label': '', 'key': key, 'cells': [operations(r) for r in rows]}],
         note='How many operations ran, were called off or were only a heads-up, and how many went?',
         name='operations', measure_switch_label='Count')
 
 
-def _responders_chart(responded, day_responded, today):
-    """When the unit goes, how many go: the operations, and the days, with each
-    number of responders, over every year or the one picked."""
+def _responders_chart(responded, day_responded, op_responded, today):
+    """When the unit goes, how many go: the operations, the days and the OPs,
+    with each number of responders, over every year or the one picked."""
     if not responded:
         return None
-    sizes = range(1, max(size for day, size in responded + day_responded) + 1)
+    sizes = range(1, max(size for day, size in responded + day_responded + op_responded) + 1)
     before, since, times_from = early_band(), from_times_band(today), report_settings().OPERATION_TIMES_FROM
 
     def draw(counts, named, said):
         views = []
         for label, counted, noun, named_in_key, title in (
-                ('Operations', responded, 'operation', 'Operations', 'Operations, by number of responders, '),
-                ('Days', day_responded, 'day', 'Operation days', 'Operation days, by number of responders, ')):
+                ('OPs', op_responded, 'OP', 'OPs of operations', 'OPs of operations, by number of responders, '),
+                ('Days', day_responded, 'day', 'Operation days', 'Operation days, by number of responders, '),
+                ('Events', responded, 'operation', 'Operations', 'Operations, by number of responders, ')):
             count = Counter(size for day, size in counted if counts(day) and day.year >= times_from)
             early = Counter(size for day, size in counted if counts(day) and day.year < times_from)
 
@@ -389,39 +403,45 @@ def _responders_chart(responded, day_responded, today):
             [{'label': 'Operations', 'title': views[0]['titles'][0]}], views,
             note='When the unit goes, how many go?', name='responders', view_switch_label='Count')
 
-    # Its menu takes in the days operations started and the days the unit was out, which may fall in a year
-    # before any started.
-    return _by_year(today, [day for day, _ in responded + day_responded], draw)
+    # Days out and OP days may fall in a year before any operation started.
+    return _by_year(today, [day for day, _ in responded + day_responded + op_responded], draw)
 
 
 def _runs_chart(years, today):
-    """How often members are out for a long day, or for days in a row."""
-    rows = _since(years, today.year, lambda r: (r.runs,))
+    """How often members are out for a long day, or for days or OPs in a row."""
+    rows = _since(years, today.year, lambda r: (r.runs, r.op_runs))
     if not rows:
         return None
-
-    runs, before, times_from = run_bands(), early_band(), report_settings().OPERATION_TIMES_FROM
-    bands = Bands(runs + (before,))
+    before, times_from = early_band(), report_settings().OPERATION_TIMES_FROM
+    key_bands = run_bands()
+    measures = [(field, run_bands(noun)) for field, noun in (('op_runs', 'OP'), ('runs', 'day'))]
+    with_before = {field: Bands(bands + (before,)) for field, bands in measures}
 
     def cell(r):
-        count = Counter(r.runs)
-        total = sum(count.values())
-        head = '{}: {} stretch{}'.format(_in_full(r.year, today), total, pluralize(total, 'es'))
-        if r.year < times_from:
-            return [{'parts': bands.stack(Counter({before.name: total})), 'total': total, 'tip': [head, FEW_TIMES]}]
-        return [{'parts': bands.stack(count), 'total': total, 'tip': [head] + runs.lines(count)}]
+        counted = []
+        for field, bands in measures:
+            count = Counter(getattr(r, field))
+            total = sum(count.values())
+            head = '{}: {} stretch{}'.format(_in_full(r.year, today), total, pluralize(total, 'es'))
+            early = r.year < times_from
+            counted.append({'parts': with_before[field].stack(Counter({before.name: total}) if early else count),
+                            'total': total, 'tip': [head, FEW_TIMES] if early else [head] + bands.lines(count)})
+        return counted
 
-    key = (bands if rows[0].year < times_from else runs).key()
+    key = (Bands(key_bands + (before,)) if rows[0].year < times_from else key_bands).key()
     return _yearly_chart(
-        rows, today, [('Stretches', 'Stretches in the field, by days in a row')],
-        'Stretches in the field, by days in a row', [{'label': '', 'key': key, 'cells': [cell(r) for r in rows]}],
-        note='How often are members out for a long day, or for days in a row?', name='runs')
+        rows, today, [('OPs', 'Stretches in the field, by OPs on days in a row'),
+                      ('Days', 'Stretches in the field, by days in a row')],
+        'Stretches in the field, by OPs or days in a row',
+        [{'label': '', 'key': key, 'cells': [cell(r) for r in rows]}],
+        note='How often are members out for a long day, or for days or OPs in a row?', name='runs',
+        measure_switch_label='Count')
 
 
 def _status_chart(years, today):
-    """Responders' days, operations and hours in the field, by the status they
-    held."""
-    rows = _since(years, today.year, lambda r: (r.status_days, r.status_events, r.status_hours))
+    """Responders' OPs, days, operations and hours in the field, by the status
+    they held."""
+    rows = _since(years, today.year, lambda r: (r.status_days, r.status_events, r.status_ops, r.status_hours))
     if not rows:
         return None
     bands, times_from = status_bands(), report_settings().OPERATION_TIMES_FROM
@@ -432,8 +452,11 @@ def _status_chart(years, today):
 
     def cell(r):
         named, days, hours, events = _in_full(r.year, today), r.status_days, r.status_hours, r.status_events
+        ops = r.status_ops
         on_days, attended, in_field = sum(days.values()), sum(events.values()), sum(hours.values())
+        on_ops = sum(ops.values())
         measures = [  # (count by status, total, head, a line for each status)
+            (ops, on_ops, '{}: {} responder-OP{}'.format(named, on_ops, pluralize(on_ops)), bands.lines(ops)),
             (days, on_days, '{}: {} responder-day{}'.format(named, on_days, pluralize(on_days)), bands.lines(days)),
             (events, attended, '{}: {} operation{} attended in the field'.format(named, attended, pluralize(attended)),
              bands.lines(events)),
@@ -447,12 +470,13 @@ def _status_chart(years, today):
 
     key = (with_before if rows[0].year < times_from else bands).key()
     return _yearly_chart(
-        rows, today, [('Days', 'Responder-days, by status on the day'),
+        rows, today, [('OPs', 'Responder-OPs, by status on the day'),
+                      ('Days', 'Responder-days, by status on the day'),
                       ('Events', 'Operations attended, by status at the start'),
                       ('Hours', 'Responder-hours, by status on the day')],
         'Time in the field, by status', [{'label': '', 'key': key, 'cells': [cell(r) for r in rows]}],
         note='How is time in the field split by status?',
-        name='status', start_measure='Hours', measure_switch_label='Count')
+        name='status', measure_switch_label='Count')
 
 
 class Slot(NamedTuple):
@@ -591,33 +615,40 @@ def _people_chart(rows, today, records_from):
     """Whether the unit is growing, and how its members split between new
     and long-standing: each year's active members by years since joining,
     over the year rows given (None for none).
-    Whoever joined as the records start may have joined earlier, so they are
-    kept apart until every one of them is in the longest band."""
+    Those known only to have joined by the records' first year are kept
+    apart until every one of them is in the longest band."""
     if not rows:
         return None
     longest = YEARS_SINCE_JOINING[-2][1] + 1            # the fewest years in the longest band
     earlier = Band('muted', 'apart', 'Joined {} or earlier'.format(records_from),
                    'joined {} or earlier'.format(records_from), on_scale=False)
 
+    def kept_apart(year):
+        return year - records_from < longest
+
     def cell(r):
-        count, year, total = r.active, r.year, sum(r.active.values())
-        apart = count[records_from] if year - records_from < longest else 0
-        joined = defaultdict(list)                       # band -> the joining years in it, with members
-        for y in count:
-            if count[y] and y <= year and (y > records_from or not apart):
-                joined[YEARS_SINCE_JOINING.name_for(year - y)].append(y)
+        year, total = r.year, sum(r.active.values())
+        apart = sum(n for (y, _), n in r.active.items() if y is None) if kept_apart(year) else 0
+        joined = defaultdict(Counter)                    # band -> the joining years in it (None: by the first) -> members
+        for (y, years), n in r.active.items():
+            if n and not (kept_apart(year) and y is None):
+                joined[YEARS_SINCE_JOINING.name_for(years)][y] += n
         parts, lines = [(earlier.colour, apart)], []         # the earliest joiners at the foot
         for band in reversed(TENURE):                    # the longest at the foot
-            parts.append((band.colour, sum(count[y] for y in joined[band.name])))
+            parts.append((band.colour, sum(joined[band.name].values())))
             if joined[band.name]:
-                since, until = min(joined[band.name]), max(joined[band.name])
-                joining = '{} or earlier'.format(until) if since == records_from else _span(since, until, None)
+                known = [y for y in joined[band.name] if y is not None]
+                if None in joined[band.name]:
+                    joining = '{} or earlier'.format(max(known + [records_from]))
+                else:
+                    joining = _span(min(known), max(known), None)
                 lines.insert(0, (parts[-1][1], '{} (joined {})'.format(band.said, joining)))
         if apart:
             lines.append((apart, earlier.said))
         return [{'parts': parts, 'total': total, 'tip': ['{}: {} active'.format(_in_full(year, today), total)] + lines}]
 
-    key = Bands(TENURE + ((earlier,) if rows[0].year - records_from < longest else ())).key()
+    shown_apart = any(n and y is None and kept_apart(r.year) for r in rows for (y, _), n in r.active.items())
+    key = Bands(TENURE + ((earlier,) if shown_apart else ())).key()
     return _yearly_chart(
         rows, today, [('Members', 'Active members, by years since joining')],
         'Active members, by years since joining', [{'label': '', 'key': key, 'cells': [cell(r) for r in rows]}],
@@ -656,6 +687,105 @@ def _flows_chart(rows, today):
         name='flows', view_switch_label='Inactive after no operation, training or community event for')
 
 
+# The most columns the tenure chart draws for one measure, and the most of them it labels.
+TENURE_COLUMNS, TENURE_LABELS = 20, 8
+
+
+def _tenure_columns(largest):
+    """Equal columns from 0 that hold every whole number up to `largest`,
+    [(low, high)]: each 1, 2, 5, 10, 20, 50 and so on wide, the narrowest
+    that keeps them to TENURE_COLUMNS."""
+    width = 1
+    while largest // width >= TENURE_COLUMNS:
+        width = width * 5 // 2 if str(width)[0] == '2' else width * 2
+    return [(low, low + width - 1) for low in range(0, largest + 1, width)]
+
+
+# The tenure chart's views: (label on the switch, MemberTenure's field, what its titles count members by, the
+# noun of one).
+TENURE_MEASURES = (('Years', 'years', 'years on the team', 'year'),
+                   ('Events', 'events', 'events attended', 'event'),
+                   ('Operations', 'operations', 'operations attended', 'operation'),
+                   ('Trainings', 'trainings', 'trainings attended', 'training'))
+
+
+# The tenure chart's parts: members by their whole years on the team, in TENURE's bands, and, with every member
+# shown, alumni as one pale layer on top.
+ON_TEAM = Bands(tuple(band._replace(said='with under a year' if band.name == 'first' else 'with ' + band.label.lower())
+                      for band in TENURE)
+                + (Band('muted-light', 'alumni', 'Alumni', 'alumni', on_scale=False),))
+
+
+def _tenure_chart(tenure, today, records_from):
+    """How long members have been on the team, and how much they have
+    attended: members counted by each of TENURE_MEASURES, a view each, in
+    columns scaled to it (_tenure_columns), for current members, alumni or
+    both (ON_TEAM). None without members."""
+    if not tenure:
+        return None
+    period = _span(records_from, today.year, today.year)
+    groups = (('Current', 'Current members'), ('Alumni', 'Alumni'), ('All', 'All members'))
+    *years_on_team, alumni = ON_TEAM.key()
+    key = years_on_team + [alumni + (groups[-1][0],)]       # the alumni layer is drawn under All alone
+
+    def said(low, high, noun):
+        if low != high:
+            return '{} to {} {}s'.format(low, high, noun)
+        return 'Under 1 year' if noun == 'year' and low == 0 else '{} {}{}'.format(low, noun, pluralize(low))
+
+    def entry(head, count, lines):
+        total = sum(count.values())
+        return {'parts': ON_TEAM.stack(count), 'total': total,
+                'tip': ['{}: {} member{}'.format(head, total, pluralize(total))] + lines}
+
+    views = []
+    for label, field, by, noun in TENURE_MEASURES:
+        columns = _tenure_columns(max(getattr(member, field) for member in tenure))
+        # Labelled from 0 at round steps: every column, every second, fifth, tenth and so on.
+        every = next(n for n in (step * 10 ** p for p in range(len(str(len(columns)))) for step in (1, 2, 5))
+                     if len(columns) <= n * TENURE_LABELS)
+        cells = []
+        for low, high in columns:
+            members = [member for member in tenure if low <= getattr(member, field) <= high]
+            current, alumni = (Counter(YEARS_SINCE_JOINING.name_for(member.years) for member in members
+                                       if member.current == is_current) for is_current in (True, False))
+            head, bands = said(low, high, noun), Bands(ON_TEAM[:-1])
+            both = current + Counter(alumni=sum(alumni.values()))
+            cells.append([entry(head, current, bands.lines(current)), entry(head, alumni, bands.lines(alumni)),
+                          entry(head, both, [(sum(current.values()), 'current')] + bands.lines(current)
+                                + [(both['alumni'], 'alumni')])])
+        views.append({'label': label, 'name': 'Members by {}'.format(by), 'max_labels': TENURE_LABELS,
+                      'titles': ['{}, by {}{}, {}'.format(named, by, '' if field == 'years' else ' and years on the team',
+                                                          period) for _, named in groups],
+                      'periods': [{'short': str(low) if c % every == 0 else ''} for c, (low, _) in enumerate(columns)],
+                      'series': [{'label': '', 'key': key, 'cells': cells}]})
+    return charts.share_panels(
+        [{'label': label, 'title': views[0]['titles'][g]} for g, (label, _) in enumerate(groups)], views,
+        note='How long have members been on the team, and how much have they attended?', name='tenure',
+        measure_switch_label='Members', view_switch_label='By')
+
+
+def _promotions_chart(rows, today):
+    """How many members are promoted each year, over the year rows given, to
+    one of report_settings' PROMOTIONS at a time, the first to start with;
+    None without rows or promotions."""
+    if not rows or not any(any(r.promoted.values()) for r in rows):
+        return None
+    promotions, named = report_settings().PROMOTIONS, dict(Member.TYPES)
+
+    def cell(r):
+        return [{'parts': [('1', r.promoted[status])], 'total': r.promoted[status],
+                 'tip': ['{}: {} promotion{} to {}'.format(_in_full(r.year, today), r.promoted[status],
+                                                          pluralize(r.promoted[status]), named[status])]}
+                for status in promotions]
+
+    return _yearly_chart(
+        rows, today, [(status, 'Promotions to ' + named[status]) for status in promotions],
+        'Promotions to ' + ' or '.join(named[status] for status in promotions),
+        [{'label': '', 'key': [('1', 'Members promoted')], 'cells': [cell(r) for r in rows]}],
+        note='How many members are promoted each year?', name='promotions', measure_switch_label='Promoted to')
+
+
 def _members_chart(years, today):
     """How many people each kind of activity rests on, and how many lead it.
     Their days are on the days chart, counted for each member."""
@@ -687,16 +817,13 @@ def _members_chart(years, today):
         note='How many members attend each type of event, and how many lead it?', name='members')
 
 
-# The glossary writes numbers up to nine in words, as humanize's apnumber does: these are their ordinals.
-ORDINALS = ('first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth')
-
-
-def unit_glossary(status_from, templates_from):
+def unit_glossary(status_from, templates_from, status_endorsed_from=None):
     """The terms this report uses beyond those shared with a member's
     report, as [(term, definition)], for the glossary at its foot, in the
     order the page's themes use them. With no status recorded (status_from
-    None), there is no status to define; templates_from is the day pages first
-    said whether they were a heads-up, None if none has."""
+    None) and none read from endorsements (status_endorsed_from, the year they
+    are read from, None), there is no status to define; templates_from is the
+    day pages first said whether they were a heads-up, None if none has."""
     rules = report_settings()
     # An operation that did not run is called off or a heads-up only by its pages, from the day they first said
     # which they were; before it, or with no such day, by its title (counting.heads_up_only).
@@ -712,7 +839,6 @@ def unit_glossary(status_from, templates_from):
     else:
         called_off = '{}, whose title does not call it a heads-up.'.format(did_not_run)
         heads_up = '{}, whose title calls it a heads-up.'.format(did_not_run)
-    joined_on = ORDINALS[rules.JOINED_AT - 1] if rules.JOINED_AT <= len(ORDINALS) else ordinal(rules.JOINED_AT)
     # Becoming inactive read more slowly, where the chart of it (_flows_chart) is switched to it; the
     # active-members chart always reads it at the first.
     flows_chart = 'the chart of members joining and becoming inactive'
@@ -729,30 +855,42 @@ def unit_glossary(status_from, templates_from):
          'A member in the field on an operation, not as AHC, with a day attended or a departure logged on it. A '
          'day\'s responders are the members with a day attended in the field that day, on any operation, each '
          'counted once. A member with a departure logged but no day attended, for example with no return time, '
-         'counts as a responder on that operation but not among any day\'s responders.'),
+         'counts as a responder on that operation but not among any day\'s responders. An OP\'s responders are the '
+         'members in the field with any time logged on it, even a departure alone; a date\'s OPs of operations '
+         'count once, with all their responders.'),
         ('Operation day', 'A unit active day on operations: two operations on the same day make one operation day.'),
-        ('Responder-day, responder-hours, operations attended',
+        ('Responder-day, responder-hours, operations attended, responder-OPs',
          'A responder\'s day in the field and their hours on it. Operations attended: one for each responder on each '
          'operation they had a day attended on, so three responders on one operation are three operations '
-         'attended.'),
+         'attended. Responder-OPs: one for each responder on each date with an OP of an operation.'),
         ('Called off', called_off),
         ('Heads-up only', heads_up),
         ('Before {}'.format(rules.OPERATION_TIMES_FROM), 'Few operations had their times logged.'),
         ('Stretch',
-         'One member\'s run of days in a row in the field, on one operation or several. A day\'s hours run '
-         'from leaving home to getting back where those times are logged, otherwise from signing in to '
-         'signing out. More than {} day{} logged by one member for one event or operating period is left '
+         'One member\'s run of days in a row in the field, on one operation or several. In OPs, a run of OPs on '
+         'days in a row: an OP stands for its day, so an operation\'s first two OPs are two in a row. A day\'s hours '
+         'run from leaving home to getting back where those times are logged, otherwise from signing in to '
+         'signing out. In days, more than {} day{} logged by one member for one event or operating period is left '
          'out.'.format(rules.MAX_ENTRY_DAYS, pluralize(rules.MAX_ENTRY_DAYS))),
-        ('Long day', 'A one-day stretch of more than {} hour{} logged in the field.'.format(
-            rules.LONG_DAY, pluralize(rules.LONG_DAY))),
+        ('Long day', 'A one-day stretch of more than {} hour{} logged in the field: in OPs, on that day\'s '
+                     'OPs.'.format(rules.LONG_DAY, pluralize(rules.LONG_DAY))),
     ]
-    if status_from:
+    if status_from or status_endorsed_from:
+        recorded = status_from and status_from.strftime('%d %b %Y')
+        if status_endorsed_from:
+            read = ('{} {}, when most operations have their times logged, it is the status of the member\'s latest '
+                    '{} endorsement by that day, read as for Joined, or Other status without one. Time '
+                    'before {} is not counted by status.'.format('Before then, from' if recorded else 'From',
+                                                                status_endorsed_from,
+                                                                get_text_list(rules.BANDED_STATUSES, 'or'),
+                                                                status_endorsed_from))
+        else:
+            read = 'Time before then is not counted by status.'
         terms.append(('Status',
                       'The status a member held on the day; for operations attended, on the day the operation '
-                      'started. Statuses are recorded from {}. Time before then is not counted by status, and a '
-                      'member first recorded later counts under their first recorded status. Other status holds '
-                      'members with no recorded status and statuses without a band of their own.'.format(
-                          status_from.strftime('%d %b %Y'))))
+                      'started. {}{} A member first recorded later counts under their first recorded status. Other '
+                      'status holds members with no recorded status and statuses without a band of their '
+                      'own.'.format('Statuses are recorded from {}. '.format(recorded) if recorded else '', read)))
     return terms + [
         ('Callout page, callout to a member',
          'A heads-up or availability page for an operation. Heads-ups count, as members are asked to reply quickly '
@@ -763,26 +901,32 @@ def unit_glossary(status_from, templates_from):
          'An operation with a callout page {}. It counts once the operation has begun. It is timed from the first '
          'such page to the first departure logged at or after it, by a member in the field, not a guest or the AHC, '
          'up to today.'.format(rules.IMMEDIATE_CALLOUT_SAID)),
-        ('Member-days, events attended, member-hours',
-         'Each member\'s days, events or hours, added up. At one event on one calendar day, ten members out for '
-         'the same 8 hours make 1 unit active day, 1 unit event and 8 unit active hours; and 10 member-days, 10 '
-         'events attended and 80 member-hours.'),
+        ('Member-days, events attended, member-OPs, member-hours',
+         'Each member\'s days, events, OPs or hours, added up. At one event on one calendar day, ten members out '
+         'for the same 8 hours on its one OP make 1 unit active day, 1 unit event, 1 unit OP and 8 unit active '
+         'hours; and 10 member-days, 10 events attended, 10 member-OPs and 80 member-hours.'),
         ('Unit active hours',
          'Each hour counts once, however many members were out. AHC time on operations is left out.'),
         ('Members at each type of event',
          'Each member counts once a year for each type of event they attended. One who led at least once that year '
          'counts among those who led.'),
         ('Joined',
-         'A member\'s {} day at an operation or a training not open to guests; with fewer than {}, their first '
-         'event. The site holds no date of joining or of becoming inactive, so both are read from activity.'.format(
-             joined_on, apnumber(rules.JOINED_AT)) + (' ' + rules.JOINED_CHECKED if rules.JOINED_CHECKED else '')),
+         'The date of a member\'s {} endorsement, or with no date, the year its comment starts with: "2008 (from '
+         'the residency sheet)", or "by 2008 (background check)", which counts as 2008. Without either, their first '
+         'training or operation.'.format(rules.JOINED_ENDORSEMENT)),
+        ('Promotion',
+         'The date of a member\'s {} endorsement, or with no date, the year its comment starts with: "2008 (from '
+         'the residency sheet)". Without either, or with only a "by" year, it is not '
+         'counted.'.format(get_text_list(rules.PROMOTIONS, 'or'))),
         ('Active',
          'Every year from joining to the year of a member\'s last operation, training or community event, except '
          'the years between becoming inactive and being reactivated. The day a member joins counts, whatever its '
          'event.' + first_reading),
         ('Years since joining',
-         'The year shown less the year a member joined. Members who joined in the records\' first year or '
-         'earlier are shown apart until all of them have over {} years.'.format(YEARS_SINCE_JOINING[-2][1])),
+         'A member\'s whole years on the team, counted as an age is, at the end of the year shown, or today for this '
+         'year. Members known only to have joined by the records\' first year, by a "by" year or by their first '
+         'training or operation, are shown apart until all of them have over {} years.'.format(
+             YEARS_SINCE_JOINING[-2][1])),
         ('Inactive',
          '{} month{} {} passed without an operation, training or community event{}. '.format(
              rules.LEFT_AFTER[0], pluralize(rules.LEFT_AFTER[0]), pluralize(rules.LEFT_AFTER[0], 'has,have'), slower)
@@ -796,6 +940,11 @@ def unit_glossary(status_from, templates_from):
                         pluralize(rules.LEFT_AFTER[0], 'has,have'), switched)),
         ('Reactivated',
          'The year of a member\'s next operation, training or community event after becoming inactive.'),
+        ('Tenure',
+         'A member\'s time on the team, in whole years from joining to their last operation, training or community '
+         'event, counted as an age is, and the events, operations and trainings they attended from joining on, as the '
+         'records hold them. Alumni are members no longer current, such as Member Alums; every other member is '
+         'current.'),
     ]
 
 
@@ -816,7 +965,7 @@ def unit_activity(now=None):
     themes = [
         ('Operations', [
             _operations_chart(years, today, rows['templates_from']),
-            _responders_chart(rows['responded'], rows['day_responded'], today),
+            _responders_chart(rows['responded'], rows['day_responded'], rows['op_responded'], today),
             _runs_chart(years, today),
             _status_chart(years, today)]),
         ('Pages for operations', [
@@ -829,7 +978,9 @@ def unit_activity(now=None):
             _members_chart(years, today)]),
         ('Membership', [
             _people_chart(retention, today, rows['records_from']),
-            _flows_chart(retention, today)]),
+            _flows_chart(retention, today),
+            _tenure_chart(rows['tenure'], today, rows['records_from']),
+            _promotions_chart(retention, today)]),
     ]
     sections = [{'title': title, 'charts': [chart for chart in drawn if chart]} for title, drawn in themes]
     sections = [section for section in sections if section['charts']]
@@ -840,5 +991,5 @@ def unit_activity(now=None):
         section['wide'] = [chart for chart in section['charts'] if chart['wide']]
         section['tiles'] = [chart for chart in section['charts'] if not chart['wide']]
     return {'sections': sections, 'charts': [chart for section in sections for chart in section['charts']],
-            'glossary': unit_glossary(rows['status_from'], rows['templates_from']),
+            'glossary': unit_glossary(rows['status_from'], rows['templates_from'], rows['status_endorsed_from']),
             'period': '{} to {}'.format(rows['first_year'], today.strftime('%d %b %Y'))}

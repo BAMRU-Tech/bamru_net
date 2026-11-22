@@ -15,10 +15,11 @@ when it does not:
   every worker on its next load: an edit or an addition moves updated_at
   (every model the reports read sets it on save: BaseModel), a deletion moves
   the count. Each value reads only its own tables: a page rebuilds the first
-  day but not the unit's days, and a reply or a busy period rebuilds neither,
-  only the unit report. A member's status history is not one of them: every
-  login adds a row to it, and a change of status is a save of the member,
-  which moves the members' fingerprint.
+  day but not the unit's days, an endorsement the unit's days but not the
+  first day, and a reply or a busy period neither, only the unit report. A
+  member's status history is not one of them: every login adds a row to it,
+  and a change of status is a save of the member, which moves the members'
+  fingerprint.
 - The team's rules in force (report_settings) and the time zone.
 - The time: the reports read it (an event counts once it has begun, an
   operation once it has finished, a DO week once its shift starts, nothing
@@ -38,20 +39,20 @@ from django.utils import timezone
 from main.lib import counting
 from main.lib import unit_activity as unit_report
 from main.lib.report_settings import report_settings
-from main.models import (DoAvailable, Distribution, Event, Member, Message, Participant, Period, RsvpTemplate,
-                         Unavailable)
+from main.models import (Cert, CertSubType, CertType, DoAvailable, Distribution, Event, Member, Message, Participant,
+                         Period, RsvpTemplate, Unavailable)
 
 # How long a value built for one moment stands for the moments after it, in seconds: an operation that finishes,
 # or an event that begins, with no edit, shows on the reports within this.
 EXPIRY = 300
 
-# The tables each value reads. What the unit did reads the events that count, their periods and the time logged on
-# them, and members' statuses; the first day reads pages too (an operation with nobody listed and no page, since
-# pages were first recorded, counts nowhere) and DO weeks; the unit report reads replies, reply templates and busy
-# periods besides.
-UNIT_DAYS = (Event, Period, Participant, Member)
-RECORDS = UNIT_DAYS + (Message, DoAvailable)
-UNIT_REPORT = RECORDS + (Distribution, RsvpTemplate, Unavailable)
+# The tables each value reads. The first day's (RECORDS) take in pages, as an operation with nobody listed and no
+# page, since pages were first recorded, counts nowhere; what the unit did (UNIT_DAYS) takes in endorsements and
+# their kinds, which date joining.
+LOGGED = (Event, Period, Participant, Member)
+RECORDS = LOGGED + (Message, DoAvailable)
+UNIT_DAYS = LOGGED + (Cert, CertSubType, CertType)
+UNIT_REPORT = RECORDS + (Cert, CertSubType, CertType, Distribution, RsvpTemplate, Unavailable)
 
 
 def _read(tables):
@@ -101,7 +102,7 @@ def member_report(now):
     counting.activity_rows to call only for a member with something to count;
     the tables both read are asked once. The function gives None with no
     records."""
-    prints = _read(RECORDS)
+    prints = _read({*RECORDS, *UNIT_DAYS})
     since = _kept('records_from', prints, RECORDS, now, lambda: counting.records_from(now))
 
     def unit_days():
