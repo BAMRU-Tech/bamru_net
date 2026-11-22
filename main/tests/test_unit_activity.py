@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from main.lib.counting import TYPES, first_year, joined_on, operations_that_ran, records_from
 from main.lib.report_settings import report_settings
-from main.lib.unit_activity import _tenure_columns, early_band, unit_activity
+from main.lib.unit_activity import _tenure_columns, _year_columns, early_band, unit_activity
 from main.lib.unit_counting import MemberTenure, unit_entries, unit_rows
 from main.models import (Distribution, Event, Member, Message, Participant, Period,
                          RsvpTemplate, Unavailable)
@@ -1094,7 +1094,7 @@ class UnitActivityTestCase(ActivityTestCase):
         people, flows = self.tips('people', ''), self.tips('flows', '')
         self.assertEqual(people[-1].split(' | '),
                          ['2024 to 15 Jun: 2 active', '1 in their first year (joined 2024)', '1 joined 2020 or earlier'])
-        self.assertEqual(people[3].split(' | '), ['2023: 1 active', '1 after 1 to 2 years (joined 2021)'])
+        self.assertEqual(people[3].split(' | '), ['2023: 1 active', '1 after 1 to 3 years (joined 2021)'])
         self.assertEqual(flows[2].split(' | '),
                          ['2022', '2 joined', '0 reactivated', '2 became inactive',
                           '0 became inactive, reactivated later', '+0 net change'])
@@ -1104,7 +1104,7 @@ class UnitActivityTestCase(ActivityTestCase):
         chart = self.chart('people')
         # A band for each stretch of years since joining; whoever joined as the records start is kept apart.
         self.assertEqual([k['label'] for k in chart['views'][0]['panels'][0]['key']],
-                         ['First year', '1 to 2 years', '3 to 5 years', '6 to 10 years', 'Over 10 years',
+                         ['Under 1 year', '1 to 3 years', '3 to 6 years', '6 to 11 years', '11 years or more',
                           'Joined 2020 or earlier'])
         self.assertEqual(chart['measures'][0]['title'], 'Active members, by years since joining, 2020 to Present')
         self.assertFalse(chart['wide'])            # a tile, beside the chart of members joining and becoming inactive
@@ -1158,7 +1158,7 @@ class UnitActivityTestCase(ActivityTestCase):
         # So in 2021 Bob is in his first year; Ann, whose joining in the records' first year is dated, after 1 year;
         # and Dee shown apart, who may have joined earlier.
         self.assertEqual(self.tips('people', '')[1].split(' | ')[1:], ['1 in their first year (joined 2021)',
-                                                                      '1 after 1 to 2 years (joined 2020)',
+                                                                      '1 after 1 to 3 years (joined 2020)',
                                                                       '1 joined 2020 or earlier'])
         # Ann's dated joining is the one joining in 2020; Cy's and Dee's are not known to be.
         self.assertEqual(years[2020].flows[12]['joined'], 1)
@@ -1174,8 +1174,8 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual([sum(figures) for figures in self.figures('people', '')],
                          [sum(years[y].active.values()) for y in (2020, 2021, 2022, 2023, 2024)])
 
-    def test_those_there_as_the_records_start_join_the_longest_band_once_all_have_over_ten_years(self):
-        # Ann, there in 2013 as the records start, is kept apart through 2023 and is "over 10 years" in 2024.
+    def test_those_there_as_the_records_start_join_the_longest_band_once_all_have_eleven_years(self):
+        # Ann, there in 2013 as the records start, is kept apart through 2023 and has "11 years or more" in 2024.
         for day in (7, 14):
             self.make_event('training', when(2013, 2, day), attended=[self.member])
         for year in range(2013, 2025):
@@ -1184,14 +1184,14 @@ class UnitActivityTestCase(ActivityTestCase):
         band = {(k['colour'], k.get('ramp')): k['label'] for k in panel['key']}     # a part's band, as the key names it
         self.assertEqual([[band[(part['colour'], part.get('ramp'))] for part in cell['parts'] if part['sizes'][0]]
                           for cell in panel['cells'][-2:]],
-                         [['Joined 2013 or earlier'], ['Over 10 years']])
+                         [['Joined 2013 or earlier'], ['11 years or more']])
 
     def test_a_band_holding_those_there_as_the_records_start_says_or_earlier(self):
         # Ann, there in 2013 as the records start, may have joined long before Bob, whose joining is dated 2011.
         self.endorse(self.other, 'T', date(2011, 5, 1))
         for year in range(2013, 2025):
             self.make_event('training', when(year, 3, 7), attended=[self.member, self.other])
-        self.assertEqual(self.tips('people', '')[-1].split(' | ')[1:], ['2 after over 10 years (joined 2013 or earlier)'])
+        self.assertEqual(self.tips('people', '')[-1].split(' | ')[1:], ['2 after 11 years or more (joined 2013 or earlier)'])
 
     def test_a_member_counts_from_the_day_they_joined_and_as_a_guest_before_it(self):
         # The third joined on 1 March. Before it: a Saturday training, an operation they alone went on, and a
@@ -1328,14 +1328,15 @@ class UnitActivityTestCase(ActivityTestCase):
         self.make_event('training', when(2022, 5, 10), attended=[ann])
         self.make_event('training', when(2024, 2, 10), attended=[ann])
         # Bea joined in June 2021, trained once before (as a guest, not counted) and once after, went on one
-        # operation in March 2022 and since then only to a meeting: under a year on the team, three events. She
-        # is still a current member, so she counts with them.
+        # operation in March 2022 and since then only to a meeting: three events. She is still a current member,
+        # so her time on the team runs to today: 3 years.
         self.endorse(bea, 'T', date(2021, 6, 1))
         self.make_event('training', when(2021, 5, 1), attended=[bea])
         self.make_event('training', when(2021, 7, 1), attended=[bea])
         self.make_event('operation', when(2022, 3, 1), attended=[bea])
         self.make_event('meeting', when(2023, 1, 10), attended=[bea])
-        # Cal trained this spring but is a Member Alum, and Dee is a former member not to be contacted: alumni.
+        # Cal trained this spring but is a Member Alum, and Dee is a former member not to be contacted: alumni,
+        # whose time on the team ran to their last training.
         self.endorse(cal, 'T', date(2023, 1, 1))
         self.make_event('training', when(2024, 4, 10), attended=[cal])
         Member.objects.filter(id=cal.id).update(status='MA')
@@ -1345,7 +1346,7 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(sorted(unit_rows(NOW)['tenure']),
                          [MemberTenure(current=False, events=1, operations=0, trainings=1, years=0),
                           MemberTenure(current=False, events=1, operations=0, trainings=1, years=1),
-                          MemberTenure(current=True, events=3, operations=1, trainings=1, years=0),
+                          MemberTenure(current=True, events=3, operations=1, trainings=1, years=3),
                           MemberTenure(current=True, events=3, operations=1, trainings=2, years=4)])
         # One chart: a view for each measure, with its own columns, and a switch between current members, alumni
         # and both.
@@ -1361,28 +1362,32 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(chart['note'], 'How long have members been on the team, and how much have they attended?')
         # Each view's columns go up to its own largest figure: 4 years, 3 events.
         self.assertEqual([p['label'] for p in chart['views'][0]['axis']], ['0', '1', '2', '3', '4'])
-        # Years count as an age does: Bea's nine months are under a year. Each column splits by years on the team,
-        # as the active-members chart's bands do.
-        self.assertEqual(self.tips('tenure', '')[0],
-                         'Under 1 year: 1 member | 1 with under a year | 0 with 1 to 2 years | 0 with 3 to 5 years '
-                         '| 0 with 6 to 10 years | 0 with over 10 years')
+        # Years count as an age does: Dee's month is under a year. A column a year, each in the band of years on the
+        # team that the active-members chart gives it.
+        self.assertEqual([tip['head'] for tip in self.column_tips('tenure', '', 'Alumni')],
+                         ['Under 1 year: 1 member', '1 year: 1 member', '2 years: 0 members', '3 years: 0 members',
+                          '4 years: 0 members'])
+        self.assertEqual(self.tips('tenure', '')[3],
+                         '3 years: 1 member | 0 with under a year | 0 with 1 to 3 years | 1 with 3 to 6 years '
+                         '| 0 with 6 to 11 years | 0 with 11 years or more')
         self.assertEqual([tip['head'] for tip in self.column_tips('tenure', '', 'Alumni', view=1)],
                          ['0 events: 0 members', '1 event: 2 members', '2 events: 0 members', '3 events: 0 members'])
-        # The alumni layer's key shows under All alone, where it is drawn.
+        # The bands are named by the time on the team they hold; the alumni layer's key shows under All alone,
+        # where it is drawn.
         self.assertEqual([(k['label'], k.get('measure')) for k in self.panel('tenure', '')['key']],
-                         [('First year', None), ('1 to 2 years', None), ('3 to 5 years', None), ('6 to 10 years', None),
-                          ('Over 10 years', None), ('Alumni', 3)])
+                         [('Under 1 year', None), ('1 to 3 years', None), ('3 to 6 years', None),
+                          ('6 to 11 years', None), ('11 years or more', None), ('Alumni', 3)])
         # With every member, the current ones in those bands and the alumni as one layer above them.
         all_members = self.tips('tenure', '', measure='All', view=1)
-        self.assertEqual(all_members[1], '1 event: 2 members | 0 current | 0 with under a year | 0 with 1 to 2 years '
-                                         '| 0 with 3 to 5 years | 0 with 6 to 10 years | 0 with over 10 years '
+        self.assertEqual(all_members[1], '1 event: 2 members | 0 current | 0 with under a year | 0 with 1 to 3 years '
+                                         '| 0 with 3 to 6 years | 0 with 6 to 11 years | 0 with 11 years or more '
                                          '| 2 alumni')
-        self.assertEqual(all_members[3], '3 events: 2 members | 2 current | 1 with under a year | 0 with 1 to 2 years '
-                                         '| 1 with 3 to 5 years | 0 with 6 to 10 years | 0 with over 10 years '
+        self.assertEqual(all_members[3], '3 events: 2 members | 2 current | 0 with under a year | 0 with 1 to 3 years '
+                                         '| 2 with 3 to 6 years | 0 with 6 to 11 years | 0 with 11 years or more '
                                          '| 0 alumni')
         self.assertTrue(dict(unit_activity(NOW)['glossary'])['Tenure'].startswith(
-            "A member's time on the team, in whole years from joining to their last operation, training or community "
-            'event'))
+            "A member's time on the team, in whole years from joining to today, or for alumni to their last "
+            'operation, training or community event'))
 
     def test_the_tenure_chart_s_columns_are_equal_and_at_most_20(self):
         self.assertEqual(_tenure_columns(0), [(0, 0)])
@@ -1390,6 +1395,21 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual(_tenure_columns(20)[::10], [(0, 1), (20, 21)])
         self.assertEqual(_tenure_columns(40)[-1], (40, 44))
         self.assertEqual(_tenure_columns(1234)[:2], [(0, 99), (100, 199)])
+
+    def test_the_tenure_chart_s_years_go_a_column_a_year_up_to_20_or_more(self):
+        self.assertEqual(_year_columns(0), [(0, 0)])
+        self.assertEqual(_year_columns(19), [(n, n) for n in range(20)])
+        self.assertEqual(_year_columns(20), [(n, n) for n in range(20)] + [(20, None)])
+        self.assertEqual(_year_columns(36), _year_columns(20))
+        # Ann, endorsed T in 1990, has 34 years on the team today; Bea, endorsed this year, none.
+        self.endorse(self.member, 'T', date(1990, 1, 1))
+        self.endorse(self.other, 'T', date(2024, 1, 1))
+        self.make_event('training', when(2024, 3, 7), attended=[self.member, self.other])
+        years = self.chart('tenure')['views'][0]
+        self.assertEqual([p['label'] for p in years['axis'] if p['label']], ['0', '5', '10', '15', '20+'])
+        heads = [tip['head'] for tip in self.column_tips('tenure', '')]
+        self.assertEqual((heads[0], heads[1], heads[-1]),
+                         ('Under 1 year: 1 member', '1 year: 0 members', '20 years or more: 1 member'))
 
     def test_a_team_sets_the_months_after_which_a_member_has_left(self):
         # Trainings in January and September 2023: eight months apart, and nine before today.
