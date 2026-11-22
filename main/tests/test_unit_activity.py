@@ -345,10 +345,12 @@ class UnitActivityTestCase(ActivityTestCase):
             event = self.make_event('operation', when(year, 2, 7), attended=[self.member, self.other])
             self.page(event, when(year, 2, 7) - timedelta(hours=6), 'Callout', 'Available?', {self.member: 60})
         self.page(stray, when(1995, 2, 7) - timedelta(hours=6), 'Callout', 'Available?', {self.member: 60})
-        for name in ('responders', 'calls', 'reply_hours'):
+        for name, first, span in (('responders', 'All years', '2022 to Present'),
+                                  ('calls', 'All full years', '2023'),         # page records began in 2022
+                                  ('reply_hours', 'All years', '2022 to Present')):
             chart = self.chart(name)
-            self.assertEqual([o['label'] for o in chart['menu']['options']], ['All years', '2024', '2022'], name)
-            self.assertTrue(chart['measures'][0]['title'].endswith(', 2022 to Present'), name)
+            self.assertEqual([o['label'] for o in chart['menu']['options']], [first, '2024', '2022'], name)
+            self.assertTrue(chart['measures'][0]['title'].endswith(', ' + span), name)
         # The 1995 operation, a stray, is in no column; 1 responder would be its only one.
         self.assertEqual(self.drawn('responders', ''), [False, True])
 
@@ -611,12 +613,31 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertIn('Operations by hour of first page, 2024',
                       [t['text'] for t in chart['titles']])
         self.assertEqual(unit_rows(NOW)['first_pages'], [timezone.localtime(when(2024, 2, 7) - timedelta(hours=6))])
-        self.assertEqual(self.tips('calls', '')[:2], ['January: 0 operations | since 2024',
-                                                      'February: 1 operation | since 2024'])
+        self.assertEqual(self.tips('calls', '')[:2], ['January: 0 operations | in 2024',
+                                                      'February: 1 operation | in 2024'])
         # On a Wednesday, at 06:00.
         self.assertEqual([self.drawn('calls', '', view=view).index(True) for view in (0, 1, 2)], [1, 2, 6])
-        self.assertEqual(self.drawn('calls', '', view=2, option='2024').index(True), 6)
-        self.assertEqual([o['label'] for o in chart['menu']['options']], ['All years', '2024'])
+        # No year before this one has a page, so the menu has only this year.
+        self.assertEqual([o['label'] for o in chart['menu']['options']], ['2024'])
+
+    def test_when_operations_are_first_paged_adds_up_the_full_years(self):
+        # Paged in May of each year, from 2021 when page records began: neither 2021 nor this year is in full.
+        for year in (2021, 2022, 2023, 2024):
+            event = self.make_event('operation', when(year, 5, 7), attended=[self.member])
+            self.page(event, when(year, 5, 7) - timedelta(hours=6), 'Callout', 'Available?', {self.member: 60})
+        chart = self.chart('calls')
+        self.assertEqual([o['label'] for o in chart['menu']['options']],
+                         ['All full years', '2024', '2023', '2022', '2021'])
+        self.assertEqual(chart['titles'][0]['text'], 'Operations by month of first page, 2022 to 2023')
+        self.assertEqual(self.tips('calls', '')[4], 'May: 2 operations | from 2022 to 2023')
+        self.assertEqual(self.tips('calls', '', option='2024')[4], 'May: 1 operation | in 2024')
+        # Page records begun on 1 January cover that year in full.
+        event = self.make_event('operation', self.local(2021, 1, 1, 9), attended=[self.member])
+        self.page(event, self.local(2021, 1, 1, 8), 'Callout', 'Available?', {self.member: 60})
+        self.assertEqual(self.chart('calls')['titles'][0]['text'], 'Operations by month of first page, 2021 to 2023')
+        # The charts by responders and by the hour a page is sent add up every year, this year's part too.
+        for name in ('responders', 'reply_hours'):
+            self.assertEqual(self.chart(name)['menu']['options'][0]['label'], 'All years', name)
 
     def test_a_page_sent_with_the_test_button_is_not_an_operations_first_page_nor_a_callout(self):
         # The evening before an operation of 01:00 on Monday 1 April, its sender tried paging out; the
@@ -1698,11 +1719,12 @@ class UnitActivityTestCase(ActivityTestCase):
         self.assertEqual((len(self.drawn('immediate', '')), sum(years[2015].first_out.values()),
                           sum(years[2016].first_out.values())), (10, 1, 0))
         # The charts with a year menu too.
-        for name in ('calls', 'reply_hours'):
+        for name, first, span in (('calls', 'All full years', '2016 to 2023'),
+                                  ('reply_hours', 'All years', '2015 to Present')):
             chart = self.chart(name)
             self.assertEqual([o['label'] for o in chart['menu']['options']],
-                             ['All years', '2024', '2023', '2022', '2021', '2020', '2019', '2015'], name)
-            self.assertTrue(chart['measures'][0]['title'].endswith(', 2015 to Present'), name)
+                             [first, '2024', '2023', '2022', '2021', '2020', '2019', '2015'], name)
+            self.assertTrue(chart['measures'][0]['title'].endswith(', ' + span), name)
 
     def test_charts_start_where_their_data_does_and_run_to_the_present(self):
         self.make_event('operation', when(2018, 2, 7), no_time=[self.member])     # a stray early record

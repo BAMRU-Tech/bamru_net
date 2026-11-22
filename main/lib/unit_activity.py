@@ -8,7 +8,9 @@ page's foot (unit_glossary, after the terms shared with a member's report).
   this year, empty years included.
 - A chart whose columns are months, days of the week, hours or numbers of
   responders adds up every year on record, or the one year the reader picks
-  from its menu.
+  from its menu. The chart of when operations are first paged adds up only
+  the years its pages were recorded for in full, so that no month is short
+  of a year: neither this year's nor the one page records began in.
 - Few operations had their times logged before report_settings'
   OPERATION_TIMES_FROM, so what
   a chart reads from those times (whether an operation ran, who went) is
@@ -237,16 +239,29 @@ def _span(first, last, this_year):
     return '{} to {}'.format(first, 'Present' if last == this_year else last) if first != last else str(first)
 
 
-def _by_year(today, days, draw):
+def _by_year(today, days, draw, full_years=False):
     """A chart without years, with a menu to pick what it adds up: every
     year on record, shown first, or one year that has something to show.
-    `days` are the days of what it counts; `draw(counts, named, said)` draws
-    the chart for one choice, given a test of whether a day counts, how the
-    title names the period and how the hover text does."""
+    With `full_years`, for a chart that a part-year would make uneven, the
+    first choice adds up the years its records cover in full, and says so:
+    from the first they cover from 1 January, the first day's year or the
+    next, to last year. `days` are the days of what it counts;
+    `draw(counts, named, said)` draws the chart for one choice, given a test
+    of whether a day counts, how the title names the period and how the
+    hover text does."""
     years = {day.year for day in days}
     first = min(years)
-    options = [('All years', draw(lambda day: day.year >= first, _span(first, today.year, today.year),
-                                  'since {}'.format(first)))]
+    options = []
+    if not full_years:
+        options.append(('All years', draw(lambda day: day.year >= first, _span(first, today.year, today.year),
+                                          'since {}'.format(first))))
+    else:
+        start = min(days)
+        low, high = first if (start.month, start.day) == (1, 1) else first + 1, today.year - 1
+        if low <= high:
+            said = 'in {}'.format(low) if low == high else 'from {} to {}'.format(low, high)
+            options.append(('All full years', draw(lambda day: low <= day.year <= high,
+                                                   _span(low, high, today.year), said)))
     for year in sorted(years, reverse=True):
         options.append((str(year), draw(lambda day, year=year: day.year == year, str(year), 'in {}'.format(year))))
     return charts.with_menu(options, label='Year')
@@ -537,7 +552,7 @@ def _calls_chart(first_pages, today):
             [{'label': 'Operations', 'title': views[0]['titles'][0]}], views,
             note='When are operations first paged?', name='calls', view_switch_label='By')
 
-    return _by_year(today, [paged.date() for paged in first_pages], draw)
+    return _by_year(today, [paged.date() for paged in first_pages], draw, full_years=True)
 
 
 def _replies_chart(years, today):
