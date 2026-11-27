@@ -122,6 +122,16 @@ class Event(BaseModel):
     def __str__(self):
         return self.title
 
+    @property
+    def point(self):
+        """The event's (lat, lon) in degrees, or None without both as numbers on the globe."""
+        try:
+            lat, lon = float(self.lat), float(self.lon)
+        except (TypeError, ValueError):
+            return None
+        # A comparison with nan is false, so nan is refused here too.
+        return (lat, lon) if abs(lat) <= 90 and abs(lon) <= 180 else None
+
     def add_period(self, only_if_empty=False):
         q = self.period_set.all().aggregate(models.Max('position'))
         current = q['position__max']
