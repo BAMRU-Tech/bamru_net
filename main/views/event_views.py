@@ -1,20 +1,22 @@
 from django import forms
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
-from django.forms import widgets
+from django.views.decorators.http import require_POST
 from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from dynamic_preferences.registries import global_preferences_registry
 
 from main.lib.gcal import get_gcal_manager
+from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
 from main.models import DoAvailable, Member, Event, Participant, Period
 from main.models.event import every_username, leader_parts
 from main.views.api_views import EventFilter
@@ -113,10 +115,16 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
 
 
 class EventForm(ModelForm):
+    # One box for the event's point, read in any common form and saved as lat and lon.
+    lat_lon = forms.CharField(
+        required=False, label='Lat/Lon',
+        help_text='The command post or meeting point, in any form, such as decimal degrees, degrees and minutes, '
+                  'UTM or USNG.')
+
     class Meta:
         model = Event
         fields = ['title', 'description', 'description_private', 'type',
-                  'location', 'location_private', 'lat', 'lon', 'leaders',
+                  'location', 'location_private', 'lat_lon', 'leaders',
                   'start_at', 'finish_at',
                   'all_day', 'published',
                   ]
@@ -139,10 +147,27 @@ class EventForm(ModelForm):
                 time_attrs={'type': 'time', 'pattern': '[0-9]{2}:[0-9]{2}',
                             'oninvalid': "this.setCustomValidity('Enter valid time 24H: hh:mm')"},
             ),
-            'lat': widgets.HiddenInput(),
-            'lon': widgets.HiddenInput(),
-                
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.lat and self.instance.lon:
+            self.initial['lat_lon'] = '{}, {}'.format(self.instance.lat, self.instance.lon)
+        # An edit page opened before the box existed posts no box; it leaves the point as stored.
+        if self.is_bound and 'lat_lon' not in self.data:
+            self.fields['lat_lon'].disabled = True
+
+    def clean_lat_lon(self):
+        """The point as lat and lon text to store, or None for no point. A saved point the member
+        left untouched is kept exactly as stored."""
+        if 'lat_lon' not in self.changed_data:
+            return None
+        try:
+            point = read_point(self.cleaned_data['lat_lon'])
+        except NotAPoint as problem:
+            raise forms.ValidationError(str(problem))
+        self.point_warning = point and area_warning(point.lat, point.lon)
+        return point and (degrees_text(point.lat), degrees_text(point.lon))
 
     def clean(self):
         cleaned_data = super().clean()
@@ -152,8 +177,38 @@ class EventForm(ModelForm):
             self.add_error('finish_at', 'Finish time must not be earlier than start time')
         return cleaned_data
 
+    point_warning = None
 
-class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
+    def save(self, commit=True):
+        if 'lat_lon' in self.changed_data:
+            self.instance.lat, self.instance.lon = self.cleaned_data['lat_lon'] or (None, None)
+        return super().save(commit)
+
+
+@login_required
+@require_POST
+def event_lat_lon(request):
+    """The Lat/Lon box's text read as the event form reads it, so the form can show the point
+    converted in place, and warn of one outside the team's usual area, before the member saves."""
+    try:
+        point = read_point(request.POST.get('text'))
+    except NotAPoint as problem:
+        return JsonResponse({'error': str(problem)})
+    if not point:
+        return JsonResponse({'value': ''})
+    return JsonResponse({'value': point_text(point.lat, point.lon), 'note': reading_note(point),
+                         'warning': area_warning(point.lat, point.lon)})
+
+
+class PointWarningMixin:
+    """After saving the event form, the page it goes to shows the point's warning, if it has one."""
+    def form_valid(self, form):
+        if form.point_warning:
+            messages.warning(self.request, 'Lat/Lon: ' + form.point_warning)
+        return super().form_valid(form)
+
+
+class EventUpdateView(LoginRequiredMixin, PointWarningMixin, generic.edit.UpdateView):
     model = Event
     form_class = EventForm
     template_name = 'event_create.html'
@@ -169,6 +224,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
 
         return form
 
+
     # Abuse get_success_url to do a calendar update after updating the object.
     def get_success_url(self, *args, **kwargs):
         get_gcal_manager().sync_event(self.object)
@@ -181,7 +237,7 @@ class EventUpdateView(LoginRequiredMixin, generic.edit.UpdateView):
         return context
 
 
-class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
+class EventCreateView(LoginRequiredMixin, PointWarningMixin, generic.edit.CreateView):
     model = Event
     form_class = EventForm
     template_name = 'event_create.html'
@@ -200,6 +256,7 @@ class EventCreateView(LoginRequiredMixin, generic.edit.CreateView):
         form.fields['description'].widget.attrs = { 'rows':4 }
 
         return form
+
 
     # Abuse get_success_url to do a calendar update after creating the object.
     def get_success_url(self, *args, **kwargs):

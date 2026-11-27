@@ -41,26 +41,27 @@
     {% if event.description_private %}
     <p><strong>Private Description:</strong> {{ event.description_private|urlize }}</p>
     {% endif %}
-    <p><strong>Location:</strong> {{ event.location|urlize }}
-      <a target="_blank"
+    <p><strong>Location:</strong>
+      <span class="copy-on-tap">{{ event.location|urlize }}</span>
+      <a target="_blank" aria-label="Google Maps: the Location" title="Google Maps: the Location"
          href="https://google.com/maps/search/?api=1&query={{ event.location|urlencode }}">
         <i class="fa fa-map-marker"></i>
       </a>
-      <p>
       {% if event.location_private %}
-      <strong>Private Location:</strong> {{ event.location_private|urlize }}
-      <a target="_blank"
+      <br><strong>Private Location:</strong> <span class="copy-on-tap">{{ event.location_private|urlize }}</span>
+      <a target="_blank" aria-label="Google Maps: the Private Location" title="Google Maps: the Private Location"
          href="https://google.com/maps/search/?api=1&query={{ event.location_private|urlencode }}">
         <i class="fa fa-map-marker"></i>
       </a>
       {% endif %}
-      {% if event.lat != None %}
-      <strong>Lat:</strong> {{ event.lat|floatformat:8 }}
+      {% if event.point %}
+      <br><strong>Lat/Lon:</strong> <span class="copy-on-tap">{{ event.lat }}, {{ event.lon }}</span>
+      <a target="_blank" aria-label="Google Maps: the Lat/Lon" title="Google Maps: the Lat/Lon"
+         href="https://google.com/maps/search/?api=1&query={{ event.lat|urlencode }}%2C{{ event.lon|urlencode }}">
+        <i class="fa fa-map-marker"></i>
+      </a>
       {% endif %}
-      {% if event.lon != None %}
-      <strong>Lon:</strong> {{ event.lon|floatformat:8 }}
-      {% endif %}
-      </p></p>
+    </p>
     <p><strong>Leaders:</strong>
       {% for leader in leaders %}{% if leader.id != 0 %}<a href="{% url 'member_detail' leader.id %}">{{ leader.name }}</a>{% else %}{{ leader.name }}{% endif %}{% endfor %}
     </p>
@@ -1230,5 +1231,28 @@ function MarkRow ( e, dt, type, indices ) {
             });
 }
 
+</script>
+<script type="text/javascript">
+// Tapping a location or the Lat/Lon copies it whole, ready to paste into a map app or CalTopo.
+// A link inside still opens, and text the member selected is left alone. Where the browser
+// won't copy, select it so the member can.
+$(document).ready(function() {
+    $('.copy-on-tap').on('click', function(event) {
+        if ($(event.target).closest('a').length || getSelection().toString()) return;
+        var text = this;
+        function select() {
+            var range = document.createRange();
+            range.selectNodeContents(text);
+            getSelection().removeAllRanges();
+            getSelection().addRange(range);
+        }
+        if (!navigator.clipboard) return select();
+        navigator.clipboard.writeText(text.textContent.trim()).then(function() {
+            $(text).next('.copied').remove();
+            var note = $('<small class="copied text-muted"> Copied</small>').insertAfter(text);
+            setTimeout(function() { note.remove(); }, 2000);
+        }, select);
+    });
+});
 </script>
 {% endblock js %}
