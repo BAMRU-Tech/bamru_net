@@ -7,6 +7,7 @@ from django.db.models import Prefetch
 from django.forms.models import ModelForm, modelformset_factory
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import generic
@@ -15,8 +16,13 @@ from django.forms.widgets import HiddenInput, Select, Widget, SelectDateWidget
 
 from dynamic_preferences.registries import global_preferences_registry
 
+from main.lib.county import county_text
+from main.lib.elevation import altitude_band, elevation_feet
+from main.lib.forecast import DAYS_COVERED, forecast_days
 from main.lib.gcal import get_gcal_manager
+from main.lib import lookups
 from main.lib.lat_lon import NotAPoint, area_warning, degrees_text, point_text, read_point, reading_note
+from main.lib.sun import sun_times
 from main.models import DoAvailable, Member, Event, Participant, Period
 from main.models.event import every_username, leader_parts
 from main.views.api_views import EventFilter
@@ -90,6 +96,12 @@ class EventDetailView(LoginRequiredMixin, generic.DetailView):
                       for text, member_id in leader_parts(event.leaders, every_username())]
 
         context['leaders'] = result
+        if event.point:
+            context['sun'] = sun_times(*event.point, timezone.localtime(event.start_at).date())
+            first_day, last_day = forecast_span(event)
+            today = timezone.localdate()
+            context['forecast_wanted'] = last_day >= today and first_day < today + timedelta(days=DAYS_COVERED)
+            context['lookup_seconds'] = lookups.SECONDS
         context['current_do'] = DoAvailable.current_scheduled_do()
         context['esb_spreadsheet_url'] = (
             global_preferences_registry.manager()['general__esb_spreadsheet_url'])
@@ -198,6 +210,54 @@ def event_lat_lon(request):
         return JsonResponse({'value': ''})
     return JsonResponse({'value': point_text(point.lat, point.lon), 'note': reading_note(point),
                          'warning': area_warning(point.lat, point.lon)})
+
+
+def forecast_span(event):
+    """The days the event's forecast covers, in local time: from the day before the event, for anyone
+    driving up or camping the night before, to its last day."""
+    first_day = timezone.localtime(event.start_at).date()
+    last_day = timezone.localtime(event.finish_at).date() if event.finish_at else first_day
+    return first_day - timedelta(days=1), max(first_day, last_day)
+
+
+@login_required
+def event_forecast(request, pk):
+    """The rows of the forecast table (event_forecast.html) at the event's point, for the day before the
+    event and each of its days, named "Day before", "OP1 Sat 21", "OP2 Sun 22" and so on, for the event
+    page to show once it has loaded; empty with no day to show. 'ready' is false while the forecast is being
+    asked for in the background, and the page asks again."""
+    event = get_object_or_404(Event, pk=pk)
+    if not event.point:
+        return JsonResponse({'ready': True, 'html': ''})
+    day_before, last_day = forecast_span(event)
+    ready, days = forecast_days(*event.point, day_before, last_day)
+    for day in days:
+        op = (datetime.date.fromisoformat(day['date']) - day_before).days
+        day['name'] = 'OP{} {}'.format(op, day['label']) if op else 'Day before'
+    return JsonResponse({'ready': ready, 'html': render_to_string('event_forecast.html', {'days': days}) if days else ''})
+
+
+@login_required
+def event_county(request, pk):
+    """The county line for the event's point, for the event page to show once it has loaded; 'ready' is
+    false while it is being asked for in the background, and the page asks again."""
+    event = get_object_or_404(Event, pk=pk)
+    if not event.point:
+        return JsonResponse({'ready': True, 'county': None})
+    ready, county = county_text(*event.point)
+    return JsonResponse({'ready': ready, 'county': county})
+
+
+@login_required
+def event_elevation(request, pk):
+    """The ground elevation at the event's point and its altitude band, for the event page to show once it
+    has loaded; 'ready' is false while it is being asked for in the background, and the page asks again."""
+    event = get_object_or_404(Event, pk=pk)
+    if not event.point:
+        return JsonResponse({'ready': True, 'feet': None, 'band': None, 'note': None})
+    ready, feet = elevation_feet(*event.point)
+    band, note = altitude_band(feet)
+    return JsonResponse({'ready': ready, 'feet': feet, 'band': band, 'note': note})
 
 
 class PointWarningMixin:
