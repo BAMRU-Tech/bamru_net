@@ -175,13 +175,14 @@ def _spells(member_days, months):
 
 
 class MemberTenure(NamedTuple):
-    """A member's time on the team, from joining to their last reportable
-    day, and what they attended in it, as the records hold it."""
+    """A member's time on the team, from joining to today, or for alumni to
+    their last reportable day, and what they attended from joining on, as
+    the records hold it."""
     current: bool               # a current member (Member.CURRENT_MEMBERS); the rest are alumni
     events: int                 # of every type
     operations: int
     trainings: int
-    years: int                  # whole years from joining to that last day
+    years: int                  # whole years on the team
 
 
 class Retention(NamedTuple):
@@ -231,7 +232,7 @@ def _retention(entries, entered, first_attended, today, report_from, joining):
         tenure.append(MemberTenure(
             current=member in current, events=sum(since_joining.values()),
             operations=since_joining['operation'], trainings=since_joining['training'],
-            years=whole_months(joined, member_days[-1]) // 12))
+            years=whole_months(joined, today if member in current else member_days[-1]) // 12))
         cohort = None if member in early else joined.year
         for months in left_after:
             spells = _spells(member_days, months)

@@ -8,7 +8,9 @@ page's foot (unit_glossary, after the terms shared with a member's report).
   this year, empty years included.
 - A chart whose columns are months, days of the week, hours or numbers of
   responders adds up every year on record, or the one year the reader picks
-  from its menu.
+  from its menu. The chart of when operations are first paged adds up only
+  the years its pages were recorded for in full, so that no month is short
+  of a year: neither this year's nor the one page records began in.
 - Few operations had their times logged before report_settings'
   OPERATION_TIMES_FROM, so what
   a chart reads from those times (whether an operation ran, who went) is
@@ -113,13 +115,14 @@ FLOWS = Bands((Band('1', 'joined', 'Joined', 'joined'), Band('1-light', 'came_ba
                Band('2-light', 'left_returned', 'Became inactive, reactivated later',
                     'became inactive, reactivated later')))
 DEPARTURES = ('left', 'left_returned')
-# Years since joining, newest first and lightest; the limit is the most whole years in the band.
+# Years since joining, newest first and lightest; the limit is the most whole years in the band. Each band is
+# named by the time on the team it holds: whole years 1 and 2 are 1 to 3 years.
 YEARS_SINCE_JOINING = Cuts((('first', 0), ('early', 2), ('settled', 5), ('long', 10), ('longest', None)))
-TENURE = Bands((Band('ramp-1-5', 'first', 'First year', 'in their first year'),
-                 Band('ramp-2-5', 'early', '1 to 2 years', 'after 1 to 2 years'),
-                 Band('ramp-3-5', 'settled', '3 to 5 years', 'after 3 to 5 years'),
-                 Band('ramp-4-5', 'long', '6 to 10 years', 'after 6 to 10 years'),
-                 Band('ramp-5-5', 'longest', 'Over 10 years', 'after over 10 years')))
+TENURE = Bands((Band('ramp-1-5', 'first', 'Under 1 year', 'in their first year'),
+                 Band('ramp-2-5', 'early', '1 to 3 years', 'after 1 to 3 years'),
+                 Band('ramp-3-5', 'settled', '3 to 6 years', 'after 3 to 6 years'),
+                 Band('ramp-4-5', 'long', '6 to 11 years', 'after 6 to 11 years'),
+                 Band('ramp-5-5', 'longest', '11 years or more', 'after 11 years or more')))
 # Who attended each type of event, counted once each: those who took part, and those who led it, darker, at
 # the foot.
 MEMBERS = {t: Bands((Band('1-light', 'others', 'as participant', 'as participant'),
@@ -237,16 +240,29 @@ def _span(first, last, this_year):
     return '{} to {}'.format(first, 'Present' if last == this_year else last) if first != last else str(first)
 
 
-def _by_year(today, days, draw):
+def _by_year(today, days, draw, full_years=False):
     """A chart without years, with a menu to pick what it adds up: every
     year on record, shown first, or one year that has something to show.
-    `days` are the days of what it counts; `draw(counts, named, said)` draws
-    the chart for one choice, given a test of whether a day counts, how the
-    title names the period and how the hover text does."""
+    With `full_years`, for a chart that a part-year would make uneven, the
+    first choice adds up the years its records cover in full, and says so:
+    from the first they cover from 1 January, the first day's year or the
+    next, to last year. `days` are the days of what it counts;
+    `draw(counts, named, said)` draws the chart for one choice, given a test
+    of whether a day counts, how the title names the period and how the
+    hover text does."""
     years = {day.year for day in days}
     first = min(years)
-    options = [('All years', draw(lambda day: day.year >= first, _span(first, today.year, today.year),
-                                  'since {}'.format(first)))]
+    options = []
+    if not full_years:
+        options.append(('All years', draw(lambda day: day.year >= first, _span(first, today.year, today.year),
+                                          'since {}'.format(first))))
+    else:
+        start = min(days)
+        low, high = first if (start.month, start.day) == (1, 1) else first + 1, today.year - 1
+        if low <= high:
+            said = 'in {}'.format(low) if low == high else 'from {} to {}'.format(low, high)
+            options.append(('All full years', draw(lambda day: low <= day.year <= high,
+                                                   _span(low, high, today.year), said)))
     for year in sorted(years, reverse=True):
         options.append((str(year), draw(lambda day, year=year: day.year == year, str(year), 'in {}'.format(year))))
     return charts.with_menu(options, label='Year')
@@ -537,7 +553,7 @@ def _calls_chart(first_pages, today):
             [{'label': 'Operations', 'title': views[0]['titles'][0]}], views,
             note='When are operations first paged?', name='calls', view_switch_label='By')
 
-    return _by_year(today, [paged.date() for paged in first_pages], draw)
+    return _by_year(today, [paged.date() for paged in first_pages], draw, full_years=True)
 
 
 def _replies_chart(years, today):
@@ -687,8 +703,9 @@ def _flows_chart(rows, today):
         name='flows', view_switch_label='Inactive after no operation, training or community event for')
 
 
-# The most columns the tenure chart draws for one measure, and the most of them it labels.
-TENURE_COLUMNS, TENURE_LABELS = 20, 8
+# The most columns the tenure chart draws for a count of events, and the most of them it labels; and the years
+# from which one column holds every member with that many or more.
+TENURE_COLUMNS, TENURE_LABELS, TENURE_YEARS = 20, 8, 20
 
 
 def _tenure_columns(largest):
@@ -699,6 +716,15 @@ def _tenure_columns(largest):
     while largest // width >= TENURE_COLUMNS:
         width = width * 5 // 2 if str(width)[0] == '2' else width * 2
     return [(low, low + width - 1) for low in range(0, largest + 1, width)]
+
+
+def _year_columns(largest):
+    """A column for each whole year from 0 up to `largest`, [(low, high)],
+    so that every column is one of TENURE's bands; past TENURE_YEARS, one
+    column holds the rest (high None)."""
+    if largest < TENURE_YEARS:
+        return [(year, year) for year in range(largest + 1)]
+    return [(year, year) for year in range(TENURE_YEARS)] + [(TENURE_YEARS, None)]
 
 
 # The tenure chart's views: (label on the switch, MemberTenure's field, what its titles count members by, the
@@ -719,8 +745,9 @@ ON_TEAM = Bands(tuple(band._replace(said='with under a year' if band.name == 'fi
 def _tenure_chart(tenure, today, records_from):
     """How long members have been on the team, and how much they have
     attended: members counted by each of TENURE_MEASURES, a view each, in
-    columns scaled to it (_tenure_columns), for current members, alumni or
-    both (ON_TEAM). None without members."""
+    a column a year (_year_columns) or columns scaled to the count
+    (_tenure_columns), for current members, alumni or both (ON_TEAM). None
+    without members."""
     if not tenure:
         return None
     period = _span(records_from, today.year, today.year)
@@ -729,6 +756,8 @@ def _tenure_chart(tenure, today, records_from):
     key = years_on_team + [alumni + (groups[-1][0],)]       # the alumni layer is drawn under All alone
 
     def said(low, high, noun):
+        if high is None:
+            return '{} {}s or more'.format(low, noun)
         if low != high:
             return '{} to {} {}s'.format(low, high, noun)
         return 'Under 1 year' if noun == 'year' and low == 0 else '{} {}{}'.format(low, noun, pluralize(low))
@@ -740,13 +769,15 @@ def _tenure_chart(tenure, today, records_from):
 
     views = []
     for label, field, by, noun in TENURE_MEASURES:
-        columns = _tenure_columns(max(getattr(member, field) for member in tenure))
+        largest = max(getattr(member, field) for member in tenure)
+        columns = _year_columns(largest) if field == 'years' else _tenure_columns(largest)
         # Labelled from 0 at round steps: every column, every second, fifth, tenth and so on.
         every = next(n for n in (step * 10 ** p for p in range(len(str(len(columns)))) for step in (1, 2, 5))
                      if len(columns) <= n * TENURE_LABELS)
         cells = []
         for low, high in columns:
-            members = [member for member in tenure if low <= getattr(member, field) <= high]
+            top = largest if high is None else high
+            members = [member for member in tenure if low <= getattr(member, field) <= top]
             current, alumni = (Counter(YEARS_SINCE_JOINING.name_for(member.years) for member in members
                                        if member.current == is_current) for is_current in (True, False))
             head, bands = said(low, high, noun), Bands(ON_TEAM[:-1])
@@ -757,7 +788,8 @@ def _tenure_chart(tenure, today, records_from):
         views.append({'label': label, 'name': 'Members by {}'.format(by), 'max_labels': TENURE_LABELS,
                       'titles': ['{}, by {}{}, {}'.format(named, by, '' if field == 'years' else ' and years on the team',
                                                           period) for _, named in groups],
-                      'periods': [{'short': str(low) if c % every == 0 else ''} for c, (low, _) in enumerate(columns)],
+                      'periods': [{'short': '{}+'.format(low) if high is None else str(low) if c % every == 0 else ''}
+                                  for c, (low, high) in enumerate(columns)],
                       'series': [{'label': '', 'key': key, 'cells': cells}]})
     return charts.share_panels(
         [{'label': label, 'title': views[0]['titles'][g]} for g, (label, _) in enumerate(groups)], views,
@@ -925,8 +957,8 @@ def unit_glossary(status_from, templates_from, status_endorsed_from=None):
         ('Years since joining',
          'A member\'s whole years on the team, counted as an age is, at the end of the year shown, or today for this '
          'year. Members known only to have joined by the records\' first year, by a "by" year or by their first '
-         'training or operation, are shown apart until all of them have over {} years.'.format(
-             YEARS_SINCE_JOINING[-2][1])),
+         'training or operation, are shown apart until all of them have {} years or more.'.format(
+             YEARS_SINCE_JOINING[-2][1] + 1)),
         ('Inactive',
          '{} month{} {} passed without an operation, training or community event{}. '.format(
              rules.LEFT_AFTER[0], pluralize(rules.LEFT_AFTER[0]), pluralize(rules.LEFT_AFTER[0], 'has,have'), slower)
@@ -941,10 +973,10 @@ def unit_glossary(status_from, templates_from, status_endorsed_from=None):
         ('Reactivated',
          'The year of a member\'s next operation, training or community event after becoming inactive.'),
         ('Tenure',
-         'A member\'s time on the team, in whole years from joining to their last operation, training or community '
-         'event, counted as an age is, and the events, operations and trainings they attended from joining on, as the '
-         'records hold them. Alumni are members no longer current, such as Member Alums; every other member is '
-         'current.'),
+         'A member\'s time on the team, in whole years from joining to today, or for alumni to their last operation, '
+         'training or community event, counted as an age is, and the events, operations and trainings they attended '
+         'from joining on, as the records hold them. Alumni are members no longer current, such as Member Alums; '
+         'every other member is current.'),
     ]
 
 
