@@ -95,6 +95,12 @@ class RosterTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertResponseContainsMembers(response)
 
+    def testReportsPageNeedsLogin(self):
+        response = self.client.get('/reports/')
+        self.assertRedirects(response, '/accounts/login/?next=/reports/')
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get('/reports/'), 'BAMRU-roster.csv')
+
     def testVcf(self):
         self.client.force_login(self.user)
         response = self.client.get('/reports/roster/BAMRU-roster.vcf')
