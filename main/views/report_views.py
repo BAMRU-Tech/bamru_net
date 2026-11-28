@@ -28,7 +28,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ReportListView(generic.base.TemplateView):
+class ReportListView(LoginRequiredMixin, generic.base.TemplateView):
     template_name = 'reports/index.html'
 
     def get_context_data(self, **kwargs):
